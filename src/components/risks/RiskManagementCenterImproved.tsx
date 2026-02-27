@@ -134,17 +134,17 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
   const { filters, setFilters } = useRiskFilters();
 
-  // Ações rápidas integradas e organizadas
   const getQuickActions = (): QuickAction[] => [
     // Ações Primárias
     {
       id: 'register-risk',
       title: 'Registrar Risco',
-      description: 'Criação manual de risco',
+      description: 'Assistente Inteligente',
       icon: Plus,
       color: 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700',
-      action: () => handleRegisterRisk(),
-      category: 'primary'
+      action: () => handleAlexAnalysis(),
+      category: 'primary',
+      badge: 'IA Integrada'
     },
     {
       id: 'action-plans-management',
@@ -237,16 +237,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
   ];
 
   // Handlers melhorados
-  const handleRegisterRisk = () => {
-    console.log('handleRegisterRisk chamado - abrindo Processo Manual Guiado com biblioteca de riscos');
-    setGuidedCreationOpen(true);
-
-    toast({
-      title: '📋 Registro Manual de Risco',
-      description: 'Abrindo processo guiado com integração à biblioteca de riscos e metodologias...',
-    });
-  };
-
   const handleRiskLibrary = () => {
     setLibraryDialogOpen(true);
 
@@ -268,8 +258,8 @@ export const RiskManagementCenterImproved: React.FC = () => {
     console.log('handleAlexAnalysis chamado - abrindo processo guiado');
     setProcessDialogOpen(true);
     toast({
-      title: '🧠 Análise Alex Risk',
-      description: 'Abrindo processo guiado com assistência de IA...',
+      title: '🧠 Assistente de Registro de Risco',
+      description: 'Abrindo assistente de registro de risco...',
     });
   };
 
@@ -310,7 +300,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       case 'dashboard': return 'Dashboard Executivo';
       case 'table': return 'Lista Detalhada';
       case 'kanban': return 'Kanban Board';
-      case 'process': return 'Processo Guiado com Alex Risk';
+      case 'process': return 'Assistente de Registro de Risco';
       case 'matrix': return 'Matriz de Risco';
       case 'documentation': return 'Documentação Completa';
       case 'library': return 'Biblioteca de Riscos';
@@ -347,27 +337,23 @@ export const RiskManagementCenterImproved: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos - Centro Integrado</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Plataforma unificada com Alex Risk para gestão completa de riscos corporativos
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Gestão de Riscos - Centro Integrado</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm lg:text-base mt-0.5 sm:mt-0">
+            Plataforma Unificada para Gestão de Riscos Corporativos
           </p>
 
           {/* Status do Sistema Melhorado */}
-          <div className="flex items-center space-x-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-4 text-xs sm:text-sm">
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-green-600 dark:text-green-400 font-medium">Sistema Operacional</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Activity className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+              <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 dark:text-blue-400" />
               <span>{risks.length} riscos monitorados</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Brain className="h-4 w-4 text-purple-500 dark:text-purple-400" />
-              <span>Alex Risk {alexRiskActive ? 'ativo' : 'standby'}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Clock className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 dark:text-orange-400" />
               <span>Última sync: agora</span>
             </div>
           </div>
@@ -375,26 +361,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
         {/* Controles do Header Melhorados */}
         <div className="flex items-center space-x-2">
-          {/* Alex Risk sempre disponível */}
-          <ImprovedAIChatDialog
-            type="risk"
-            context={{
-              totalRisks: metrics?.totalRisks || 0,
-              highRisks: metrics?.risksByLevel?.['Alto'] || 0,
-              overdueActions: metrics?.overdueActivities || 0,
-              currentView: viewMode
-            }}
-            trigger={
-              <Button variant="outline" className="flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800">
-                <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
-                  <Brain className="h-3 w-3 text-white" />
-                </div>
-                <span>Alex Risk</span>
-                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400">IA</Badge>
-              </Button>
-            }
-          />
-
           {/* Painel de Notificações */}
           <NotificationPanel />
         </div>
@@ -571,25 +537,26 @@ export const RiskManagementCenterImproved: React.FC = () => {
           {/* Navegação de Views */}
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                 <div className="flex items-center space-x-2">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-base sm:text-lg font-semibold truncate max-w-[150px] sm:max-w-none">
                     {getViewTitle(viewMode)}
                   </h3>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs">
                     {viewMode}
                   </Badge>
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center justify-start sm:justify-end gap-1 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
                   {(['dashboard', 'table', 'kanban', 'process', 'matrix'] as ViewMode[]).map((view) => {
                     const Icon = getViewIcon(view);
                     return (
                       <Button
                         key={view}
                         variant={viewMode === view ? "default" : "outline"}
-                        size="sm"
+                        size="icon"
                         onClick={() => changeViewMode(view)}
-                        className="flex items-center space-x-1"
+                        className={`h-8 w-8 sm:h-9 text-xs flex-shrink-0 ${viewMode === view ? '' : 'text-muted-foreground'} sm:w-auto sm:px-3 sm:space-x-2`}
+                        title={view}
                       >
                         <Icon className="h-4 w-4" />
                         <span className="hidden sm:inline">
@@ -606,16 +573,16 @@ export const RiskManagementCenterImproved: React.FC = () => {
               </div>
 
               {/* Busca e Filtros Compactos */}
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-2 sm:gap-4 mt-2">
                 {/* Campo de busca */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3 w-3 sm:h-4 sm:w-4" />
                     <Input
-                      placeholder="Pesquisar riscos por nome, categoria ou responsável..."
+                      placeholder="Pesquisar..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
+                      className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm"
                     />
                   </div>
                 </div>
@@ -643,7 +610,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   )}
 
                   {/* Contador de resultados */}
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs h-6 sm:h-auto whitespace-nowrap">
                     {risks.length} riscos
                   </Badge>
                 </div>
@@ -651,11 +618,11 @@ export const RiskManagementCenterImproved: React.FC = () => {
                 {/* Botão de filtros */}
                 <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="flex items-center space-x-2">
-                      <Filter className="h-4 w-4" />
+                    <Button variant="outline" size="sm" className="flex items-center gap-1 sm:gap-2 h-8 sm:h-10 px-2 sm:px-4 text-xs sm:text-sm">
+                      <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span>Filtros</span>
                       {((filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)) > 0 && (
-                        <Badge variant="secondary" className="ml-1">
+                        <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs px-1 sm:px-2">
                           {(filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)}
                         </Badge>
                       )}
@@ -781,48 +748,41 @@ export const RiskManagementCenterImproved: React.FC = () => {
         </div>
       </div>
 
-      {/* Alex Risk Integration - Contextual e Sempre Ativo */}
-      {alexRiskActive && (
-        <AlexRiskIntegration
-          currentView={viewMode}
-          selectedRisks={risks}
-          onSuggestion={(suggestion) => {
-            toast({
-              title: '🤖 Sugestão Alex Risk',
-              description: suggestion,
-            });
-          }}
-        />
-      )}
-
-      {/* Dialog do Processo Guiado Alex Risk */}
+      {/* Dialog do Assistente de Registro de Risco */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto overflow-x-hidden p-0" style={{ maxWidth: '95vw' }}>
-          <DialogHeader className="px-3 pt-3 pb-2">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 mx-auto" style={{ maxWidth: 'calc(100vw - 1rem)', width: 'calc(100vw - 1rem)' }}>
+          <DialogHeader className="pt-10 pb-4 px-4 sm:px-6 text-left relative flex-shrink-0 border-b border-border/40 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 dark:border-purple-900/50">
             <DialogTitle className="flex items-center space-x-2 text-sm">
               <Brain className="h-5 w-5 text-purple-600" />
-              <span>Alex Risk - Processo Guiado</span>
+              <span>Assistente de Registro de Risco</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Processo inteligente e guiado com suporte de IA.
+              Processo inteligente e guiado.
             </DialogDescription>
           </DialogHeader>
 
           <div className="px-3 pb-3">
             <AlexRiskGuidedProcess
               onComplete={(riskData) => {
-                createRisk(riskData);
+                // Adaptando do formato do Wizard/IA para o formato do Controller
+                createRisk({
+                  name: riskData.risk_title || 'Risco Sem Nome',
+                  category: riskData.risk_category || 'Operacional',
+                  probability: (riskData as any).risk_probability || 'Medium',
+                  impact: (riskData as any).risk_impact || 'Medium',
+                  status: 'Identificado'
+                } as any);
                 setProcessDialogOpen(false);
                 toast({
-                  title: '🎉 Alex Risk Processo Concluído',
+                  title: '🎉 Registro Concluído',
                   description: `Risco "${riskData.risk_title}" registrado com sucesso!`,
                 });
               }}
               onCancel={() => {
                 setProcessDialogOpen(false);
                 toast({
-                  title: 'Alex Risk Cancelado',
-                  description: 'O processo guiado foi cancelado.',
+                  title: 'Assistente Inicializado',
+                  description: 'O assistente foi fechado.',
                 });
               }}
             />
@@ -832,18 +792,18 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
       {/* Dialog da Biblioteca de Riscos */}
       <Dialog open={libraryDialogOpen} onOpenChange={setLibraryDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 mx-auto" style={{ maxWidth: 'calc(100vw - 1rem)', width: 'calc(100vw - 1rem)' }}>
+          <DialogHeader className="px-4 pr-10 pt-8 sm:pt-10 pb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 dark:from-green-950/20 dark:to-emerald-950/20 dark:border-green-900/50 text-left">
+            <DialogTitle className="flex items-center space-x-2 text-lg sm:text-xl">
               <Library className="h-6 w-6 text-green-600" />
               <span>Biblioteca de Riscos - Templates e Modelos</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Explore nossa coleção de templates pré-definidos, modelos de riscos por setor e melhores práticas para acelerar sua gestão de riscos.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
+          <div className="px-3 py-6 sm:px-6 sm:py-8 overflow-x-hidden">
             <RiskLibraryIntegrated
               onSelectTemplate={(template) => {
                 toast({

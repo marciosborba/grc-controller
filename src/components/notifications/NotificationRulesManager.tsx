@@ -4,16 +4,16 @@
 // Sistema para criar e gerenciar regras automáticas de escalação
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Play, 
-  Pause, 
-  Settings, 
-  Zap, 
-  Clock, 
-  Users, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Play,
+  Pause,
+  Settings,
+  Zap,
+  Clock,
+  Users,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -35,7 +35,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -76,7 +76,7 @@ interface EscalationRule {
   description: string;
   module?: NotificationModule;
   type?: NotificationType;
-  
+
   // Condições para ativar escalação
   conditions: {
     priority?: NotificationPriority[];
@@ -89,7 +89,7 @@ interface EscalationRule {
     timeOfDay?: { start: string; end: string };
     daysOfWeek?: number[]; // 0-6, domingo a sábado
   };
-  
+
   // Ações de escalação
   escalationActions: {
     increasePriority?: boolean;
@@ -104,18 +104,18 @@ interface EscalationRule {
     webhookUrl?: string;
     customMessage?: string;
   };
-  
+
   // Configurações
   isActive: boolean;
   maxEscalations?: number;
   escalationIntervalMinutes: number;
   priority: number; // para ordenação
-  
+
   // Estatísticas
   timesTriggered: number;
   lastTriggered?: string;
   successRate: number;
-  
+
   // Auditoria
   createdBy: string;
   createdAt: string;
@@ -247,12 +247,12 @@ export const NotificationRulesManager: React.FC = () => {
   // Filtrar regras
   const filteredRules = rules.filter(rule => {
     const matchesSearch = rule.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         rule.description.toLowerCase().includes(searchQuery.toLowerCase());
+      rule.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesModule = filterModule === 'all' || rule.module === filterModule;
-    const matchesStatus = filterStatus === 'all' || 
-                         (filterStatus === 'active' && rule.isActive) ||
-                         (filterStatus === 'inactive' && !rule.isActive);
-    
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'active' && rule.isActive) ||
+      (filterStatus === 'inactive' && !rule.isActive);
+
     return matchesSearch && matchesModule && matchesStatus;
   });
 
@@ -346,12 +346,12 @@ export const NotificationRulesManager: React.FC = () => {
   };
 
   const handleToggleRule = (ruleId: string) => {
-    setRules(prev => prev.map(rule => 
-      rule.id === ruleId 
+    setRules(prev => prev.map(rule =>
+      rule.id === ruleId
         ? { ...rule, isActive: !rule.isActive, updatedAt: new Date().toISOString() }
         : rule
     ));
-    
+
     const rule = rules.find(r => r.id === ruleId);
     toast.success(`Regra ${rule?.isActive ? 'desativada' : 'ativada'} com sucesso`);
   };
@@ -524,7 +524,7 @@ export const NotificationRulesManager: React.FC = () => {
                     <TestTube className="h-3 w-3 mr-1" />
                     Testar
                   </Button>
-                  
+
                   <Button
                     size="sm"
                     variant="outline"
@@ -556,7 +556,7 @@ export const NotificationRulesManager: React.FC = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Excluir Regra</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Tem certeza que deseja excluir a regra "{rule.name}"? 
+                          Tem certeza que deseja excluir a regra "{rule.name}"?
                           Esta ação não pode ser desfeita.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -683,7 +683,7 @@ export const NotificationRulesManager: React.FC = () => {
 
       {/* Dialog de Edição/Criação */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isCreating ? 'Criar Nova Regra' : 'Editar Regra'}
@@ -711,7 +711,7 @@ export const NotificationRulesManager: React.FC = () => {
                     placeholder="Ex: Escalação Riscos Críticos"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="priority">Prioridade da Regra</Label>
                   <Input
@@ -730,8 +730,8 @@ export const NotificationRulesManager: React.FC = () => {
                   <Label htmlFor="module">Módulo (Opcional)</Label>
                   <Select
                     value={formData.module || ''}
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
+                    onValueChange={(value) => setFormData(prev => ({
+                      ...prev,
                       module: value as NotificationModule || undefined
                     }))}
                   >
@@ -754,9 +754,9 @@ export const NotificationRulesManager: React.FC = () => {
                     id="intervalMinutes"
                     type="number"
                     value={formData.escalationIntervalMinutes || 60}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      escalationIntervalMinutes: parseInt(e.target.value) 
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      escalationIntervalMinutes: parseInt(e.target.value)
                     }))}
                     placeholder="60"
                   />
@@ -768,9 +768,9 @@ export const NotificationRulesManager: React.FC = () => {
                     id="maxEscalations"
                     type="number"
                     value={formData.maxEscalations || 3}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      maxEscalations: parseInt(e.target.value) 
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      maxEscalations: parseInt(e.target.value)
                     }))}
                     placeholder="3"
                   />
@@ -814,7 +814,7 @@ export const NotificationRulesManager: React.FC = () => {
                             const newPriorities = e.target.checked
                               ? [...currentPriorities, priority]
                               : currentPriorities.filter(p => p !== priority);
-                            
+
                             setFormData(prev => ({
                               ...prev,
                               conditions: {
@@ -826,8 +826,8 @@ export const NotificationRulesManager: React.FC = () => {
                         />
                         <Label htmlFor={`priority-${priority}`} className="capitalize">
                           {priority === 'low' ? 'Baixa' :
-                           priority === 'medium' ? 'Média' :
-                           priority === 'high' ? 'Alta' : 'Crítica'}
+                            priority === 'medium' ? 'Média' :
+                              priority === 'high' ? 'Alta' : 'Crítica'}
                         </Label>
                       </div>
                     ))}

@@ -17,7 +17,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { 
+import {
   Library,
   Search,
   Plus,
@@ -31,6 +31,8 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Edit,
   Save,
   X,
@@ -51,12 +53,12 @@ import { RiskTemplateService } from '@/services/riskTemplateService';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import type { RiskTemplate as DBRiskTemplate } from '@/types/riskTemplate';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 type RiskTemplate = DBRiskTemplate;
 
 interface RiskLibraryFixedProps {
-  onSelectTemplate: (template: RiskTemplate) => void;
+  onSelectTemplate: (template: RiskTemplate & any) => void;
 }
 
 export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
@@ -74,10 +76,12 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
   const [editFormData, setEditFormData] = useState<Partial<RiskTemplate>>({});
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newTemplateData, setNewTemplateData] = useState<Partial<RiskTemplate>>({});
-  
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   const isAdmin = user?.role === 'admin' || user?.isPlatformAdmin || user?.role === 'platform_admin';
 
   useEffect(() => {
@@ -86,10 +90,10 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
 
   const loadTemplates = async () => {
     setIsLoading(true);
-    
+
     try {
       const dbTemplates = await RiskTemplateService.getTemplates();
-      
+
       if (dbTemplates.length === 0) {
         toast({
           title: '⚠️ Banco Vazio',
@@ -118,7 +122,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
 
         const userFavorites = new Set(favoritesData.data?.map(f => f.template_id) || []);
         const userRatings = new Map(userRatingsData.data?.map(r => [r.template_id, r.rating]) || []);
-        
+
         // Calcular estatísticas globais de rating
         const globalStats = new Map();
         allRatingsData.data?.forEach(rating => {
@@ -135,30 +139,26 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
           const stats = globalStats.get(template.id);
           const globalTotalRatings = stats?.totalRatings || 0;
           const globalAvgRating = stats ? (stats.sumRatings / stats.totalRatings) : 0;
-          
+
           return {
             ...template,
-            // Mapear campos do banco (snake_case) para o formato esperado (camelCase)
-            usageCount: template.usage_count || 0,
-            // Usar rating global calculado de TODOS os usuários
+            // Valores calculados globalmente e de uso local
             rating: globalAvgRating || template.rating || 0,
-            totalRatings: globalTotalRatings || template.total_ratings || 0,
-            isPopular: template.is_popular || (index < 10),
-            alexRiskSuggested: template.alex_risk_suggested || false,
-            // Dados específicos do usuário atual
+            totalRatings: globalTotalRatings || template.totalRatings || 0,
+            isPopular: template.isPopular || (index < 10),
+            // Dados específicos do usuário atual passados para campos auxiliares localmente
             isFavorite: userFavorites.has(template.id),
-            userRating: userRatings.get(template.id),
-            lastUpdated: template.last_updated || template.updated_at || new Date().toISOString().split('T')[0]
-          };
+            userRating: userRatings.get(template.id)
+          } as RiskTemplate & { isFavorite?: boolean; userRating?: number };
         });
-        
+
         setTemplates(processedTemplates);
         toast({
           title: '✅ Templates Carregados',
           description: `${dbTemplates.length} templates carregados com sucesso!`,
         });
       }
-      
+
     } catch (error) {
       console.error('Erro ao carregar templates:', error);
       toast({
@@ -174,16 +174,26 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
 
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         template.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      template.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      template.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesCategory = selectedCategory === 'all' || template.category === selectedCategory;
     const matchesIndustry = selectedIndustry === 'all' || template.industry === selectedIndustry;
     const matchesLevel = selectedLevel === 'all' || template.riskLevel === selectedLevel;
     const matchesFavorites = !showFavorites || template.isFavorite;
-    
+
     return matchesSearch && matchesCategory && matchesIndustry && matchesLevel && matchesFavorites;
   });
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedIndustry, selectedLevel, showFavorites]);
+
+  const totalPages = Math.ceil(filteredTemplates.length / ITEMS_PER_PAGE);
+  const paginatedTemplates = filteredTemplates.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const categories = [...new Set(templates.map(t => t.category))];
   const industries = [...new Set(templates.map(t => t.industry))];
@@ -220,15 +230,14 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
         isPopular: template.isPopular,
         isFavorite: template.isFavorite,
         createdBy: template.createdBy,
-        lastUpdated: template.updatedAt ? template.updatedAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        lastUpdated: template.updatedAt ? (template.updatedAt instanceof Date ? template.updatedAt.toISOString().split('T')[0] : template.updatedAt) : new Date().toISOString().split('T')[0],
         tags: template.tags?.map(t => t.tag) || [],
         alexRiskSuggested: template.alexRiskSuggested,
-        userRatings: template.userRatings?.map(r => r.rating) || [],
         totalRatings: template.totalRatings
       };
-      
-      onSelectTemplate(compatibleTemplate);
-      
+
+      onSelectTemplate(compatibleTemplate as any);
+
       toast({
         title: '✅ Template Aplicado',
         description: `Template "${template.name}" será usado para criar novo risco`,
@@ -247,10 +256,10 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
     try {
       const template = templates.find(t => t.id === templateId);
       const newFavoriteStatus = !template?.isFavorite;
-      
+
       // Atualizar localmente primeiro para UX responsiva
-      setTemplates(prev => prev.map(t => 
-        t.id === templateId 
+      setTemplates(prev => prev.map(t =>
+        t.id === templateId
           ? { ...t, isFavorite: newFavoriteStatus }
           : t
       ));
@@ -263,7 +272,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
             template_id: templateId,
             user_id: user?.id
           });
-        
+
         if (error) throw error;
       } else {
         // Remover dos favoritos
@@ -272,10 +281,10 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
           .delete()
           .eq('template_id', templateId)
           .eq('user_id', user?.id);
-        
+
         if (error) throw error;
       }
-      
+
       toast({
         title: newFavoriteStatus ? '⭐ Adicionado aos favoritos' : '☆ Removido dos favoritos',
         description: newFavoriteStatus ? 'Template salvo nos seus favoritos.' : 'Template removido dos favoritos.'
@@ -283,8 +292,8 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
     } catch (error) {
       console.error('Erro ao atualizar favorito:', error);
       // Reverter mudança local se erro na API
-      setTemplates(prev => prev.map(t => 
-        t.id === templateId 
+      setTemplates(prev => prev.map(t =>
+        t.id === templateId
           ? { ...t, isFavorite: !t.isFavorite }
           : t
       ));
@@ -299,16 +308,16 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
   const handleRateTemplate = async (templateId: string, rating: number) => {
     try {
       console.log('Tentando avaliar:', { templateId, userId: user?.id, rating });
-      
+
       // Verificar autenticação
       const { data: { user: authUser } } = await supabase.auth.getUser();
       console.log('Usuário autenticado:', authUser?.id);
       console.log('User context:', user?.id);
-      
+
       if (!authUser) {
         throw new Error('Usuário não autenticado');
       }
-      
+
       // Primeiro tentar inserir, se falhar devido a duplicata, atualizar
       const { data: existingRating } = await supabase
         .from('risk_template_ratings')
@@ -337,7 +346,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
           });
         console.log('Tentando INSERT:', { templateId, userId: authUser.id, rating });
       }
-      
+
       if (result.error) {
         console.error('Erro no banco:', result.error);
         console.error('Detalhes do erro:', {
@@ -352,15 +361,15 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
       console.log('Avaliação salva com sucesso:', result);
 
       // Atualizar template localmente
-      setTemplates(prev => prev.map(t => 
-        t.id === templateId 
-          ? { 
-              ...t, 
-              userRating: rating
-            }
+      setTemplates(prev => prev.map(t =>
+        t.id === templateId
+          ? {
+            ...t,
+            userRating: rating
+          }
           : t
       ));
-      
+
       toast({
         title: '⭐ Avaliação enviada',
         description: `Você avaliou este template com ${rating} estrela${rating > 1 ? 's' : ''}.`
@@ -414,8 +423,8 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
       if (error) throw error;
 
       // Atualizar template localmente
-      setTemplates(prev => prev.map(t => 
-        t.id === templateId 
+      setTemplates(prev => prev.map(t =>
+        t.id === templateId
           ? { ...t, ...editFormData }
           : t
       ));
@@ -440,102 +449,102 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
   // Funções de cores corrigidas
   const getRiskLevelBadgeClass = (level: string) => {
     switch (level) {
-      case 'Muito Alto': 
+      case 'Muito Alto':
         return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-200 dark:border-red-700';
-      case 'Alto': 
+      case 'Alto':
         return 'bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-700';
-      case 'Médio': 
+      case 'Médio':
         return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-200 dark:border-yellow-700';
-      case 'Baixo': 
+      case 'Baixo':
         return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-200 dark:border-green-700';
-      case 'Muito Baixo': 
+      case 'Muito Baixo':
         return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-700';
-      default: 
+      default:
         return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/30 dark:text-gray-200 dark:border-gray-700';
     }
   };
 
   const getCategoryBadgeClass = (category: string) => {
     switch (category) {
-      case 'Tecnológico': 
+      case 'Tecnológico':
         return 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/30 dark:text-purple-200 dark:border-purple-700';
-      case 'Operacional': 
+      case 'Operacional':
         return 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-700';
-      case 'Financeiro': 
+      case 'Financeiro':
         return 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-200 dark:border-emerald-700';
-      case 'Regulatório': 
+      case 'Regulatório':
         return 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-900/30 dark:text-indigo-200 dark:border-indigo-700';
-      case 'Reputacional': 
+      case 'Reputacional':
         return 'bg-pink-100 text-pink-800 border-pink-300 dark:bg-pink-900/30 dark:text-pink-200 dark:border-pink-700';
-      default: 
+      default:
         return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/30 dark:text-gray-200 dark:border-gray-700';
     }
   };
 
   const getProbabilityStyles = (probability: number) => {
     switch (probability) {
-      case 5: 
+      case 5:
         return { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#dc2626' };
-      case 4: 
+      case 4:
         return { backgroundColor: '#ea580c', color: '#ffffff', borderColor: '#ea580c' };
-      case 3: 
+      case 3:
         return { backgroundColor: '#d97706', color: '#ffffff', borderColor: '#d97706' };
-      case 2: 
+      case 2:
         return { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#2563eb' };
-      case 1: 
+      case 1:
         return { backgroundColor: '#16a34a', color: '#ffffff', borderColor: '#16a34a' };
-      default: 
+      default:
         return { backgroundColor: '#6b7280', color: '#ffffff', borderColor: '#6b7280' };
     }
   };
 
   const getImpactStyles = (impact: number) => {
     switch (impact) {
-      case 5: 
+      case 5:
         return { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#dc2626' };
-      case 4: 
+      case 4:
         return { backgroundColor: '#ea580c', color: '#ffffff', borderColor: '#ea580c' };
-      case 3: 
+      case 3:
         return { backgroundColor: '#d97706', color: '#ffffff', borderColor: '#d97706' };
-      case 2: 
+      case 2:
         return { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#2563eb' };
-      case 1: 
+      case 1:
         return { backgroundColor: '#16a34a', color: '#ffffff', borderColor: '#16a34a' };
-      default: 
+      default:
         return { backgroundColor: '#6b7280', color: '#ffffff', borderColor: '#6b7280' };
     }
   };
 
   const getCategoryStyles = (category: string) => {
     switch (category) {
-      case 'Tecnológico': 
+      case 'Tecnológico':
         return { backgroundColor: '#7c3aed', color: '#ffffff', borderColor: '#7c3aed' };
-      case 'Operacional': 
+      case 'Operacional':
         return { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#2563eb' };
-      case 'Financeiro': 
+      case 'Financeiro':
         return { backgroundColor: '#059669', color: '#ffffff', borderColor: '#059669' };
-      case 'Regulatório': 
+      case 'Regulatório':
         return { backgroundColor: '#4338ca', color: '#ffffff', borderColor: '#4338ca' };
-      case 'Reputacional': 
+      case 'Reputacional':
         return { backgroundColor: '#db2777', color: '#ffffff', borderColor: '#db2777' };
-      default: 
+      default:
         return { backgroundColor: '#6b7280', color: '#ffffff', borderColor: '#6b7280' };
     }
   };
 
   const getRiskLevelStyles = (level: string) => {
     switch (level) {
-      case 'Muito Alto': 
+      case 'Muito Alto':
         return { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#dc2626' };
-      case 'Alto': 
+      case 'Alto':
         return { backgroundColor: '#ea580c', color: '#ffffff', borderColor: '#ea580c' };
-      case 'Médio': 
+      case 'Médio':
         return { backgroundColor: '#d97706', color: '#ffffff', borderColor: '#d97706' };
-      case 'Baixo': 
+      case 'Baixo':
         return { backgroundColor: '#16a34a', color: '#ffffff', borderColor: '#16a34a' };
-      case 'Muito Baixo': 
+      case 'Muito Baixo':
         return { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#2563eb' };
-      default: 
+      default:
         return { backgroundColor: '#6b7280', color: '#ffffff', borderColor: '#6b7280' };
     }
   };
@@ -577,30 +586,28 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
-      <Star 
-        key={i} 
-        className={`h-3 w-3 ${
-          i < Math.floor(rating) 
-            ? 'text-yellow-400 fill-current' 
-            : 'text-gray-300 dark:text-gray-600'
-        }`}
+      <Star
+        key={i}
+        className={`h-3 w-3 ${i < Math.floor(rating)
+          ? 'text-yellow-400 fill-current'
+          : 'text-gray-300 dark:text-gray-600'
+          }`}
       />
     ));
   };
 
   const InteractiveStars = ({ templateId, userRating }: { templateId: string; userRating?: number }) => {
     const [hoverRating, setHoverRating] = useState(0);
-    
+
     return (
       <div className="flex items-center space-x-1">
         {Array.from({ length: 5 }, (_, i) => (
           <Star
             key={i}
-            className={`h-4 w-4 cursor-pointer transition-colors ${
-              i < (hoverRating || userRating || 0)
-                ? 'text-yellow-400 fill-current hover:text-yellow-500' 
-                : 'text-gray-300 dark:text-gray-600 hover:text-yellow-300'
-            }`}
+            className={`h-4 w-4 cursor-pointer transition-colors ${i < (hoverRating || userRating || 0)
+              ? 'text-yellow-400 fill-current hover:text-yellow-500'
+              : 'text-gray-300 dark:text-gray-600 hover:text-yellow-300'
+              }`}
             onMouseEnter={() => setHoverRating(i + 1)}
             onMouseLeave={() => setHoverRating(0)}
             onClick={() => handleRateTemplate(templateId, i + 1)}
@@ -628,41 +635,42 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
     <div className="w-full space-y-6">
       {/* Header da Biblioteca */}
       <Card className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-950/20 dark:to-teal-950/20 border-green-200 dark:border-green-800">
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-2">
-              <Library className="h-6 w-6 text-green-600 dark:text-green-400" />
-              <CardTitle>Biblioteca Inteligente de Riscos</CardTitle>
-              <span 
+              <Library className="h-5 w-5 text-green-600 dark:text-green-400" />
+              <CardTitle className="text-base sm:text-lg">Biblioteca Inteligente de Riscos</CardTitle>
+              <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   borderRadius: '9999px',
                   border: '1px solid',
-                  paddingLeft: '10px',
-                  paddingRight: '10px',
+                  paddingLeft: '8px',
+                  paddingRight: '8px',
                   paddingTop: '2px',
                   paddingBottom: '2px',
-                  fontSize: '12px',
+                  fontSize: '10px',
                   fontWeight: '600',
+                  lineHeight: '1.2',
                   ...getTemplateCountStyles()
                 }}
               >
                 {templates.length} Templates
               </span>
             </div>
-            
+
             {isAdmin && (
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white">
+              <Button className="w-full sm:w-auto bg-sky-500 hover:bg-sky-600 text-white border-0 shadow-sm">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Template
               </Button>
             )}
           </div>
-          
-          <p className="text-muted-foreground">
+
+          <p className="text-sm text-muted-foreground mt-2">
             Templates pré-configurados com metodologias, controles e KRIs baseados em melhores práticas de mercado
-            {isAdmin && <span className="ml-2 text-blue-600 dark:text-blue-400 font-medium">• Modo Administrador Ativo</span>}
+            {isAdmin && <span className="ml-1 sm:ml-2 text-slate-800 dark:text-slate-200 font-semibold">• Modo Administrador Ativo</span>}
           </p>
         </CardHeader>
       </Card>
@@ -680,9 +688,9 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                 className="pl-10"
               />
             </div>
-            
-            <select 
-              value={selectedCategory} 
+
+            <select
+              value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-3 py-2 border border-input rounded-md bg-background"
             >
@@ -691,9 +699,9 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
-            
-            <select 
-              value={selectedIndustry} 
+
+            <select
+              value={selectedIndustry}
               onChange={(e) => setSelectedIndustry(e.target.value)}
               className="px-3 py-2 border border-input rounded-md bg-background"
             >
@@ -702,8 +710,8 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                 <option key={ind} value={ind}>{ind}</option>
               ))}
             </select>
-            
-            <Button 
+
+            <Button
               variant={showFavorites ? "default" : "outline"}
               onClick={() => setShowFavorites(!showFavorites)}
               className="flex items-center justify-center space-x-2"
@@ -712,14 +720,11 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
               <span>Favoritos</span>
             </Button>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm text-muted-foreground">
             <span>{filteredTemplates.length} templates encontrados</span>
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center space-x-1">
-                <Brain className="h-4 w-4 text-purple-500 dark:text-purple-400" />
-                <span>{templates.filter(t => t.alexRiskSuggested).length} Alex Risk</span>
-              </div>
+
               <div className="flex items-center space-x-1">
                 <TrendingUp className="h-4 w-4 text-green-500 dark:text-green-400" />
                 <span>{templates.filter(t => t.isPopular).length} populares</span>
@@ -736,10 +741,10 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
       </Card>
 
       {/* Lista de Templates Expansíveis */}
-      <div className="w-full space-y-4">
-        {filteredTemplates.map((template) => {
+      <div className="w-full space-y-4 overflow-x-hidden">
+        {paginatedTemplates.map((template) => {
           const isExpanded = expandedCards.has(template.id);
-          
+
           return (
             <Card key={template.id} className="w-full hover:shadow-lg transition-all duration-200">
               <Collapsible open={isExpanded} onOpenChange={() => toggleCardExpansion(template.id)}>
@@ -749,46 +754,27 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                       <div className="flex items-start space-x-4 flex-1 min-w-0">
                         {/* Indicador de Nível de Risco */}
                         <div className={`w-1 h-16 rounded-full flex-shrink-0 ${getRiskLevelIndicatorColor(template.riskLevel)}`}></div>
-                        
+
                         {/* Informações Principais */}
                         <div className="flex-1 min-w-0 space-y-3">
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                            <CardTitle className="text-lg">{template.name}</CardTitle>
-                            
+                            <CardTitle className="text-base font-semibold text-slate-900 dark:text-slate-100">{template.name}</CardTitle>
+
                             {/* Badges de Status */}
                             <div className="flex flex-wrap items-center gap-2">
-                              {template.alexRiskSuggested && (
-                                <span 
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    borderRadius: '9999px',
-                                    border: '1px solid',
-                                    paddingLeft: '10px',
-                                    paddingRight: '10px',
-                                    paddingTop: '2px',
-                                    paddingBottom: '2px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    ...getAlexIAStyles()
-                                  }}
-                                >
-                                  <Brain className="h-3 w-3 mr-1" />
-                                  Alex IA
-                                </span>
-                              )}
+
                               {template.isPopular && (
-                                <span 
+                                <span
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     borderRadius: '9999px',
                                     border: '1px solid',
-                                    paddingLeft: '10px',
-                                    paddingRight: '10px',
-                                    paddingTop: '2px',
-                                    paddingBottom: '2px',
-                                    fontSize: '12px',
+                                    paddingLeft: '6px',
+                                    paddingRight: '6px',
+                                    paddingTop: '1px',
+                                    paddingBottom: '1px',
+                                    fontSize: '10px',
                                     fontWeight: '600',
                                     ...getPopularStyles()
                                   }}
@@ -799,39 +785,39 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                               )}
                             </div>
                           </div>
-                          
-                          <p className="text-sm text-muted-foreground line-clamp-2">{template.description}</p>
-                          
+
+                          <p className="text-xs text-muted-foreground line-clamp-2">{template.description}</p>
+
                           {/* Metadados */}
                           <div className="flex flex-wrap items-center gap-2">
-                            <span 
+                            <span
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 borderRadius: '9999px',
                                 border: '1px solid',
-                                paddingLeft: '10px',
-                                paddingRight: '10px',
-                                paddingTop: '2px',
-                                paddingBottom: '2px',
-                                fontSize: '12px',
+                                paddingLeft: '8px',
+                                paddingRight: '8px',
+                                paddingTop: '1px',
+                                paddingBottom: '1px',
+                                fontSize: '10px',
                                 fontWeight: '600',
                                 ...getCategoryStyles(template.category)
                               }}
                             >
                               {template.category}
                             </span>
-                            <span 
+                            <span
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 borderRadius: '9999px',
                                 border: '1px solid',
-                                paddingLeft: '10px',
-                                paddingRight: '10px',
-                                paddingTop: '2px',
-                                paddingBottom: '2px',
-                                fontSize: '12px',
+                                paddingLeft: '8px',
+                                paddingRight: '8px',
+                                paddingTop: '1px',
+                                paddingBottom: '1px',
+                                fontSize: '10px',
                                 fontWeight: '600',
                                 ...getRiskLevelStyles(template.riskLevel)
                               }}
@@ -844,29 +830,30 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                             </div>
                             <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                               <Users className="h-3 w-3" />
-                              <span>{template.usageCount.toLocaleString()} usos</span>
+                              <span className="text-xs">0 usos</span>
                             </div>
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Ações Rápidas */}
                       <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
-                        <Button 
+                        <Button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleUseTemplate(template);
                           }}
-                          className="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white"
+                          className="bg-sky-500 hover:bg-sky-600 text-white h-8 text-xs px-3"
                           size="sm"
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Usar
                         </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="sm"
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 bg-slate-900/40 border-slate-700/50 hover:bg-slate-800"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleToggleFavorite(template.id);
@@ -874,7 +861,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                         >
                           <Heart className={`h-3 w-3 ${template.isFavorite ? 'fill-current text-red-500' : ''}`} />
                         </Button>
-                        
+
                         <div className="flex items-center">
                           {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </div>
@@ -882,7 +869,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                     </div>
                   </CardHeader>
                 </CollapsibleTrigger>
-                
+
                 <CollapsibleContent>
                   <CardContent className="pt-0">
                     <div className="space-y-6">
@@ -894,25 +881,25 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                               <Edit className="h-5 w-5 mr-2" />
                               Editando Template - {template.name}
                             </h3>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               {/* Nome */}
                               <div>
                                 <label className="block text-sm font-medium mb-2">Nome do Template</label>
-                                <Input 
+                                <Input
                                   value={editFormData.name || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, name: e.target.value}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
                                   placeholder="Nome do template"
                                   className="w-full"
                                 />
                               </div>
-                              
+
                               {/* Categoria */}
                               <div>
                                 <label className="block text-sm font-medium mb-2">Categoria</label>
-                                <select 
+                                <select
                                   value={editFormData.category || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, category: e.target.value}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, category: e.target.value }))}
                                   className="w-full px-3 py-2 border border-input rounded-md bg-background"
                                 >
                                   <option value="">Selecione uma categoria</option>
@@ -923,24 +910,24 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   <option value="Reputacional">Reputacional</option>
                                 </select>
                               </div>
-                              
+
                               {/* Indústria */}
                               <div>
                                 <label className="block text-sm font-medium mb-2">Indústria</label>
-                                <Input 
+                                <Input
                                   value={editFormData.industry || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, industry: e.target.value}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, industry: e.target.value }))}
                                   placeholder="Ex: Financeiro, Tecnologia, Saúde"
                                   className="w-full"
                                 />
                               </div>
-                              
+
                               {/* Nível de Risco */}
                               <div>
                                 <label className="block text-sm font-medium mb-2">Nível de Risco</label>
-                                <select 
+                                <select
                                   value={editFormData.riskLevel || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, riskLevel: e.target.value}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, riskLevel: e.target.value }))}
                                   className="w-full px-3 py-2 border border-input rounded-md bg-background"
                                 >
                                   <option value="">Selecione um nível</option>
@@ -951,13 +938,13 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   <option value="Muito Baixo">Muito Baixo</option>
                                 </select>
                               </div>
-                              
+
                               {/* Probabilidade */}
                               <div>
                                 <label className="block text-sm font-medium mb-2">Probabilidade (1-5)</label>
-                                <select 
+                                <select
                                   value={editFormData.probability || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, probability: parseInt(e.target.value)}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, probability: parseInt(e.target.value) }))}
                                   className="w-full px-3 py-2 border border-input rounded-md bg-background"
                                 >
                                   <option value="">Selecione</option>
@@ -968,13 +955,13 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   <option value="5">5 - Muito Alta</option>
                                 </select>
                               </div>
-                              
+
                               {/* Impacto */}
                               <div>
                                 <label className="block text-sm font-medium mb-2">Impacto (1-5)</label>
-                                <select 
+                                <select
                                   value={editFormData.impact || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, impact: parseInt(e.target.value)}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, impact: parseInt(e.target.value) }))}
                                   className="w-full px-3 py-2 border border-input rounded-md bg-background"
                                 >
                                   <option value="">Selecione</option>
@@ -985,33 +972,33 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   <option value="5">5 - Muito Alto</option>
                                 </select>
                               </div>
-                              
+
                               {/* Metodologia */}
                               <div className="md:col-span-2">
                                 <label className="block text-sm font-medium mb-2">Metodologia</label>
-                                <Input 
+                                <Input
                                   value={editFormData.methodology || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, methodology: e.target.value}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, methodology: e.target.value }))}
                                   placeholder="Ex: ISO 27001, NIST, COBIT"
                                   className="w-full"
                                 />
                               </div>
-                              
+
                               {/* Descrição */}
                               <div className="md:col-span-2">
                                 <label className="block text-sm font-medium mb-2">Descrição</label>
-                                <Textarea 
+                                <Textarea
                                   value={editFormData.description || ''}
-                                  onChange={(e) => setEditFormData(prev => ({...prev, description: e.target.value}))}
+                                  onChange={(e) => setEditFormData(prev => ({ ...prev, description: e.target.value }))}
                                   placeholder="Descrição detalhada do risco"
                                   className="w-full h-24"
                                 />
                               </div>
                             </div>
-                            
+
                             {/* Botões de ação */}
                             <div className="flex items-center justify-end space-x-2 mt-6">
-                              <Button 
+                              <Button
                                 variant="outline"
                                 onClick={handleCancelEdit}
                                 className="flex items-center"
@@ -1019,7 +1006,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                 <X className="h-4 w-4 mr-2" />
                                 Cancelar
                               </Button>
-                              <Button 
+                              <Button
                                 onClick={() => handleSaveEdit(template.id)}
                                 className="bg-green-600 hover:bg-green-700 text-white flex items-center"
                               >
@@ -1041,7 +1028,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm">Probabilidade:</span>
-                                    <span 
+                                    <span
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -1061,7 +1048,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm">Impacto:</span>
-                                    <span 
+                                    <span
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -1081,7 +1068,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <span className="text-sm">Indústria:</span>
-                                    <span 
+                                    <span
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -1101,10 +1088,10 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   </div>
                                 </div>
                               </div>
-                              
+
                               <div>
                                 <h4 className="font-medium text-sm text-muted-foreground mb-2 uppercase tracking-wide">Metodologia</h4>
-                                <span 
+                                <span
                                   style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -1122,13 +1109,13 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   {template.methodology}
                                 </span>
                               </div>
-                              
+
                               <div>
                                 <h4 className="font-medium text-sm text-muted-foreground mb-2 uppercase tracking-wide">Estatísticas</h4>
                                 <div className="space-y-2">
                                   <div className="flex items-center space-x-2">
                                     <Activity className="h-4 w-4 text-blue-500" />
-                                    <span className="text-sm">{template.usageCount.toLocaleString()} usos</span>
+                                    <span className="text-sm">0 usos</span>
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <Award className="h-4 w-4 text-yellow-500" />
@@ -1136,17 +1123,21 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <Calendar className="h-4 w-4 text-gray-500" />
-                                    <span className="text-sm">{template.lastUpdated || new Date().toISOString().split('T')[0]}</span>
+                                    <span className="text-sm">
+                                      {template.updatedAt instanceof Date
+                                        ? template.updatedAt.toISOString().split('T')[0]
+                                        : (template.updatedAt || new Date().toISOString().split('T')[0])}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
 
                               <div>
                                 <h4 className="font-medium text-sm text-muted-foreground mb-3 uppercase tracking-wide">Sua Avaliação</h4>
-                                <InteractiveStars templateId={template.id} userRating={template.userRating} />
+                                <InteractiveStars templateId={template.id} userRating={(template as any).userRating} />
                               </div>
                             </div>
-                        
+
                             {/* Coluna 2: Controles */}
                             <div>
                               <h4 className="font-medium text-sm text-muted-foreground mb-3 uppercase tracking-wide flex items-center">
@@ -1160,11 +1151,11 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                     <span className="text-sm">{control.controlDescription}</span>
                                   </div>
                                 )) || (
-                                  <p className="text-sm text-muted-foreground italic">Nenhum controle definido</p>
-                                )}
+                                    <p className="text-sm text-muted-foreground italic">Nenhum controle definido</p>
+                                  )}
                               </div>
                             </div>
-                        
+
                             {/* Coluna 3: KRIs */}
                             <div>
                               <h4 className="font-medium text-sm text-muted-foreground mb-3 uppercase tracking-wide flex items-center">
@@ -1178,12 +1169,12 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                     <span className="text-sm">{kri.kriDescription}</span>
                                   </div>
                                 )) || (
-                                  <p className="text-sm text-muted-foreground italic">Nenhum KRI definido</p>
-                                )}
+                                    <p className="text-sm text-muted-foreground italic">Nenhum KRI definido</p>
+                                  )}
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Tags - visível apenas no modo de visualização */}
                           {template.tags && template.tags.length > 0 && (
                             <div>
@@ -1193,7 +1184,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                               </h4>
                               <div className="flex flex-wrap gap-2">
                                 {template.tags.map((tagObj, index) => (
-                                  <span 
+                                  <span
                                     key={tagObj.id || index}
                                     style={{
                                       display: 'inline-flex',
@@ -1215,7 +1206,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                               </div>
                             </div>
                           )}
-                          
+
                           {/* Metadados de Rodapé - visível apenas no modo de visualização */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-4 border-t border-border text-xs text-muted-foreground">
                             <div className="flex flex-wrap items-center gap-4">
@@ -1228,7 +1219,7 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                 <span>Atualizado: {template.updatedAt ? template.updatedAt.toISOString().split('T')[0] : 'N/A'}</span>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center space-x-2">
                               <Button variant="outline" size="sm">
                                 <Copy className="h-3 w-3 mr-1" />
@@ -1238,11 +1229,11 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
                                 <Download className="h-3 w-3 mr-1" />
                                 Exportar
                               </Button>
-                              
+
                               {/* Botão de edição para administradores */}
                               {isAdmin && (
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1265,7 +1256,43 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
           );
         })}
       </div>
-      
+
+      {/* Paginação */}
+      {totalPages > 1 && (
+        <div className="flex flex-col items-center justify-center gap-4 mt-8 mb-4">
+          <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">
+            Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredTemplates.length)} de {filteredTemplates.length} templates
+          </p>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-slate-900/40 hover:bg-slate-800 text-slate-300 border-slate-700/50 h-9"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Anterior
+            </Button>
+
+            <div className="flex items-center justify-center min-w-9 h-9 px-3 rounded-md bg-slate-800/80 text-slate-200 text-sm font-medium border border-slate-700/50">
+              {currentPage}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-slate-900/40 hover:bg-slate-800 text-slate-300 border-slate-700/50 h-9"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            >
+              Próxima
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Estado vazio */}
       {filteredTemplates.length === 0 && (
         <Card>
@@ -1275,8 +1302,8 @@ export const RiskLibraryFixed: React.FC<RiskLibraryFixedProps> = ({
             <p className="text-muted-foreground mb-4">
               Tente ajustar os filtros ou termos de busca
             </p>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setSearchTerm('');
                 setSelectedCategory('all');

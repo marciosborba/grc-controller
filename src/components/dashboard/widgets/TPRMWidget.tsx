@@ -171,7 +171,7 @@ export const TPRMWidget = () => {
             {/* Watermark Icon */}
             <Globe2 className="absolute -right-12 -top-12 h-64 w-64 text-primary/5 rotate-12 pointer-events-none" />
 
-            <CardHeader className="pb-2 pt-4 sm:pt-6 px-4 sm:px-6 relative z-10">
+            <CardHeader className="pb-1 pt-3 sm:pt-5 px-3 sm:px-5 relative z-10">
                 <div className="flex flex-wrap items-center justify-between gap-1 sm:gap-2">
                     <div className="flex items-center gap-2">
                         <div className="p-1 sm:p-1.5 rounded-md bg-orange-500/10 border border-orange-500/20">
@@ -195,19 +195,19 @@ export const TPRMWidget = () => {
                 </div>
             </CardHeader>
 
-            <CardContent className="px-1 sm:px-2 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
-                <div className="flex-1 w-full min-h-0 mt-2 sm:mt-0">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={120}>
-                        <PieChart margin={{ top: 10, right: 0, bottom: 10, left: -10 }}>
+            <CardContent className="px-2 sm:px-3 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+                <div className="flex-1 w-full min-h-0 mt-1 sm:mt-0">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={150}>
+                        <PieChart margin={{ top: 20, right: 8, bottom: 8, left: 8 }}>
                             <Pie
                                 data={vendorData}
                                 activeIndex={activeIndex}
                                 activeShape={renderActiveShape}
                                 onMouseEnter={onPieEnter}
-                                cx="35%"
+                                cx="50%"
                                 cy="50%"
-                                innerRadius={45}
-                                outerRadius={65}
+                                innerRadius={38}
+                                outerRadius={55}
                                 paddingAngle={3}
                                 dataKey="value"
                                 stroke="none"
@@ -218,8 +218,8 @@ export const TPRMWidget = () => {
                                     <Cell
                                         key={`cell-${index}`}
                                         fill={entry.color}
-                                        fillOpacity={0.3} // TRANSPARENT
-                                        stroke={entry.color} // SOLID BORDERS
+                                        fillOpacity={0.3}
+                                        stroke={entry.color}
                                         strokeWidth={2}
                                         className="transition-all duration-300 hover:opacity-100 cursor-pointer"
                                     />
@@ -227,13 +227,13 @@ export const TPRMWidget = () => {
                             </Pie>
                             <Tooltip content={<CustomTooltip />} />
                             <Legend
-                                iconSize={8}
-                                wrapperStyle={{ fontSize: '10px' }}
-                                layout="vertical"
-                                verticalAlign="middle"
-                                align="right"
-                                formatter={(value, entry: any) => (
-                                    <span className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-1">{value}</span>
+                                iconSize={7}
+                                wrapperStyle={{ fontSize: '9px', paddingTop: '4px' }}
+                                layout="horizontal"
+                                verticalAlign="bottom"
+                                align="center"
+                                formatter={(value) => (
+                                    <span className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-0.5">{value}</span>
                                 )}
                             />
                         </PieChart>

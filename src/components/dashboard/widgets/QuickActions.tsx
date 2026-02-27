@@ -15,17 +15,17 @@ export const QuickActions = () => {
     ];
 
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {actions.map((action, idx) => (
                 <button
                     key={idx}
-                    className="flex items-center gap-3 p-4 rounded-xl bg-card border border-border/50 hover:bg-accent hover:border-border hover:-translate-y-1 transition-all duration-300 text-left group shadow-sm hover:shadow-md"
+                    className="flex flex-col items-center justify-center gap-2 p-3 sm:p-4 rounded-xl bg-card border border-border/50 hover:bg-accent hover:border-border hover:-translate-y-1 transition-all duration-300 text-center group shadow-sm hover:shadow-md min-h-[80px] sm:min-h-[90px]"
                     onClick={() => navigate(action.route)}
                 >
                     <div className="p-2 rounded-lg bg-secondary group-hover:bg-background transition-colors border border-border/10">
                         <action.icon className={`h-4 w-4 ${action.color}`} />
                     </div>
-                    <span className="text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
+                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider leading-tight">
                         {action.label}
                     </span>
                 </button>

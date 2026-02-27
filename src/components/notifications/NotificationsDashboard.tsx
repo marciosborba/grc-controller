@@ -4,13 +4,13 @@
 // Dashboard com analytics, métricas avançadas e centro de comando
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Bell, 
-  TrendingUp, 
-  TrendingDown, 
-  Clock, 
-  Users, 
-  AlertTriangle, 
+import {
+  Bell,
+  TrendingUp,
+  TrendingDown,
+  Clock,
+  Users,
+  AlertTriangle,
   CheckCircle,
   BarChart3,
   PieChart,
@@ -33,29 +33,29 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
-import { 
-  LineChart, 
-  Line, 
-  AreaChart, 
-  Area, 
-  BarChart, 
-  Bar, 
-  PieChart as RechartsPieChart, 
-  Cell, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer 
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 
 import { useNotifications } from '@/hooks/useNotifications';
@@ -141,31 +141,31 @@ const mockAnalytics: NotificationAnalytics = {
     { priority: 'Baixa', count: 512, color: '#22c55e' }
   ],
   channelPerformance: [
-    { 
-      channel: 'Push', 
-      sent: 1247, 
-      delivered: 1198, 
-      opened: 892, 
+    {
+      channel: 'Push',
+      sent: 1247,
+      delivered: 1198,
+      opened: 892,
       clicked: 234,
       deliveryRate: 96.1,
       openRate: 74.5,
       clickRate: 26.2
     },
-    { 
-      channel: 'Email', 
-      sent: 856, 
-      delivered: 834, 
-      opened: 567, 
+    {
+      channel: 'Email',
+      sent: 856,
+      delivered: 834,
+      opened: 567,
       clicked: 123,
       deliveryRate: 97.4,
       openRate: 68.0,
       clickRate: 21.7
     },
-    { 
-      channel: 'SMS', 
-      sent: 45, 
-      delivered: 44, 
-      opened: 42, 
+    {
+      channel: 'SMS',
+      sent: 45,
+      delivered: 44,
+      opened: 42,
       clicked: 18,
       deliveryRate: 97.8,
       openRate: 95.5,
@@ -183,7 +183,7 @@ const mockAnalytics: NotificationAnalytics = {
 export const NotificationsDashboard: React.FC = () => {
   const { stats, loading } = useNotifications();
   const { isConnected, messagesReceived } = useNotificationsRealtime();
-  
+
   // Hook otimizado para dados de notificações
   const {
     notifications,
@@ -197,7 +197,7 @@ export const NotificationsDashboard: React.FC = () => {
     markAllAsRead,
     refreshNotifications
   } = useNotificationsOptimized();
-  
+
   const [selectedPeriod, setSelectedPeriod] = useState('30d');
   const [selectedModule, setSelectedModule] = useState<string>('all');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
@@ -215,23 +215,23 @@ export const NotificationsDashboard: React.FC = () => {
     info: '#06b6d4'
   };
 
-  // Usar analytics otimizado ou fallback para mock
-  const currentAnalytics = optimizedAnalytics || mockAnalytics;
+  // Usar analytics otimizado ou fallback para mock com cast de tipo
+  const currentAnalytics = (optimizedAnalytics as unknown as NotificationAnalytics) || mockAnalytics;
 
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard de Notificações</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard de Notificações</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             Analytics e métricas do sistema de notificações
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-[110px] sm:w-[130px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -242,14 +242,14 @@ export const NotificationsDashboard: React.FC = () => {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-1" />
-            Exportar
+          <Button variant="outline" size="sm" className="h-9">
+            <Download className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Exportar</span>
           </Button>
 
-          <Button variant="outline" size="sm" onClick={refreshNotifications}>
-            <RefreshCw className="h-4 w-4 mr-1" />
-            Atualizar
+          <Button variant="outline" size="sm" onClick={refreshNotifications} className="h-9">
+            <RefreshCw className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Atualizar</span>
           </Button>
         </div>
       </div>
@@ -259,12 +259,12 @@ export const NotificationsDashboard: React.FC = () => {
 
       {/* Gráficos e Analytics */}
       <Tabs defaultValue="trends" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="trends">Tendências</TabsTrigger>
-          <TabsTrigger value="distribution">Distribuição</TabsTrigger>
-          <TabsTrigger value="channels">Canais</TabsTrigger>
-          <TabsTrigger value="engagement">Engajamento</TabsTrigger>
-          <TabsTrigger value="realtime">Tempo Real</TabsTrigger>
+        <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1">
+          <TabsTrigger value="trends" className="whitespace-nowrap px-3 text-xs sm:text-sm">Tendências</TabsTrigger>
+          <TabsTrigger value="distribution" className="whitespace-nowrap px-3 text-xs sm:text-sm">Distribuição</TabsTrigger>
+          <TabsTrigger value="channels" className="whitespace-nowrap px-3 text-xs sm:text-sm">Canais</TabsTrigger>
+          <TabsTrigger value="engagement" className="whitespace-nowrap px-3 text-xs sm:text-sm">Engajamento</TabsTrigger>
+          <TabsTrigger value="realtime" className="whitespace-nowrap px-3 text-xs sm:text-sm">Tempo Real</TabsTrigger>
         </TabsList>
 
         {/* Tendências */}
@@ -288,29 +288,29 @@ export const NotificationsDashboard: React.FC = () => {
                     <YAxis />
                     <Tooltip />
                     <Legend />
-                    <Area 
-                      type="monotone" 
-                      dataKey="total" 
+                    <Area
+                      type="monotone"
+                      dataKey="total"
                       stackId="1"
-                      stroke={colors.primary} 
+                      stroke={colors.primary}
                       fill={colors.primary}
                       fillOpacity={0.6}
                       name="Total"
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="unread" 
+                    <Area
+                      type="monotone"
+                      dataKey="unread"
                       stackId="2"
-                      stroke={colors.warning} 
+                      stroke={colors.warning}
                       fill={colors.warning}
                       fillOpacity={0.6}
                       name="Não Lidas"
                     />
-                    <Area 
-                      type="monotone" 
-                      dataKey="critical" 
+                    <Area
+                      type="monotone"
+                      dataKey="critical"
                       stackId="3"
-                      stroke={colors.danger} 
+                      stroke={colors.danger}
                       fill={colors.danger}
                       fillOpacity={0.8}
                       name="Críticas"
@@ -398,7 +398,7 @@ export const NotificationsDashboard: React.FC = () => {
                   {currentAnalytics.priorityDistribution.map((item, index) => (
                     <div key={index} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div 
+                        <div
                           className="w-4 h-4 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
@@ -408,8 +408,8 @@ export const NotificationsDashboard: React.FC = () => {
                         <span className="text-sm text-muted-foreground">
                           {item.count} notificações
                         </span>
-                        <Progress 
-                          value={(item.count / currentAnalytics.totalNotifications) * 100} 
+                        <Progress
+                          value={(item.count / currentAnalytics.totalNotifications) * 100}
                           className="w-20"
                         />
                       </div>

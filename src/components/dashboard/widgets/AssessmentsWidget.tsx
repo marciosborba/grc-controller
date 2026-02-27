@@ -30,7 +30,7 @@ export const AssessmentsWidget = () => {
             {/* Watermark Icon */}
             <FileSpreadsheet className="absolute -right-12 -top-12 h-64 w-64 text-primary/5 rotate-12 pointer-events-none" />
 
-            <CardHeader className="pb-2 pt-6 px-6 relative z-10">
+            <CardHeader className="pb-1 pt-3 sm:pt-5 px-3 sm:px-5 relative z-10">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="p-1 sm:p-1.5 rounded-md bg-indigo-500/10 border border-indigo-500/20">
@@ -43,7 +43,7 @@ export const AssessmentsWidget = () => {
                     </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-2 sm:mt-3">
                     <div className="flex items-baseline gap-2">
                         <span className="text-3xl sm:text-4xl font-bold text-foreground tracking-tighter">{participationRate}%</span>
                         <span className="text-xs sm:text-sm font-medium text-muted-foreground">Taxa de Resposta</span>
@@ -54,15 +54,15 @@ export const AssessmentsWidget = () => {
                 </div>
             </CardHeader>
 
-            <CardContent className="px-2 sm:px-4 sm:px-6 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
-                <div className="flex-1 w-full min-h-0 mt-2 sm:mt-0 relative">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={100}>
+            <CardContent className="px-3 sm:px-5 pb-2 sm:pb-4 relative z-10 flex-1 flex flex-col min-h-0">
+                <div className="flex-1 w-full min-h-0 mt-1 relative">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={110}>
                         <RadialBarChart
                             cx="50%"
-                            cy="50%"
-                            innerRadius="70%"
-                            outerRadius="100%"
-                            barSize={12}
+                            cy="55%"
+                            innerRadius="60%"
+                            outerRadius="90%"
+                            barSize={10}
                             data={chartData}
                             startAngle={90}
                             endAngle={-270}
@@ -78,7 +78,7 @@ export const AssessmentsWidget = () => {
                             />
                         </RadialBarChart>
                     </ResponsiveContainer>
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col mt-4 sm:mt-0">
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none flex-col">
                         <span className="text-xl sm:text-2xl font-bold text-indigo-500">89</span>
                         <span className="text-[9px] sm:text-[10px] uppercase font-bold text-muted-foreground">Respondidos</span>
                     </div>

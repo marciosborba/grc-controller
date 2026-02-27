@@ -42,11 +42,11 @@ import {
   Mail
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { 
-  Notification, 
-  NotificationPriority, 
-  NotificationStatus, 
-  NotificationModule 
+import type {
+  Notification,
+  NotificationPriority,
+  NotificationStatus,
+  NotificationModule
 } from '@/types/notifications';
 
 interface ExpandableNotificationCardProps {
@@ -143,8 +143,8 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
   return (
     <Card className={cn(
       "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden",
-      isExpanded 
-        ? "shadow-lg border-primary/30" 
+      isExpanded
+        ? "shadow-lg border-primary/30"
         : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border",
       notification.status === 'unread' && "border-l-4 border-l-blue-500",
       isSelected && "ring-2 ring-primary",
@@ -152,126 +152,132 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <CardHeader className="pb-3 cursor-pointer relative z-10 group/header">
+          <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-3 cursor-pointer relative z-10 group/header">
             {/* Hover Effect Gradient for Header */}
-            <div 
-              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+            <div
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none"
               style={{
                 background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
               }}
             />
-            <div className="flex items-center justify-between gap-4 relative z-10">
-              {/* Left Section - Checkbox e Info */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={onSelect}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-shrink-0"
-                  />
-                  {isExpanded ? 
-                    <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
-                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  }
-                </div>
-                
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                  priorityConfig[notification.priority].color
-                )}>
-                  <PriorityIcon className="h-5 w-5" />
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className={cn(
-                      "font-medium text-sm truncate",
-                      notification.status === 'unread' && "font-semibold"
-                    )}>
-                      {notification.title}
-                    </h3>
-                    {notification.isSticky && (
-                      <Badge variant="outline" className="text-xs flex-shrink-0">
-                        Fixado
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{moduleConfig[notification.module].label}</span>
-                    <span>•</span>
-                    <span className="truncate">{formatDate(notification.createdAt)}</span>
-                    {notification.metadata.dueDate && (
-                      <>
-                        <span>•</span>
-                        <span className={cn(
-                          "truncate",
-                          new Date(notification.metadata.dueDate) < new Date() && "text-red-600 dark:text-red-400"
-                        )}>
-                          Vence {formatDate(notification.metadata.dueDate)}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
+            <div className="flex items-start gap-3 relative z-10">
+              {/* Checkbox + chevron */}
+              <div className="flex items-center gap-1 pt-0.5 flex-shrink-0">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={onSelect}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-shrink-0"
+                />
+                {isExpanded ?
+                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> :
+                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                }
               </div>
-              
-              {/* Center Section - Message Preview */}
-              <div className="flex-1 min-w-0 hidden md:block">
+
+              {/* Ícone de prioridade */}
+              <div className={cn(
+                "w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0",
+                priorityConfig[notification.priority].color
+              )}>
+                <PriorityIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              </div>
+
+              {/* Conteúdo principal */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                      <div className="flex items-center gap-2">
+                        <h3 className={cn(
+                          "font-medium text-sm sm:text-base leading-tight truncate",
+                          notification.status === 'unread' && "font-semibold text-foreground",
+                          notification.status !== 'unread' && "text-muted-foreground sm:text-foreground"
+                        )}>
+                          {notification.title}
+                        </h3>
+                        {notification.isSticky && (
+                          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 py-0 h-4 sm:h-5 flex-shrink-0">
+                            Fixado
+                          </Badge>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-0 flex-wrap">
+                        <Badge variant="secondary" className={cn("text-[10px] px-1.5 py-0 h-4 sm:hidden", moduleConfig[notification.module].color)}>
+                          {moduleConfig[notification.module].label}
+                        </Badge>
+                        <span className="hidden sm:inline">{moduleConfig[notification.module].label}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>{formatDate(notification.createdAt)}</span>
+                        {notification.metadata.dueDate && (
+                          <>
+                            <span>•</span>
+                            <span className={cn(
+                              new Date(notification.metadata.dueDate) < new Date() && "text-red-600 dark:text-red-400 font-medium"
+                            )}>
+                              Vence {formatDate(notification.metadata.dueDate)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {/* Preview da mensagem — visível no mobile */}
+                    <p className={cn(
+                      "text-xs mt-1.5 truncate sm:hidden leading-snug",
+                      notification.status === 'unread' ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      {notification.message}
+                    </p>
+                  </div>
+
+                  {/* Badge + menu */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <Badge
+                      variant="outline"
+                      className={cn("text-xs hidden sm:flex", statusConfig[notification.status].color)}
+                    >
+                      <StatusIcon className="h-3 w-3 mr-1" />
+                      {notification.status === 'unread' ? 'Não lida' :
+                        notification.status === 'read' ? 'Lida' :
+                          notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
+                    </Badge>
+                    {!isExpanded && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 flex-shrink-0">
+                            <MoreVertical className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={handleMarkAsRead}>
+                            {notification.status === 'unread' ? (
+                              <><Eye className="h-4 w-4 mr-2" />Marcar como lida</>
+                            ) : (
+                              <><EyeOff className="h-4 w-4 mr-2" />Marcar como não lida</>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleArchive}>
+                            <Archive className="h-4 w-4 mr-2" />
+                            Arquivar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+
+                {/* Preview desktop */}
                 <p className={cn(
-                  "text-sm line-clamp-2 text-center",
+                  "text-xs mt-1.5 line-clamp-1 hidden sm:block",
                   notification.status === 'unread' ? "text-foreground" : "text-muted-foreground"
                 )}>
                   {notification.message}
                 </p>
-              </div>
-              
-              {/* Right Section - Status e Actions */}
-              <div className="text-right flex-shrink-0">
-                <div className="flex items-center gap-2 mb-1 justify-end">
-                  <Badge 
-                    variant="outline" 
-                    className={cn("text-xs", statusConfig[notification.status].color)}
-                  >
-                    <StatusIcon className="h-3 w-3 mr-1" />
-                    {notification.status === 'unread' ? 'Não lida' : 
-                     notification.status === 'read' ? 'Lida' :
-                     notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1 justify-end">
-                  {notification.actions && notification.actions.length > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {notification.actions.length} ação(ões)
-                    </span>
-                  )}
-                  {!isExpanded && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                          <MoreVertical className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={handleMarkAsRead}>
-                          {notification.status === 'unread' ? (
-                            <><Eye className="h-4 w-4 mr-2" />Marcar como lida</>
-                          ) : (
-                            <><EyeOff className="h-4 w-4 mr-2" />Marcar como não lida</>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleArchive}>
-                          <Archive className="h-4 w-4 mr-2" />
-                          Arquivar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
               </div>
             </div>
           </CardHeader>
@@ -284,35 +290,32 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
               <div className="flex flex-wrap gap-1 bg-muted/50 p-1 rounded-lg border overflow-x-auto">
                 <button
                   onClick={() => setActiveSection('details')}
-                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeSection === 'details' 
-                      ? 'bg-background shadow-sm text-foreground border border-border' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                  }`}
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeSection === 'details'
+                    ? 'bg-background shadow-sm text-foreground border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }`}
                 >
                   <Info className="h-3 w-3 sm:h-4 sm:w-4" />
                   Detalhes
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('metadata')}
-                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeSection === 'metadata' 
-                      ? 'bg-background shadow-sm text-foreground border border-border' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                  }`}
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeSection === 'metadata'
+                    ? 'bg-background shadow-sm text-foreground border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }`}
                 >
                   <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
                   Metadados
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('actions')}
-                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeSection === 'actions' 
-                      ? 'bg-background shadow-sm text-foreground border border-border' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                  }`}
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeSection === 'actions'
+                    ? 'bg-background shadow-sm text-foreground border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }`}
                 >
                   <Target className="h-3 w-3 sm:h-4 sm:w-4" />
                   Ações
@@ -322,14 +325,13 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
                     </Badge>
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('history')}
-                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeSection === 'history' 
-                      ? 'bg-background shadow-sm text-foreground border border-border' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                  }`}
+                  className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${activeSection === 'history'
+                    ? 'bg-background shadow-sm text-foreground border border-border'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }`}
                 >
                   <History className="h-3 w-3 sm:h-4 sm:w-4" />
                   Histórico
@@ -340,89 +342,91 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
               {/* 1. DETALHES */}
               {activeSection === 'details' && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b border-border">
-                    <h4 className="text-lg font-semibold text-foreground">DETALHES DA NOTIFICAÇÃO</h4>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-border">
+                    <h4 className="text-sm sm:text-base font-semibold text-foreground">DETALHES DA NOTIFICAÇÃO</h4>
                     {canEdit && (
-                      <div className="flex items-center gap-2">
+                      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={handleMarkAsRead}
+                          className="text-xs h-8 col-span-2 sm:col-span-1 w-full sm:w-auto"
                         >
                           {notification.status === 'unread' ? (
-                            <><Eye className="h-4 w-4 mr-2" />Marcar como lida</>
+                            <><Eye className="h-3 w-3 mr-1" />Marcar lida</>
                           ) : (
-                            <><EyeOff className="h-4 w-4 mr-2" />Marcar como não lida</>
+                            <><EyeOff className="h-3 w-3 mr-1" />Não lida</>
                           )}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={handleArchive}
+                          className="text-xs h-8 w-full sm:w-auto"
                         >
-                          <Archive className="h-4 w-4 mr-2" />
+                          <Archive className="h-3 w-3 mr-1" />
                           Arquivar
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={handleDelete}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-xs h-8 text-red-600 hover:text-red-700 w-full sm:w-auto"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                          <Trash2 className="h-3 w-3 mr-1" />
                           Excluir
                         </Button>
                       </div>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-6">
-                      <div className="p-4 bg-muted/30 rounded-lg border">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Título</Label>
-                        <p className="text-sm font-semibold text-foreground mt-1">{notification.title}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-4">
+                      <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                        <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Título</Label>
+                        <p className="text-sm font-semibold text-foreground mt-1 break-words">{notification.title}</p>
                       </div>
-                      
-                      <div className="p-4 bg-muted/30 rounded-lg border">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Módulo</Label>
+
+                      <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                        <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Módulo</Label>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge className={moduleConfig[notification.module].color}>
                             {moduleConfig[notification.module].label}
                           </Badge>
                         </div>
                       </div>
-                      
-                      <div className="p-4 bg-muted/30 rounded-lg border">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo</Label>
+
+                      <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                        <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo</Label>
                         <p className="text-sm font-medium mt-1 capitalize">{notification.type}</p>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
-                      <div className="p-4 bg-muted/30 rounded-lg border">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Status & Prioridade</Label>
-                        <div className="space-y-3 mt-2">
+                    <div className="space-y-4">
+                      <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                        <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Status & Prioridade</Label>
+                        <div className="space-y-2 mt-2">
                           <div className="flex items-center gap-2">
                             <StatusIcon className="h-4 w-4" />
                             <Badge className={cn("text-xs", statusConfig[notification.status].color)}>
-                              {notification.status === 'unread' ? 'Não lida' : 
-                               notification.status === 'read' ? 'Lida' :
-                               notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
+                              {notification.status === 'unread' ? 'Não lida' :
+                                notification.status === 'read' ? 'Lida' :
+                                  notification.status === 'archived' ? 'Arquivada' : 'Descartada'}
                             </Badge>
                           </div>
                           <div className="flex items-center gap-2">
                             <PriorityIcon className="h-4 w-4" />
                             <Badge className={cn("text-xs", priorityConfig[notification.priority].color)}>
                               {notification.priority === 'low' ? 'Baixa' :
-                               notification.priority === 'medium' ? 'Média' :
-                               notification.priority === 'high' ? 'Alta' : 'Crítica'}
+                                notification.priority === 'medium' ? 'Média' :
+                                  notification.priority === 'high' ? 'Alta' : 'Crítica'}
                             </Badge>
                           </div>
                         </div>
                       </div>
-                      
-                      <div className="p-4 bg-muted/30 rounded-lg border">
-                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Criada em</Label>
+
+                      <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                        <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Criada em</Label>
                         <p className="text-sm font-medium mt-1">
                           {format(new Date(notification.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
@@ -430,10 +434,10 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
                           {formatDate(notification.createdAt)}
                         </p>
                       </div>
-                      
+
                       {notification.readAt && (
-                        <div className="p-4 bg-muted/30 rounded-lg border">
-                          <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Lida em</Label>
+                        <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                          <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Lida em</Label>
                           <p className="text-sm font-medium mt-1">
                             {format(new Date(notification.readAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
@@ -441,9 +445,9 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
                       )}
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {notification.metadata.dueDate && (
-                        <div className="p-4 bg-muted/30 rounded-lg border">
+                        <div className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
                           <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vencimento</Label>
                           <p className={cn(
                             "text-sm font-medium mt-1",
@@ -496,27 +500,27 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
 
               {/* 2. METADADOS */}
               {activeSection === 'metadata' && (
-                <div className="space-y-6">
-                  <div className="pb-4 border-b border-border">
-                    <h4 className="text-lg font-semibold text-foreground">METADADOS</h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="pb-3 sm:pb-4 border-b border-border">
+                    <h4 className="text-sm sm:text-base font-semibold text-foreground">METADADOS</h4>
                   </div>
-                  
+
                   {Object.keys(notification.metadata).length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {Object.entries(notification.metadata).map(([key, value]) => {
                         if (key === 'dueDate') return null; // Já mostrado na seção de detalhes
-                        
+
                         return (
-                          <div key={key} className="p-4 bg-muted/30 rounded-lg border">
-                            <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          <div key={key} className="p-3 sm:p-4 bg-muted/30 rounded-lg border">
+                            <Label className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">
                               {key === 'assessmentId' ? 'Assessment ID' :
-                               key === 'riskId' ? 'Risk ID' :
-                               key === 'workflowStage' ? 'Etapa do Workflow' :
-                               key === 'userId' ? 'Usuário' :
-                               key === 'entityId' ? 'Entidade' :
-                               key}
+                                key === 'riskId' ? 'Risk ID' :
+                                  key === 'workflowStage' ? 'Etapa do Workflow' :
+                                    key === 'userId' ? 'Usuário' :
+                                      key === 'entityId' ? 'Entidade' :
+                                        key}
                             </Label>
-                            <p className="text-sm font-medium mt-1">
+                            <p className="text-xs sm:text-sm font-medium mt-1 break-words">
                               {typeof value === 'string' ? value : JSON.stringify(value)}
                             </p>
                           </div>
@@ -535,34 +539,31 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
 
               {/* 3. AÇÕES */}
               {activeSection === 'actions' && (
-                <div className="space-y-6">
-                  <div className="pb-4 border-b border-border">
-                    <h4 className="text-lg font-semibold text-foreground">AÇÕES DISPONÍVEIS</h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="pb-3 sm:pb-4 border-b border-border">
+                    <h4 className="text-sm sm:text-base font-semibold text-foreground">AÇÕES DISPONÍVEIS</h4>
                   </div>
-                  
+
                   {notification.actions && notification.actions.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {notification.actions.map((action) => (
-                        <div key={action.id} className="p-4 bg-muted/30 rounded-lg border">
-                          <div className="flex items-center justify-between mb-2">
-                            <Label className="text-sm font-medium">{action.label}</Label>
-                            <Badge 
-                              variant={action.type === 'primary' ? 'default' : 
-                                      action.type === 'danger' ? 'destructive' : 'outline'}
-                              className="text-xs"
+                        <div key={action.id} className="p-3 sm:p-4 bg-muted/30 rounded-lg border flex flex-col justify-between">
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-xs sm:text-sm font-medium">{action.label}</Label>
+                            <Badge
+                              variant={action.type === 'primary' ? 'default' :
+                                action.type === 'danger' ? 'destructive' : 'outline'}
+                              className="text-[10px] sm:text-xs"
                             >
                               {action.type === 'primary' ? 'Principal' :
-                               action.type === 'danger' ? 'Perigosa' : 'Secundária'}
+                                action.type === 'danger' ? 'Perigosa' : 'Secundária'}
                             </Badge>
                           </div>
-                          {action.description && (
-                            <p className="text-xs text-muted-foreground mb-3">{action.description}</p>
-                          )}
                           <Button
-                            variant={action.type === 'primary' ? 'default' : 
-                                    action.type === 'danger' ? 'destructive' : 'outline'}
+                            variant={action.type === 'primary' ? 'default' :
+                              action.type === 'danger' ? 'destructive' : 'outline'}
                             size="sm"
-                            className="w-full"
+                            className="w-full mt-auto"
                             onClick={() => onActionClick(notification, action.id)}
                           >
                             {action.label}
@@ -582,32 +583,32 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
 
               {/* 4. HISTÓRICO */}
               {activeSection === 'history' && (
-                <div className="space-y-6">
-                  <div className="pb-4 border-b border-border">
-                    <h4 className="text-lg font-semibold text-foreground">HISTÓRICO</h4>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="pb-3 sm:pb-4 border-b border-border">
+                    <h4 className="text-sm sm:text-base font-semibold text-foreground">HISTÓRICO</h4>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-start gap-3 p-3 sm:p-4 bg-muted/30 rounded-lg border">
                       <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
                         <Bell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Notificação criada</p>
-                        <p className="text-xs text-muted-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-medium truncate">Notificação criada</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
                           {format(new Date(notification.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
                       </div>
                     </div>
 
                     {notification.readAt && (
-                      <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+                      <div className="flex items-start gap-3 p-3 sm:p-4 bg-muted/30 rounded-lg border">
                         <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0">
                           <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">Notificação lida</p>
-                          <p className="text-xs text-muted-foreground">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium truncate">Notificação lida</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
                             {format(new Date(notification.readAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
@@ -615,13 +616,13 @@ const ExpandableNotificationCard: React.FC<ExpandableNotificationCardProps> = ({
                     )}
 
                     {notification.status === 'archived' && (
-                      <div className="flex items-start gap-3 p-4 bg-muted/30 rounded-lg border">
+                      <div className="flex items-start gap-3 p-3 sm:p-4 bg-muted/30 rounded-lg border">
                         <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center flex-shrink-0">
                           <Archive className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">Notificação arquivada</p>
-                          <p className="text-xs text-muted-foreground">Data não disponível</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium truncate">Notificação arquivada</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Data não disponível</p>
                         </div>
                       </div>
                     )}

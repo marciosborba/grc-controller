@@ -166,7 +166,7 @@ export default function ModernDashboard() {
                         <RiskMatrixWidget />
                     </Suspense>
                 </div>
-                <div className="min-h-[300px] sm:h-[400px] lg:h-[900px]">
+                <div className="min-h-[520px] sm:min-h-[500px] lg:h-[900px] h-auto">
                     <Suspense fallback={<WidgetSkeleton />}>
                         <RiskEvolutionWidget />
                     </Suspense>

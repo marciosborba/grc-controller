@@ -1,15 +1,15 @@
 // Serviço para gerenciar Templates de Riscos no Banco de Dados
 import { supabase } from '@/integrations/supabase/client';
-import type { 
-  RiskTemplate, 
-  CreateRiskTemplateDTO, 
-  UpdateRiskTemplateDTO, 
+import type {
+  RiskTemplate,
+  CreateRiskTemplateDTO,
+  UpdateRiskTemplateDTO,
   RiskTemplateFilters,
-  RiskTemplateStats 
+  RiskTemplateStats
 } from '@/types/riskTemplate';
 
 export class RiskTemplateService {
-  
+
   /**
    * Buscar todos os templates com filtros
    */
@@ -18,7 +18,6 @@ export class RiskTemplateService {
       .from('risk_templates')
       .select(`
         *,
-        controls:risk_template_controls(id, control_description, control_order),
         kris:risk_template_kris(id, kri_description, kri_order),
         tags:risk_template_tags(id, tag),
         userRatings:risk_template_ratings(id, user_id, rating, created_at)
@@ -30,27 +29,27 @@ export class RiskTemplateService {
     if (filters?.category) {
       query = query.eq('category', filters.category);
     }
-    
+
     if (filters?.industry) {
       query = query.eq('industry', filters.industry);
     }
-    
+
     if (filters?.riskLevel) {
       query = query.eq('risk_level', filters.riskLevel);
     }
-    
+
     if (filters?.isPopular !== undefined) {
       query = query.eq('is_popular', filters.isPopular);
     }
-    
+
     if (filters?.alexRiskSuggested !== undefined) {
       query = query.eq('alex_risk_suggested', filters.alexRiskSuggested);
     }
-    
+
     if (filters?.minRating) {
       query = query.gte('rating', filters.minRating);
     }
-    
+
     if (filters?.createdBy) {
       query = query.eq('created_by', filters.createdBy);
     }
@@ -61,7 +60,7 @@ export class RiskTemplateService {
     }
 
     const { data, error } = await query;
-    
+
     if (error) {
       console.error('Erro ao buscar templates:', error);
       throw new Error('Falha ao carregar templates de risco');
@@ -78,7 +77,6 @@ export class RiskTemplateService {
       .from('risk_templates')
       .select(`
         *,
-        controls:risk_template_controls(id, control_description, control_order),
         kris:risk_template_kris(id, kri_description, kri_order),
         tags:risk_template_tags(id, tag),
         userRatings:risk_template_ratings(id, user_id, rating, created_at)
@@ -99,7 +97,7 @@ export class RiskTemplateService {
    */
   static async createTemplate(templateData: CreateRiskTemplateDTO): Promise<RiskTemplate> {
     const templateId = `${templateData.category.toLowerCase().substring(0, 3)}-${Date.now()}`;
-    
+
     // Iniciar transação
     const { data: template, error: templateError } = await supabase
       .from('risk_templates')
@@ -375,10 +373,10 @@ export class RiskTemplateService {
 
     // Agrupar por categoria
     templates.forEach(template => {
-      stats.templatesByCategory[template.category] = 
+      stats.templatesByCategory[template.category] =
         (stats.templatesByCategory[template.category] || 0) + 1;
-      
-      stats.templatesByRiskLevel[template.risk_level] = 
+
+      stats.templatesByRiskLevel[template.risk_level] =
         (stats.templatesByRiskLevel[template.risk_level] || 0) + 1;
     });
 
@@ -454,7 +452,7 @@ export class RiskTemplateService {
 
       await supabase
         .from('risk_templates')
-        .update({ 
+        .update({
           rating: roundedRating,
           total_ratings: ratings.length,
           is_popular: ratings.length >= 10 && roundedRating >= 4.0
@@ -467,10 +465,10 @@ export class RiskTemplateService {
    * Criar registro de auditoria
    */
   private static async createAuditRecord(
-    templateId: string, 
-    action: string, 
-    changedBy: string, 
-    oldValues: any, 
+    templateId: string,
+    action: string,
+    changedBy: string,
+    oldValues: any,
     newValues: any
   ): Promise<void> {
     await supabase

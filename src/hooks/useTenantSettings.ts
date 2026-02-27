@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useTenantSecurity } from '@/utils/tenantSecurity';
 
 export interface RiskMatrixConfig {
@@ -41,7 +41,7 @@ export interface TenantSettings {
 export const useTenantSettings = (specificTenantId?: string) => {
   const { user } = useAuth();
   const { userTenantId } = useTenantSecurity();
-  
+
   // Usar o tenantId específico se fornecido, senão usar o do usuário
   const targetTenantId = specificTenantId || userTenantId;
 
@@ -102,7 +102,7 @@ export const useTenantSettings = (specificTenantId?: string) => {
           settings.risk_matrix.type = '5x5';
         }
       }
-      
+
       return settings;
     },
     enabled: !!user && !!targetTenantId,
@@ -142,7 +142,7 @@ export const useTenantSettings = (specificTenantId?: string) => {
     if (risk_matrix.risk_levels.high.includes(score)) return 'Alto';
     if (risk_matrix.risk_levels.medium.includes(score)) return 'Médio';
     if (risk_matrix.risk_levels.low.includes(score)) return 'Baixo';
-    
+
     return risk_matrix.type === '4x4' ? 'Baixo' : 'Muito Baixo';
   };
 
@@ -176,19 +176,25 @@ export const useTenantSettings = (specificTenantId?: string) => {
     return { rows: 5, cols: 5 };
   };
 
-  // Função para obter os níveis de risco corretos
-  const getRiskLevels = () => {
+  // Função para obter os níveis de risco corretos de forma exata e não repetida
+  const getRiskLevels = (): ('Muito Baixo' | 'Baixo' | 'Médio' | 'Alto' | 'Muito Alto' | 'Crítico')[] => {
     if (!tenantSettings?.risk_matrix) {
-      return ['Baixo', 'Médio', 'Alto', 'Crítico']; // Usar padrão 5x5 com Crítico
+      // Padrão 5x5:
+      return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
     }
 
-    const { type } = tenantSettings.risk_matrix;
-    if (type === '4x4') {
-      return ['Baixo', 'Médio', 'Alto', 'Crítico'];
-    } else if (type === '3x3') {
+    const { type, risk_levels } = tenantSettings.risk_matrix;
+
+    // Identifica se usa 'Crítico' ou 'Muito Alto' pela presença do nível 'critical' ou dependendo do tipo da matriz
+    const highestLevel = risk_levels.critical ? 'Crítico' : 'Muito Alto';
+
+    if (type === '3x3') {
       return ['Baixo', 'Médio', 'Alto'];
+    } else if (type === '4x4') {
+      return ['Baixo', 'Médio', 'Alto', 'Crítico'];
     }
-    return ['Baixo', 'Médio', 'Alto', 'Crítico']; // 5x5 também usa Crítico
+    // 5x5
+    return ['Muito Baixo', 'Baixo', 'Médio', 'Alto', highestLevel];
   };
 
   // Função para obter configuração do questionário SI
@@ -196,10 +202,10 @@ export const useTenantSettings = (specificTenantId?: string) => {
     if (tenantSettings?.si_questionnaire) {
       return tenantSettings.si_questionnaire;
     }
-    
+
     // Configuração padrão se não existir
     const defaultAnswers = ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'];
-    
+
     return {
       probability_questions: [
         {
@@ -277,7 +283,7 @@ export const useTenantSettings = (specificTenantId?: string) => {
     if (tenantSettings?.supplier_questionnaire) {
       return tenantSettings.supplier_questionnaire;
     }
-    
+
     // Configuração padrão para Risco de Fornecedor
     return {
       probability_questions: [
@@ -364,7 +370,7 @@ export const useTenantSettings = (specificTenantId?: string) => {
 
     const { error } = await supabase
       .from('tenants')
-      .update({ 
+      .update({
         settings: updatedSettings,
         updated_at: new Date().toISOString()
       })
@@ -391,7 +397,7 @@ export const useTenantSettings = (specificTenantId?: string) => {
 
     const { error } = await supabase
       .from('tenants')
-      .update({ 
+      .update({
         settings: updatedSettings,
         updated_at: new Date().toISOString()
       })

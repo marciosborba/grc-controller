@@ -191,8 +191,8 @@ export const RiskEvolutionWidget = () => {
 
                     <div className="flex-1 p-0 flex flex-col min-h-0">
 
-                        {/* TOP: EVOLUTION AREA CHART (50%) */}
-                        <div className="flex-1 p-3 sm:p-4 lg:p-5 border-b border-white/5 relative group flex flex-col min-h-[220px] sm:min-h-[200px]">
+                        {/* TOP: EVOLUTION AREA CHART */}
+                        <div className="flex-1 p-3 sm:p-4 lg:p-5 border-b border-white/5 relative group flex flex-col min-h-[180px] sm:min-h-[200px]">
                             <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
                             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2 relative z-10 shrink-0">
@@ -238,7 +238,7 @@ export const RiskEvolutionWidget = () => {
                                                 strokeWidth={2}
                                                 fill={`url(#color-${level.id.replace(/\s+/g, '-')})`}
                                                 animationDuration={1500}
-                                                animationBegin={index * 200} // Staggered animation
+                                                animationBegin={index * 200}
                                                 activeDot={{ r: 5, strokeWidth: 0, fill: level.color, className: "animate-pulse" }}
                                             />
                                         ))}
@@ -247,8 +247,8 @@ export const RiskEvolutionWidget = () => {
                             </div>
                         </div>
 
-                        {/* BOTTOM: TREATMENT STATUS DONUT (50%) */}
-                        <div className="flex-1 p-0 flex flex-col min-h-[200px] sm:min-h-0 border-l border-border/5 dark:border-white/5 dark:bg-gradient-to-t dark:from-black/20 to-transparent">
+                        {/* BOTTOM: TREATMENT STATUS DONUT */}
+                        <div className="flex-1 p-0 flex flex-col min-h-[280px] sm:min-h-0 border-l border-border/5 dark:border-white/5 dark:bg-gradient-to-t dark:from-black/20 to-transparent">
                             <div className="p-3 sm:p-5 pb-0 flex items-center justify-between">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2 shrink-0">
                                     <PieChartIcon className="w-3 h-3 text-blue-500" /> Status de Resposta
@@ -263,9 +263,9 @@ export const RiskEvolutionWidget = () => {
                                             activeShape={renderActiveShape}
                                             data={treatmentData}
                                             cx="50%"
-                                            cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={75}
+                                            cy="45%"
+                                            innerRadius={45}
+                                            outerRadius={68}
                                             paddingAngle={2}
                                             dataKey="value"
                                             onMouseEnter={(_, index) => setActiveIndex(index)}
@@ -289,7 +289,7 @@ export const RiskEvolutionWidget = () => {
                                             iconSize={6}
                                             wrapperStyle={{ bottom: '10px', fontSize: '10px' }}
                                             content={({ payload }) => (
-                                                <ul className="flex flex-wrap justify-center gap-3 w-full px-4">
+                                                <ul className="flex flex-wrap justify-center gap-2 sm:gap-3 w-full px-4">
                                                     {payload?.map((entry: any, index: number) => (
                                                         <li key={`item-${index}`} className="flex items-center gap-1.5 cursor-pointer hover:opacity-100 opacity-60 transition-opacity">
                                                             <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: entry.color }} />

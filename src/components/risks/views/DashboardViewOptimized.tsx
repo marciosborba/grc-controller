@@ -1,4 +1,4 @@
-import React, { useMemo, memo, lazy, Suspense } from 'react';
+import React, { useMemo, memo, lazy, Suspense, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import {
 import type { Risk, RiskMetrics, RiskFilters } from '@/types/risk-management';
 
 // Lazy loading dos gráficos pesados
-const RiskCharts = lazy(() => import('./components/RiskCharts'));
+const RiskCharts = lazy(() => import('./RiskCharts'));
 
 interface DashboardViewProps {
   risks: Risk[];
@@ -40,6 +40,9 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
   searchTerm,
   filters = {}
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   // Filtrar riscos baseado nos filtros e busca
   const filteredRisks = useMemo(() => {
     return risks.filter(risk => {
@@ -47,8 +50,8 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         if (!risk.name.toLowerCase().includes(term) &&
-            !risk.description?.toLowerCase().includes(term) &&
-            !risk.category.toLowerCase().includes(term)) {
+          !risk.description?.toLowerCase().includes(term) &&
+          !risk.category.toLowerCase().includes(term)) {
           return false;
         }
       }
@@ -72,46 +75,50 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
     });
   }, [risks, searchTerm, filters]);
 
+  const totalItems = filteredRisks.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const currentItems = filteredRisks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Funções utilitárias memoizadas
   const getRiskLevelBadgeStyle = useMemo(() => (level: string) => {
     switch (level) {
       case 'Crítico':
-      case 'Muito Alto': 
+      case 'Muito Alto':
         return {
           backgroundColor: '#dc2626',
           color: '#ffffff',
           borderColor: '#dc2626',
           borderWidth: '1px'
         };
-      case 'Alto': 
+      case 'Alto':
         return {
           backgroundColor: '#ea580c',
           color: '#ffffff',
           borderColor: '#ea580c',
           borderWidth: '1px'
         };
-      case 'Médio': 
+      case 'Médio':
         return {
           backgroundColor: '#ca8a04',
           color: '#ffffff',
           borderColor: '#ca8a04',
           borderWidth: '1px'
         };
-      case 'Baixo': 
+      case 'Baixo':
         return {
           backgroundColor: '#16a34a',
           color: '#ffffff',
           borderColor: '#16a34a',
           borderWidth: '1px'
         };
-      case 'Muito Baixo': 
+      case 'Muito Baixo':
         return {
           backgroundColor: '#64748b',
           color: '#ffffff',
           borderColor: '#64748b',
           borderWidth: '1px'
         };
-      default: 
+      default:
         return {
           backgroundColor: '#6b7280',
           color: '#ffffff',
@@ -165,7 +172,7 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
   }, []);
 
   // Top riscos por prioridade
-  const topRisks = useMemo(() => 
+  const topRisks = useMemo(() =>
     filteredRisks
       .sort((a, b) => b.riskScore - a.riskScore)
       .slice(0, 5),
@@ -180,16 +187,16 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
         <Card className="md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <BarChartIcon className="h-5 w-5" />
-              <span>Distribuição por Nível de Risco</span>
+              <Target className="h-5 w-5" />
+              <span>Distribuição por Categoria</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             <Suspense fallback={<ChartLoader />}>
-              <RiskCharts 
-                data={filteredRisks} 
-                type="level-distribution"
-                height={200}
+              <RiskCharts
+                data={filteredRisks}
+                type="category-distribution"
+                height={Math.max(250, Object.keys(filteredRisks.reduce((acc, r) => ({ ...acc, [r.category]: 1 }), {})).length * 35 + 40)}
               />
             </Suspense>
           </CardContent>
@@ -203,31 +210,31 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
               <span>Top 5 Riscos</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             <div className="space-y-3">
               {topRisks.map((risk, index) => (
-                <div key={risk.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                <div key={risk.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 gap-2 overflow-hidden">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-xs font-bold text-muted-foreground">#{index + 1}</span>
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs"
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold text-muted-foreground">#{index + 1}</span>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 h-4 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={getRiskLevelBadgeStyle(risk.riskLevel)}
                       >
                         {risk.riskLevel}
                       </Badge>
                     </div>
-                    <p className="text-sm font-medium truncate">{risk.name}</p>
-                    <p className="text-xs text-muted-foreground">{risk.category}</p>
+                    <p className="text-xs sm:text-sm font-medium truncate" title={risk.name}>{risk.name}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate" title={risk.category}>{risk.category}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">{risk.riskScore}</p>
-                    <p className="text-xs text-muted-foreground">Score</p>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm sm:text-base font-bold">{risk.riskScore}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Score</p>
                   </div>
                 </div>
               ))}
-              
+
               {topRisks.length === 0 && (
                 <div className="text-center py-4">
                   <Shield className="mx-auto h-8 w-8 text-green-500 mb-2" />
@@ -245,15 +252,15 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Target className="h-5 w-5" />
-              <span>Distribuição por Categoria</span>
+              <BarChartIcon className="h-5 w-5" />
+              <span>Distribuição por Nível de Risco</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             <Suspense fallback={<ChartLoader />}>
-              <RiskCharts 
-                data={filteredRisks} 
-                type="category-distribution"
+              <RiskCharts
+                data={filteredRisks}
+                type="level-distribution"
                 height={250}
               />
             </Suspense>
@@ -267,10 +274,10 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
               <span>Evolução de Riscos</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             <Suspense fallback={<ChartLoader />}>
-              <RiskCharts 
-                data={filteredRisks} 
+              <RiskCharts
+                data={filteredRisks}
                 type="trend-analysis"
                 height={250}
               />
@@ -298,18 +305,18 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredRisks.slice(0, 10).map((risk) => (
+            {currentItems.map((risk) => (
               <div key={risk.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                 <div className="flex items-center space-x-4 flex-1 min-w-0">
                   <div className={`p-2 rounded-lg ${getRiskLevelIconBg(risk.riskLevel)}`}>
                     <AlertTriangle className={`h-4 w-4 ${getRiskLevelIconColor(risk.riskLevel)}`} />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
                       <h4 className="font-medium truncate">{risk.name}</h4>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className="text-xs"
                         style={getRiskLevelBadgeStyle(risk.riskLevel)}
                       >
@@ -325,26 +332,26 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Badge className={getStatusColor(risk.status)}>
                     {risk.status}
                   </Badge>
-                  
+
                   {risk.assignedTo && (
                     <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                       <Users className="h-3 w-3" />
                       <span>{risk.assignedTo}</span>
                     </div>
                   )}
-                  
+
                   <Button variant="ghost" size="sm">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
-            
+
             {filteredRisks.length === 0 && (
               <div className="text-center py-12">
                 <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -352,7 +359,7 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
                   Nenhum risco encontrado
                 </h3>
                 <p className="text-muted-foreground">
-                  {searchTerm || Object.keys(filters || {}).length > 0 
+                  {searchTerm || Object.keys(filters || {}).length > 0
                     ? 'Tente ajustar os filtros ou termo de busca'
                     : 'Nenhum risco foi identificado ainda'
                   }
@@ -360,6 +367,38 @@ export const DashboardViewOptimized: React.FC<DashboardViewProps> = memo(({
               </div>
             )}
           </div>
+
+          {/* Controles de Paginação */}
+          {totalItems > itemsPerPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t gap-2">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} riscos
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="h-7 px-2 text-xs"
+                >
+                  Anterior
+                </Button>
+                <span className="text-xs font-medium px-2 py-1 bg-muted rounded">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-7 px-2 text-xs"
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

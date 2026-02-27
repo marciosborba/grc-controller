@@ -7,10 +7,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
   Brain,
   FileText,
   Target,
@@ -28,11 +28,12 @@ import {
   AlertTriangle,
   TrendingUp,
   Library,
-  Copy
+  Copy,
+  Plus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { RiskRegistrationData } from './wizard/RiskRegistrationWizard';
 import { RiskLibraryFixed } from './shared/RiskLibraryFixed';
 import type { RiskTemplate as DBRiskTemplate } from '@/types/riskTemplate';
@@ -72,7 +73,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
   onCancel
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
-  const [registrationData, setRegistrationData] = useState<RiskRegistrationData>({});
+  const [registrationData, setRegistrationData] = useState<RiskRegistrationData & Record<string, any>>({});
   const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -83,14 +84,14 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     probabilityLabels: ['Raro', 'Improvável', 'Possível', 'Provável', 'Quase Certo'],
     riskLevels: {}
   });
-  
+
   // Estados específicos para etapas
   const [actionPlanItems, setActionPlanItems] = useState<any[]>([]);
   const [stakeholders, setStakeholders] = useState<any[]>([]);
-  
+
   // Estados para biblioteca de riscos
   const [showRiskLibrary, setShowRiskLibrary] = useState(false);
-  
+
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -98,7 +99,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     {
       id: 1,
       title: 'Identificação',
-      description: 'Alex Risk te ajuda a identificar e descrever o risco',
+      description: 'O Assistente te ajuda a identificar e descrever o risco',
       icon: FileText,
       alexPrompt: 'Vamos começar identificando seu risco. Descreva brevemente a situação e eu te ajudarei a refiná-la.'
     },
@@ -153,7 +154,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
   useEffect(() => {
     const loadMatrixConfiguration = async () => {
       if (!user?.tenantId) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('tenants')
@@ -162,7 +163,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
           .single();
 
         if (error) throw error;
-        
+
         const riskMatrixConfig = data?.settings?.risk_matrix;
         if (riskMatrixConfig) {
           setMatrixConfig({
@@ -189,7 +190,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
   const createNewRiskRegistration = async () => {
     if (!user?.tenantId || !user?.id || registrationId) return;
-    
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -205,16 +206,16 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         .single();
 
       if (error) throw error;
-      
+
       setRegistrationId(data.id);
       toast({
-        title: '✨ Alex Risk Ativado',
+        title: '✨ Assistente Ativado',
         description: 'Vamos começar o processo guiado de registro de risco.',
       });
-      
+
       // Gerar sugestões iniciais
       await generateAlexSuggestions(1, {});
-      
+
     } catch (error) {
       console.error('Erro ao criar registro:', error);
       toast({
@@ -243,10 +244,10 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
       setRegistrationData(prev => ({ ...prev, ...templateData }));
       setShowRiskLibrary(false);
-      
+
       // Gerar sugestões baseadas no template aplicado
       await generateAlexSuggestions(currentStep, templateData);
-      
+
       toast({
         title: 'Template Aplicado',
         description: `Template "${template.name}" carregado com sucesso`,
@@ -293,25 +294,25 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         advice: 'Avalie riscos específicos da cadeia de suprimentos. Ideal para fornecedores e terceirização.'
       }
     };
-    
+
     return methodologies[methodologyId] || { name: 'Desconhecida', advice: 'Metodologia não reconhecida.' };
   };
 
   const generateAlexSuggestions = async (step: number, data: Partial<RiskRegistrationData>): Promise<void> => {
     setIsAnalyzing(true);
-    
+
     try {
       // Simular análise de IA (em produção seria uma chamada real para IA)
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       const suggestions = await getStepSuggestions(step, data);
       setAlexSuggestions(suggestions);
-      
+
     } catch (error) {
       console.error('Erro ao gerar sugestões:', error);
       setAlexSuggestions([{
         type: 'warning',
-        title: 'Alex Temporariamente Indisponível',
+        title: 'Assistente Temporariamente Indisponível',
         content: 'Não consegui gerar sugestões no momento. Continue preenchendo e eu tentarei ajudar mais tarde.',
         severity: 'medium'
       }]);
@@ -320,7 +321,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     }
   };
 
-  const getStepSuggestions = async (step: number, data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
+  const getStepSuggestions = async (step: number, data: Partial<RiskRegistrationData> & Record<string, any>): Promise<AlexRiskSuggestion[]> => {
     switch (step) {
       case 1: // Identificação
         return [
@@ -346,7 +347,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
             severity: 'medium'
           }
         ];
-      
+
       case 2: // Análise
         const suggestions: AlexRiskSuggestion[] = [
           {
@@ -375,7 +376,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         }
 
         return suggestions;
-      
+
       case 3: // GUT
         return [
           {
@@ -385,7 +386,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
             severity: 'high'
           }
         ];
-      
+
       case 4: // Estratégia
         const strategy = determineOptimalStrategy(data);
         return [
@@ -396,7 +397,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
             severity: 'high'
           }
         ];
-      
+
       case 5: // Plano de Ação
         if (data.treatment_strategy === 'accept') {
           return [{
@@ -407,13 +408,13 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
           }];
         }
         return await generateActionPlanSuggestions(data);
-      
+
       case 6: // Comunicação
         return await generateStakeholderSuggestions(data);
-      
+
       case 7: // Monitoramento
         return await generateMonitoringSuggestions(data);
-      
+
       default:
         return [];
     }
@@ -422,7 +423,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
   const analyzeRiskImpact = async (description: string): Promise<string> => {
     // Análise simplificada baseada em palavras-chave
     const keywords = description.toLowerCase();
-    
+
     if (keywords.includes('financeiro') || keywords.includes('monetário') || keywords.includes('custo')) {
       return 'Detectei impacto financeiro. Considere valores específicos de perdas potenciais.';
     }
@@ -435,13 +436,13 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     if (keywords.includes('legal') || keywords.includes('regulatório') || keywords.includes('compliance')) {
       return 'Impacto regulatório identificado. Verifique multas e sanções aplicáveis.';
     }
-    
+
     return 'Analise o impacto considerando aspectos financeiros, operacionais, reputacionais e de conformidade.';
   };
 
   const determineOptimalStrategy = (data: Partial<RiskRegistrationData>): string => {
     const riskScore = data.risk_score || 0;
-    
+
     if (riskScore >= 20) return 'EVITAR - Risco muito alto';
     if (riskScore >= 15) return 'MITIGAR - Implementar controles';
     if (riskScore >= 10) return 'TRANSFERIR - Considerar seguros';
@@ -450,7 +451,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
   const generateActionPlanSuggestions = async (data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
     const suggestions: AlexRiskSuggestion[] = [];
-    
+
     if (data.treatment_strategy === 'mitigate') {
       suggestions.push({
         type: 'suggestion',
@@ -459,14 +460,14 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         severity: 'high'
       });
     }
-    
+
     suggestions.push({
       type: 'improvement',
       title: 'Cronograma Inteligente',
       content: 'Vou sugerir prazos realistas baseados na complexidade das atividades e recursos disponíveis.',
       severity: 'medium'
     });
-    
+
     return suggestions;
   };
 
@@ -489,7 +490,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
   const generateMonitoringSuggestions = async (data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
     const frequency = data.risk_level === 'Alto' || data.risk_level === 'Muito Alto' ? 'mensal' : 'trimestral';
-    
+
     return [
       {
         type: 'suggestion',
@@ -506,19 +507,19 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     ];
   };
 
-  const updateRegistrationData = useCallback((newData: Partial<RiskRegistrationData>) => {
+  const updateRegistrationData = useCallback((newData: Partial<RiskRegistrationData> & Record<string, any>) => {
     const updatedData = { ...registrationData, ...newData };
     setRegistrationData(updatedData);
-    
+
     // Salvar automaticamente
     if (registrationId) {
       saveToSupabase(updatedData);
     }
-    
+
     // Gerar novas sugestões se houve mudança significativa
     const significantFields = ['risk_description', 'risk_category', 'treatment_strategy'];
     const hasSignificantChange = significantFields.some(field => newData[field as keyof RiskRegistrationData]);
-    
+
     if (hasSignificantChange) {
       generateAlexSuggestions(currentStep, updatedData);
     }
@@ -526,7 +527,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
   const saveToSupabase = async (data: RiskRegistrationData) => {
     if (!registrationId) return;
-    
+
     try {
       const { error } = await supabase
         .from('risk_registrations')
@@ -561,7 +562,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
     toast({
       title: '✅ Etapa Concluída',
-      description: `Avançando com Alex Risk...`,
+      description: `Avançando com o Assistente...`,
     });
   };
 
@@ -713,7 +714,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
       if (error) throw error;
 
       toast({
-        title: '🎉 Processo Concluído com Alex Risk',
+        title: '🎉 Processo Concluído com o Assistente',
         description: `Risco "${registrationData.risk_title}" foi registrado com sucesso.`,
       });
 
@@ -741,10 +742,10 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     if (suggestion.action) {
       suggestion.action();
     }
-    
+
     // Remover sugestão aplicada
     setAlexSuggestions(prev => prev.filter(s => s !== suggestion));
-    
+
     toast({
       title: '✨ Sugestão Aplicada',
       description: 'Alex Risk otimizou sua entrada.',
@@ -757,24 +758,24 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Alex Risk está se preparando...</p>
+            <p className="text-muted-foreground">O Assistente está se preparando...</p>
           </div>
         </div>
       );
     }
 
     return (
-      <div className="space-y-6">
-        {/* Alex Risk Prompt */}
-        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+      <div className="space-y-6 w-full max-w-full overflow-hidden">
+        {/* Assistente Prompt */}
+        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 w-full overflow-hidden">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-3">
               <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/50">
                 <Brain className="h-5 w-5 text-purple-600" />
               </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-purple-900 dark:text-purple-100 mb-2">Alex Risk</h4>
-                <p className="text-purple-700 dark:text-purple-200">{currentStepData?.alexPrompt}</p>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h4 className="font-medium text-purple-900 dark:text-purple-100 mb-2 truncate">Assistente IA</h4>
+                <p className="text-purple-700 dark:text-purple-200 text-sm whitespace-pre-wrap break-words">{currentStepData?.alexPrompt}</p>
               </div>
               {isAnalyzing && (
                 <RefreshCw className="h-4 w-4 text-purple-600 animate-spin" />
@@ -783,18 +784,17 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
           </CardContent>
         </Card>
 
-        {/* Sugestões do Alex */}
+        {/* Sugestões do Assistente */}
         {alexSuggestions.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 w-full overflow-hidden">
             {alexSuggestions.map((suggestion, index) => (
-              <Card key={index} className={`border-l-4 ${
-                suggestion.severity === 'high' ? 'border-l-red-500' :
+              <Card key={index} className={`w-full overflow-hidden border-l-4 ${suggestion.severity === 'high' ? 'border-l-red-500' :
                 suggestion.severity === 'medium' ? 'border-l-yellow-500' :
-                'border-l-blue-500'
-              }`}>
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1">
+                  'border-l-blue-500'
+                }`}>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-start justify-between gap-3 min-w-0">
+                    <div className="flex items-start space-x-3 flex-1 min-w-0">
                       <div className="p-1 rounded-full bg-purple-100 dark:bg-purple-900/50">
                         {suggestion.type === 'warning' ? (
                           <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -804,21 +804,23 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                           <Lightbulb className="h-4 w-4 text-purple-600" />
                         )}
                       </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-sm mb-1">{suggestion.title}</h5>
-                        <p className="text-sm text-muted-foreground">{suggestion.content}</p>
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <h5 className="font-medium text-sm mb-1 truncate">{suggestion.title}</h5>
+                        <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap break-words">{suggestion.content}</p>
                       </div>
                     </div>
                     {suggestion.action && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => applyAlexSuggestion(suggestion)}
-                        className="ml-2"
-                      >
-                        <Zap className="h-3 w-3 mr-1" />
-                        Aplicar
-                      </Button>
+                      <div className="flex-shrink-0 self-end sm:self-auto w-full sm:w-auto">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => applyAlexSuggestion(suggestion)}
+                          className="w-full sm:w-auto"
+                        >
+                          <Zap className="h-3 w-3 mr-1" />
+                          Aplicar
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -856,13 +858,13 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   className="w-full max-w-full"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">
                   Categoria do Risco <span className="text-red-500">*</span>
                 </label>
-                <Select 
-                  value={registrationData.risk_category || ''} 
+                <Select
+                  value={registrationData.risk_category || ''}
                   onValueChange={(value) => updateRegistrationData({ risk_category: value })}
                 >
                   <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -880,7 +882,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                   <label className="block text-sm font-medium">
                     Descrição Detalhada <span className="text-red-500">*</span>
                   </label>
@@ -891,8 +893,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                     onClick={() => setShowRiskLibrary(true)}
                     className="text-xs h-7"
                   >
-                    <Library className="h-3 w-3 mr-1" />
-                    Carregar da Biblioteca
+                    <Library className="h-3 w-3 mr-1 flex-shrink-0" />
+                    <span className="truncate">Carregar Biblioteca</span>
                   </Button>
                 </div>
                 <Textarea
@@ -923,8 +925,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   <label className="block text-sm font-medium mb-2">
                     Selecione a Metodologia <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={registrationData.methodology_id || ''} 
+                  <Select
+                    value={registrationData.methodology_id || ''}
                     onValueChange={(value) => updateRegistrationData({ methodology_id: value })}
                   >
                     <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -961,11 +963,11 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                         <label className="block text-xs font-medium mb-1">
                           Impacto <span className="text-red-500">*</span>
                         </label>
-                        <Select 
-                          value={registrationData.impact_score?.toString() || ''} 
+                        <Select
+                          value={registrationData.impact_score?.toString() || ''}
                           onValueChange={(value) => {
                             const score = parseInt(value);
-                            updateRegistrationData({ 
+                            updateRegistrationData({
                               impact_score: score,
                               risk_score: score * (registrationData.likelihood_score || 1)
                             });
@@ -988,11 +990,11 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                         <label className="block text-xs font-medium mb-1">
                           Probabilidade <span className="text-red-500">*</span>
                         </label>
-                        <Select 
-                          value={registrationData.likelihood_score?.toString() || ''} 
+                        <Select
+                          value={registrationData.likelihood_score?.toString() || ''}
                           onValueChange={(value) => {
                             const score = parseInt(value);
-                            updateRegistrationData({ 
+                            updateRegistrationData({
                               likelihood_score: score,
                               probability_score: score,
                               risk_score: (registrationData.impact_score || 1) * score
@@ -1054,8 +1056,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                         <label className="block text-xs font-medium mb-1">
                           Função NIST Afetada <span className="text-red-500">*</span>
                         </label>
-                        <Select 
-                          value={registrationData.nist_function || ''} 
+                        <Select
+                          value={registrationData.nist_function || ''}
                           onValueChange={(value) => updateRegistrationData({ nist_function: value })}
                         >
                           <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1070,14 +1072,14 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs font-medium mb-1">
                             Nível de Impacto Cibernético <span className="text-red-500">*</span>
                           </label>
-                          <Select 
-                            value={registrationData.cyber_impact?.toString() || ''} 
+                          <Select
+                            value={registrationData.cyber_impact?.toString() || ''}
                             onValueChange={(value) => updateRegistrationData({ cyber_impact: parseInt(value) })}
                           >
                             <SelectTrigger className="w-full text-xs h-8">
@@ -1096,8 +1098,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                           <label className="block text-xs font-medium mb-1">
                             Probabilidade de Ameaça <span className="text-red-500">*</span>
                           </label>
-                          <Select 
-                            value={registrationData.threat_likelihood?.toString() || ''} 
+                          <Select
+                            value={registrationData.threat_likelihood?.toString() || ''}
                             onValueChange={(value) => updateRegistrationData({ threat_likelihood: parseInt(value) })}
                           >
                             <SelectTrigger className="w-full text-xs h-8">
@@ -1124,7 +1126,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                         <span className="font-medium">Metodologia Selecionada</span>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        A configuração completa para esta metodologia será implementada em breve. 
+                        A configuração completa para esta metodologia será implementada em breve.
                         Por enquanto, use a análise qualitativa padrão.
                       </p>
                     </div>
@@ -1169,8 +1171,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   <label className="block text-xs font-medium mb-1">
                     Gravidade <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={registrationData.gut_gravity?.toString() || ''} 
+                  <Select
+                    value={registrationData.gut_gravity?.toString() || ''}
                     onValueChange={(value) => updateRegistrationData({ gut_gravity: parseInt(value) })}
                   >
                     <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1190,8 +1192,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   <label className="block text-xs font-medium mb-1">
                     Urgência <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={registrationData.gut_urgency?.toString() || ''} 
+                  <Select
+                    value={registrationData.gut_urgency?.toString() || ''}
                     onValueChange={(value) => updateRegistrationData({ gut_urgency: parseInt(value) })}
                   >
                     <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1211,8 +1213,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   <label className="block text-xs font-medium mb-1">
                     Tendência <span className="text-red-500">*</span>
                   </label>
-                  <Select 
-                    value={registrationData.gut_tendency?.toString() || ''} 
+                  <Select
+                    value={registrationData.gut_tendency?.toString() || ''}
                     onValueChange={(value) => updateRegistrationData({ gut_tendency: parseInt(value) })}
                   >
                     <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1264,8 +1266,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                 <label className="block text-sm font-medium mb-2">
                   Estratégia Recomendada <span className="text-red-500">*</span>
                 </label>
-                <Select 
-                  value={registrationData.treatment_strategy || ''} 
+                <Select
+                  value={registrationData.treatment_strategy || ''}
                   onValueChange={(value) => updateRegistrationData({ treatment_strategy: value })}
                 >
                   <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1307,7 +1309,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                       className="w-full max-w-full text-xs p-2"
                     />
                   </div>
-                  
+
                   <div className="min-w-0 w-full">
                     <label className="block text-xs font-medium mb-1">
                       Prazo para Implementação
@@ -1347,9 +1349,9 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Alex Risk sugere as seguintes atividades baseadas na sua estratégia:
+                      O Assistente sugere as seguintes atividades baseadas na sua estratégia:
                     </p>
-                    
+
                     <div className="space-y-3">
                       {/* Atividades sugeridas */}
                       <div className="p-3 border border-dashed rounded-lg bg-purple-50">
@@ -1362,8 +1364,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                         </p>
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
                           <span className="text-xs text-muted-foreground">Prazo sugerido: 30 dias</span>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => {
                               const newAction = {
@@ -1386,7 +1388,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="p-3 border border-dashed rounded-lg bg-purple-50">
                         <div className="flex items-center space-x-2 text-purple-700 mb-2">
                           <Brain className="h-4 w-4" />
@@ -1397,8 +1399,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                         </p>
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
                           <span className="text-xs text-muted-foreground">Prazo sugerido: 15 dias</span>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => {
                               const newAction = {
@@ -1448,7 +1450,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                           Nova Ação
                         </Button>
                       </div>
-                      
+
                       <div className="space-y-3">
                         {actionPlanItems.map((action, index) => (
                           <div key={action.id} className="p-3 border rounded-lg bg-white">
@@ -1465,7 +1467,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                                   <RefreshCw className="h-3 w-3" />
                                 </Button>
                               </div>
-                              
+
                               <Input
                                 placeholder="Título da ação..."
                                 value={action.title}
@@ -1477,7 +1479,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                                 }}
                                 className="text-xs h-7"
                               />
-                              
+
                               <Textarea
                                 placeholder="Descrição da ação..."
                                 value={action.description}
@@ -1490,7 +1492,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                                 rows={2}
                                 className="text-xs"
                               />
-                              
+
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div>
                                   <label className="text-xs text-muted-foreground">Prazo</label>
@@ -1506,7 +1508,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                                     className="text-xs h-7"
                                   />
                                 </div>
-                                
+
                                 <div>
                                   <label className="text-xs text-muted-foreground">Responsável</label>
                                   <Input
@@ -1548,7 +1550,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                 <p className="text-sm text-muted-foreground mb-4">
                   Alex Risk identificou os seguintes stakeholders que devem ser comunicados:
                 </p>
-                
+
                 <div className="space-y-3">
                   <div className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
@@ -1558,8 +1560,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant="outline">Aprovação</Badge>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             const newStakeholder = {
@@ -1582,7 +1584,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 w-full">
@@ -1591,8 +1593,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant="secondary">Informação</Badge>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             const newStakeholder = {
@@ -1615,7 +1617,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-3 border rounded-lg">
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 w-full">
@@ -1624,8 +1626,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                       </div>
                       <div className="flex items-center space-x-2">
                         <Badge variant="secondary">Informação</Badge>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => {
                             const newStakeholder = {
@@ -1649,7 +1651,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                     </div>
                   </div>
                 </div>
-                
+
                 {stakeholders.length > 0 && (
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-3">
@@ -1729,8 +1731,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   <label className="block text-xs font-medium mb-1">
                     Frequência de Monitoramento
                   </label>
-                  <Select 
-                    value={registrationData.monitoring_frequency || ''} 
+                  <Select
+                    value={registrationData.monitoring_frequency || ''}
                     onValueChange={(value) => updateRegistrationData({ monitoring_frequency: value })}
                   >
                     <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1791,8 +1793,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 w-full max-w-full overflow-hidden">
                   <div className="min-w-0 w-full">
                     <label className="block text-xs font-medium mb-1">Impacto Residual</label>
-                    <Select 
-                      value={registrationData.residual_impact?.toString() || ''} 
+                    <Select
+                      value={registrationData.residual_impact?.toString() || ''}
                       onValueChange={(value) => updateRegistrationData({ residual_impact: parseInt(value) })}
                     >
                       <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1810,8 +1812,8 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
 
                   <div className="min-w-0 w-full">
                     <label className="block text-xs font-medium mb-1">Probabilidade Residual</label>
-                    <Select 
-                      value={registrationData.residual_probability?.toString() || ''} 
+                    <Select
+                      value={registrationData.residual_probability?.toString() || ''}
                       onValueChange={(value) => updateRegistrationData({ residual_probability: parseInt(value) })}
                     >
                       <SelectTrigger className="w-full max-w-full text-xs h-8">
@@ -1850,7 +1852,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
               <div className="text-center">
                 <Sparkles className="h-12 w-12 text-purple-600 mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Alex Risk está preparando esta etapa...
+                  O Assistente está preparando esta etapa...
                 </p>
               </div>
             </CardContent>
@@ -1860,32 +1862,18 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
   };
 
   return (
-    <div 
-      className="space-y-3 lg:space-y-4 w-full max-w-full overflow-hidden box-border px-2"
-      style={{ 
-        maxWidth: '100%', 
-        overflowX: 'hidden',
+    <div
+      className="space-y-3 w-full max-w-[calc(100vw-2rem)] sm:max-w-full min-w-0 box-border px-2 pb-6 overflow-x-hidden"
+      style={{
         wordBreak: 'break-word',
         fontSize: '14px'
       }}
     >
-      {/* Header com Alex Risk Branding */}
-      <div className="space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div>
-            <h2 className="text-lg lg:text-xl font-bold flex items-center space-x-2">
-              <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
-                <Brain className="h-6 w-6 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Análise Alex Risk
-              </span>
-            </h2>
-            <p className="text-xs lg:text-sm text-muted-foreground">
-              Processo inteligente e assistido por IA para registro completo de riscos
-            </p>
-          </div>
-          <Badge variant="secondary" className="text-sm bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 self-start lg:self-auto">
+      {/* Header com Assistente IA Branding */}
+      {/* Header com Progresso */}
+      <div className="space-y-4 w-full min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+          <Badge variant="secondary" className="text-sm bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 self-start">
             <Sparkles className="h-3 w-3 mr-1" />
             Etapa {currentStep} de {steps.length}
           </Badge>
@@ -1894,28 +1882,27 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         {/* Progress Bar */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Progresso com Alex Risk</span>
+            <span>Progresso com o Assistente</span>
             <span>{Math.round(progress)}% concluído</span>
           </div>
           <Progress value={progress} className="h-3" />
         </div>
 
-        {/* Steps Navigation - Visual similar ao wizard original */}
-        <div className="flex items-center justify-start space-x-1 overflow-x-auto pb-2 w-full" style={{ maxWidth: 'calc(100vw - 40px)' }}>
+        {/* Steps Navigation - Visual responsivo com scroll */}
+        <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-hide snap-x w-full max-w-full" style={{ scrollSnapType: 'x mandatory' }}>
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = step.id === currentStep;
             const isCompleted = step.id < currentStep;
-            
+
             return (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-1 p-2 rounded-lg transition-all whitespace-nowrap text-xs ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : isCompleted 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                      : 'bg-muted text-muted-foreground'
-                }`}>
+              <div key={step.id} className="flex items-center snap-center shrink-0">
+                <div className={`flex items-center space-x-1 px-3 py-2 rounded-full transition-all whitespace-nowrap text-xs ${isActive
+                  ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-md font-medium'
+                  : isCompleted
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                    : 'bg-muted text-muted-foreground'
+                  }`}>
                   {isCompleted ? (
                     <CheckCircle className="h-4 w-4" />
                   ) : (
@@ -1999,9 +1986,9 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
               <span>Biblioteca de Riscos - Templates e Modelos</span>
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="py-4">
-            <RiskLibraryFixed 
+            <RiskLibraryFixed
               onSelectTemplate={handleSelectTemplate}
             />
           </div>

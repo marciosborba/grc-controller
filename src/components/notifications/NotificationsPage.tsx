@@ -276,15 +276,14 @@ export const NotificationsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Notificações</h1>
-          <div className="flex items-center gap-3 mt-2">
-            <p className="text-muted-foreground text-sm sm:text-base">
+          <h1 className="text-lg sm:text-2xl font-bold truncate">Notificações</h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-muted-foreground text-xs sm:text-sm">
               Gerencie notificações e workflow dos processos
             </p>
-            {/* Indicador de conexão em tempo real */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <div className={cn(
                 "w-2 h-2 rounded-full",
                 isConnected ? "bg-green-500 animate-pulse" :
@@ -338,7 +337,6 @@ export const NotificationsPage: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
               <DropdownMenuItem onClick={markAllAsRead}>
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -473,35 +471,38 @@ export const NotificationsPage: React.FC = () => {
       {/* Ações em lote */}
       {selectedNotifications.length > 0 && (
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                {selectedNotifications.length} notificação(ões) selecionada(s)
+          <CardContent className="p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                {selectedNotifications.length} selecionada(s)
               </span>
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 sm:flex gap-2">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleBulkAction('read')}
+                  className="text-xs px-2"
                 >
-                  <Eye className="h-4 w-4 mr-1" />
-                  Marcar como lida
+                  <Eye className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Lida</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleBulkAction('archive')}
+                  className="text-xs px-2"
                 >
-                  <Archive className="h-4 w-4 mr-1" />
-                  Arquivar
+                  <Archive className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Arquivar</span>
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => handleBulkAction('delete')}
+                  className="text-xs px-2"
                 >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Excluir
+                  <Trash2 className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Excluir</span>
                 </Button>
               </div>
             </div>
@@ -512,26 +513,31 @@ export const NotificationsPage: React.FC = () => {
       {/* Content */}
       <div className="space-y-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              Todas ({stats.total})
+          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1">
+            <TabsTrigger value="all" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <Bell className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Todas</span>
+              <span className="hidden sm:inline">({stats.total})</span>
             </TabsTrigger>
-            <TabsTrigger value="unread" className="flex items-center gap-2">
-              <EyeOff className="h-4 w-4" />
-              Não lidas ({stats.unread})
+            <TabsTrigger value="unread" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Não lidas</span>
+              <span className="hidden sm:inline">({stats.unread})</span>
             </TabsTrigger>
-            <TabsTrigger value="important" className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Importantes ({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})
+            <TabsTrigger value="important" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Imp.</span>
+              <span className="hidden sm:inline">ortantes ({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})</span>
             </TabsTrigger>
-            <TabsTrigger value="archived" className="flex items-center gap-2">
-              <Archive className="h-4 w-4" />
-              Arquivadas ({stats.byStatus.archived || 0})
+            <TabsTrigger value="archived" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Arquiv.</span>
+              <span className="hidden sm:inline">adas ({stats.byStatus.archived || 0})</span>
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Configurações
+            <TabsTrigger value="preferences" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
+              <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span>Config.</span>
+              <span className="hidden sm:inline">urações</span>
             </TabsTrigger>
           </TabsList>
 
