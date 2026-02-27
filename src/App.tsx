@@ -19,6 +19,7 @@ import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltra
 import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ScrollToTop from "@/components/ScrollToTop";
 // Lazy import for GeneralSettingsPage to reduce initial bundle size
 const GeneralSettingsPage = lazy(() => import("@/components/general-settings/GeneralSettingsPage").then(module => ({ default: module.GeneralSettingsPage })));
 
@@ -306,6 +307,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
+                  <ScrollToTop />
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={

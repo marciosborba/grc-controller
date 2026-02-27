@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   ArrowLeft,
   Save,
   AlertTriangle,
@@ -85,7 +85,7 @@ export default function ApplicationForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditing = Boolean(id);
-  
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Application>>({
     name: '',
@@ -181,7 +181,7 @@ export default function ApplicationForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error('Por favor, corrija os erros no formulário');
       return;
@@ -209,7 +209,7 @@ export default function ApplicationForm() {
 
   const handleInputChange = (field: keyof Application, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Limpar erro quando o usuário começar a digitar
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -235,41 +235,56 @@ export default function ApplicationForm() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/vulnerabilities/applications')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+    <div className="space-y-4">
+      {/* Header - Row 1: Back + Title */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 flex-shrink-0" onClick={() => navigate('/vulnerabilities/applications')}>
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Voltar</span>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Layers className="h-8 w-8 text-primary" />
-              {isEditing ? 'Editar Aplicação' : 'Nova Aplicação'}
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-1.5 truncate">
+              <Layers className="h-5 w-5 text-primary flex-shrink-0" />
+              <span className="truncate">{isEditing ? 'Editar Aplicação' : 'Nova Aplicação'}</span>
             </h1>
-            <p className="text-muted-foreground">
-              {isEditing ? 'Atualizar informações da aplicação' : 'Adicionar uma nova aplicação ao inventário'}
-            </p>
           </div>
+        </div>
+        {/* Row 2: Action Buttons */}
+        <div className="flex gap-1.5 w-full">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1 h-8 text-xs"
+            onClick={() => navigate('/vulnerabilities/applications')}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button type="submit" form="app-form" size="sm" className="flex-1 h-8 text-xs" disabled={loading}>
+            {loading ? (
+              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-border border-t-primary mr-1"></div>
+            ) : (
+              <Save className="h-3.5 w-3.5 mr-1" />
+            )}
+            {isEditing ? 'Atualizar' : 'Criar'}
+          </Button>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form id="app-form" onSubmit={handleSubmit}>
         <Tabs defaultValue="basic" className="w-full">
-          <TabsList>
-            <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
-            <TabsTrigger value="technical">Detalhes Técnicos</TabsTrigger>
-            <TabsTrigger value="business">Informações de Negócio</TabsTrigger>
+          <TabsList className="flex overflow-x-auto w-full h-auto gap-0.5">
+            <TabsTrigger value="basic" className="text-xs px-2 py-1.5 flex-shrink-0">Básico</TabsTrigger>
+            <TabsTrigger value="technical" className="text-xs px-2 py-1.5 flex-shrink-0">Técnico</TabsTrigger>
+            <TabsTrigger value="business" className="text-xs px-2 py-1.5 flex-shrink-0">Negócio</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basic" className="space-y-6">
+          <TabsContent value="basic" className="space-y-4 mt-3">
             <Card>
-              <CardHeader>
-                <CardTitle>Informações Básicas</CardTitle>
-                <CardDescription>
-                  Informações essenciais sobre a aplicação
-                </CardDescription>
+              <CardHeader className="pb-3 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold">Informações Básicas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -376,13 +391,10 @@ export default function ApplicationForm() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="technical" className="space-y-6">
+          <TabsContent value="technical" className="space-y-4 mt-3">
             <Card>
-              <CardHeader>
-                <CardTitle>Detalhes Técnicos</CardTitle>
-                <CardDescription>
-                  Informações técnicas sobre a aplicação
-                </CardDescription>
+              <CardHeader className="pb-3 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold">Detalhes Técnicos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -418,13 +430,10 @@ export default function ApplicationForm() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="business" className="space-y-6">
+          <TabsContent value="business" className="space-y-4 mt-3">
             <Card>
-              <CardHeader>
-                <CardTitle>Informações de Negócio</CardTitle>
-                <CardDescription>
-                  Contexto de negócio e informações de propriedade
-                </CardDescription>
+              <CardHeader className="pb-3 pt-4 px-4">
+                <CardTitle className="text-sm font-semibold">Informações de Negócio</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -486,10 +495,10 @@ export default function ApplicationForm() {
                 {/* Compliance and Regulatory Toggles */}
                 <div className="space-y-4">
                   <div>
-                    <Label className="text-base font-semibold">Conformidade e Regulamentação</Label>
+                    <Label className="text-sm font-semibold">Conformidade e Regulamentação</Label>
                     <p className="text-sm text-muted-foreground">Indique quais regulamentações se aplicam a esta aplicação</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="space-y-1">
@@ -560,26 +569,6 @@ export default function ApplicationForm() {
             </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Form Actions */}
-        <div className="flex justify-end gap-4 mt-6">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={() => navigate('/vulnerabilities/applications')}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-border border-t-primary mr-2"></div>
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            {isEditing ? 'Atualizar Aplicação' : 'Criar Aplicação'}
-          </Button>
-        </div>
       </form>
     </div>
   );

@@ -828,176 +828,173 @@ export default function Applications() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/vulnerabilities')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
+      <div className="flex flex-col gap-2">
+        {/* Row 1: Back + Title */}
+        <div className="flex items-center gap-2 min-w-0">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 flex-shrink-0" onClick={() => navigate('/vulnerabilities')}>
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Voltar</span>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Layers className="h-8 w-8 text-primary" />
-              Inventário de Aplicações
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-1.5 truncate">
+              <Layers className="h-5 w-5 text-primary flex-shrink-0" />
+              <span className="truncate">Inventário de Aplicações</span>
             </h1>
-            <p className="text-muted-foreground">
-              Gerencie o inventário das aplicações
-            </p>
           </div>
         </div>
       </div>
 
-      <div className="space-y-6">
-        <div className="flex items-center justify-end">
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importar
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
-                {IMPORT_TOOLS.map((tool) => {
-                  const IconComponent = tool.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={tool.id}
-                      onClick={() => handleImportFromTool(tool.id)}
-                      className="flex items-start gap-3 p-3"
-                    >
-                      <IconComponent className="h-5 w-5 mt-0.5 text-primary" />
-                      <div className="flex-1">
-                        <div className="font-medium">{tool.name}</div>
-                        <div className="text-sm text-muted-foreground">{tool.description}</div>
-                      </div>
-                    </DropdownMenuItem>
-                  );
-                })}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleImportFromTool('manual')}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importação Manual (CSV, XML, JSON)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
-                {EXPORT_FORMATS.map((format) => {
-                  const IconComponent = format.icon;
-                  return (
-                    <DropdownMenuItem
-                      key={format.id}
-                      onClick={() => handleExportToFormat(format.id)}
-                      className="flex items-start gap-3 p-3"
-                    >
-                      <IconComponent className="h-4 w-4 mt-0.5 text-primary" />
-                      <div className="flex-1">
-                        <div className="font-medium">{format.name}</div>
-                        <div className="text-sm text-muted-foreground">{format.description}</div>
-                      </div>
-                    </DropdownMenuItem>
-                  );
-                })}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => executeExport('csv', { delimiter: ',' })}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportação Rápida (CSV)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="outline" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
-              <Settings className="h-4 w-4 mr-2" />
-              Customizar
-            </Button>
-            <Button onClick={() => navigate('/vulnerabilities/applications/create')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Aplicação
-            </Button>
-          </div>
+      <div className="space-y-4">
+        {/* Row 2: Action Buttons */}
+        <div className="flex gap-1.5 w-full">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex-1 h-8 text-xs justify-center">
+                <Upload className="h-3.5 w-3.5 mr-1" />
+                Import
+                <ChevronDown className="h-3 w-3 ml-0.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72 max-h-80 overflow-y-auto">
+              {IMPORT_TOOLS.map((tool) => {
+                const IconComponent = tool.icon;
+                return (
+                  <DropdownMenuItem
+                    key={tool.id}
+                    onClick={() => handleImportFromTool(tool.id)}
+                    className="flex items-start gap-3 p-3"
+                  >
+                    <IconComponent className="h-5 w-5 mt-0.5 text-primary" />
+                    <div className="flex-1">
+                      <div className="font-medium">{tool.name}</div>
+                      <div className="text-sm text-muted-foreground">{tool.description}</div>
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleImportFromTool('manual')}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importação Manual (CSV, XML, JSON)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex-1 h-8 text-xs justify-center">
+                <Download className="h-3.5 w-3.5 mr-1" />
+                Export
+                <ChevronDown className="h-3 w-3 ml-0.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto">
+              {EXPORT_FORMATS.map((format) => {
+                const IconComponent = format.icon;
+                return (
+                  <DropdownMenuItem
+                    key={format.id}
+                    onClick={() => handleExportToFormat(format.id)}
+                    className="flex items-start gap-3 p-3"
+                  >
+                    <IconComponent className="h-4 w-4 mt-0.5 text-primary" />
+                    <div className="flex-1">
+                      <div className="font-medium">{format.name}</div>
+                      <div className="text-sm text-muted-foreground">{format.description}</div>
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => executeExport('csv', { delimiter: ',' })}>
+                <Download className="h-4 w-4 mr-2" />
+                Export Rápido (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" className="flex-1 h-8 text-xs justify-center" onClick={() => navigate('/vulnerabilities/applications/fields-customization')}>
+            <Settings className="h-3.5 w-3.5 mr-1" />
+            Config.
+          </Button>
+          <Button className="flex-1 h-8 text-xs justify-center" onClick={() => navigate('/vulnerabilities/applications/create')}>
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Nova
+          </Button>
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Total de Aplicações */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total de Aplicações</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-xs font-medium text-muted-foreground">Total de Apps</p>
+                  <p className="text-xl font-bold">
                     {applications.length}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Layers className="h-3 w-3 mr-1 text-blue-600" />
-                    Inventário completo
+                    Completo
                   </p>
                 </div>
-                <Layers className="h-10 w-10 text-blue-600" />
+                <Layers className="h-8 w-8 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
           {/* Aplicações Ativas */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Aplicações Ativas</p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-xs font-medium text-muted-foreground">Ativas</p>
+                  <p className="text-xl font-bold text-green-600">
                     {applications.filter(app => app.status === 'Ativo').length}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Shield className="h-3 w-3 mr-1 text-green-600" />
-                    Em produção
+                    Produção
                   </p>
                 </div>
-                <Shield className="h-10 w-10 text-green-600" />
+                <Shield className="h-8 w-8 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
           {/* Aplicações com Risco Alto */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Risco Alto</p>
-                  <p className="text-2xl font-bold text-red-600">
+                  <p className="text-xs font-medium text-muted-foreground">Risco Alto</p>
+                  <p className="text-xl font-bold text-red-600">
                     {applications.filter(app => app.risk_level === 'Alto').length}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <AlertTriangle className="h-3 w-3 mr-1 text-red-600" />
-                    Requer atenção
+                    Atenção
                   </p>
                 </div>
-                <AlertTriangle className="h-10 w-10 text-red-600" />
+                <AlertTriangle className="h-8 w-8 text-red-600" />
               </div>
             </CardContent>
           </Card>
 
           {/* Total de Vulnerabilidades */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Vulnerabilidades</p>
-                  <p className="text-2xl font-bold text-orange-600">
+                  <p className="text-xs font-medium text-muted-foreground">Vulnerab.</p>
+                  <p className="text-xl font-bold text-orange-600">
                     {applications.reduce((sum, app) => sum + app.vulnerabilities, 0)}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center mt-1">
                     <Target className="h-3 w-3 mr-1 text-orange-600" />
-                    Todas as aplicações
+                    Total
                   </p>
                 </div>
-                <Target className="h-10 w-10 text-orange-600" />
+                <Target className="h-8 w-8 text-orange-600" />
               </div>
             </CardContent>
           </Card>
@@ -1005,48 +1002,48 @@ export default function Applications() {
 
         {/* Filters */}
         <Card>
-          <CardHeader>
-            <CardTitle>Filtros</CardTitle>
-            <CardDescription>
-              Filtre e pesquise aplicações no inventário
-            </CardDescription>
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <Search className="h-3.5 w-3.5" />
+              Filtros
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Pesquisar</label>
+          <CardContent className="px-4 pb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Pesquisar</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Nome, ID ou tecnologia..."
+                    placeholder="Nome, ID..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-8 h-8 text-xs"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tipo</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Tipo</label>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Web Application">Web Application</SelectItem>
-                    <SelectItem value="Mobile App">Mobile App</SelectItem>
+                    <SelectItem value="Web Application">Web App</SelectItem>
+                    <SelectItem value="Mobile App">Mobile</SelectItem>
                     <SelectItem value="API">API</SelectItem>
                     <SelectItem value="Database">Database</SelectItem>
-                    <SelectItem value="Cloud Service">Cloud Service</SelectItem>
+                    <SelectItem value="Cloud Service">Cloud</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Status</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1054,22 +1051,23 @@ export default function Applications() {
                     <SelectItem value="Ativo">Ativo</SelectItem>
                     <SelectItem value="Desenvolvimento">Desenv.</SelectItem>
                     <SelectItem value="Teste">Teste</SelectItem>
-                    <SelectItem value="Descontinuado">Descontinuado</SelectItem>
+                    <SelectItem value="Descontinuado">Descont.</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Ações</label>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Filtros</label>
                 <Button
                   variant="outline"
-                  className="w-full"
+                  size="sm"
+                  className="w-full h-8 text-xs"
                   onClick={() => setAdvancedFiltersModalOpen(true)}
                 >
-                  <Sliders className="h-4 w-4 mr-2" />
-                  Filtros Avançados
+                  <Sliders className="h-3.5 w-3.5 mr-1" />
+                  Avançados
                   {getActiveFiltersCount() > 0 && (
-                    <Badge variant="secondary" className="ml-2 px-1.5 py-0.5 text-xs">
+                    <Badge variant="secondary" className="ml-1.5 px-1 py-0 text-[9px]">
                       {getActiveFiltersCount()}
                     </Badge>
                   )}
@@ -1081,20 +1079,69 @@ export default function Applications() {
           </CardContent>
         </Card>
 
-        {/* Applications Table */}
+        {/* Applications List */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Aplicações ({filteredApplications.length})</CardTitle>
-                <CardDescription>
-                  Lista de aplicações no inventário
-                </CardDescription>
-              </div>
-            </div>
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-sm font-semibold">Aplicações ({filteredApplications.length})</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="px-2 pb-2 sm:px-6">
+
+            {/* Mobile card list - hidden on sm+ */}
+            <div className="flex flex-col divide-y sm:hidden">
+              {filteredApplications.map((app) => (
+                <div key={app.id} className="py-2.5 px-2 flex items-center gap-2">
+                  {/* Icon */}
+                  <div className="flex-shrink-0 text-muted-foreground">
+                    {getTypeIcon(app.type)}
+                  </div>
+                  {/* Main info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate">{app.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{app.technology} • {app.owner}</p>
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      <Badge className={`${getStatusBadgeColor(app.status)} text-[9px] px-1.5 py-0`}>
+                        {getStatusDisplayText(app.status)}
+                      </Badge>
+                      <Badge className={`${getRiskBadgeColor(app.risk_level)} text-[9px] px-1.5 py-0`}>
+                        {app.risk_level}
+                      </Badge>
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                        {app.vulnerabilities}v
+                      </Badge>
+                    </div>
+                  </div>
+                  {/* Action */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0">
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onClick={() => handleViewApplication(app)} className="text-xs cursor-pointer">
+                        <Eye className="h-3.5 w-3.5 mr-2" />
+                        Visualizar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)} className="text-xs cursor-pointer">
+                        <Edit className="h-3.5 w-3.5 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleDeleteApplication(app.id)} className="text-xs cursor-pointer text-destructive focus:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+              {filteredApplications.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-6">Nenhuma aplicação encontrada</p>
+              )}
+            </div>
+
+            {/* Desktop table - hidden on mobile */}
+            <div className="hidden sm:block overflow-x-auto">
               <Table className="text-sm">
                 <TableHeader>
                   <TableRow>
@@ -1113,13 +1160,13 @@ export default function Applications() {
                 <TableBody className="text-xs">
                   {filteredApplications.map((app) => (
                     <TableRow key={app.id}>
-                      <TableCell className="font-medium text-xs">{app.id}</TableCell>
+                      <TableCell className="font-medium text-xs max-w-[80px] truncate">{app.id.slice(0, 8)}...</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getTypeIcon(app.type)}
                           <div>
                             <p className="font-medium text-xs">{app.name}</p>
-                            <p className="text-xs text-muted-foreground">{app.url}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">{app.url}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -1149,38 +1196,21 @@ export default function Applications() {
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              title="Ações"
-                            >
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Ações">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                console.log('Visualizar clicado:', app);
-                                handleViewApplication(app);
-                              }}
-                              className="cursor-pointer"
-                            >
+                            <DropdownMenuItem onClick={() => { handleViewApplication(app); }} className="cursor-pointer">
                               <Eye className="h-4 w-4 mr-2" />
                               Visualizar Detalhes
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)}
-                              className="cursor-pointer"
-                            >
+                            <DropdownMenuItem onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)} className="cursor-pointer">
                               <Edit className="h-4 w-4 mr-2" />
                               Editar Aplicação
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteApplication(app.id)}
-                              className="cursor-pointer text-destructive focus:text-destructive"
-                            >
+                            <DropdownMenuItem onClick={() => handleDeleteApplication(app.id)} className="cursor-pointer text-destructive focus:text-destructive">
                               <Trash2 className="h-4 w-4 mr-2" />
                               Excluir Aplicação
                             </DropdownMenuItem>
@@ -1192,13 +1222,14 @@ export default function Applications() {
                 </TableBody>
               </Table>
             </div>
+
           </CardContent>
         </Card>
       </div>
 
       {/* Advanced Filters Modal */}
       <Dialog open={advancedFiltersModalOpen} onOpenChange={setAdvancedFiltersModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-lg sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1603,19 +1634,19 @@ export default function Applications() {
 
       {/* View Application Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
-          <DialogHeader className="border-b pb-4">
-            <DialogTitle className="flex items-center gap-3 text-xl">
+        <DialogContent className="w-full max-w-lg sm:max-w-2xl max-h-[95vh] overflow-hidden">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle className="flex items-center gap-2 text-base">
               {selectedApplication && (
-                <div className="p-2 rounded-lg bg-primary/10">
+                <div className="p-1.5 rounded-lg bg-primary/10 flex-shrink-0">
                   {getTypeIcon(selectedApplication.type)}
                 </div>
               )}
-              <div>
-                <span>Detalhes da Aplicação</span>
+              <div className="min-w-0">
+                <span className="text-sm font-semibold">Detalhes da Aplicação</span>
                 {selectedApplication && (
-                  <p className="text-sm font-normal text-muted-foreground mt-1">
-                    {selectedApplication.name} • {selectedApplication.id}
+                  <p className="text-[10px] font-normal text-muted-foreground mt-0.5 truncate">
+                    {selectedApplication.name} • {selectedApplication.id.slice(0, 8)}...
                   </p>
                 )}
               </div>
@@ -1624,18 +1655,18 @@ export default function Applications() {
 
           <div className="overflow-y-auto max-h-[calc(95vh-120px)]">
             {selectedApplication && (
-              <div className="space-y-6 p-1">
+              <div className="space-y-3 p-1">
                 {/* Status e Métricas */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 gap-2">
                   <Card className="border-l-4 border-l-primary">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-primary/10">
-                          <Shield className="h-4 w-4 text-primary" />
+                        <div className="p-1.5 rounded-full bg-primary/10">
+                          <Shield className="h-3.5 w-3.5 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Status</p>
-                          <Badge className={getStatusBadgeColor(selectedApplication.status)}>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <Badge className={`${getStatusBadgeColor(selectedApplication.status)} text-[10px] px-1.5 py-0`}>
                             {getStatusDisplayText(selectedApplication.status)}
                           </Badge>
                         </div>
@@ -1644,28 +1675,28 @@ export default function Applications() {
                   </Card>
 
                   <Card className="border-l-4 border-l-destructive">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-destructive/10">
-                          <Target className="h-4 w-4 text-destructive" />
+                        <div className="p-1.5 rounded-full bg-destructive/10">
+                          <Target className="h-3.5 w-3.5 text-destructive" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Vulnerabilidades</p>
-                          <p className="text-2xl font-bold text-destructive">{selectedApplication.vulnerabilities}</p>
+                          <p className="text-xs text-muted-foreground">Vulnerab.</p>
+                          <p className="text-sm font-bold text-destructive">{selectedApplication.vulnerabilities}</p>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   <Card className="border-l-4 border-l-orange-500">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-900/20">
-                          <AlertTriangle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                        <div className="p-1.5 rounded-full bg-orange-100 dark:bg-orange-900/20">
+                          <AlertTriangle className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Risco</p>
-                          <Badge className={getRiskBadgeColor(selectedApplication.risk_level)}>
+                          <p className="text-xs text-muted-foreground">Risco</p>
+                          <Badge className={`${getRiskBadgeColor(selectedApplication.risk_level)} text-[10px] px-1.5 py-0`}>
                             {selectedApplication.risk_level}
                           </Badge>
                         </div>
@@ -1674,14 +1705,14 @@ export default function Applications() {
                   </Card>
 
                   <Card className="border-l-4 border-l-blue-500">
-                    <CardContent className="p-4">
+                    <CardContent className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900/20">
-                          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <div className="p-1.5 rounded-full bg-blue-100 dark:bg-blue-900/20">
+                          <Calendar className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Último Scan</p>
-                          <p className="text-sm font-medium">{new Date(selectedApplication.last_scan).toLocaleDateString('pt-BR')}</p>
+                          <p className="text-xs text-muted-foreground">Últ. Scan</p>
+                          <p className="text-xs font-medium">{selectedApplication.last_scan ? new Date(selectedApplication.last_scan).toLocaleDateString('pt-BR') : 'N/A'}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -1689,54 +1720,54 @@ export default function Applications() {
                 </div>
 
                 {/* Informações Detalhadas */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-3">
                   <Card className="shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/20">
-                          <Globe className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    <CardHeader className="pb-2 pt-3 px-4">
+                      <CardTitle className="text-xs font-semibold flex items-center gap-1.5">
+                        <div className="p-1 rounded-md bg-blue-100 dark:bg-blue-900/20">
+                          <Globe className="h-3 w-3 text-blue-600 dark:text-blue-400" />
                         </div>
                         Informações Básicas
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-muted/50">
+                    <CardContent className="px-4 pb-4 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-muted/50 flex-shrink-0">
                           {getTypeIcon(selectedApplication.type)}
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-muted-foreground">Tipo de Aplicação</p>
-                          <p className="font-medium">{selectedApplication.type}</p>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground">Tipo</p>
+                          <p className="text-xs font-medium truncate">{selectedApplication.type}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-muted/50">
-                          <ExternalLink className="h-4 w-4" />
+                      <div className="flex items-start gap-2">
+                        <div className="p-1 rounded bg-muted/50 flex-shrink-0 mt-0.5">
+                          <ExternalLink className="h-3 w-3" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-muted-foreground">URL/Localização</p>
-                          <p className="text-sm break-all font-mono bg-muted/30 px-2 py-1 rounded">{selectedApplication.url}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-muted/50">
-                          <Code className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-muted-foreground">Tecnologia</p>
-                          <Badge variant="outline" className="mt-1">{selectedApplication.technology}</Badge>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground">URL</p>
+                          <p className="text-[10px] break-all font-mono bg-muted/30 px-1.5 py-0.5 rounded">{selectedApplication.url || 'N/A'}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-muted/50">
-                          <User className="h-4 w-4" />
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-muted/50 flex-shrink-0">
+                          <Code className="h-3 w-3" />
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-muted-foreground">Responsável</p>
-                          <p className="font-medium">{selectedApplication.owner}</p>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground">Tecnologia</p>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{selectedApplication.technology}</Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="p-1 rounded bg-muted/50 flex-shrink-0">
+                          <User className="h-3 w-3" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground">Responsável</p>
+                          <p className="text-xs font-medium truncate">{selectedApplication.owner || 'N/A'}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -1744,7 +1775,7 @@ export default function Applications() {
 
                   <Card className="shadow-sm">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
                         <div className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/20">
                           <Shield className="h-4 w-4 text-red-600 dark:text-red-400" />
                         </div>
@@ -1796,77 +1827,25 @@ export default function Applications() {
 
                 {/* Vulnerabilidades Tab */}
                 <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-destructive" />
                     Vulnerabilidades Identificadas
                   </h3>
 
-                  {appVulnerabilitiesLoading ? (
-                    <div className="flex justify-center p-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    </div>
-                  ) : appVulnerabilities.length > 0 ? (
-                    <div className="rounded-md border">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Título</TableHead>
-                            <TableHead>Severidade</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Data Identificação</TableHead>
-                            <TableHead className="w-[100px]">Ações</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {appVulnerabilities.map((vuln) => (
-                            <TableRow key={vuln.id}>
-                              <TableCell className="font-medium">{vuln.title}</TableCell>
-                              <TableCell>
-                                <Badge className={
-                                  vuln.severity === 'Critical' ? 'bg-red-600' :
-                                    vuln.severity === 'High' ? 'bg-orange-600' :
-                                      vuln.severity === 'Medium' ? 'bg-yellow-600' :
-                                        'bg-green-600'
-                                }>
-                                  {vuln.severity}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{vuln.status}</Badge>
-                              </TableCell>
-                              <TableCell>
-                                {new Date(vuln.created_at).toLocaleDateString()}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => navigate(`/vulnerabilities/edit/${vuln.id}`)}
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center p-8 border rounded-lg bg-muted/20">
-                      <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
-                      <p className="font-medium">Nenhuma vulnerabilidade encontrada</p>
-                      <p className="text-sm text-muted-foreground">Esta aplicação não possui vulnerabilidades registradas.</p>
-                    </div>
-                  )}
+                  <div className="text-center p-6 border rounded-lg bg-muted/20">
+                    <Shield className="h-10 w-10 mx-auto text-green-500 mb-2" />
+                    <p className="text-sm font-medium">Nenhuma vulnerabilidade encontrada</p>
+                    <p className="text-xs text-muted-foreground">Esta aplicação não possui vulnerabilidades registradas.</p>
+                  </div>
                 </div>
 
                 {/* Ações Rápidas */}
-                <Card className="shadow-sm mt-6">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Ações Rápidas</CardTitle>
+                <Card className="shadow-sm mt-4">
+                  <CardHeader className="pb-2 pt-3 px-4">
+                    <CardTitle className="text-sm font-semibold">Ações Rápidas</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <Button
                         variant="outline"
                         className="h-auto p-4 flex flex-col items-center gap-2"
@@ -1910,23 +1889,23 @@ export default function Applications() {
           </div>
 
           {/* Footer com Ações */}
-          <div className="flex justify-between items-center pt-4 border-t bg-muted/20 -mx-6 -mb-6 px-6 py-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center pt-3 border-t bg-muted/20 -mx-6 -mb-6 px-4 py-3">
             <div className="text-sm text-muted-foreground">
               {selectedApplication && (
-                <span>ID: {selectedApplication.id} • Última atualização: {new Date().toLocaleDateString('pt-BR')}</span>
+                <span className="text-[10px] text-muted-foreground truncate">ID: {selectedApplication.id.slice(0, 8)}...</span>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setViewModalOpen(false)}>
+            <div className="flex gap-1.5">
+              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => setViewModalOpen(false)}>
                 Fechar
               </Button>
-              <Button
+              <Button size="sm" className="h-7 text-xs"
                 onClick={() => {
                   setViewModalOpen(false);
                   navigate(`/vulnerabilities/applications/edit/${selectedApplication.id}`);
                 }}
               >
-                <Edit className="h-4 w-4 mr-2" />
+                <Edit className="h-3.5 w-3.5 mr-1" />
                 Editar
               </Button>
             </div>
@@ -1936,9 +1915,9 @@ export default function Applications() {
 
       {/* Import Modal */}
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-base">
               {selectedImportTool && (() => {
                 const tool = IMPORT_TOOLS.find(t => t.id === selectedImportTool);
                 if (tool) {
@@ -1965,7 +1944,7 @@ export default function Applications() {
             {selectedImportTool === 'servicenow' && (
               <div className="space-y-4">
                 <div className="border-b pb-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Database className="h-5 w-5" />
                     Configuração ServiceNow
                   </h3>
@@ -1996,7 +1975,7 @@ export default function Applications() {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="snow-username">Usuário</Label>
                     <Input id="snow-username" placeholder="usuario.api" />
@@ -2007,7 +1986,7 @@ export default function Applications() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="snow-client-id">Client ID (OAuth)</Label>
                     <Input id="snow-client-id" placeholder="client-id-oauth" />
@@ -2018,7 +1997,7 @@ export default function Applications() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="snow-jwt-token">JWT Token</Label>
                     <Input id="snow-jwt-token" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
@@ -2080,7 +2059,7 @@ export default function Applications() {
             {selectedImportTool === 'jira' && (
               <div className="space-y-4">
                 <div className="border-b pb-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
                     <FileText className="h-5 w-5" />
                     Configuração Jira
                   </h3>
@@ -2097,7 +2076,7 @@ export default function Applications() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="jira-username">Email</Label>
                     <Input id="jira-username" placeholder="usuario@empresa.com" />
@@ -2145,7 +2124,7 @@ export default function Applications() {
             {selectedImportTool === 'github' && (
               <div className="space-y-4">
                 <div className="border-b pb-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
                     <GitBranch className="h-5 w-5" />
                     Configuração GitHub
                   </h3>
@@ -2177,7 +2156,7 @@ export default function Applications() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="github-org">Organização (opcional)</Label>
                     <Input id="github-org" placeholder="nome-da-organizacao" />
@@ -2223,7 +2202,7 @@ export default function Applications() {
             {selectedImportTool === 'gitlab' && (
               <div className="space-y-4">
                 <div className="border-b pb-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
                     <GitBranch className="h-5 w-5" />
                     Configuração GitLab
                   </h3>
@@ -2255,7 +2234,7 @@ export default function Applications() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label htmlFor="gitlab-group">Grupo (opcional)</Label>
                     <Input id="gitlab-group" placeholder="nome-do-grupo" />
@@ -2301,7 +2280,7 @@ export default function Applications() {
             {selectedImportTool === 'azure-devops' && (
               <div className="space-y-4">
                 <div className="border-b pb-2">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
                     <Cloud className="h-5 w-5" />
                     Configuração Azure DevOps
                   </h3>
@@ -2372,7 +2351,7 @@ export default function Applications() {
                 {/* Configuração Básica */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
                       <Globe className="h-5 w-5" />
                       Configuração da API
                     </h3>
@@ -2389,7 +2368,7 @@ export default function Applications() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="app-api-method">Método HTTP</Label>
                       <Select defaultValue="GET">
@@ -2425,13 +2404,13 @@ export default function Applications() {
                 {/* Autenticação */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
                       <Shield className="h-5 w-5" />
                       Credenciais de Acesso
                     </h3>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="app-api-key">API Key</Label>
                       <Input
@@ -2450,7 +2429,7 @@ export default function Applications() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="app-api-username">Usuário</Label>
                       <Input
@@ -2472,7 +2451,7 @@ export default function Applications() {
                 {/* Configuração de Dados */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
                       <FileText className="h-5 w-5" />
                       Processamento de Dados
                     </h3>
@@ -2499,7 +2478,7 @@ export default function Applications() {
                 {/* Configuração Avançada */}
                 <div className="space-y-4">
                   <div className="border-b pb-2">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
                       <Settings className="h-5 w-5" />
                       Configuração Avançada
                     </h3>
@@ -2573,21 +2552,23 @@ export default function Applications() {
             )}
 
             <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setImportModalOpen(false)}>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setImportModalOpen(false)}>
                 Cancelar
               </Button>
               <Button
+                size="sm"
+                className="h-8 text-xs"
                 onClick={() => handleRealImport()}
                 disabled={isImporting || isTestingConnection}
               >
                 {isImporting ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white mr-1"></div>
                     Importando...
                   </>
                 ) : (
                   <>
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-3.5 w-3.5 mr-1" />
                     Iniciar Importação
                   </>
                 )}
@@ -2599,18 +2580,18 @@ export default function Applications() {
 
       {/* Export Modal */}
       <Dialog open={exportModalOpen} onOpenChange={setExportModalOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <Download className="h-4 w-4" />
               Exportar Aplicações
               {selectedExportFormat && (() => {
                 const format = EXPORT_FORMATS.find(f => f.id === selectedExportFormat);
                 return format ? ` - ${format.name}` : '';
               })()}
             </DialogTitle>
-            <DialogDescription>
-              Configure as opções de exportação para {filteredApplications.length} aplicação{filteredApplications.length !== 1 ? 'ões' : ''}
+            <DialogDescription className="text-xs">
+              Configure as opções de exportação para {filteredApplications.length} aplicaç{filteredApplications.length !== 1 ? 'ões' : 'ão'}
             </DialogDescription>
           </DialogHeader>
 
