@@ -1,9 +1,9 @@
 import React from 'react';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  RefreshCw, 
-  TrendingUp, 
+import {
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  TrendingUp,
   Activity,
   Zap,
   Globe,
@@ -17,11 +17,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import type { 
-  Integration, 
-  IntegrationStats, 
+import type {
+  Integration,
+  IntegrationStats,
   IntegrationLog,
-  ConnectionTestResult 
+  ConnectionTestResult
 } from '@/types/general-settings';
 
 interface IntegrationsStatusDashboardProps {
@@ -63,63 +63,91 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
 
   return (
     <div className="space-y-6">
-      {/* Health Overview */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
-            <CardTitle className="text-xs sm:text-sm font-medium">Status Geral</CardTitle>
-            <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+      {/* Health Overview - Premium Metrics (Identical to IncidentManagementPage style) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        {/* Card 1: Status Geral */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all bg-secondary">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <Activity className="h-24 w-24" />
+          </div>
+          <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-lg font-bold flex items-center gap-1 sm:gap-2 text-primary leading-tight">
+              Status Geral
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <div className={`text-lg sm:text-2xl font-bold ${getHealthColor(healthPercentage)}`}>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className={`text-xl sm:text-3xl font-bold ${getHealthColor(healthPercentage)}`}>
               {getHealthStatus(healthPercentage)}
             </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              {Math.round(healthPercentage)}% das integrações ativas
+            <p className="text-[10px] sm:text-sm text-muted-foreground font-medium leading-tight sm:leading-relaxed mt-1">
+              <span className="text-blue-600 font-bold flex items-center gap-1">
+                <Activity className="h-3 w-3" /> {Math.round(healthPercentage)}%
+              </span>
+              <span className="block mt-0.5 sm:mt-1">integrado</span>
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
-            <CardTitle className="text-xs sm:text-sm font-medium">Conectadas</CardTitle>
-            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl font-bold text-green-600">{connectedCount}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              de {totalCount} integrações
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
-            <CardTitle className="text-xs sm:text-sm font-medium">Com Problemas</CardTitle>
-            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl font-bold text-red-600">
-              {errorCount}
+        {/* Card 2: Conectadas */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-green-500/50 bg-secondary">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <CheckCircle className="h-24 w-24 text-green-500" />
+          </div>
+          <CardContent className="p-3 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 h-full pt-4">
+            <div className="p-1.5 sm:p-3 bg-green-100 dark:bg-green-900/30 rounded-lg sm:rounded-2xl shrink-0">
+              <CheckCircle className="h-4 w-4 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              requerem atenção
-            </p>
+            <div>
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight sm:leading-normal">Conectadas</p>
+              <h3 className="text-xl sm:text-3xl font-bold text-green-600 dark:text-green-500">
+                {connectedCount}
+              </h3>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium leading-tight sm:leading-normal">
+                de {totalCount} total
+              </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-3 sm:p-4">
-            <CardTitle className="text-xs sm:text-sm font-medium">Pendentes</CardTitle>
-            <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4">
-            <div className="text-lg sm:text-2xl font-bold text-yellow-600">
-              {pendingCount}
+        {/* Card 3: Com Problemas */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500/50 bg-secondary">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <AlertCircle className="h-24 w-24 text-red-500" />
+          </div>
+          <CardContent className="p-3 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 h-full pt-4">
+            <div className="p-1.5 sm:p-3 bg-red-100 dark:bg-red-900/30 rounded-lg sm:rounded-2xl shrink-0">
+              <AlertCircle className="h-4 w-4 sm:h-8 sm:w-8 text-red-600 dark:text-red-400" />
             </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">
-              em configuração
-            </p>
+            <div>
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight sm:leading-normal">Com Problemas</p>
+              <h3 className="text-xl sm:text-3xl font-bold text-red-600 dark:text-red-500">
+                {errorCount}
+              </h3>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium leading-tight sm:leading-normal">
+                requerem atenção
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Pendentes */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-orange-500/50 bg-secondary">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <RefreshCw className="h-24 w-24 text-orange-500" />
+          </div>
+          <CardContent className="p-3 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 h-full pt-4">
+            <div className="p-1.5 sm:p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg sm:rounded-2xl shrink-0">
+              <RefreshCw className="h-4 w-4 sm:h-8 sm:w-8 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight sm:leading-normal">Pendentes</p>
+              <h3 className="text-xl sm:text-3xl font-bold text-foreground">
+                {pendingCount}
+              </h3>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 font-medium leading-tight sm:leading-normal">
+                em configuração
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -134,8 +162,8 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
                 Monitoramento em tempo real do status de conectividade
               </CardDescription>
             </div>
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={`${getHealthColor(healthPercentage)} border-current text-xs`}
             >
               {Math.round(healthPercentage)}%
@@ -154,46 +182,51 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
         </CardContent>
       </Card>
 
-      {/* Integration Types Overview */}
-      <Card>
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <Server className="h-4 w-4 sm:h-5 sm:w-5" />
-            Integrações por Categoria
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {[
-              { type: 'api', label: 'APIs', icon: Globe, color: 'blue' },
-              { type: 'email', label: 'E-mail', icon: Mail, color: 'green' },
-              { type: 'sso', label: 'SSO', icon: Shield, color: 'orange' },
-              { type: 'webhook', label: 'Webhooks', icon: Webhook, color: 'indigo' },
-              { type: 'backup', label: 'Backup', icon: Cloud, color: 'cyan' },
-              { type: 'mcp', label: 'MCP', icon: Zap, color: 'purple' }
-            ].map(({ type, label, icon: Icon, color }) => {
-              const count = stats?.by_type?.[type as keyof typeof stats.by_type] || integrations.filter(i => i.type === type).length;
-              const connected = integrations.filter(i => i.type === type && i.status === 'connected').length;
-              
-              return (
-                <div key={type} className="text-center space-y-2">
-                  <div className={`p-2 sm:p-3 bg-${color}-100 dark:bg-${color}-900/20 rounded-lg w-fit mx-auto`}>
-                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 text-${color}-600 dark:text-${color}-400`} />
-                  </div>
-                  <div>
-                    <p className="text-sm sm:text-base font-medium">{connected}/{count}</p>
-                    <p className="text-xs text-muted-foreground">{label}</p>
-                  </div>
+      {/* Integration Categories - Sincronizado e Compacto */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <Server className="h-4 w-4 text-muted-foreground" />
+          Integrações por Categoria
+        </h3>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {[
+            { type: 'api', label: 'APIs', icon: Globe, color: 'blue' },
+            { type: 'email', label: 'E-mail', icon: Mail, color: 'green' },
+            { type: 'sso', label: 'SSO', icon: Shield, color: 'orange' },
+            { type: 'webhook', label: 'Webhooks', icon: Webhook, color: 'indigo' },
+            { type: 'backup', label: 'Backup', icon: Cloud, color: 'cyan' },
+            { type: 'mcp', label: 'MCP', icon: Zap, color: 'purple' }
+          ].map(({ type, label, icon: Icon, color }) => {
+            const count = stats?.by_type?.[type as keyof typeof stats.by_type] || integrations.filter(i => i.type === type).length;
+            const connected = integrations.filter(i => i.type === type && i.status === 'connected').length;
+
+            return (
+              <Card
+                key={type}
+                className="relative flex flex-col items-center justify-center p-3 sm:p-4 hover:shadow-md transition-shadow transition-transform hover:-translate-y-0.5 cursor-default bg-secondary"
+              >
+                <div className={`mb-2 p-1.5 rounded-lg bg-${color}-100 dark:bg-${color}-900/20`}>
+                  <Icon className={`h-4 w-4 text-${color}-600 dark:text-${color}-400`} />
                 </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                <div className="text-center">
+                  <p className="text-sm sm:text-base font-bold text-foreground leading-none">{connected}/{count}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mt-1">{label}</p>
+                </div>
+
+                {/* Indicador de Status Discreto */}
+                {connected > 0 && (
+                  <div className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-green-500" />
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Recent Activity from Logs */}
       {recentLogs.length > 0 && (
-        <Card>
+        <Card className="bg-secondary">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-sm sm:text-base flex items-center gap-2">
               <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -223,20 +256,20 @@ const IntegrationsStatusDashboard: React.FC<IntegrationsStatusDashboardProps> = 
                       </p>
                     </div>
                   </div>
-                  <Badge 
-                    variant={log.level === 'error' ? 'destructive' : 'outline'} 
+                  <Badge
+                    variant={log.level === 'error' ? 'destructive' : 'outline'}
                     className="text-xs"
                   >
                     {log.level}
                   </Badge>
                 </div>
               ))}
-              
+
               {recentLogs.length > 5 && (
                 <div className="text-center pt-3">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={onRefresh}
                     disabled={isLoading}
                   >

@@ -1100,6 +1100,15 @@
 
 /* Canvas Layout Fixed Proportions - Prevents canvas expansion */
 @layer utilities {
+  /* Hide scrollbar but keep scroll functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .canvas-layout-fixed {
     display: flex;
     overflow: hidden;

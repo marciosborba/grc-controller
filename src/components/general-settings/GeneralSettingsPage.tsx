@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Settings, 
-  Plug, 
-  Mail, 
-  Shield, 
-  Webhook, 
-  Cloud, 
-  Activity, 
+import {
+  Settings,
+  Plug,
+  Mail,
+  Shield,
+  Webhook,
+  Cloud,
+  Activity,
   AlertCircle,
   CheckCircle,
   RefreshCw,
@@ -41,7 +41,7 @@ import { StaticColorController } from './sections/StaticColorController';
 import DocumentationModal from './DocumentationModal';
 import CryptoFieldMappingConfig from '../admin/CryptoFieldMappingConfig';
 import { useGeneralSettings } from '@/hooks/useGeneralSettings';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { cn } from '@/lib/utils';
 import type { IntegrationStatus as IntegrationStatusType } from '@/types/general-settings';
 
@@ -51,7 +51,7 @@ export const GeneralSettingsPage = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isDocumentationOpen, setIsDocumentationOpen] = useState(false);
-  
+
   // Debug: Log quando o componente é renderizado
   console.log('🏗️ GeneralSettingsPage renderizado!', {
     activeTab,
@@ -59,7 +59,7 @@ export const GeneralSettingsPage = () => {
     timestamp: new Date().toISOString(),
     url: window.location.pathname
   });
-  
+
   // Usar hook real para carregar dados
   const {
     integrations,
@@ -152,100 +152,81 @@ export const GeneralSettingsPage = () => {
   ];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-6">
+      {/* Header - Identical to IncidentManagementPage */}
+      <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0 mb-2 sm:mb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Settings className="h-6 w-6 sm:h-8 sm:w-8" />
             Configurações Gerais
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Integre a plataforma com serviços externos e amplie suas funcionalidades
+            Integre a plataforma com serviços externos e amplie suas funcionalidades.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+
+        <div className="flex flex-wrap items-center justify-end sm:justify-start gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={refreshAll}
             disabled={isLoading}
+            className="h-9 flex-1 sm:flex-none border-gray-200 dark:border-gray-800"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Atualizar Status
+            <RefreshCw className={`h-4 w-4 mr-1 sm:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="text-xs sm:text-sm whitespace-nowrap">Atualizar Status</span>
           </Button>
-          <Button size="sm" onClick={() => setIsDocumentationOpen(true)}>
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Documentação
+          <Button
+            size="sm"
+            onClick={() => setIsDocumentationOpen(true)}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 h-9 flex-1 sm:flex-none"
+          >
+            <ExternalLink className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="text-xs sm:text-sm whitespace-nowrap">Documentação</span>
           </Button>
         </div>
       </div>
 
-      {/* Alert de Informação ou Erro */}
-      {error ? (
-        <Alert className="border-red-200 bg-red-50 dark:bg-red-950">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Erro ao carregar integrações</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : (
-        <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
-          <Info className="h-4 w-4" />
-          <AlertTitle>Centro de Integrações</AlertTitle>
-          <AlertDescription>
-            Configure e gerencie todas as integrações externas da plataforma GRC. 
-            Cada integração pode ser testada individualmente e monitorada em tempo real.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <Tabs value={activeTab} onValueChange={(value) => {
-        console.log('🔄 Mudando aba para:', value);
-        if (value === 'risk-matrix') {
-          console.log('🎯 ABA MATRIZ SELECIONADA!');
-        }
         setActiveTab(value);
       }} className="space-y-6">
-        <TabsList className={cn(
-          "grid w-full",
-          (user?.isPlatformAdmin || user?.role === 'admin') 
-            ? "grid-cols-2 sm:grid-cols-4 lg:grid-cols-11" 
-            : "grid-cols-2 sm:grid-cols-4 lg:grid-cols-9"
-        )}>
-          <TabsTrigger value="overview" className="text-xs sm:text-sm">Visão Geral</TabsTrigger>
-          <TabsTrigger value="risk-matrix" className="text-xs sm:text-sm flex items-center gap-1">
-            <Grid3x3 className="h-3 w-3" />
-            Matriz
-          </TabsTrigger>
-          {(user?.isPlatformAdmin || user?.role === 'admin') && (
-            <TabsTrigger value="global-rules" className="text-xs sm:text-sm flex items-center gap-1">
-              <Crown className="h-3 w-3" />
-              Regras Globais
+        <div className="overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-full sm:w-full bg-muted/50 p-1 h-10 sm:h-11">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">Visão Geral</TabsTrigger>
+            <TabsTrigger value="risk-matrix" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1">
+              <Grid3x3 className="h-3 w-3" />
+              Matriz
             </TabsTrigger>
-          )}
-          {(user?.isPlatformAdmin || user?.role === 'admin') && (
-            <TabsTrigger value="static-colors" className="text-xs sm:text-sm flex items-center gap-1">
-              <Palette className="h-3 w-3" />
-              APP Color
-            </TabsTrigger>
-          )}
-          {(user?.isPlatformAdmin || user?.role === 'admin') && (
-            <TabsTrigger value="crypto-mapping" className="text-xs sm:text-sm flex items-center gap-1">
-              <Key className="h-3 w-3" />
-              Mapeamento Cripto
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="apis" className="text-xs sm:text-sm">APIs</TabsTrigger>
-          <TabsTrigger value="mcp" className="text-xs sm:text-sm">MCP</TabsTrigger>
-          <TabsTrigger value="email" className="text-xs sm:text-sm">E-mail</TabsTrigger>
-          <TabsTrigger value="sso" className="text-xs sm:text-sm">SSO</TabsTrigger>
-          <TabsTrigger value="webhooks" className="text-xs sm:text-sm">Webhooks</TabsTrigger>
-          <TabsTrigger value="backup" className="text-xs sm:text-sm">Backup</TabsTrigger>
-        </TabsList>
+            {(user?.isPlatformAdmin || user?.roles?.includes('admin')) && (
+              <TabsTrigger value="global-rules" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1">
+                <Crown className="h-3 w-3" />
+                Regras Globais
+              </TabsTrigger>
+            )}
+            {(user?.isPlatformAdmin || user?.roles?.includes('admin')) && (
+              <TabsTrigger value="static-colors" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1">
+                <Palette className="h-3 w-3" />
+                APP Color
+              </TabsTrigger>
+            )}
+            {(user?.isPlatformAdmin || user?.roles?.includes('admin')) && (
+              <TabsTrigger value="crypto-mapping" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 flex items-center gap-1">
+                <Key className="h-3 w-3" />
+                Cripto
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="apis" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">APIs</TabsTrigger>
+            <TabsTrigger value="mcp" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">MCP</TabsTrigger>
+            <TabsTrigger value="email" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">E-mail</TabsTrigger>
+            <TabsTrigger value="sso" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">SSO</TabsTrigger>
+            <TabsTrigger value="webhooks" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">Webhooks</TabsTrigger>
+            <TabsTrigger value="backup" className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2">Backup</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <IntegrationsStatusDashboard 
+          <IntegrationsStatusDashboard
             integrations={integrations}
             stats={stats}
             recentLogs={recentLogs}
@@ -254,25 +235,25 @@ export const GeneralSettingsPage = () => {
             onTestConnection={testConnection}
           />
 
-          {/* Categories Grid */}
+          {/* Categories Grid - Optimized for Mobile Width */}
           <div>
             <h2 className="text-lg sm:text-xl font-semibold mb-4">Categorias de Integração</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
               {integrationCategories.map((category) => (
-                <Card 
+                <Card
                   key={category.id}
-                  className="hover:shadow-lg transition-shadow cursor-pointer group"
+                  className="hover:shadow-lg transition-shadow cursor-pointer group bg-secondary"
                   onClick={() => setActiveTab(category.id)}
                 >
-                  <CardHeader className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className={`p-2 rounded-lg bg-${category.color}-100 dark:bg-${category.color}-900/20`}>
-                        <category.icon className={`h-5 w-5 text-${category.color}-600 dark:text-${category.color}-400`} />
+                  <CardHeader className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`p-1.5 rounded-lg bg-${category.color}-100 dark:bg-${category.color}-900/20`}>
+                        <category.icon className={`h-4 w-4 text-${category.color}-600 dark:text-${category.color}-400`} />
                       </div>
-                      <Badge variant="secondary">{category.count}</Badge>
+                      <Badge variant="secondary" className="text-[10px] h-4 px-1">{category.count}</Badge>
                     </div>
-                    <CardTitle className="text-base">{category.title}</CardTitle>
-                    <CardDescription className="text-sm">{category.description}</CardDescription>
+                    <CardTitle className="text-sm sm:text-base font-bold truncate">{category.title}</CardTitle>
+                    <CardDescription className="text-[11px] leading-tight line-clamp-2 mt-1 sm:text-sm">{category.description}</CardDescription>
                   </CardHeader>
                 </Card>
               ))}
@@ -280,7 +261,7 @@ export const GeneralSettingsPage = () => {
           </div>
 
           {/* Recent Activity */}
-          <Card>
+          <Card className="bg-secondary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5" />
@@ -308,7 +289,7 @@ export const GeneralSettingsPage = () => {
                         </p>
                       </div>
                     </div>
-                    <Badge 
+                    <Badge
                       variant={log.level === 'error' ? 'destructive' : 'default'}
                       className="text-xs"
                     >
@@ -323,7 +304,6 @@ export const GeneralSettingsPage = () => {
 
         {/* Risk Matrix Tab */}
         <TabsContent value="risk-matrix">
-          {console.log('🎯 RENDERIZANDO ABA RISK-MATRIX!')}
           <div className="space-y-6">
             <div className="p-4 bg-green-100 border-2 border-green-500 rounded">
               <h2 className="text-xl font-bold text-green-800">🎯 ABA MATRIZ RENDERIZADA!</h2>
@@ -343,21 +323,21 @@ export const GeneralSettingsPage = () => {
         </TabsContent>
 
         {/* Global Rules Tab - Only for Platform Admins or System Admins */}
-        {(user?.isPlatformAdmin || user?.role === 'admin') && (
+        {(user?.isPlatformAdmin || user?.roles?.includes('admin')) && (
           <TabsContent value="global-rules">
             <GlobalRulesSection />
           </TabsContent>
         )}
 
         {/* Static Colors Tab - Only for Platform Admins or System Admins */}
-        {(user?.isPlatformAdmin || user?.role === 'admin') && (
+        {(user?.isPlatformAdmin || user?.roles?.includes('admin')) && (
           <TabsContent value="static-colors">
             <StaticColorController />
           </TabsContent>
         )}
 
         {/* Crypto Field Mapping Tab - Only for Platform Admins or System Admins */}
-        {(user?.isPlatformAdmin || user?.role === 'admin') && (
+        {(user?.isPlatformAdmin || user?.roles?.includes('admin')) && (
           <TabsContent value="crypto-mapping">
             <div className="space-y-6">
               <div className="flex items-center gap-3">
@@ -407,7 +387,7 @@ export const GeneralSettingsPage = () => {
       </Tabs>
 
       {/* Documentation Modal */}
-      <DocumentationModal 
+      <DocumentationModal
         isOpen={isDocumentationOpen}
         onClose={() => setIsDocumentationOpen(false)}
       />

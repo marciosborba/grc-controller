@@ -411,11 +411,11 @@ const PolicyManagementHub: React.FC = () => {
               />
             </div>
 
-            <div className="flex flex-wrap flex-row gap-2 w-full lg:w-auto items-center pb-1 lg:pb-0">
+            <div className="flex flex-wrap flex-row gap-2 w-full lg:w-auto items-center overflow-x-auto pb-1 lg:pb-0">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="flex-1 min-w-[130px] h-10 px-2 py-2 border border-border rounded-md text-xs sm:text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary truncate"
+                className="h-10 px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-md text-xs sm:text-sm bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary w-[140px] sm:w-[160px]"
               >
                 <option value="all">Todos os Status</option>
                 {statuses.map(status => (
@@ -431,7 +431,7 @@ const PolicyManagementHub: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="flex-1 min-w-[130px] h-10 px-2 py-2 border border-border rounded-md text-xs sm:text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary truncate"
+                className="h-10 px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-md text-xs sm:text-sm bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary w-[140px] sm:w-[160px]"
               >
                 <option value="all">Todas as Categorias</option>
                 {categories.map(category => (
@@ -450,17 +450,17 @@ const PolicyManagementHub: React.FC = () => {
 
       {/* Tabs principais */}
       <Tabs value={activeView} onValueChange={changeActiveView} className="space-y-6">
-        <TabsList className="flex w-full overflow-x-auto scrollbar-hide gap-1 p-1 h-auto bg-muted/50 justify-start sm:justify-between lg:grid lg:grid-cols-8 pb-2">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 gap-0.5 p-0.5 h-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <TabsTrigger
                 key={tab.id}
                 value={tab.id}
-                className="flex-shrink-0 flex flex-col items-center justify-center p-2 min-w-[72px] sm:min-w-[80px] h-14 sm:h-16 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md transition-all whitespace-nowrap"
+                className="!flex !flex-col !items-center !justify-center !p-1 !px-0.5 !py-1 !min-w-0 !h-10 !text-xs"
                 title={tab.description}
               >
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5 mb-1 opacity-70" />
+                <Icon className="h-3 w-3 mb-0.5" />
                 <span className="hidden sm:block truncate leading-none text-xs">{tab.label}</span>
               </TabsTrigger>
             );

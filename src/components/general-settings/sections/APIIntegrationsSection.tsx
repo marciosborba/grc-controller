@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Plug, 
-  TestTube, 
-  CheckCircle, 
+import {
+  Plus,
+  Plug,
+  TestTube,
+  CheckCircle,
   AlertCircle,
   Eye,
   EyeOff,
@@ -36,11 +36,11 @@ const APIIntegrationsSection: React.FC = () => {
     testConnection,
     refreshAll
   } = useApiConnections();
-  
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [showApiKey, setShowApiKey] = useState<{ [key: string]: boolean }>({});
   const [testingConnection, setTestingConnection] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState<ApiConnectionFormData>({
     name: '',
     api_type: 'rest',
@@ -165,9 +165,9 @@ const APIIntegrationsSection: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={refreshAll}
             disabled={isLoading}
           >
@@ -188,7 +188,7 @@ const APIIntegrationsSection: React.FC = () => {
                   Configure uma nova conexão com API externa
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -300,7 +300,7 @@ const APIIntegrationsSection: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                   Cancelar
@@ -314,50 +314,50 @@ const APIIntegrationsSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Optimized for width */}
       {metrics && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total de Requests</CardTitle>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground">Total Requests</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{metrics.total_requests}</div>
-              <p className="text-xs text-muted-foreground">
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{metrics.total_requests}</div>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                 {metrics.requests_today} hoje
               </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground">Taxa Sucesso</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{Math.round(metrics.success_rate)}%</div>
-              <p className="text-xs text-muted-foreground">
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold text-green-600">{Math.round(metrics.success_rate)}%</div>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                 {metrics.successful_requests} sucessos
               </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground">Tempo Médio</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{Math.round(metrics.avg_response_time)}ms</div>
-              <p className="text-xs text-muted-foreground">
-                tempo de resposta
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold">{Math.round(metrics.avg_response_time)}ms</div>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                resposta
               </p>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Falhas</CardTitle>
+          <Card className="border-gray-200 dark:border-gray-800">
+            <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-[10px] sm:text-sm font-medium text-muted-foreground">Falhas</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{metrics.failed_requests}</div>
-              <p className="text-xs text-muted-foreground">
-                requests com erro
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-lg sm:text-2xl font-bold text-red-600">{metrics.failed_requests}</div>
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                erros
               </p>
             </CardContent>
           </Card>
@@ -386,21 +386,21 @@ const APIIntegrationsSection: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    {getStatusIcon(connection.integrations.status)}
+                    {getStatusIcon(connection.successful_requests > 0 ? 'connected' : 'error')}
                     <div>
                       <h3 className="font-semibold">{connection.name}</h3>
                       <p className="text-sm text-muted-foreground">
                         {connection.api_type.toUpperCase()} • {connection.base_url}
                       </p>
                       <div className="flex items-center space-x-2 mt-1">
-                        {getStatusBadge(connection.integrations.status)}
+                        {getStatusBadge(connection.successful_requests > 0 ? 'connected' : 'error')}
                         <Badge variant="outline" className="text-xs">
                           {connection.auth_type}
                         </Badge>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     <Button
                       variant="outline"
@@ -423,7 +423,7 @@ const APIIntegrationsSection: React.FC = () => {
                     </Button>
                   </div>
                 </div>
-                
+
                 {/* Connection Stats */}
                 <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
                   <div className="text-center">

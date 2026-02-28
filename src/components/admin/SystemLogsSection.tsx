@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +66,7 @@ export const SystemLogsSection = () => {
   const loadLogData = async () => {
     setIsLoading(true);
     try {
-      console.log('🔍 Carregando logs REAIS de atividade do sistema...');
+      console.log('Ã°Å¸â€Â Carregando logs REAIS de atividade do sistema...');
 
       // Determinar o filtro de data
       const now = new Date();
@@ -87,11 +87,11 @@ export const SystemLogsSection = () => {
           limitRecords = 2000;
           break;
         default:
-          dateThreshold = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // Últimos 90 dias
+          dateThreshold = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); // ÃƒÅ¡ltimos 90 dias
           limitRecords = 3000;
       }
 
-      console.log('📅 Filtro de data:', {
+      console.log('Ã°Å¸â€œâ€¦ Filtro de data:', {
         periodo: dateFilter,
         threshold: dateThreshold.toISOString(),
         limite: limitRecords
@@ -116,16 +116,16 @@ export const SystemLogsSection = () => {
         .limit(limitRecords);
 
       if (logsError) {
-        console.error('❌ Erro ao carregar logs:', logsError);
-        console.error('🔍 Detalhes do erro:', {
+        console.error('Ã¢ÂÅ’ Erro ao carregar logs:', logsError);
+        console.error('Ã°Å¸â€Â Detalhes do erro:', {
           message: logsError.message,
           details: logsError.details,
           hint: logsError.hint,
           code: logsError.code
         });
 
-        // Não fazer throw, apenas definir dados vazios para mostrar o erro na UI
-        console.log('⚠️ Continuando com dados vazios devido ao erro...');
+        // NÃƒÂ£o fazer throw, apenas definir dados vazios para mostrar o erro na UI
+        console.log('Ã¢Å¡Â Ã¯Â¸Â Continuando com dados vazios devido ao erro...');
         setLogs([]);
         setLogStats({
           total: 0,
@@ -140,58 +140,58 @@ export const SystemLogsSection = () => {
         return;
       }
 
-      console.log('📊 Logs carregados:', {
+      console.log('Ã°Å¸â€œÅ  Logs carregados:', {
         total: count,
         retornados: logsData?.length || 0,
         periodo: dateFilter
       });
 
-      // 2. Para logs sem profile, buscar informações na tabela auth.users
+      // 2. Para logs sem profile, buscar informaÃƒÂ§ÃƒÂµes na tabela auth.users
       const logsWithoutProfile = logsData?.filter(log =>
         log.user_id && !log.profiles
       ) || [];
 
       const authUsersMap = new Map();
       if (logsWithoutProfile.length > 0) {
-        console.log('🔍 Buscando dados de usuários para', logsWithoutProfile.length, 'logs sem profile');
+        console.log('Ã°Å¸â€Â Buscando dados de usuÃƒÂ¡rios para', logsWithoutProfile.length, 'logs sem profile');
 
         try {
           const { data: authUsers } = await supabase.auth.admin.listUsers();
           if (authUsers?.users) {
             authUsers.users.forEach(user => {
               authUsersMap.set(user.id, {
-                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
+                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'UsuÃƒÂ¡rio',
                 email: user.email
               });
             });
           }
         } catch (authError) {
-          console.warn('⚠️ Erro ao carregar usuários de auth:', authError);
+          console.warn('Ã¢Å¡Â Ã¯Â¸Â Erro ao carregar usuÃƒÂ¡rios de auth:', authError);
         }
       }
 
-      // 3. Processar logs e enriquecer com dados de usuário
+      // 3. Processar logs e enriquecer com dados de usuÃƒÂ¡rio
       const processedLogs: ActivityLog[] = (logsData || []).map(log => {
         let userName = 'Sistema';
         let userEmail = '';
 
         if (log.user_id) {
           if (log.profiles && Array.isArray(log.profiles) && log.profiles.length > 0) {
-            userName = log.profiles[0].full_name || 'Usuário';
+            userName = log.profiles[0].full_name || 'UsuÃƒÂ¡rio';
             const authData = authUsersMap.get(log.user_id);
             userEmail = authData?.email || '';
           } else if (log.profiles && !Array.isArray(log.profiles)) {
-            userName = log.profiles.full_name || 'Usuário';
+            userName = log.profiles.full_name || 'UsuÃƒÂ¡rio';
             const authData = authUsersMap.get(log.user_id);
             userEmail = authData?.email || '';
           } else {
-            // Usar dados do auth se não houver profile
+            // Usar dados do auth se nÃƒÂ£o houver profile
             const authData = authUsersMap.get(log.user_id);
             userName = authData?.full_name || `User-${log.user_id?.slice(-8) || 'unknown'}`;
             userEmail = authData?.email || '';
           }
         } else {
-          // Tentar extrair identidade de logs anônimos (ex: falha de login)
+          // Tentar extrair identidade de logs anÃƒÂ´nimos (ex: falha de login)
           const detailsObj = (typeof log.details === 'object' ? log.details : {}) as Record<string, any>;
           if (detailsObj?.email) {
             userName = 'Visitante (Tentativa)';
@@ -214,7 +214,7 @@ export const SystemLogsSection = () => {
         };
       });
 
-      console.log('✅ Logs processados:', {
+      console.log('Ã¢Å“â€¦ Logs processados:', {
         total: processedLogs.length,
         comUsuario: processedLogs.filter(l => l.user_id).length,
         sistema: processedLogs.filter(l => !l.user_id).length,
@@ -223,16 +223,16 @@ export const SystemLogsSection = () => {
 
       setLogs(processedLogs);
 
-      // 4. Calcular estatísticas REAIS baseadas nos dados carregados
+      // 4. Calcular estatÃƒÂ­sticas REAIS baseadas nos dados carregados
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-      // Para estatísticas totais, usar dados de todo o período se não for filtro específico
+      // Para estatÃƒÂ­sticas totais, usar dados de todo o perÃƒÂ­odo se nÃƒÂ£o for filtro especÃƒÂ­fico
       const totalLogsCount = count || 0;
       let todayLogsData = processedLogs;
       let weekLogsData = processedLogs;
 
-      // Se não for filtro de hoje, carregar dados específicos para estatísticas precisas
+      // Se nÃƒÂ£o for filtro de hoje, carregar dados especÃƒÂ­ficos para estatÃƒÂ­sticas precisas
       if (dateFilter !== 'today') {
         const { data: todayData } = await supabase
           .from('activity_logs')
@@ -295,21 +295,21 @@ export const SystemLogsSection = () => {
         }).length
       };
 
-      console.log('📈 Estatísticas calculadas:', stats);
+      console.log('Ã°Å¸â€œË† EstatÃƒÂ­sticas calculadas:', stats);
       setLogStats(stats);
 
     } catch (error) {
-      console.error('❌ Erro crítico ao carregar logs:', error);
+      console.error('Ã¢ÂÅ’ Erro crÃƒÂ­tico ao carregar logs:', error);
 
       // Log detalhado do erro para debug
       if (error instanceof Error) {
-        console.error('🐞 Stack trace:', error.stack);
-        console.error('🐞 Mensagem:', error.message);
+        console.error('Ã°Å¸ÂÅ¾ Stack trace:', error.stack);
+        console.error('Ã°Å¸ÂÅ¾ Mensagem:', error.message);
       }
 
       // Tentar uma consulta mais simples como fallback
       try {
-        console.log('🔄 Tentando consulta simplificada...');
+        console.log('Ã°Å¸â€â€ž Tentando consulta simplificada...');
         const { data: simpleLogs, error: simpleError } = await supabase
           .from('activity_logs')
           .select('id, action, resource_type, created_at')
@@ -317,9 +317,9 @@ export const SystemLogsSection = () => {
           .limit(10);
 
         if (simpleError) {
-          console.error('❌ Erro na consulta simplificada:', simpleError);
+          console.error('Ã¢ÂÅ’ Erro na consulta simplificada:', simpleError);
         } else {
-          console.log('✅ Consulta simplificada funcionou:', simpleLogs?.length || 0, 'logs');
+          console.log('Ã¢Å“â€¦ Consulta simplificada funcionou:', simpleLogs?.length || 0, 'logs');
           if (simpleLogs && simpleLogs.length > 0) {
             const processedSimpleLogs = simpleLogs.map(log => ({
               id: log.id,
@@ -351,10 +351,10 @@ export const SystemLogsSection = () => {
           }
         }
       } catch (fallbackError) {
-        console.error('❌ Erro na consulta de fallback:', fallbackError);
+        console.error('Ã¢ÂÅ’ Erro na consulta de fallback:', fallbackError);
       }
 
-      // Mostrar dados básicos em caso de erro total
+      // Mostrar dados bÃƒÂ¡sicos em caso de erro total
       const fallbackStats = {
         total: 0,
         today: 0,
@@ -458,7 +458,7 @@ export const SystemLogsSection = () => {
       return <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-700">Aviso</Badge>;
     }
     if (log.resource_type === 'security') {
-      return <Badge variant="outline" className="text-xs border-purple-500 text-purple-700">Segurança</Badge>;
+      return <Badge variant="outline" className="text-xs border-purple-500 text-purple-700">SeguranÃƒÂ§a</Badge>;
     }
     return <Badge variant="outline" className="text-xs">Info</Badge>;
   };
@@ -479,9 +479,10 @@ export const SystemLogsSection = () => {
   };
 
   const exportLogs = () => {
+    const paginatedLogs = getPaginatedLogs(1);
     const csvContent = [
-      // Cabeçalho CSV
-      ['Timestamp', 'Usuário', 'Email', 'Ação', 'Recurso', 'Recurso_ID', 'IP', 'Severidade', 'Detalhes'].join(','),
+      // CabeÃƒÂ§alho CSV
+      ['Timestamp', 'UsuÃƒÂ¡rio', 'Email', 'AÃƒÂ§ÃƒÂ£o', 'Recurso', 'Recurso_ID', 'IP', 'Severidade', 'Detalhes'].join(','),
       // Dados dos logs
       ...filteredLogs.map(log => [
         `"${log.created_at}"`,
@@ -508,48 +509,48 @@ export const SystemLogsSection = () => {
   return (
     <div className="space-y-6">
       {/* Log Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Total</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{logStats.total}</div>
-            <p className="text-xs text-muted-foreground">eventos registrados</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">eventos registrados</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hoje</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Hoje</CardTitle>
             <Calendar className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{logStats.today}</div>
-            <p className="text-xs text-muted-foreground">eventos hoje</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">eventos hoje</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Erros</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Erros</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{logStats.errors}</div>
-            <p className="text-xs text-muted-foreground">eventos de erro</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">eventos de erro</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Segurança</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">SeguranÃƒÂ§a</CardTitle>
             <Shield className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{logStats.securityEvents}</div>
-            <p className="text-xs text-muted-foreground">eventos de segurança</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">eventos de seguranÃƒÂ§a</p>
           </CardContent>
         </Card>
       </div>
@@ -585,7 +586,7 @@ export const SystemLogsSection = () => {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por ação, usuário ou recurso..."
+                placeholder="Buscar por aÃƒÂ§ÃƒÂ£o, usuÃƒÂ¡rio ou recurso..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -599,7 +600,7 @@ export const SystemLogsSection = () => {
               <SelectContent>
                 <SelectItem value="today">Hoje</SelectItem>
                 <SelectItem value="week">Esta semana</SelectItem>
-                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="month">Este mÃƒÂªs</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
             </Select>
@@ -610,13 +611,13 @@ export const SystemLogsSection = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="auth">Autenticação</SelectItem>
-                <SelectItem value="security">Segurança</SelectItem>
-                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="auth">AutenticaÃƒÂ§ÃƒÂ£o</SelectItem>
+                <SelectItem value="security">SeguranÃƒÂ§a</SelectItem>
+                <SelectItem value="user">UsuÃƒÂ¡rio</SelectItem>
                 <SelectItem value="system">Sistema</SelectItem>
                 <SelectItem value="assessment">Assessment</SelectItem>
                 <SelectItem value="risk">Risco</SelectItem>
-                <SelectItem value="policy">Política</SelectItem>
+                <SelectItem value="policy">PolÃƒÂ­tica</SelectItem>
                 <SelectItem value="tenant">Tenant</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
@@ -641,12 +642,12 @@ export const SystemLogsSection = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-32">Timestamp</TableHead>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Ação</TableHead>
+                  <TableHead>UsuÃƒÂ¡rio</TableHead>
+                  <TableHead>AÃƒÂ§ÃƒÂ£o</TableHead>
                   <TableHead>Recurso</TableHead>
                   <TableHead>Severidade</TableHead>
                   <TableHead className="w-32">IP</TableHead>
-                  <TableHead className="w-20">Ações</TableHead>
+                  <TableHead className="w-20">AÃƒÂ§ÃƒÂµes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -666,10 +667,10 @@ export const SystemLogsSection = () => {
                         <div className="space-y-2">
                           <div>Nenhum log encontrado</div>
                           <div className="text-xs">
-                            Período: {dateFilter} | Total carregado: {logs.length}
+                            PerÃƒÂ­odo: {dateFilter} | Total carregado: {logs.length}
                           </div>
                           <div className="text-xs">
-                            Verifique se há logs no período selecionado ou se as permissões estão corretas
+                            Verifique se hÃƒÂ¡ logs no perÃƒÂ­odo selecionado ou se as permissÃƒÂµes estÃƒÂ£o corretas
                           </div>
                         </div>
                       ) : (
@@ -692,7 +693,7 @@ export const SystemLogsSection = () => {
                         <div className="flex flex-col">
                           <span className="text-sm font-medium">{log.user_name}</span>
                           {log.user_email && (
-                            <span className="text-xs text-muted-foreground">{log.user_email}</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">{log.user_email}</span>
                           )}
                         </div>
                       </TableCell>
@@ -702,7 +703,7 @@ export const SystemLogsSection = () => {
                           <span className="text-sm">{log.action}</span>
                         </div>
                         {log.details && (
-                          <div className="text-xs text-muted-foreground mt-1">
+                          <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                             {log.details.error_message && (
                               <div className="text-red-600">{String(log.details.error_message)}</div>
                             )}

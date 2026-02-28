@@ -41,6 +41,15 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
     p.status === 'draft' || p.status === 'under_review' || p.workflow_stage === 'review'
   );
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
+  const totalPages = Math.ceil(policiesForReview.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, policiesForReview.length);
+  const currentPolicies = policiesForReview.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   const handleReviewAction = async (policyId: string, action: 'approve' | 'reject' | 'request_changes') => {
     if (!reviewComment.trim() && action !== 'approve') {
       toast({
@@ -134,18 +143,18 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Revisão de Políticas</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          <h2 className="text-2xl font-bold">Revisão de Políticas</h2>
+          <p className="text-muted-foreground">
             {policiesForReview.length} política(s) aguardando revisão
           </p>
         </div>
 
-        <div className="flex items-center self-start sm:self-auto mt-1 sm:mt-0">
-          <Badge variant="outline" className="flex items-center gap-1 shrink-0 overflow-hidden text-[10px] sm:text-xs">
-            <Clock className="h-3 w-3 shrink-0" />
-            <span className="truncate">Pendentes: {policiesForReview.length}</span>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Pendentes: {policiesForReview.length}
           </Badge>
         </div>
       </div>
@@ -155,7 +164,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Políticas Pendentes</h3>
 
-          {policiesForReview.map((policy) => (
+          {currentPolicies.map((policy) => (
             <Card
               key={policy.id}
               className={`cursor-pointer transition-all hover:shadow-md ${selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
@@ -175,16 +184,16 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
               </CardHeader>
 
               <CardContent className="pt-0">
-                <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm gap-2">
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-1">
-                    <div className="flex items-center space-x-1 whitespace-nowrap overflow-hidden">
-                      <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground hidden sm:inline shrink-0">Categoria:</span>
-                      <span className="truncate max-w-[100px] sm:max-w-[200px]">{policy.category}</span>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Categoria:</span>
+                      <span>{policy.category}</span>
                     </div>
 
-                    <div className="flex items-center space-x-1 whitespace-nowrap">
-                      <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
                       <span className="text-muted-foreground">
                         {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
                       </span>
@@ -194,7 +203,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                   {policy.priority && (
                     <Badge
                       variant="outline"
-                      className={`text-[10px] sm:text-xs min-w-fit flex-shrink-0 ${getPriorityColor(policy.priority)}`}
+                      className={`text-xs ${getPriorityColor(policy.priority)}`}
                     >
                       {policy.priority === 'high' ? 'Alta' :
                         policy.priority === 'medium' ? 'Média' : 'Baixa'}
@@ -204,6 +213,48 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
               </CardContent>
             </Card>
           ))}
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
+              <span className="text-sm text-muted-foreground">
+                Mostrando {startIndex + 1}–{endIndex} de {policiesForReview.length} políticas
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-9 w-9"
+                >
+                  &lt;
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-9 w-9"
+                >
+                  &gt;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Painel de revisão */}

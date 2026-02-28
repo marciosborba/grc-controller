@@ -109,6 +109,10 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   // Filtrar políticas para elaboração (draft, under_review)
   const filteredPolicies = policies.filter(policy => {
     const elaborationStatuses = ['draft', 'under_review', 'pending_approval'];
@@ -119,6 +123,17 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
 
     return matchesStatus && matchesSearch;
   });
+
+  // Lógica de Paginação
+  const totalPages = Math.ceil(filteredPolicies.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredPolicies.length);
+  const currentPolicies = filteredPolicies.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Atualizar página atual se o filtro mudar
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
 
   // Debug: verificar se o botão deve aparecer
   console.log('PolicyElaboration Debug:');
@@ -1459,30 +1474,30 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       {/* Header da seção */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Elaboração de Políticas</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          <h2 className="text-2xl font-bold">Elaboração de Políticas</h2>
+          <p className="text-muted-foreground">
             Crie, edite e desenvolva políticas com assistência da IA Alex Policy
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+        <div className="flex gap-2">
           <button
-            className="flex-1 sm:flex-none justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-9 px-3 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800"
+            className="justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-9 px-3 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800"
             type="button"
             onClick={() => setShowAlexChat(!showAlexChat)}
           >
             <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
               <Brain className="h-3 w-3 text-white" />
             </div>
-            <span className="truncate">{showAlexChat ? 'Ocultar' : 'Mostrar'} Alex</span>
-            <Badge variant="secondary" className="text-[10px] px-1 bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
+            <span>{showAlexChat ? 'Ocultar' : 'Mostrar'} Alex Chat</span>
+            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
               IA
             </Badge>
           </button>
 
-          <Button onClick={handleCreateNewPolicy} className="flex-1 sm:flex-none">
-            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
-            <span className="truncate">Nova Política</span>
+          <Button onClick={handleCreateNewPolicy}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Política
           </Button>
         </div>
       </div>
@@ -1492,13 +1507,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         {/* Coluna principal - Lista de políticas */}
         <div className={`space-y-4 ${showAlexChat ? 'lg:col-span-2' : 'lg:col-span-1'}`}>
           {/* Estatísticas rápidas */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <FileText className="h-5 w-5 text-blue-500" />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <Card className="shadow-sm hover:shadow-md transition-all">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
+                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
+                  </div>
                   <div>
-                    <p className="text-[10px] sm:text-sm font-medium truncate">Em Elaboração</p>
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Em Elaboração</p>
                     <p className="text-lg sm:text-2xl font-bold">
                       {filteredPolicies.filter(p => p.status === 'draft').length}
                     </p>
@@ -1507,12 +1524,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <Edit className="h-5 w-5 text-orange-500" />
+            <Card className="shadow-sm hover:shadow-md transition-all">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg shrink-0">
+                    <Edit className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
+                  </div>
                   <div>
-                    <p className="text-[10px] sm:text-sm font-medium">Em Revisão</p>
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Em Revisão</p>
                     <p className="text-lg sm:text-2xl font-bold">
                       {filteredPolicies.filter(p => p.status === 'under_review').length}
                     </p>
@@ -1521,12 +1540,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center space-x-2">
-                  <Lightbulb className="h-5 w-5 text-purple-500" />
+            <Card className="col-span-2 md:col-span-1 shadow-sm hover:shadow-md transition-all">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center space-x-2 sm:space-x-3">
+                  <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
+                    <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
+                  </div>
                   <div>
-                    <p className="text-[10px] sm:text-sm font-medium truncate">Com Insights Alex</p>
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Com Insights Alex</p>
                     <p className="text-lg sm:text-2xl font-bold">
                       {filteredPolicies.filter(p => generateAlexInsights(p).length > 0).length}
                     </p>
@@ -1545,17 +1566,17 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                <div className="flex-1 w-full">
+              <div className="flex gap-4">
+                <div className="flex-1">
                   <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar políticas..."
-                      className="pl-9 h-9"
+                      placeholder="Buscar políticas em elaboração..."
+                      className="pl-10"
                     />
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
+                <Button variant="outline" size="sm">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Atualizar
                 </Button>
@@ -1565,8 +1586,8 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
 
           {/* Lista de Políticas com Cards Expansíveis */}
           <div className="space-y-4">
-            {filteredPolicies.length > 0 ? (
-              filteredPolicies.map((policy) => (
+            {currentPolicies.length > 0 ? (
+              currentPolicies.map((policy) => (
                 <PolicyProcessCard
                   key={policy.id}
                   policy={policy}
@@ -1591,6 +1612,48 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               </Card>
             )}
           </div>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
+              <span className="text-sm text-muted-foreground">
+                Mostrando {startIndex + 1}–{endIndex} de {filteredPolicies.length} políticas
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-9 w-9"
+                >
+                  &lt;
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-9 w-9"
+                >
+                  &gt;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Coluna lateral - Alex Policy Chat */}

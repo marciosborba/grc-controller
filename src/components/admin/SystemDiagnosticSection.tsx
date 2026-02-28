@@ -1269,83 +1269,87 @@ export const SystemDiagnosticSection = () => {
 
   return (
     <Tabs defaultValue="overview" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-4">
-        <TabsTrigger value="overview" className="flex items-center gap-2">
-          <Activity className="h-4 w-4" />
-          Informações do Sistema
+      <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-4 no-scrollbar">
+        <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+          <Activity className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+          <span className="hidden sm:inline">Informações do Sistema</span>
+          <span className="sm:hidden">Sistema</span>
         </TabsTrigger>
-        <TabsTrigger value="vulnerabilities" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          Vulnerabilidades
+        <TabsTrigger value="vulnerabilities" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+          <Shield className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+          <span className="hidden sm:inline">Vulnerabilidades</span>
+          <span className="sm:hidden">Vuln.</span>
         </TabsTrigger>
-        <TabsTrigger value="ethics" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          Módulo Ética
+        <TabsTrigger value="ethics" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+          <Shield className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+          <span className="hidden sm:inline">Módulo Ética</span>
+          <span className="sm:hidden">Ética</span>
         </TabsTrigger>
-        <TabsTrigger value="privacy" className="flex items-center gap-2">
-          <Shield className="h-4 w-4" />
-          Scanner Priv.
+        <TabsTrigger value="privacy" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+          <Shield className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+          <span className="hidden sm:inline">Scanner Priv.</span>
+          <span className="sm:hidden">Priv.</span>
         </TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview" className="space-y-6">
         {/* Diagnostic Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Saúde do Sistema</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Saúde do Sistema</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{diagnosticSummary.systemHealth}%</div>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold">{diagnosticSummary.systemHealth}%</div>
               <Progress value={diagnosticSummary.systemHealth} className="mt-2" />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                 Score baseado em dados reais
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Checks OK</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Checks OK</CardTitle>
               <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{diagnosticSummary.passed}</div>
-              <p className="text-xs text-muted-foreground">de {diagnosticSummary.totalChecks} checks</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{diagnosticSummary.passed}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">de {diagnosticSummary.totalChecks} checks</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avisos</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Avisos</CardTitle>
               <AlertTriangle className="h-4 w-4 text-yellow-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{diagnosticSummary.warnings}</div>
-              <p className="text-xs text-muted-foreground">requerem atenção</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-600">{diagnosticSummary.warnings}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">requerem atenção</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Falhas</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Falhas</CardTitle>
               <XCircle className="h-4 w-4 text-red-600" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{diagnosticSummary.failed}</div>
-              <p className="text-xs text-muted-foreground">necessitam correção</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">{diagnosticSummary.failed}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">necessitam correção</p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Críticos</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Críticos</CardTitle>
               <XCircle className="h-4 w-4 text-red-800" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-800">{diagnosticSummary.critical}</div>
-              <p className="text-xs text-muted-foreground">alta prioridade</p>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <div className="text-xl sm:text-2xl font-bold text-red-800">{diagnosticSummary.critical}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">alta prioridade</p>
             </CardContent>
           </Card>
         </div>
@@ -1353,22 +1357,22 @@ export const SystemDiagnosticSection = () => {
         {/* Scan Controls */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                   <Search className="h-5 w-5" />
                   <span>Diagnóstico do Sistema</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Escaneie o sistema usando dados reais do banco de dados para identificar problemas
                 </CardDescription>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filtro: {{ 'active': 'Ativos', 'safe': 'Seguros', 'all': 'Todos' }[statusFilter]}
+                      <Filter className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Filtro: {{ 'active': 'Ativos', 'safe': 'Seguros', 'all': 'Todos' }[statusFilter]}</span>
                       <ChevronDown className="h-4 w-4 ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -1381,9 +1385,9 @@ export const SystemDiagnosticSection = () => {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar Relatório
-                      <ChevronDown className="h-4 w-4 ml-2" />
+                      <Download className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Exportar</span>
+                      <ChevronDown className="h-4 w-4 ml-1 sm:ml-2" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -1411,7 +1415,7 @@ export const SystemDiagnosticSection = () => {
                   ) : (
                     <Play className="h-4 w-4 mr-2" />
                   )}
-                  {isScanning ? 'Escaneando...' : 'Executar Diagnóstico'}
+                  <span className="hidden sm:inline">{isScanning ? 'Escaneando...' : 'Executar Diagnóstico'}</span><span className="sm:hidden">{isScanning ? '...' : 'Executar'}</span>
                 </Button>
               </div>
             </div>
@@ -1419,7 +1423,7 @@ export const SystemDiagnosticSection = () => {
           <CardContent>
             {isScanning && (
               <div className="mb-4">
-                <div className="flex justify-between text-sm mb-2">
+                <div className="flex justify-between text-xs sm:text-sm mb-2">
                   <span>Progresso do Scan:</span>
                   <span>{scanProgress.toFixed(1)}%</span>
                 </div>
@@ -1428,17 +1432,18 @@ export const SystemDiagnosticSection = () => {
             )}
 
             {diagnosticSummary.lastFullScan && (
-              <div className="mb-4 text-sm text-muted-foreground">
+              <div className="mb-4 text-xs sm:text-sm text-muted-foreground">
                 Último scan completo: {new Date(diagnosticSummary.lastFullScan).toLocaleString('pt-BR')}
                 (duração: {(diagnosticSummary.scanDuration / 1000).toFixed(1)}s)
               </div>
             )}
 
             {/* Category Filter */}
-            <div className="flex space-x-2 mb-4">
+            <div className="flex gap-1.5 sm:gap-2 mb-4 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
               <Button
                 variant={selectedCategory === 'all' ? 'default' : 'outline'}
                 size="sm"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => setSelectedCategory('all')}
               >
                 Todos
@@ -1446,6 +1451,7 @@ export const SystemDiagnosticSection = () => {
               <Button
                 variant={selectedCategory === 'system' ? 'default' : 'outline'}
                 size="sm"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => setSelectedCategory('system')}
               >
                 <Settings className="h-3 w-3 mr-1" />
@@ -1454,6 +1460,7 @@ export const SystemDiagnosticSection = () => {
               <Button
                 variant={selectedCategory === 'security' ? 'default' : 'outline'}
                 size="sm"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => setSelectedCategory('security')}
               >
                 <Shield className="h-3 w-3 mr-1" />
@@ -1462,6 +1469,7 @@ export const SystemDiagnosticSection = () => {
               <Button
                 variant={selectedCategory === 'performance' ? 'default' : 'outline'}
                 size="sm"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => setSelectedCategory('performance')}
               >
                 <Zap className="h-3 w-3 mr-1" />
@@ -1470,6 +1478,7 @@ export const SystemDiagnosticSection = () => {
               <Button
                 variant={selectedCategory === 'data' ? 'default' : 'outline'}
                 size="sm"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => setSelectedCategory('data')}
               >
                 <Database className="h-3 w-3 mr-1" />
@@ -1478,6 +1487,7 @@ export const SystemDiagnosticSection = () => {
               <Button
                 variant={selectedCategory === 'user' ? 'default' : 'outline'}
                 size="sm"
+                className="whitespace-nowrap text-xs sm:text-sm"
                 onClick={() => setSelectedCategory('user')}
               >
                 <Users className="h-3 w-3 mr-1" />
@@ -1488,8 +1498,8 @@ export const SystemDiagnosticSection = () => {
             {/* Diagnostic Checks */}
             <div className="space-y-3">
               {filteredChecks.map((check) => (
-                <div key={check.id} className="border rounded-lg p-4">
-                  <div className="flex items-start justify-between">
+                <div key={check.id} className="border rounded-lg p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:justify-between gap-2 sm:gap-0">
                     <div className="flex items-start space-x-3 flex-1">
                       <div className="flex items-center space-x-2">
                         {getCategoryIcon(check.category)}
@@ -1497,45 +1507,45 @@ export const SystemDiagnosticSection = () => {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h4 className="font-medium">{check.name}</h4>
-                          <Badge className={`text-xs ${getStatusColor(check.status)}`}>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 mb-1">
+                          <h4 className="text-sm sm:text-base font-medium">{check.name}</h4>
+                          <Badge className={`text-[10px] sm:text-xs ${getStatusColor(check.status)}`}>
                             {check.status}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-[10px] sm:text-xs">
                             {check.severity}
                           </Badge>
                         </div>
 
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-2">
                           {check.description}
                         </p>
 
                         {check.result && (
                           <div className="mb-2">
-                            <p className="text-sm font-medium">Resultado:</p>
-                            <p className="text-sm">{check.result}</p>
+                            <p className="text-xs sm:text-sm font-medium">Resultado:</p>
+                            <p className="text-xs sm:text-sm">{check.result}</p>
                           </div>
                         )}
 
                         {check.recommendation && (
                           <div className="mb-2">
-                            <p className="text-sm font-medium text-blue-600">Recomendação:</p>
-                            <p className="text-sm text-blue-600">{check.recommendation}</p>
+                            <p className="text-xs sm:text-sm font-medium text-blue-600">Recomendação:</p>
+                            <p className="text-xs sm:text-sm text-blue-600">{check.recommendation}</p>
                           </div>
                         )}
 
                         {check.realData && (
                           <div className="mb-2">
-                            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Dados Reais:</p>
-                            <pre className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-2 rounded mt-1 overflow-x-auto">
+                            <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Dados Reais:</p>
+                            <pre className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 p-1.5 sm:p-2 rounded mt-1 overflow-x-auto max-h-32 sm:max-h-48">
                               {JSON.stringify(check.realData, null, 2)}
                             </pre>
                           </div>
                         )}
 
                         {check.lastRun && (
-                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-muted-foreground">
                             <span>Executado: {new Date(check.lastRun).toLocaleString('pt-BR')}</span>
                             {check.duration && (
                               <span>Duração: {check.duration}ms</span>
@@ -1548,6 +1558,7 @@ export const SystemDiagnosticSection = () => {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="self-end sm:self-start shrink-0"
                       onClick={() => runIndividualCheck(check)}
                       disabled={check.status === 'running'}
                     >

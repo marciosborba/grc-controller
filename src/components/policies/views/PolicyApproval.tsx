@@ -39,6 +39,15 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
     p.status === 'pending_approval' || p.workflow_stage === 'approval'
   );
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
+  const totalPages = Math.ceil(policiesForApproval.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, policiesForApproval.length);
+  const currentPolicies = policiesForApproval.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   const handleApprovalAction = async (policyId: string, action: 'approve' | 'reject') => {
     if (!approvalComment.trim() && action === 'reject') {
       toast({
@@ -125,18 +134,18 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Aprovação de Políticas</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          <h2 className="text-2xl font-bold">Aprovação de Políticas</h2>
+          <p className="text-muted-foreground">
             {policiesForApproval.length} política(s) aguardando aprovação final
           </p>
         </div>
 
-        <div className="flex items-center self-start sm:self-auto mt-1 sm:mt-0">
-          <Badge variant="outline" className="flex items-center gap-1 border-orange-300 text-orange-800 bg-orange-50 dark:border-orange-600 dark:text-orange-200 dark:bg-orange-950/20 text-[10px] sm:text-xs">
-            <Stamp className="h-3 w-3 shrink-0" />
-            <span className="truncate">Pendentes: {policiesForApproval.length}</span>
+        <div className="flex items-center space-x-2">
+          <Badge variant="outline" className="flex items-center gap-1 border-orange-300 text-orange-800 bg-orange-50 dark:border-orange-600 dark:text-orange-200 dark:bg-orange-950/20">
+            <Stamp className="h-3 w-3" />
+            Pendentes: {policiesForApproval.length}
           </Badge>
         </div>
       </div>
@@ -146,7 +155,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Políticas Pendentes</h3>
 
-          {policiesForApproval.map((policy) => (
+          {currentPolicies.map((policy) => (
             <Card
               key={policy.id}
               className={`cursor-pointer transition-all hover:shadow-md ${selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
@@ -166,16 +175,16 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
               </CardHeader>
 
               <CardContent className="pt-0">
-                <div className="flex flex-wrap items-center justify-between text-xs sm:text-sm gap-2">
-                  <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-1">
-                    <div className="flex items-center space-x-1 whitespace-nowrap overflow-hidden">
-                      <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground hidden sm:inline shrink-0">Categoria:</span>
-                      <span className="truncate max-w-[100px] sm:max-w-none">{policy.category}</span>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-1">
+                      <User className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-muted-foreground">Categoria:</span>
+                      <span>{policy.category}</span>
                     </div>
 
-                    <div className="flex items-center space-x-1 whitespace-nowrap">
-                      <Calendar className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3 text-muted-foreground" />
                       <span className="text-muted-foreground">
                         {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
                       </span>
@@ -185,11 +194,11 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                   {policy.priority && (
                     <Badge
                       variant="outline"
-                      className={`text-[10px] sm:text-xs min-w-fit flex-shrink-0 ${policy.priority === 'high'
-                          ? 'border-red-300 text-red-800 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-950/20'
-                          : policy.priority === 'medium'
-                            ? 'border-yellow-300 text-yellow-800 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-950/20'
-                            : 'border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20'
+                      className={`text-xs ${policy.priority === 'high'
+                        ? 'border-red-300 text-red-800 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-950/20'
+                        : policy.priority === 'medium'
+                          ? 'border-yellow-300 text-yellow-800 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-950/20'
+                          : 'border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20'
                         }`}
                     >
                       Prioridade: {policy.priority === 'high' ? 'Alta' :
@@ -200,6 +209,48 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
               </CardContent>
             </Card>
           ))}
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
+              <span className="text-sm text-muted-foreground">
+                Mostrando {startIndex + 1}–{endIndex} de {policiesForApproval.length} políticas
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-9 w-9"
+                >
+                  &lt;
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-9 w-9"
+                >
+                  &gt;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Painel de aprovação */}
