@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -26,7 +26,7 @@ export const useIncidentManagement = () => {
   const { user } = useAuth();
   const tenantId = useCurrentTenantId();
   const queryClient = useQueryClient();
-  const { toast } = useToast();
+  // removed const { toast } = useToast();  keep using the imported sonner toast
 
   console.log('🔧 [useIncidentManagement] Inicializando hook');
   console.log('👤 [useIncidentManagement] User:', user?.id);
@@ -415,7 +415,7 @@ export const useIncidentManagement = () => {
     };
   };
 
-  const filterIncidents = (filters: IncidentFilters): Incident[] => {
+  const filterIncidents = useCallback((filters: IncidentFilters): Incident[] => {
     let filtered = incidents;
 
     if (filters.search_term) {
@@ -460,7 +460,7 @@ export const useIncidentManagement = () => {
     }
 
     return filtered;
-  };
+  }, [incidents]);
 
   const getProfileName = (userId: string) => {
     const profile = profiles.find(p => p.user_id === userId);

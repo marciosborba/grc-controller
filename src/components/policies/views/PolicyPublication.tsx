@@ -16,7 +16,7 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -40,7 +40,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
   const [isPublishing, setIsPublishing] = useState(false);
 
   // Filtrar políticas aprovadas para publicação
-  const policiesForPublication = policies.filter(p => 
+  const policiesForPublication = policies.filter(p =>
     p.status === 'approved' || p.status === 'under_review' || p.status === 'pending_approval'
   );
 
@@ -51,7 +51,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
     console.log('🚀 Tentando publicar política:', policyId);
     console.log('📅 Data de publicação:', publicationDate);
     console.log('📅 Data de vigência:', effectiveDate);
-    
+
     if (!publicationDate || !effectiveDate) {
       console.log('❌ Datas não preenchidas');
       toast({
@@ -67,10 +67,10 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
       // Converter datetime-local para ISO string
       const publicationDateISO = new Date(publicationDate).toISOString();
       const effectiveDateISO = new Date(effectiveDate).toISOString();
-      
+
       console.log('📅 Data de publicação (ISO):', publicationDateISO);
       console.log('📅 Data de vigência (ISO):', effectiveDateISO);
-      
+
       const updateData = {
         status: 'published',
         workflow_stage: 'published',
@@ -80,9 +80,9 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
         updated_at: new Date().toISOString(),
         updated_by: user?.id
       };
-      
+
       console.log('📊 Dados para atualização:', updateData);
-      
+
       const { error } = await supabase
         .from('policies')
         .update(updateData)
@@ -92,7 +92,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
         console.error('❌ Erro do Supabase:', error);
         throw error;
       }
-      
+
       console.log('✅ Política publicada com sucesso!');
 
       toast({
@@ -137,22 +137,22 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Publicação de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Publicação de Políticas</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Gerencie a publicação e distribuição de políticas aprovadas
           </p>
         </div>
-        
-        <div className="flex items-center space-x-2">
-          <Badge variant="outline" className="flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            Para publicar: {policiesForPublication.length}
+
+        <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
+          <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs shrink-0">
+            <BookOpen className="h-3 w-3 shrink-0" />
+            <span>Para publicar: {policiesForPublication.length}</span>
           </Badge>
-          <Badge variant="outline" className="flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Publicadas: {publishedPolicies.length}
+          <Badge variant="outline" className="flex items-center gap-1 text-[10px] sm:text-xs shrink-0">
+            <CheckCircle className="h-3 w-3 shrink-0" />
+            <span>Publicadas: {publishedPolicies.length}</span>
           </Badge>
         </div>
       </div>
@@ -166,11 +166,10 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
               <h3 className="text-lg font-semibold mb-3">Prontas para Publicação</h3>
               <div className="space-y-1.5">
                 {policiesForPublication.map((policy) => (
-                  <Card 
-                    key={policy.id} 
-                    className={`cursor-pointer transition-all hover:shadow-md rounded-[7px] ${
-                      selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
-                    }`}
+                  <Card
+                    key={policy.id}
+                    className={`cursor-pointer transition-all hover:shadow-md rounded-[7px] ${selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
+                      }`}
                     onClick={() => setSelectedPolicy(policy)}
                   >
                     <CardContent className="p-3">
@@ -208,8 +207,8 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-medium truncate leading-tight">{policy.title}</h4>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Publicado em: {policy.published_at ? 
-                              new Date(policy.published_at).toLocaleDateString('pt-BR') : 
+                            Publicado em: {policy.published_at ?
+                              new Date(policy.published_at).toLocaleDateString('pt-BR') :
                               'Data não informada'}
                           </p>
                         </div>
@@ -246,7 +245,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                     Publicar: {selectedPolicy.title}
                   </CardTitle>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   {/* Informações da política */}
                   <div className="space-y-3">
@@ -256,7 +255,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                         {selectedPolicy.description || 'Sem descrição'}
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium">Categoria</label>
@@ -284,7 +283,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                         min={new Date().toISOString().slice(0, 16)}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="text-sm font-medium">Data de Vigência *</label>
                       <Input
@@ -298,7 +297,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                         min={new Date().toISOString().split('T')[0]}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="text-sm font-medium">Mensagem de Notificação</label>
                       <Textarea
@@ -319,7 +318,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                       <div>Data Vigência: {effectiveDate || 'Não preenchida'}</div>
                       <div>Botão habilitado: {(!isPublishing && publicationDate && effectiveDate) ? 'Sim' : 'Não'}</div>
                       <div className="mt-2 space-x-2">
-                        <button 
+                        <button
                           onClick={() => {
                             const now = new Date();
                             setPublicationDate(now.toISOString().slice(0, 16));
@@ -331,7 +330,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                         </button>
                       </div>
                     </div>
-                    
+
                     <Button
                       onClick={() => {
                         console.log('🖱️ Botão clicado!');
@@ -355,7 +354,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                         </>
                       )}
                     </Button>
-                    
+
                     <div className="grid grid-cols-2 gap-2">
                       <Button variant="outline" size="sm">
                         <Download className="h-4 w-4 mr-2" />
@@ -375,7 +374,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                 <CardHeader>
                   <CardTitle className="text-base">Canais de Distribuição</CardTitle>
                 </CardHeader>
-                
+
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -385,7 +384,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                       </div>
                       <Badge variant="outline" className="text-xs">Ativo</Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-green-600" />
@@ -393,7 +392,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                       </div>
                       <Badge variant="outline" className="text-xs">Ativo</Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Bell className="h-4 w-4 text-yellow-600" />
@@ -401,7 +400,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
                       </div>
                       <Badge variant="outline" className="text-xs">Ativo</Badge>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Users className="h-4 w-4 text-purple-600" />

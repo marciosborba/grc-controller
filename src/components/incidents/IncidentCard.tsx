@@ -71,21 +71,23 @@ import {
   Gauge,
   AlertTriangle
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useIncidentManagement } from '@/hooks/useIncidentManagement';
+import IncidentRCATab from './IncidentRCATab';
+import IncidentHistoryTab from './IncidentHistoryTab';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import type { 
-  Incident, 
-  IncidentStatus, 
+import type {
+  Incident,
+  IncidentStatus,
   IncidentSeverity,
   IncidentPriority,
   IncidentType,
   IncidentCategory
 } from '@/types/incident-management';
-import { 
-  INCIDENT_TYPES, 
-  INCIDENT_CATEGORIES, 
+import {
+  INCIDENT_TYPES,
+  INCIDENT_CATEGORIES,
   INCIDENT_STATUSES,
   INCIDENT_SEVERITIES,
   INCIDENT_PRIORITIES
@@ -115,7 +117,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
   canApprove = true
 }) => {
   const { user } = useAuth();
-  const { 
+  const {
     profiles,
     updateStatus,
     assignIncident,
@@ -128,7 +130,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
   // Helper function to safely format dates for input fields
   const formatDateForInput = useCallback((date: string | Date | undefined): string => {
     if (!date) return '';
-    
+
     try {
       if (typeof date === 'string') {
         // Check if it's already in YYYY-MM-DD format
@@ -220,11 +222,11 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
         detection_date: generalData.detection_date ? new Date(generalData.detection_date) : undefined,
         resolution_date: generalData.resolution_date ? new Date(generalData.resolution_date) : undefined,
         assigned_to: generalData.assigned_to || undefined,
-        affected_systems: generalData.affected_systems ? 
+        affected_systems: generalData.affected_systems ?
           generalData.affected_systems.split(',').map(s => s.trim()).filter(s => s) : undefined,
         business_impact: generalData.business_impact || undefined
       };
-      
+
       try {
         await onUpdate(incident.id, updates);
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -337,80 +339,101 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
   return (
     <Card className={cn(
       "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden cursor-pointer",
-      isExpanded 
-        ? "shadow-lg border-primary/30" 
+      isExpanded
+        ? "shadow-lg border-primary/30"
         : "hover:bg-gray-50/50 dark:hover:bg-gray-800/50 border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
           <CardHeader className="pb-3 relative z-10 group/header">
             {/* Hover Effect Gradient for Header */}
-            <div 
-              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none" 
+            <div
+              className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none"
               style={{
                 background: 'linear-gradient(to right, hsl(var(--primary) / 0.15), transparent)'
               }}
             />
-            <div className="flex items-center justify-between gap-4 relative z-10">
-              {/* Left Section */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? 
-                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                }
-                
-                <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
-                  <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+            <div className="flex flex-col gap-4 relative z-10 w-full">
+
+              {/* Top: Icon, Title, Chevron */}
+              <div className="flex items-start gap-3 w-full">
+                {/* Icon */}
+                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm border",
+                  incident.status === 'resolved' || incident.status === 'closed' ? 'bg-green-100 border-green-200 dark:bg-green-900/30 dark:border-green-800 text-green-700 dark:text-green-400' :
+                    incident.severity === 'critical' || incident.severity === 'high' ? 'bg-red-100 border-red-200 dark:bg-red-900/40 dark:border-red-800 text-red-700 dark:text-red-400' :
+                      'bg-orange-100 border-orange-200 dark:bg-orange-900/40 dark:border-orange-800 text-orange-700 dark:text-orange-400'
+                )}>
+                  {getStatusIcon(incident.status)}
                 </div>
-                
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-sm font-semibold truncate">{incident.title}</CardTitle>
-                    <Badge className={getStatusColor(incident.status)}>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(incident.status)}
-                        {INCIDENT_STATUSES[incident.status]?.split(' - ')[0] || incident.status}
-                      </div>
-                    </Badge>
+
+                {/* Title */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base sm:text-lg font-bold leading-tight text-foreground line-clamp-2 break-words" title={incident.title}>
+                      {incident.title}
+                    </CardTitle>
+                    <div className="flex-shrink-0 mt-0.5">
+                      {isExpanded ?
+                        <ChevronDown className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" /> :
+                        <ChevronRight className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
+                      }
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{INCIDENT_TYPES[incident.type]?.split(' - ')[0] || incident.type}</span>
-                    <span>•</span>
-                    <span className={`truncate ${getSeverityColor(incident.severity)}`}>
-                      {INCIDENT_SEVERITIES[incident.severity]?.split(' - ')[0] || incident.severity}
-                    </span>
-                    <span>•</span>
-                    <span className={`truncate ${getPriorityColor(incident.priority)}`}>
-                      {INCIDENT_PRIORITIES[incident.priority]?.split(' - ')[0] || incident.priority}
-                    </span>
-                    {incident.assigned_to && (
-                      <>
-                        <span>•</span>
-                        <span className="truncate">{getProfileName(incident.assigned_to)}</span>
-                      </>
-                    )}
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    <Badge className={cn("inline-flex shrink-0 font-medium px-2 py-0.5 text-[10px] shadow-none border-0 uppercase tracking-wider", getStatusColor(incident.status))}>
+                      {INCIDENT_STATUSES[incident.status]?.split(' - ')[0] || incident.status}
+                    </Badge>
                   </div>
                 </div>
               </div>
-              
-              {/* Right Section */}
-              <div className="text-right flex-shrink-0">
-                <div className="text-xs text-muted-foreground">
-                  <div>Detectado:</div>
-                  <div className="font-medium">
-                    {format(incident.detection_date, "dd/MM/yyyy HH:mm", { locale: ptBR })}
+
+              {/* Middle: Badges */}
+              <div className="flex flex-wrap items-center gap-2.5 text-xs bg-muted/40 p-2.5 rounded-lg border border-border/50">
+                <span className="flex items-center gap-1 font-medium bg-background text-foreground px-2 py-1 rounded shadow-sm border border-border text-[11px] shrink-0" title={INCIDENT_TYPES[incident.type]?.split(' - ')[0] || incident.type}>
+                  {INCIDENT_TYPES[incident.type]?.split(' - ')[0] || incident.type}
+                </span>
+
+                <span className={`font-bold shrink-0 uppercase tracking-wider text-[10px] ${getSeverityColor(incident.severity)}`}>
+                  {INCIDENT_SEVERITIES[incident.severity]?.split(' - ')[0] || incident.severity}
+                </span>
+                <span className="text-muted-foreground/30">•</span>
+
+                <span className={`font-bold shrink-0 uppercase tracking-wider text-[10px] ${getPriorityColor(incident.priority)}`}>
+                  {INCIDENT_PRIORITIES[incident.priority]?.split(' - ')[0] || incident.priority}
+                </span>
+              </div>
+
+              {/* Bottom: Assignee & Dates */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs w-full">
+                {/* Assignee */}
+                <div className="flex items-center gap-2 min-w-0 flex-shrink-0 max-w-[50%]">
+                  <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 border border-border">
+                    <Users className="w-3 h-3 text-muted-foreground" />
                   </div>
+                  <span className="truncate font-medium text-foreground/80">
+                    {incident.assigned_to ? getProfileName(incident.assigned_to) : 'Não atribuído'}
+                  </span>
                 </div>
-                {incident.resolution_date && (
-                  <div className={`text-xs mt-1 ${
-                    isOverdue(incident.resolution_date) ? 'text-red-600 font-semibold' : 'text-green-600'
-                  }`}>
-                    <div>Resolvido:</div>
-                    <div className="font-medium">
-                      {format(incident.resolution_date, "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                    </div>
+
+                {/* Dates */}
+                <div className="flex flex-col text-left sm:text-right gap-1 border-t sm:border-t-0 border-border/50 pt-2 sm:pt-0 min-w-0">
+                  <div className="flex items-center sm:justify-end gap-1.5 text-[11px] truncate">
+                    <Clock className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <span className="text-muted-foreground shrink-0">Detectado:</span>
+                    <span className="font-medium text-foreground truncate">
+                      {format(new Date(incident.detection_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    </span>
                   </div>
-                )}
+                  {incident.resolution_date && (
+                    <div className={cn("flex items-center sm:justify-end gap-1.5 text-[11px] truncate", isOverdue(new Date(incident.resolution_date)) ? 'text-red-600' : 'text-green-600')}>
+                      <CheckCircle className="w-3 h-3 shrink-0" />
+                      <span className="opacity-80 shrink-0">Resolvido:</span>
+                      <span className="font-medium truncate">
+                        {format(new Date(incident.resolution_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -419,65 +442,60 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
           <CardContent className="pt-0 relative z-10">
             <div className="space-y-6">
               {/* Navigation Tabs */}
-              <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg overflow-x-auto md:overflow-visible w-full [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <button
                   onClick={() => setActiveSection('general')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'general' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'general'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-primary'
+                    }`}
                 >
-                  <Shield className="h-4 w-4" />
-                  Informações Gerais
+                  <Shield className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Informações Gerais</span>
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('response')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'response' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'response'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-primary'
+                    }`}
                 >
-                  <Activity className="h-4 w-4" />
-                  Resposta
+                  <Activity className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Resposta</span>
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('evidence')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'evidence' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'evidence'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-primary'
+                    }`}
                 >
-                  <FileCheck className="h-4 w-4" />
-                  Evidências
+                  <FileCheck className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Evidências</span>
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('analysis')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'analysis' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'analysis'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-primary'
+                    }`}
                 >
-                  <Target className="h-4 w-4" />
-                  Análise
+                  <Target className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Análise</span>
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('history')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'history' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
-                      : 'text-muted-foreground hover:text-primary'
-                  }`}
+                  className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'history'
+                    ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
+                    : 'text-muted-foreground hover:text-primary'
+                    }`}
                 >
-                  <History className="h-4 w-4" />
-                  Histórico
+                  <History className="h-4 w-4 flex-shrink-0" />
+                  <span className="whitespace-nowrap">Histórico</span>
                 </button>
               </div>
 
@@ -523,7 +541,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                           <Input
                             id="title"
                             value={generalData.title}
-                            onChange={(e) => setGeneralData({...generalData, title: e.target.value})}
+                            onChange={(e) => setGeneralData({ ...generalData, title: e.target.value })}
                           />
                         ) : (
                           <p className="text-sm text-muted-foreground mt-1">{incident.title}</p>
@@ -533,9 +551,9 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                       <div>
                         <Label htmlFor="type">Tipo</Label>
                         {isEditingGeneral ? (
-                          <Select 
-                            value={generalData.type} 
-                            onValueChange={(value) => setGeneralData({...generalData, type: value as IncidentType})}
+                          <Select
+                            value={generalData.type}
+                            onValueChange={(value) => setGeneralData({ ...generalData, type: value as IncidentType })}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -558,9 +576,9 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                       <div>
                         <Label htmlFor="severity">Severidade</Label>
                         {isEditingGeneral ? (
-                          <Select 
-                            value={generalData.severity} 
-                            onValueChange={(value) => setGeneralData({...generalData, severity: value as IncidentSeverity})}
+                          <Select
+                            value={generalData.severity}
+                            onValueChange={(value) => setGeneralData({ ...generalData, severity: value as IncidentSeverity })}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -587,7 +605,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                             id="detection_date"
                             type="datetime-local"
                             value={generalData.detection_date + 'T00:00'}
-                            onChange={(e) => setGeneralData({...generalData, detection_date: e.target.value.split('T')[0]})}
+                            onChange={(e) => setGeneralData({ ...generalData, detection_date: e.target.value.split('T')[0] })}
                           />
                         ) : (
                           <p className="text-sm text-muted-foreground mt-1">
@@ -605,7 +623,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                           <Textarea
                             id="description"
                             value={generalData.description}
-                            onChange={(e) => setGeneralData({...generalData, description: e.target.value})}
+                            onChange={(e) => setGeneralData({ ...generalData, description: e.target.value })}
                             rows={3}
                           />
                         ) : (
@@ -618,9 +636,9 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                       <div>
                         <Label htmlFor="priority">Prioridade</Label>
                         {isEditingGeneral ? (
-                          <Select 
-                            value={generalData.priority} 
-                            onValueChange={(value) => setGeneralData({...generalData, priority: value as IncidentPriority})}
+                          <Select
+                            value={generalData.priority}
+                            onValueChange={(value) => setGeneralData({ ...generalData, priority: value as IncidentPriority })}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -643,9 +661,9 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                       <div>
                         <Label htmlFor="status">Status</Label>
                         {isEditingGeneral ? (
-                          <Select 
-                            value={generalData.status} 
-                            onValueChange={(value) => setGeneralData({...generalData, status: value as IncidentStatus})}
+                          <Select
+                            value={generalData.status}
+                            onValueChange={(value) => setGeneralData({ ...generalData, status: value as IncidentStatus })}
                           >
                             <SelectTrigger>
                               <SelectValue />
@@ -668,9 +686,9 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                       <div>
                         <Label htmlFor="assigned_to">Atribuído para</Label>
                         {isEditingGeneral ? (
-                          <Select 
-                            value={generalData.assigned_to} 
-                            onValueChange={(value) => setGeneralData({...generalData, assigned_to: value})}
+                          <Select
+                            value={generalData.assigned_to}
+                            onValueChange={(value) => setGeneralData({ ...generalData, assigned_to: value })}
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Selecionar usuário" />
@@ -695,9 +713,9 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
 
                   {isEditingGeneral && (
                     <div className="flex gap-2 pt-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => setIsEditingGeneral(false)}
                       >
                         <X className="h-4 w-4 mr-2" />
@@ -711,10 +729,10 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
               {/* 2. RESPOSTA */}
               {activeSection === 'response' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4">
                     <h4 className="text-lg font-medium text-muted-foreground">RESPOSTA AO INCIDENTE</h4>
                     {canEdit && (
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
                         <Button variant="outline" size="sm" onClick={() => setIsResponseDialogOpen(true)}>
                           <Activity className="h-4 w-4 mr-2" />
                           Atualizar Status
@@ -739,13 +757,15 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
               {/* 3. EVIDÊNCIAS */}
               {activeSection === 'evidence' && (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4">
                     <h4 className="text-lg font-medium text-muted-foreground">EVIDÊNCIAS</h4>
                     {canEdit && (
-                      <Button variant="outline" size="sm">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Adicionar Evidência
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Adicionar Evidência
+                        </Button>
+                      </div>
                     )}
                   </div>
 
@@ -760,58 +780,36 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
 
               {/* 4. ANÁLISE */}
               {activeSection === 'analysis' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-lg font-medium text-muted-foreground">ANÁLISE DE CAUSA RAIZ</h4>
-                  </div>
-
-                  <div className="text-center py-8">
-                    <Target className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      Módulo de análise de causa raiz em desenvolvimento.
-                    </p>
-                  </div>
+                <div className="py-2">
+                  <IncidentRCATab
+                    incident={incident}
+                    canEdit={canEdit}
+                    onUpdate={onUpdate}
+                  />
                 </div>
               )}
 
               {/* 5. HISTÓRICO */}
               {activeSection === 'history' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-lg font-medium text-muted-foreground">HISTÓRICO DE MUDANÇAS</h4>
-                  </div>
-
-                  <div className="text-center py-8">
-                    <History className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-sm text-gray-500">
-                      Histórico de mudanças em desenvolvimento.
-                    </p>
-                  </div>
+                <div className="py-2">
+                  <IncidentHistoryTab incidentId={incident.id} />
                 </div>
               )}
 
               {/* Actions */}
               <Separator />
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
-                    <Eye className="h-4 w-4 mr-2" />
-                    Ver Detalhes
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleDuplicate}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Duplicar
-                  </Button>
-                </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+
                 {canDelete && (
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={handleDelete}
                     disabled={isDeleting}
+                    className="w-full sm:w-auto px-2"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir
+                    <Trash2 className="h-4 w-4 mr-1 sm:mr-2 flex-shrink-0" />
+                    <span className="truncate text-xs sm:text-sm">Excluir</span>
                   </Button>
                 )}
               </div>
@@ -822,20 +820,20 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
 
       {/* Dialog para Atualização de Status */}
       <Dialog open={isResponseDialogOpen} onOpenChange={setIsResponseDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-lg sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Atualizar Status do Incidente</DialogTitle>
             <DialogDescription>
               Atualize o status e adicione comentários sobre a resposta.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="response_status">Novo Status</Label>
-              <Select 
-                value={responseData.status} 
-                onValueChange={(value) => setResponseData({...responseData, status: value as IncidentStatus})}
+              <Select
+                value={responseData.status}
+                onValueChange={(value) => setResponseData({ ...responseData, status: value as IncidentStatus })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -849,19 +847,19 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="response_comments">Comentários</Label>
               <Textarea
                 id="response_comments"
                 value={responseData.comments}
-                onChange={(e) => setResponseData({...responseData, comments: e.target.value})}
+                onChange={(e) => setResponseData({ ...responseData, comments: e.target.value })}
                 rows={4}
                 placeholder="Descreva as ações tomadas..."
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResponseDialogOpen(false)}>
               Cancelar
@@ -876,20 +874,20 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
 
       {/* Dialog para Atribuição */}
       <Dialog open={isAssignmentDialogOpen} onOpenChange={setIsAssignmentDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-lg sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Atribuir Incidente</DialogTitle>
             <DialogDescription>
               Atribua este incidente a um responsável.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="assignment_user">Usuário</Label>
-              <Select 
-                value={assignmentData.assigned_to} 
-                onValueChange={(value) => setAssignmentData({...assignmentData, assigned_to: value})}
+              <Select
+                value={assignmentData.assigned_to}
+                onValueChange={(value) => setAssignmentData({ ...assignmentData, assigned_to: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar usuário" />
@@ -903,19 +901,19 @@ const IncidentCard: React.FC<IncidentCardProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="assignment_comments">Comentários</Label>
               <Textarea
                 id="assignment_comments"
                 value={assignmentData.comments}
-                onChange={(e) => setAssignmentData({...assignmentData, comments: e.target.value})}
+                onChange={(e) => setAssignmentData({ ...assignmentData, comments: e.target.value })}
                 rows={3}
                 placeholder="Instruções adicionais..."
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAssignmentDialogOpen(false)}>
               Cancelar

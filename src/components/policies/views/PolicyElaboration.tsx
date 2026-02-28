@@ -29,7 +29,7 @@ import {
   Paperclip,
   Brain
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import PolicyProcessCard from '../shared/PolicyProcessCard';
@@ -113,13 +113,13 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
   const filteredPolicies = policies.filter(policy => {
     const elaborationStatuses = ['draft', 'under_review', 'pending_approval'];
     const matchesStatus = elaborationStatuses.includes(policy.status.toLowerCase());
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       policy.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       policy.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     return matchesStatus && matchesSearch;
   });
-  
+
   // Debug: verificar se o botão deve aparecer
   console.log('PolicyElaboration Debug:');
   console.log('  - Total policies:', policies.length);
@@ -129,7 +129,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
   // Gerar insights do Alex Policy para cada política
   const generateAlexInsights = (policy: Policy) => {
     const insights = [];
-    
+
     // Verificar se precisa de descrição
     if (!policy.description || policy.description.length < 50) {
       insights.push({
@@ -144,7 +144,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     const daysSinceCreation = Math.floor(
       (new Date().getTime() - new Date(policy.created_at).getTime()) / (1000 * 60 * 60 * 24)
     );
-    
+
     if (daysSinceCreation > 7 && policy.status === 'draft') {
       insights.push({
         type: 'warning' as const,
@@ -169,7 +169,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
 
   const handlePolicyAction = async (action: string, policyId: string, data?: any) => {
     setIsLoading(true);
-    
+
     try {
       switch (action) {
         case 'edit':
@@ -186,18 +186,18 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               review_date: policyToEdit.review_date || '',
               expiry_date: policyToEdit.expiry_date || ''
             });
-            
+
             // Carregar documentos existentes
             loadExistingDocuments(policyToEdit);
             setShowEditModal(true);
           }
           break;
-          
+
         case 'alex_suggestions':
           setSelectedPolicy(policies.find(p => p.id === policyId) || null);
           setShowAlexChat(true);
           break;
-          
+
         case 'send_review':
           await updatePolicyStatus(policyId, 'under_review');
           toast({
@@ -205,14 +205,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
             description: "A política foi enviada para a equipe de revisão",
           });
           break;
-          
+
         case 'improve_description':
           toast({
             title: "Alex Policy",
             description: "Sugestão: Adicione mais detalhes sobre o propósito e escopo da política",
           });
           break;
-          
+
         case 'suggest_structure':
           toast({
             title: "Alex Policy",
@@ -221,7 +221,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           setSelectedPolicy(policies.find(p => p.id === policyId) || null);
           setShowAlexChat(true);
           break;
-          
+
         default:
           console.log('Ação não implementada:', action);
       }
@@ -240,20 +240,20 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
   const handleSavePolicy = async (updatedPolicy: Policy) => {
     console.log('\n=== 💾 INÍCIO DO SALVAMENTO NO BANCO ===');
     console.log('📥 updatedPolicy recebido:', updatedPolicy);
-    
+
     try {
       console.log('🏗️ Construindo updateData...');
-      
+
       // Usando função RPC para contornar problema de cache do PostgREST
       console.log('📎 DEBUG METADADOS:');
       console.log('  - updatedPolicy.metadata (original):', (updatedPolicy as any).metadata);
       console.log('  - Tipo dos metadados:', typeof (updatedPolicy as any).metadata);
-      
+
       let metadataString;
       try {
         if ((updatedPolicy as any).metadata) {
-          metadataString = typeof (updatedPolicy as any).metadata === 'string' 
-            ? (updatedPolicy as any).metadata 
+          metadataString = typeof (updatedPolicy as any).metadata === 'string'
+            ? (updatedPolicy as any).metadata
             : JSON.stringify((updatedPolicy as any).metadata);
           console.log('  - metadataString gerada:', metadataString);
           console.log('  - Tamanho da string:', metadataString.length);
@@ -265,7 +265,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.error('  - Erro ao processar metadata:', metadataError);
         metadataString = '{}';
       }
-      
+
       const updateData = {
         title: updatedPolicy.title,
         description: updatedPolicy.description,
@@ -280,93 +280,93 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         updated_at: new Date().toISOString(),
         updated_by: user?.id
       };
-      
+
       console.log('📎 updateData.metadata final:', updateData.metadata);
       console.log('📎 updateData.document_url:', updateData.document_url);
-      
+
       console.log('✅ Campo expiration_date reativado usando função RPC personalizada');
-      
+
       console.log('📊 updateData construído:');
       Object.entries(updateData).forEach(([key, value]) => {
         console.log(`  - ${key}:`, typeof value, '→', value);
       });
-      
+
       console.log('🆔 ID da política para update:', updatedPolicy.id);
       console.log('🔍 Tipo do ID:', typeof updatedPolicy.id);
-      
+
       console.log('🚀 Executando query no Supabase...');
       console.log('📡 Tabela: policies');
       console.log('🔧 Operação: UPDATE');
       console.log('🎯 Condição: id =', updatedPolicy.id);
-      
+
       const startTime = Date.now();
-      
+
       // Tentar abordagem alternativa com RPC para contornar problema de cache
       console.log('🔧 Tentando abordagem com função RPC personalizada...');
-      
+
       let error = null;
       let data = null;
-      
+
       try {
         const { error: rpcError, data: rpcData } = await supabase.rpc('update_policy_direct', {
           policy_id: updatedPolicy.id,
           policy_data: updateData
         });
-        
+
         if (rpcError) {
           console.log('🔄 RPC falhou, tentando método tradicional...', rpcError.message);
           throw rpcError;
         }
-        
+
         console.log('✅ RPC executada com sucesso!');
         error = null;
         data = rpcData ? [rpcData] : [];
-        
+
       } catch (rpcError) {
         console.log('🔄 Fallback para método tradicional sem expiration_date...');
-        
+
         // Remover expiry_date para o fallback
         const { expiry_date, ...updateDataWithoutExpiration } = updateData;
-        
+
         const { error: updateError, data: updateData2 } = await supabase
           .from('policies')
           .update(updateDataWithoutExpiration)
           .eq('id', updatedPolicy.id)
           .select();
-          
+
         if (updateError) {
           throw updateError;
         }
-        
+
         console.log('✅ Update tradicional funcionou!');
         error = null;
         data = updateData2;
-        
+
         // Tentar atualizar expiry_date separadamente se necessário
         if (expiry_date) {
           console.log('🔄 Tentando atualizar expiry_date separadamente...');
-          
+
           try {
             await supabase
               .from('policies')
               .update({ expiry_date })
               .eq('id', updatedPolicy.id);
-              
+
             console.log('✅ expiry_date atualizado separadamente!');
           } catch (expirationError) {
             console.log('⚠️ Aviso: Não foi possível atualizar expiry_date:', expirationError.message);
           }
         }
       }
-      
+
       const endTime = Date.now();
       console.log(`⏱️ Query executada em ${endTime - startTime}ms`);
-      
+
       console.log('📡 Resposta completa do Supabase:');
       console.log('  - error:', error);
       console.log('  - data:', data);
       console.log('  - data length:', data?.length);
-      
+
       if (error) {
         console.log('\n=== ❌ ERRO DO SUPABASE DETECTADO ===');
         console.error('🚨 Erro completo:', error);
@@ -374,26 +374,26 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.error('🚨 Mensagem:', error.message);
         console.error('🚨 Detalhes:', error.details);
         console.error('🚨 Hint:', error.hint);
-        
+
         // Verificar se é erro de constraint
         if (error.code === '23514') {
           console.log('🔍 ERRO DE CONSTRAINT DETECTADO!');
           console.log('🔍 Verificando valores que podem estar causando o erro...');
-          
+
           if (updateData.category && !categories.includes(updateData.category)) {
             console.log('❌ Categoria inválida:', updateData.category);
             console.log('✅ Categorias válidas:', categories);
           }
-          
+
           if (updateData.document_type && !documentTypes.includes(updateData.document_type)) {
             console.log('❌ Tipo de documento inválido:', updateData.document_type);
             console.log('✅ Tipos válidos:', documentTypes);
           }
         }
-        
+
         throw error;
       }
-      
+
       if (!data || data.length === 0) {
         console.log('⚠️ AVISO: Update executado mas nenhuma linha foi retornada');
         console.log('🔍 Isso pode indicar que o ID não foi encontrado');
@@ -402,36 +402,36 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.log('📄 Linhas afetadas:', data.length);
         console.log('📄 Dados atualizados:', data[0]);
       }
-      
+
       console.log('🔄 Chamando onPolicyUpdate()...');
       onPolicyUpdate();
-      
+
       console.log('🎉 Exibindo toast de sucesso...');
       toast({
         title: "Política atualizada",
         description: "As alterações foram salvas com sucesso.",
       });
-      
+
       console.log('✅ handleSavePolicy concluído com sucesso');
-      
+
     } catch (error) {
       console.log('\n=== ❌ ERRO CAPTURADO EM handleSavePolicy ===');
       console.error('🚨 Erro capturado:', error);
       console.error('🚨 Tipo:', typeof error);
       console.error('🚨 Nome:', error.name);
       console.error('🚨 Mensagem:', error.message);
-      
+
       console.log('🔄 Re-throwing error para handleSaveEdit...');
       throw error;
     }
-    
+
     console.log('=== 💾 FIM DO SALVAMENTO NO BANCO ===\n');
   };
 
   const updatePolicyStatus = async (policyId: string, newStatus: string) => {
     const { error } = await supabase
       .from('policies')
-      .update({ 
+      .update({
         status: newStatus,
         updated_at: new Date().toISOString()
       })
@@ -443,7 +443,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
 
   const handleCreateNewPolicy = () => {
     console.log('🆕 Abrindo modal de criação de nova política');
-    
+
     // Resetar formulário
     setCreateFormData({
       title: '',
@@ -455,10 +455,10 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       review_date: '',
       expiry_date: ''
     });
-    
+
     // Limpar documentos anexados
     setCreateAttachedDocuments([]);
-    
+
     // Abrir modal
     setShowCreateModal(true);
   };
@@ -469,7 +469,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       [field]: value
     }));
   };
-  
+
   const handleCreateInputChange = (field: string, value: string) => {
     setCreateFormData(prev => ({
       ...prev,
@@ -479,7 +479,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
 
   const loadExistingDocuments = (policy: Policy) => {
     const documents = [];
-    
+
     // Carregar documento principal se existir
     if ((policy as any).document_url) {
       const mainDoc = {
@@ -493,19 +493,19 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       };
       documents.push(mainDoc);
     }
-    
+
     // Carregar documentos dos metadados se existirem
     try {
       const metadata = (policy as any).metadata;
       if (metadata) {
         let parsedMetadata;
-        
+
         if (typeof metadata === 'string') {
           parsedMetadata = JSON.parse(metadata);
         } else {
           parsedMetadata = metadata;
         }
-        
+
         if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
           parsedMetadata.attachedDocuments.forEach((doc: any, index: number) => {
             const processedDoc = {
@@ -517,7 +517,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               storagePath: doc.storagePath || '',
               uploadedAt: doc.uploadedAt || new Date().toISOString()
             };
-            
+
             documents.push(processedDoc);
           });
         }
@@ -525,15 +525,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     } catch (error) {
       console.error('❌ PolicyElaboration: Erro ao carregar documentos:', error);
     }
-    
+
     setAttachedDocuments(documents);
   };
 
   const handleFileUpload = async (files: FileList) => {
     if (!files.length) return;
-    
+
     setIsUploading(true);
-    
+
     try {
       for (const file of Array.from(files)) {
         const allowedTypes = [
@@ -542,7 +542,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'text/plain'
         ];
-        
+
         if (!allowedTypes.includes(file.type)) {
           toast({
             title: "Tipo de arquivo não suportado",
@@ -551,7 +551,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           });
           continue;
         }
-        
+
         if (file.size > 10 * 1024 * 1024) {
           toast({
             title: "Arquivo muito grande",
@@ -560,15 +560,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           });
           continue;
         }
-        
+
         console.log('📁 Iniciando upload real do arquivo:', file.name);
-        
+
         // Gerar nome único para o arquivo
         const fileExtension = file.name.split('.').pop();
         const fileName = `${user?.tenantId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
-        
+
         console.log('📁 Nome do arquivo no storage:', fileName);
-        
+
         // === DEBUG COMPLETO DO UPLOAD ===
         console.log('\n=== 🔍 DEBUG COMPLETO DO UPLOAD ===');
         console.log('⏰ Timestamp:', new Date().toISOString());
@@ -577,12 +577,12 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.log('  - Tamanho:', file.size, 'bytes');
         console.log('  - Tipo MIME:', file.type);
         console.log('  - Última modificação:', new Date(file.lastModified).toISOString());
-        
+
         // 1. Verificar autenticação
         console.log('\n🔑 ETAPA 1: Verificando autenticação...');
         const session = await supabase.auth.getSession();
         console.log('  - Sessão existe:', !!session.data.session);
-        
+
         if (session.data.session) {
           console.log('  - User ID:', session.data.session.user?.id);
           console.log('  - Email:', session.data.session.user?.email);
@@ -591,18 +591,18 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           console.log('  - Token válido:', new Date(session.data.session.expires_at! * 1000) > new Date());
         } else {
           console.error('❌ Sessão não encontrada!');
-          
+
           // Tentar obter usuário diretamente
           const { data: userData, error: userError } = await supabase.auth.getUser();
           console.log('  - Tentativa getUser():', userData.user ? 'Sucesso' : 'Falhou');
           if (userError) console.log('  - Erro getUser():', userError.message);
         }
-        
+
         // 2. Verificar configuração do cliente Supabase
         console.log('\n🔧 ETAPA 2: Verificando configuração do cliente...');
         console.log('  - URL Supabase:', supabase.supabaseUrl);
         console.log('  - Chave pública:', supabase.supabaseKey.substring(0, 20) + '...');
-        
+
         // 3. Gerar nome do arquivo
         console.log('\n📝 ETAPA 3: Gerando nome do arquivo...');
         console.log('  - Tenant ID:', user?.tenantId);
@@ -610,14 +610,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.log('  - Random:', Math.random().toString(36).substring(2));
         console.log('  - Extensão:', file.name.split('.').pop());
         console.log('  - Caminho final:', fileName);
-        
+
         // 4. Verificar bucket
         console.log('\n📦 ETAPA 4: Verificando bucket...');
         try {
           const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
           console.log('  - Lista de buckets:', buckets?.map(b => b.name) || 'Erro ao listar');
           if (bucketsError) console.log('  - Erro ao listar buckets:', bucketsError.message);
-          
+
           const policyBucket = buckets?.find(b => b.name === 'policy-documents');
           if (policyBucket) {
             console.log('  - Bucket policy-documents encontrado:');
@@ -630,30 +630,30 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         } catch (bucketError) {
           console.error('  - ❌ Erro ao verificar buckets:', bucketError);
         }
-        
+
         // 5. Tentar upload
         console.log('\n🚀 ETAPA 5: Executando upload...');
         console.log('  - Bucket de destino: policy-documents');
         console.log('  - Caminho do arquivo:', fileName);
         console.log('  - Opções de upload:', { cacheControl: '3600', upsert: false });
-        
+
         const uploadStartTime = Date.now();
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('policy-documents')
           .upload(fileName, file, {
             cacheControl: '3600',
             upsert: false
           });
-        
+
         const uploadEndTime = Date.now();
         const uploadDuration = uploadEndTime - uploadStartTime;
-        
+
         console.log('\n📡 ETAPA 6: Analisando resposta...');
         console.log('  - Duração do upload:', uploadDuration + 'ms');
         console.log('  - Upload data:', uploadData);
         console.log('  - Upload error:', uploadError);
-        
+
         if (uploadError) {
           console.error('\n❌ ERRO DETALHADO DO UPLOAD:');
           console.error('  - Tipo do erro:', typeof uploadError);
@@ -661,12 +661,12 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           console.error('  - Mensagem:', uploadError.message);
           console.error('  - Código de status:', uploadError.statusCode);
           console.error('  - Stack trace:', uploadError.stack);
-          
+
           // Tentar extrair mais informações
           if (uploadError.cause) {
             console.error('  - Causa:', uploadError.cause);
           }
-          
+
           // Serializar o erro completo
           try {
             const errorSerialized = JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError), 2);
@@ -674,44 +674,44 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           } catch (serError) {
             console.error('  - Erro ao serializar:', serError.message);
           }
-          
+
           // Verificar se é erro de RLS
           if (uploadError.message?.includes('row-level security') || uploadError.message?.includes('RLS')) {
             console.error('  - 🚨 ERRO DE RLS DETECTADO!');
             console.error('  - Verificar políticas de segurança do bucket');
           }
-          
+
           // Verificar se é erro de autenticação
           if (uploadError.message?.includes('Unauthorized') || uploadError.statusCode === 401) {
             console.error('  - 🚨 ERRO DE AUTENTICAÇÃO DETECTADO!');
             console.error('  - Token pode estar expirado ou inválido');
           }
-          
+
           // Verificar se é erro de permissão
           if (uploadError.statusCode === 403) {
             console.error('  - 🚨 ERRO DE PERMISSÃO DETECTADO!');
             console.error('  - Usuário não tem permissão para upload');
           }
-          
+
           toast({
             title: "Erro no upload",
             description: `Erro ao enviar ${file.name}: ${uploadError.message}`,
             variant: "destructive",
           });
-          
+
           console.log('=== FIM DO DEBUG (COM ERRO) ===\n');
           continue;
         }
-        
+
         console.log('✅ Upload realizado com sucesso:', uploadData);
-        
+
         // Obter URL pública do arquivo
         const { data: urlData } = supabase.storage
           .from('policy-documents')
           .getPublicUrl(fileName);
-        
+
         console.log('🔗 URL pública gerada:', urlData.publicUrl);
-        
+
         const newDocument = {
           id: Date.now().toString(),
           name: file.name,
@@ -721,9 +721,9 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           storagePath: fileName,
           uploadedAt: new Date().toISOString()
         };
-        
+
         setAttachedDocuments(prev => [...prev, newDocument]);
-        
+
         toast({
           title: "Documento anexado",
           description: `${file.name} foi enviado e anexado com sucesso.`,
@@ -744,7 +744,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files) {
       handleFileUpload(e.dataTransfer.files);
     }
@@ -759,13 +759,13 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     e.preventDefault();
     setDragActive(false);
   };
-  
+
   // Funções para modal de criação
   const handleCreateFileUpload = async (files: FileList) => {
     if (!files.length) return;
-    
+
     setIsCreateUploading(true);
-    
+
     try {
       for (const file of Array.from(files)) {
         const allowedTypes = [
@@ -774,7 +774,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'text/plain'
         ];
-        
+
         if (!allowedTypes.includes(file.type)) {
           toast({
             title: "Tipo de arquivo não suportado",
@@ -783,7 +783,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           });
           continue;
         }
-        
+
         if (file.size > 10 * 1024 * 1024) {
           toast({
             title: "Arquivo muito grande",
@@ -792,15 +792,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           });
           continue;
         }
-        
+
         console.log('📁 Iniciando upload real do arquivo (criação):', file.name);
-        
+
         // Gerar nome único para o arquivo
         const fileExtension = file.name.split('.').pop();
         const fileName = `${user?.tenantId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExtension}`;
-        
+
         console.log('📁 Nome do arquivo no storage:', fileName);
-        
+
         // === DEBUG COMPLETO DO UPLOAD (CRIAÇÃO) ===
         console.log('\n=== 🔍 DEBUG COMPLETO DO UPLOAD (CRIAÇÃO) ===');
         console.log('⏰ Timestamp:', new Date().toISOString());
@@ -809,12 +809,12 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.log('  - Tamanho:', file.size, 'bytes');
         console.log('  - Tipo MIME:', file.type);
         console.log('  - Última modificação:', new Date(file.lastModified).toISOString());
-        
+
         // 1. Verificar autenticação
         console.log('\n🔑 ETAPA 1: Verificando autenticação...');
         const session = await supabase.auth.getSession();
         console.log('  - Sessão existe:', !!session.data.session);
-        
+
         if (session.data.session) {
           console.log('  - User ID:', session.data.session.user?.id);
           console.log('  - Email:', session.data.session.user?.email);
@@ -823,18 +823,18 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           console.log('  - Token válido:', new Date(session.data.session.expires_at! * 1000) > new Date());
         } else {
           console.error('❌ Sessão não encontrada!');
-          
+
           // Tentar obter usuário diretamente
           const { data: userData, error: userError } = await supabase.auth.getUser();
           console.log('  - Tentativa getUser():', userData.user ? 'Sucesso' : 'Falhou');
           if (userError) console.log('  - Erro getUser():', userError.message);
         }
-        
+
         // 2. Verificar configuração do cliente Supabase
         console.log('\n🔧 ETAPA 2: Verificando configuração do cliente...');
         console.log('  - URL Supabase:', supabase.supabaseUrl);
         console.log('  - Chave pública:', supabase.supabaseKey.substring(0, 20) + '...');
-        
+
         // 3. Gerar nome do arquivo
         console.log('\n📝 ETAPA 3: Gerando nome do arquivo...');
         console.log('  - Tenant ID:', user?.tenantId);
@@ -842,14 +842,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.log('  - Random:', Math.random().toString(36).substring(2));
         console.log('  - Extensão:', file.name.split('.').pop());
         console.log('  - Caminho final:', fileName);
-        
+
         // 4. Verificar bucket
         console.log('\n📦 ETAPA 4: Verificando bucket...');
         try {
           const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
           console.log('  - Lista de buckets:', buckets?.map(b => b.name) || 'Erro ao listar');
           if (bucketsError) console.log('  - Erro ao listar buckets:', bucketsError.message);
-          
+
           const policyBucket = buckets?.find(b => b.name === 'policy-documents');
           if (policyBucket) {
             console.log('  - Bucket policy-documents encontrado:');
@@ -862,30 +862,30 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         } catch (bucketError) {
           console.error('  - ❌ Erro ao verificar buckets:', bucketError);
         }
-        
+
         // 5. Tentar upload
         console.log('\n🚀 ETAPA 5: Executando upload...');
         console.log('  - Bucket de destino: policy-documents');
         console.log('  - Caminho do arquivo:', fileName);
         console.log('  - Opções de upload:', { cacheControl: '3600', upsert: false });
-        
+
         const uploadStartTime = Date.now();
-        
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('policy-documents')
           .upload(fileName, file, {
             cacheControl: '3600',
             upsert: false
           });
-        
+
         const uploadEndTime = Date.now();
         const uploadDuration = uploadEndTime - uploadStartTime;
-        
+
         console.log('\n📡 ETAPA 6: Analisando resposta...');
         console.log('  - Duração do upload:', uploadDuration + 'ms');
         console.log('  - Upload data:', uploadData);
         console.log('  - Upload error:', uploadError);
-        
+
         if (uploadError) {
           console.error('\n❌ ERRO DETALHADO DO UPLOAD:');
           console.error('  - Tipo do erro:', typeof uploadError);
@@ -893,12 +893,12 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           console.error('  - Mensagem:', uploadError.message);
           console.error('  - Código de status:', uploadError.statusCode);
           console.error('  - Stack trace:', uploadError.stack);
-          
+
           // Tentar extrair mais informações
           if (uploadError.cause) {
             console.error('  - Causa:', uploadError.cause);
           }
-          
+
           // Serializar o erro completo
           try {
             const errorSerialized = JSON.stringify(uploadError, Object.getOwnPropertyNames(uploadError), 2);
@@ -906,44 +906,44 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           } catch (serError) {
             console.error('  - Erro ao serializar:', serError.message);
           }
-          
+
           // Verificar se é erro de RLS
           if (uploadError.message?.includes('row-level security') || uploadError.message?.includes('RLS')) {
             console.error('  - 🚨 ERRO DE RLS DETECTADO!');
             console.error('  - Verificar políticas de segurança do bucket');
           }
-          
+
           // Verificar se é erro de autenticação
           if (uploadError.message?.includes('Unauthorized') || uploadError.statusCode === 401) {
             console.error('  - 🚨 ERRO DE AUTENTICAÇÃO DETECTADO!');
             console.error('  - Token pode estar expirado ou inválido');
           }
-          
+
           // Verificar se é erro de permissão
           if (uploadError.statusCode === 403) {
             console.error('  - 🚨 ERRO DE PERMISSÃO DETECTADO!');
             console.error('  - Usuário não tem permissão para upload');
           }
-          
+
           toast({
             title: "Erro no upload",
             description: `Erro ao enviar ${file.name}: ${uploadError.message}`,
             variant: "destructive",
           });
-          
+
           console.log('=== FIM DO DEBUG (COM ERRO) ===\n');
           continue;
         }
-        
+
         console.log('✅ Upload realizado com sucesso:', uploadData);
-        
+
         // Obter URL pública do arquivo
         const { data: urlData } = supabase.storage
           .from('policy-documents')
           .getPublicUrl(fileName);
-        
+
         console.log('🔗 URL pública gerada:', urlData.publicUrl);
-        
+
         const newDocument = {
           id: Date.now().toString(),
           name: file.name,
@@ -953,9 +953,9 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           storagePath: fileName,
           uploadedAt: new Date().toISOString()
         };
-        
+
         setCreateAttachedDocuments(prev => [...prev, newDocument]);
-        
+
         toast({
           title: "Documento anexado",
           description: `${file.name} foi enviado e anexado com sucesso.`,
@@ -972,11 +972,11 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       setIsCreateUploading(false);
     }
   };
-  
+
   const handleCreateDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setCreateDragActive(false);
-    
+
     if (e.dataTransfer.files) {
       handleCreateFileUpload(e.dataTransfer.files);
     }
@@ -991,18 +991,18 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     e.preventDefault();
     setCreateDragActive(false);
   };
-  
+
   const removeCreateDocument = async (documentId: string) => {
     const document = createAttachedDocuments.find(doc => doc.id === documentId);
-    
+
     if (document && document.storagePath) {
       console.log('🗑️ Removendo arquivo do storage:', document.storagePath);
-      
+
       try {
         const { error } = await supabase.storage
           .from('policy-documents')
           .remove([document.storagePath]);
-          
+
         if (error) {
           console.error('❌ Erro ao remover arquivo do storage:', error);
         } else {
@@ -1012,7 +1012,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.error('❌ Erro ao remover arquivo:', error);
       }
     }
-    
+
     setCreateAttachedDocuments(prev => prev.filter(doc => doc.id !== documentId));
     toast({
       title: "Documento removido",
@@ -1022,15 +1022,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
 
   const removeDocument = async (documentId: string) => {
     const document = attachedDocuments.find(doc => doc.id === documentId);
-    
+
     if (document && document.storagePath) {
       console.log('🗑️ Removendo arquivo do storage:', document.storagePath);
-      
+
       try {
         const { error } = await supabase.storage
           .from('policy-documents')
           .remove([document.storagePath]);
-          
+
         if (error) {
           console.error('❌ Erro ao remover arquivo do storage:', error);
         } else {
@@ -1040,7 +1040,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.error('❌ Erro ao remover arquivo:', error);
       }
     }
-    
+
     setAttachedDocuments(prev => prev.filter(doc => doc.id !== documentId));
     toast({
       title: "Documento removido",
@@ -1055,14 +1055,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-  
+
   const handleCreatePolicy = async () => {
     console.log('\n=== 🆕 DEBUG DETALHADO - CRIAÇÃO DE NOVA POLÍTICA ===');
     console.log('⏰ Timestamp:', new Date().toISOString());
     console.log('👤 Usuário:', user);
     console.log('📋 createFormData:', createFormData);
     console.log('📎 createAttachedDocuments:', createAttachedDocuments);
-    
+
     // Validação 1: Título
     if (!createFormData.title.trim()) {
       console.log('❌ ERRO: Título vazio');
@@ -1073,7 +1073,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       });
       return;
     }
-    
+
     // Validação 2: Categoria
     if (!createFormData.category) {
       console.log('❌ ERRO: Categoria vazia');
@@ -1084,15 +1084,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       });
       return;
     }
-    
+
     console.log('✅ Validações passaram, iniciando criação...');
-    
+
     // Verificar dados do usuário
     console.log('🔍 Verificando dados do usuário:');
     console.log('  - user.id:', user?.id);
     console.log('  - user.tenantId:', user?.tenantId);
     console.log('  - user.tenant:', user?.tenant);
-    
+
     if (!user?.id) {
       console.log('❌ ERRO: Usuário não tem ID');
       toast({
@@ -1102,7 +1102,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       });
       return;
     }
-    
+
     if (!user?.tenantId) {
       console.log('❌ ERRO: Usuário não tem tenantId');
       toast({
@@ -1112,9 +1112,9 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Preparar dados da nova política (sem expiration_date devido ao cache do PostgREST)
       const newPolicyData = {
@@ -1145,64 +1145,64 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         owner_id: user.id,
         tenant_id: user.tenantId
       };
-      
+
       console.log('✅ Campo expiry_date incluído na criação');
-      
+
       console.log('📦 Dados da nova política:', newPolicyData);
-      
+
       // Inserir nova política no banco
       console.log('🚀 Executando INSERT no Supabase...');
       console.log('📊 Dados para inserção:', newPolicyData);
-      
+
       const { error, data } = await supabase
         .from('policies')
         .insert([newPolicyData])
         .select();
-      
+
       console.log('📡 Resposta do INSERT:');
       console.log('  - error:', error);
       console.log('  - data:', data);
-      
+
       if (error) {
         console.error('❌ Erro detalhado ao criar política:', error);
         console.error('❌ Código do erro:', error.code);
         console.error('❌ Mensagem:', error.message);
         console.error('❌ Detalhes:', error.details);
         console.error('❌ Hint:', error.hint);
-        
+
         // Verificar se é erro de constraint
         if (error.code === '23514') {
           console.log('🔍 ERRO DE CONSTRAINT DETECTADO!');
           console.log('🔍 Verificando valores que podem estar causando o erro...');
-          
+
           if (newPolicyData.category && !categories.includes(newPolicyData.category)) {
             console.log('❌ Categoria inválida:', newPolicyData.category);
             console.log('✅ Categorias válidas:', categories);
           }
-          
+
           if (newPolicyData.document_type && !documentTypes.includes(newPolicyData.document_type)) {
             console.log('❌ Tipo de documento inválido:', newPolicyData.document_type);
             console.log('✅ Tipos válidos:', documentTypes);
           }
         }
-        
+
         throw error;
       }
-      
+
       if (!data || data.length === 0) {
         console.log('⚠️ AVISO: INSERT executado mas nenhuma linha foi retornada');
         throw new Error('Nenhum dado foi retornado após a inserção');
       }
-      
+
       console.log('✅ Política criada com sucesso:', data[0]);
       console.log('🆔 ID da nova política:', data[0].id);
-      
+
       // Campo expiry_date já incluído na criação, não precisa de update separado
       console.log('✅ Política criada com todos os campos, incluindo expiry_date');
-      
+
       // Atualizar lista de políticas
       onPolicyUpdate();
-      
+
       // Fechar modal e limpar formulário
       setShowCreateModal(false);
       setCreateFormData({
@@ -1216,14 +1216,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         expiry_date: ''
       });
       setCreateAttachedDocuments([]);
-      
+
       toast({
         title: "Política criada",
         description: `A política "${createFormData.title}" foi criada com sucesso.`,
       });
-      
+
       console.log('🎉 CRIAÇÃO CONCLUÍDA COM SUCESSO!');
-      
+
     } catch (error) {
       console.log('\n=== ❌ ERRO CAPTURADO NA CRIAÇÃO ===');
       console.error('❌ Erro completo:', error);
@@ -1231,7 +1231,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       console.error('❌ Nome do erro:', error.name);
       console.error('❌ Mensagem do erro:', error.message);
       console.error('❌ Stack trace:', error.stack);
-      
+
       toast({
         title: "Erro ao criar política",
         description: `Erro: ${error.message || 'Ocorreu um erro ao criar a política.'}`,
@@ -1251,7 +1251,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     console.log('📋 editFormData:', editFormData);
     console.log('📎 attachedDocuments:', attachedDocuments);
     console.log('🔄 isLoading atual:', isLoading);
-    
+
     // Validação 1: Política sendo editada
     if (!editingPolicy) {
       console.log('❌ ERRO CRÍTICO: editingPolicy é null ou undefined');
@@ -1260,13 +1260,13 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       return;
     }
     console.log('✅ VALIDAÇÃO 1: editingPolicy existe');
-    
+
     // Validação 2: Título
     console.log('🔍 Validando título...');
     console.log('📝 Título atual:', `"${editFormData.title}"`);
     console.log('📏 Comprimento do título:', editFormData.title.length);
     console.log('🧹 Título após trim:', `"${editFormData.title.trim()}"`);
-    
+
     if (!editFormData.title.trim()) {
       console.log('❌ ERRO: Título vazio após trim');
       toast({
@@ -1277,14 +1277,14 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       return;
     }
     console.log('✅ VALIDAÇÃO 2: Título válido');
-    
+
     // Validação 3: Categoria
     console.log('🔍 Validando categoria...');
     console.log('📂 Categoria atual:', `"${editFormData.category}"`);
     console.log('📂 Tipo da categoria:', typeof editFormData.category);
     console.log('📋 Categorias disponíveis:', categories);
     console.log('🔍 Categoria está na lista?', categories.includes(editFormData.category));
-    
+
     if (!editFormData.category) {
       console.log('❌ ERRO: Categoria vazia');
       toast({
@@ -1295,18 +1295,18 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       return;
     }
     console.log('✅ VALIDAÇÃO 3: Categoria válida');
-    
+
     // Validação 4: Tipo de documento
     console.log('🔍 Validando tipo de documento...');
     console.log('📄 Tipo atual:', `"${editFormData.document_type}"`);
     console.log('📄 Tipo está na lista?', documentTypes.includes(editFormData.document_type));
-    
+
     console.log('✅ TODAS AS VALIDAÇÕES PASSARAM - Iniciando salvamento...');
-    
+
     try {
       console.log('🔄 Definindo isLoading = true');
       setIsLoading(true);
-      
+
       console.log('🏗️ Construindo objeto updatedPolicy...');
       const updatedPolicy = {
         ...editingPolicy,
@@ -1326,7 +1326,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         updated_at: new Date().toISOString(),
         updated_by: user?.id
       };
-      
+
       console.log('📦 updatedPolicy construído:');
       console.log('  - ID:', updatedPolicy.id);
       console.log('  - Título:', updatedPolicy.title);
@@ -1339,16 +1339,16 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       console.log('  - URL documento:', updatedPolicy.document_url);
       console.log('  - Metadados:', updatedPolicy.metadata);
       console.log('  - Updated by:', updatedPolicy.updated_by);
-      
+
       console.log('🚀 Chamando handleSavePolicy...');
       console.log('📎 Anexos que serão salvos:', updatedPolicy.metadata);
       console.log('📎 Número de anexos:', updatedPolicy.metadata?.attachedDocuments?.length || 0);
-      
+
       await handleSavePolicy(updatedPolicy);
-      
+
       console.log('✅ handleSavePolicy retornou com sucesso');
       console.log('🔍 Verificando se os anexos foram salvos...');
-      
+
       // Verificar se a política foi realmente atualizada
       try {
         const { data: verifyData, error: verifyError } = await supabase
@@ -1356,19 +1356,19 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
           .select('metadata, document_url')
           .eq('id', updatedPolicy.id)
           .single();
-          
+
         if (verifyError) {
           console.error('❌ Erro ao verificar salvamento:', verifyError);
         } else {
           console.log('✅ Dados salvos no banco:');
           console.log('  - document_url:', verifyData.document_url);
           console.log('  - metadata:', verifyData.metadata);
-          
+
           if (verifyData.metadata) {
             let parsedMetadata;
             try {
-              parsedMetadata = typeof verifyData.metadata === 'string' 
-                ? JSON.parse(verifyData.metadata) 
+              parsedMetadata = typeof verifyData.metadata === 'string'
+                ? JSON.parse(verifyData.metadata)
                 : verifyData.metadata;
               console.log('  - attachedDocuments salvos:', parsedMetadata.attachedDocuments?.length || 0);
             } catch (parseError) {
@@ -1380,13 +1380,13 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         console.error('❌ Erro na verificação:', verifyError);
       }
       console.log('🔄 Fechando modal e limpando estado...');
-      
+
       setShowEditModal(false);
       setEditingPolicy(null);
       setAttachedDocuments([]);
-      
+
       console.log('🎉 SALVAMENTO CONCLUÍDO COM SUCESSO!');
-      
+
     } catch (error) {
       console.log('\n=== ❌ ERRO CAPTURADO ===');
       console.error('🚨 Tipo do erro:', typeof error);
@@ -1397,11 +1397,11 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       console.error('🚨 Hint do erro:', error.hint);
       console.error('🚨 Erro completo:', error);
       console.error('🚨 Stack trace:', error.stack);
-      
+
       if (error.message) {
         console.log('📝 Mensagem de erro extraída:', error.message);
       }
-      
+
       toast({
         title: "Erro ao salvar",
         description: `Erro: ${error.message || error.toString() || 'Erro desconhecido ao salvar as alterações.'}`,
@@ -1459,30 +1459,30 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       {/* Header da seção */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div>
-          <h2 className="text-2xl font-bold">Elaboração de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Elaboração de Políticas</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Crie, edite e desenvolva políticas com assistência da IA Alex Policy
           </p>
         </div>
-        
-        <div className="flex gap-2">
+
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <button
-            className="justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-9 px-3 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800"
+            className="flex-1 sm:flex-none justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-9 px-3 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800"
             type="button"
             onClick={() => setShowAlexChat(!showAlexChat)}
           >
             <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
               <Brain className="h-3 w-3 text-white" />
             </div>
-            <span>{showAlexChat ? 'Ocultar' : 'Mostrar'} Alex Chat</span>
-            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
+            <span className="truncate">{showAlexChat ? 'Ocultar' : 'Mostrar'} Alex</span>
+            <Badge variant="secondary" className="text-[10px] px-1 bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
               IA
             </Badge>
           </button>
-          
-          <Button onClick={handleCreateNewPolicy}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Política
+
+          <Button onClick={handleCreateNewPolicy} className="flex-1 sm:flex-none">
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="truncate">Nova Política</span>
           </Button>
         </div>
       </div>
@@ -1492,42 +1492,42 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         {/* Coluna principal - Lista de políticas */}
         <div className={`space-y-4 ${showAlexChat ? 'lg:col-span-2' : 'lg:col-span-1'}`}>
           {/* Estatísticas rápidas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <FileText className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="text-sm font-medium">Em Elaboração</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-[10px] sm:text-sm font-medium truncate">Em Elaboração</p>
+                    <p className="text-lg sm:text-2xl font-bold">
                       {filteredPolicies.filter(p => p.status === 'draft').length}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <Edit className="h-5 w-5 text-orange-500" />
                   <div>
-                    <p className="text-sm font-medium">Em Revisão</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-[10px] sm:text-sm font-medium">Em Revisão</p>
+                    <p className="text-lg sm:text-2xl font-bold">
                       {filteredPolicies.filter(p => p.status === 'under_review').length}
                     </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
                   <Lightbulb className="h-5 w-5 text-purple-500" />
                   <div>
-                    <p className="text-sm font-medium">Com Insights Alex</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-[10px] sm:text-sm font-medium truncate">Com Insights Alex</p>
+                    <p className="text-lg sm:text-2xl font-bold">
                       {filteredPolicies.filter(p => generateAlexInsights(p).length > 0).length}
                     </p>
                   </div>
@@ -1545,17 +1545,17 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4">
-                <div className="flex-1">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                <div className="flex-1 w-full">
                   <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Buscar políticas em elaboração..."
-                      className="pl-10"
+                      placeholder="Buscar políticas..."
+                      className="pl-9 h-9"
                     />
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Atualizar
                 </Button>
@@ -1609,16 +1609,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         )}
       </div>
 
-      {/* Modal de Edição Completo */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5" />
               Editar Política
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Informações Básicas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1631,7 +1630,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   placeholder="Digite o título da política"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-category">Categoria *</Label>
                 <Select value={editFormData.category} onValueChange={(value) => handleEditInputChange('category', value)}>
@@ -1645,7 +1644,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-document-type">Tipo de Documento</Label>
                 <Select value={editFormData.document_type} onValueChange={(value) => handleEditInputChange('document_type', value)}>
@@ -1659,7 +1658,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-priority">Prioridade</Label>
                 <Select value={editFormData.priority} onValueChange={(value) => handleEditInputChange('priority', value)}>
@@ -1674,7 +1673,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 </Select>
               </div>
             </div>
-            
+
             {/* Descrição */}
             <div className="space-y-2">
               <Label htmlFor="edit-description">Descrição</Label>
@@ -1686,7 +1685,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 rows={4}
               />
             </div>
-            
+
             {/* Datas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -1698,7 +1697,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   onChange={(e) => handleEditInputChange('effective_date', e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-review-date">Data de Revisão</Label>
                 <Input
@@ -1708,7 +1707,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   onChange={(e) => handleEditInputChange('review_date', e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="edit-expiry-date">Data de Expiração</Label>
                 <Input
@@ -1719,7 +1718,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 />
               </div>
             </div>
-            
+
             {/* Upload de Documentos */}
             <div className="space-y-4">
               <div>
@@ -1728,14 +1727,13 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   Anexe o documento principal da política (PDF, DOC, DOCX, TXT - máx. 10MB)
                 </p>
               </div>
-              
+
               {/* Área de Upload */}
               <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  dragActive 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-muted-foreground/25 hover:border-primary/50'
-                }`}
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${dragActive
+                  ? 'border-primary bg-primary/5'
+                  : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -1773,7 +1771,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   </div>
                 )}
               </div>
-              
+
               {/* Lista de Documentos Anexados */}
               {attachedDocuments.length > 0 && (
                 <div className="space-y-2">
@@ -1824,17 +1822,17 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Aviso sobre controle de versão */}
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Controle de Versão:</strong> Os documentos anexados seguirão a política através de todas as etapas 
+                <strong>Controle de Versão:</strong> Os documentos anexados seguirão a política através de todas as etapas
                 (elaboração → revisão → aprovação → publicação), garantindo rastreabilidade completa do processo.
               </AlertDescription>
             </Alert>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowEditModal(false);
@@ -1859,16 +1857,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Modal de Criação de Nova Política */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
               Nova Política
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Informações Básicas */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1881,7 +1878,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   placeholder="Digite o título da política"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="create-category">Categoria *</Label>
                 <Select value={createFormData.category} onValueChange={(value) => handleCreateInputChange('category', value)}>
@@ -1895,7 +1892,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="create-document-type">Tipo de Documento</Label>
                 <Select value={createFormData.document_type} onValueChange={(value) => handleCreateInputChange('document_type', value)}>
@@ -1909,7 +1906,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="create-priority">Prioridade</Label>
                 <Select value={createFormData.priority} onValueChange={(value) => handleCreateInputChange('priority', value)}>
@@ -1924,7 +1921,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 </Select>
               </div>
             </div>
-            
+
             {/* Descrição */}
             <div className="space-y-2">
               <Label htmlFor="create-description">Descrição</Label>
@@ -1936,7 +1933,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 rows={4}
               />
             </div>
-            
+
             {/* Datas */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -1948,7 +1945,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   onChange={(e) => handleCreateInputChange('effective_date', e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="create-review-date">Data de Revisão</Label>
                 <Input
@@ -1958,7 +1955,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   onChange={(e) => handleCreateInputChange('review_date', e.target.value)}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="create-expiry-date">Data de Expiração</Label>
                 <Input
@@ -1969,7 +1966,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 />
               </div>
             </div>
-            
+
             {/* Upload de Documentos */}
             <div className="space-y-4">
               <div>
@@ -1978,14 +1975,13 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   Anexe o documento principal da política (PDF, DOC, DOCX, TXT - máx. 10MB)
                 </p>
               </div>
-              
+
               {/* Área de Upload */}
               <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                  createDragActive 
-                    ? 'border-primary bg-primary/5' 
-                    : 'border-muted-foreground/25 hover:border-primary/50'
-                }`}
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${createDragActive
+                  ? 'border-primary bg-primary/5'
+                  : 'border-muted-foreground/25 hover:border-primary/50'
+                  }`}
                 onDrop={handleCreateDrop}
                 onDragOver={handleCreateDragOver}
                 onDragLeave={handleCreateDragLeave}
@@ -2023,7 +2019,7 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                   </div>
                 )}
               </div>
-              
+
               {/* Lista de Documentos Anexados */}
               {createAttachedDocuments.length > 0 && (
                 <div className="space-y-2">
@@ -2074,17 +2070,17 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
                 </div>
               )}
             </div>
-            
+
             {/* Aviso sobre status inicial */}
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                <strong>Status Inicial:</strong> A política será criada com status "Rascunho" e poderá ser editada 
+                <strong>Status Inicial:</strong> A política será criada com status "Rascunho" e poderá ser editada
                 antes de ser enviada para revisão. Você poderá adicionar mais detalhes e documentos posteriormente.
               </AlertDescription>
             </Alert>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => {
               setShowCreateModal(false);

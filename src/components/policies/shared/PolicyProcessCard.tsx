@@ -193,11 +193,11 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
-                
+
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-2 mb-1">
                     <h3 className="font-semibold text-lg truncate">{policy.title}</h3>
-                    <div 
+                    <div
                       className="flex items-center space-x-1 border px-2 py-1 rounded-full text-xs font-medium"
                       style={statusConfig.style}
                     >
@@ -205,22 +205,22 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                       <span>{statusConfig.label}</span>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span className="flex items-center space-x-1">
+
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-4 sm:space-x-0 text-xs sm:text-sm text-muted-foreground">
+                    <span className="flex items-center space-x-1 whitespace-nowrap">
                       <FileText className="h-3 w-3" />
                       <span>{policy.document_type}</span>
                     </span>
-                    <span className="flex items-center space-x-1">
+                    <span className="flex items-center space-x-1 whitespace-nowrap">
                       <Calendar className="h-3 w-3" />
                       <span>v{policy.version}</span>
                     </span>
-                    <span className="flex items-center space-x-1">
+                    <span className="flex items-center space-x-1 whitespace-nowrap">
                       <User className="h-3 w-3" />
                       <span>{policy.category}</span>
                     </span>
                     {(policy.document_url || policy.metadata?.attachedDocuments?.length > 0) && (
-                      <span className="flex items-center space-x-1">
+                      <span className="flex items-center space-x-1 whitespace-nowrap">
                         <Paperclip className="h-3 w-3" />
                         <span>
                           {policy.metadata?.attachedDocuments?.length || 1} doc(s)
@@ -231,11 +231,12 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2 flex-shrink-0">
+              <div className="flex items-center space-x-2 flex-shrink-0 ml-2 mt-2 sm:mt-0">
                 {alexInsights.length > 0 && (
                   <Badge variant="secondary" className="bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950/30 dark:text-blue-100 dark:border-blue-700">
-                    <Lightbulb className="h-3 w-3 mr-1" />
-                    {alexInsights.length} Alex Insights
+                    <Lightbulb className="h-3 w-3 sm:mr-1" />
+                    <span className="hidden sm:inline">{alexInsights.length} Alex Insights</span>
+                    <span className="inline sm:hidden">{alexInsights.length}</span>
                   </Badge>
                 )}
               </div>
@@ -304,7 +305,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                     )}
                   </div>
                 </div>
-                
+
                 {/* Documentos Anexados */}
                 <div>
                   <h4 className="font-medium text-sm text-muted-foreground mb-2">DOCUMENTOS</h4>
@@ -312,7 +313,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                     {(() => {
                       // Verificar se tem documentos (debug simplificado)
                       let attachedDocs = [];
-                      
+
                       if (policy.metadata) {
                         try {
                           let parsedMetadata;
@@ -321,7 +322,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                           } else {
                             parsedMetadata = policy.metadata;
                           }
-                          
+
                           if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
                             attachedDocs = parsedMetadata.attachedDocuments;
                           }
@@ -329,12 +330,12 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                           console.error('📄 Erro ao processar metadata do card:', error);
                         }
                       }
-                      
+
                       const hasDocuments = policy.document_url || attachedDocs.length > 0;
-                      
+
                       // Log apenas erros
                       // Logs de sucesso removidos para limpar console
-                      
+
                       return hasDocuments;
                     })() ? (
                       <div className="space-y-1">
@@ -367,7 +368,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                               } else {
                                 parsedMetadata = policy.metadata;
                               }
-                              
+
                               if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
                                 attachedDocs = parsedMetadata.attachedDocuments;
                               }
@@ -375,7 +376,7 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                               console.error('Erro ao processar metadata no render:', error);
                             }
                           }
-                          
+
                           return attachedDocs.map((doc: any, index: number) => (
                             <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
                               <div className="flex items-center space-x-2">
@@ -442,13 +443,12 @@ const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
                       {alexInsights.slice(0, 3).map((insight, index) => (
                         <div
                           key={index}
-                          className={`p-2 rounded-md text-xs ${
-                            insight.type === 'suggestion'
+                          className={`p-2 rounded-md text-xs ${insight.type === 'suggestion'
                               ? 'bg-blue-50 text-blue-900 border border-blue-200 dark:bg-blue-950/20 dark:text-blue-100 dark:border-blue-800'
                               : insight.type === 'warning'
-                              ? 'bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-100 dark:border-amber-800'
-                              : 'bg-gray-50 text-gray-900 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-100 dark:border-gray-800'
-                          }`}
+                                ? 'bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-100 dark:border-amber-800'
+                                : 'bg-gray-50 text-gray-900 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-100 dark:border-gray-800'
+                            }`}
                         >
                           <div className="font-medium">{insight.title}</div>
                           <div className="mt-1 text-muted-foreground">{insight.description}</div>
