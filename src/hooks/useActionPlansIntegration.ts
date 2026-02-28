@@ -21,7 +21,7 @@ export const useActionPlansIntegration = ({
   const [error, setError] = useState<string | null>(null);
 
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(10);
+  const [perPage, setPerPage] = useState(5);
   const [totalItems, setTotalItems] = useState(0);
 
   const [sortBy, setSortBy] = useState('created_at');
