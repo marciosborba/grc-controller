@@ -229,7 +229,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
 
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Risk Distribution */}
         <Card className="border-none shadow-md">
           <CardHeader>
@@ -382,7 +382,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       </Card>
 
       {/* Alerts and Insights */}
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:gap-6">
         {/* Critical Alerts */}
         <Card className="border-none shadow-md">
           <CardHeader>

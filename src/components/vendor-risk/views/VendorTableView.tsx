@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -415,234 +416,239 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
+      <Card className="overflow-hidden w-full">
+        <CardContent className="p-3 sm:p-6 w-full">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:items-center w-full">
+            <div className="w-full lg:flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Pesquisar fornecedores..."
                   value={localSearchTerm}
                   onChange={(e) => setLocalSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full h-9 sm:h-10 text-xs sm:text-sm"
                 />
               </div>
             </div>
 
-            <Select
-              value={localFilters.status?.[0] || 'all'}
-              onValueChange={(value) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  status: value === 'all' ? undefined : [value]
-                }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="onboarding">Onboarding</SelectItem>
-                <SelectItem value="suspended">Suspenso</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-3 lg:flex lg:flex-row gap-2 sm:gap-4 w-full lg:w-auto">
 
-            <Select
-              value={localFilters.criticality_level?.[0] || 'all'}
-              onValueChange={(value) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  criticality_level: value === 'all' ? undefined : [value]
-                }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Criticidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="critical">Crítica</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="low">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select
+                value={localFilters.status?.[0] || 'all'}
+                onValueChange={(value) =>
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    status: value === 'all' ? undefined : [value]
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="onboarding">Onboarding</SelectItem>
+                  <SelectItem value="suspended">Suspenso</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select
-              value={localFilters.vendor_type?.[0] || 'all'}
-              onValueChange={(value) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  vendor_type: value === 'all' ? undefined : [value]
-                }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                <SelectItem value="strategic">Estratégico</SelectItem>
-                <SelectItem value="operational">Operacional</SelectItem>
-                <SelectItem value="transactional">Transacional</SelectItem>
-                <SelectItem value="critical">Crítico</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select
+                value={localFilters.criticality_level?.[0] || 'all'}
+                onValueChange={(value) =>
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    criticality_level: value === 'all' ? undefined : [value]
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Criticidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="critical">Crítica</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Button
-              onClick={() => setShowCreateDialog(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Fornecedor
-            </Button>
+              <Select
+                value={localFilters.vendor_type?.[0] || 'all'}
+                onValueChange={(value) =>
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    vendor_type: value === 'all' ? undefined : [value]
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  <SelectItem value="strategic">Estratégico</SelectItem>
+                  <SelectItem value="operational">Operacional</SelectItem>
+                  <SelectItem value="transactional">Transacional</SelectItem>
+                  <SelectItem value="critical">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={() => setShowCreateDialog(true)}
+                className="col-span-3 lg:col-span-1 h-9 sm:h-10 text-[10px] sm:text-sm w-full lg:w-auto"
+              >
+                <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Novo Fornecedor</span>
+                <span className="inline sm:hidden">Novo</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Vendor Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      <Card className="overflow-hidden w-full">
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4 w-full">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 w-full">
             <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-primary" />
+              <CardTitle className="flex items-center space-x-2 text-lg sm:text-xl">
+                <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 <span>Fornecedores Registrados</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm mt-1">
                 Gerencie seu catálogo completo de fornecedores e parceiros
               </CardDescription>
             </div>
             {selectedVendors.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">
+              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">
                   {selectedVendors.length} selecionados
                 </Badge>
-                <Button size="sm" variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar
+                <Button size="sm" variant="outline" className="h-8 text-xs shrink-0">
+                  <Download className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Exportar</span>
                 </Button>
               </div>
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="w-full">
+        <CardContent className="p-0 sm:p-6 w-full">
+          <div className="w-full overflow-x-auto scrollbar-none sm:scrollbar-thin pb-4 sm:pb-0">
             <Table className="w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-8 sm:w-12 p-1 sm:p-3">
                     <Checkbox
                       checked={selectedVendors.length === paginatedVendors.length && paginatedVendors.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[25%]"
+                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[30%] sm:w-[25%]"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span className="text-xs font-medium">Fornecedor</span>
+                      <span className="text-[10px] sm:text-xs font-medium">Fornecedor</span>
                       {sortBy === 'name' && (
-                        <span className="text-xs">
+                        <span className="text-[10px] sm:text-xs">
                           {sortOrder === 'asc' ? '↑' : '↓'}
                         </span>
                       )}
                     </div>
                   </TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[12%]">Tipo</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[12%]">Criticidade</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[10%]">Status</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[15%] sm:w-[12%]">Tipo</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[15%] sm:w-[12%]">Criticidade</TableHead>
+                  <TableHead className="hidden md:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[10%]">Status</TableHead>
                   <TableHead
-                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[8%]"
+                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[15%] sm:w-[8%]"
                     onClick={() => handleSort('risk_score')}
                   >
                     <div className="flex items-center space-x-1">
-                      <span className="text-xs font-medium">Risco</span>
+                      <span className="text-[10px] sm:text-xs font-medium">Risco</span>
                       {sortBy === 'risk_score' && (
-                        <span className="text-xs">
+                        <span className="text-[10px] sm:text-xs">
                           {sortOrder === 'asc' ? '↑' : '↓'}
                         </span>
                       )}
                     </div>
                   </TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[12%]">Status do Processo</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[10%]">Contrato</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[10%]">Último Assessment</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[11%]">Ações</TableHead>
+                  <TableHead className="hidden lg:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[12%]">Processo</TableHead>
+                  <TableHead className="hidden lg:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[10%]">Contrato</TableHead>
+                  <TableHead className="hidden xl:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[10%]">Assessment</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[10%] sm:w-[11%]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedVendors.map((vendor) => (
-                  <TableRow key={vendor.id} className="h-12">
-                    <TableCell className="p-3">
+                  <TableRow key={vendor.id} className="h-10 sm:h-12">
+                    <TableCell className="p-1 sm:p-3 text-center sm:text-left">
                       <Checkbox
                         checked={selectedVendors.includes(vendor.id)}
                         onCheckedChange={(checked) => handleVendorSelect(vendor.id, !!checked)}
-                        className="h-4 w-4"
+                        className="h-3 w-3 sm:h-4 sm:w-4"
                       />
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[25%]">
-                      <div className="flex items-center space-x-2">
+                    <TableCell className="text-[10px] sm:text-xs p-1 sm:p-3 w-[30%] sm:w-[25%]">
+                      <div className="flex items-center space-x-1 sm:space-x-2">
                         <div className="flex-shrink-0">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                            <span className="text-xs font-medium text-white">
+                          <div className="w-5 h-5 sm:w-7 sm:h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
+                            <span className="text-[9px] sm:text-xs font-medium text-white">
                               {vendor.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">
+                          <p className="text-[10px] sm:text-xs font-medium truncate max-w-[80px] sm:max-w-[200px]">
                             {vendor.name}
                           </p>
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="hidden sm:block text-[10px] text-muted-foreground truncate">
                             {vendor.primary_contact_email || vendor.website?.replace(/^https?:\/\//, '') || ''}
                           </p>
                         </div>
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[12%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
+                    <TableCell className="text-[10px] sm:text-xs p-1 sm:p-3 w-[15%] sm:w-[12%]">
+                      <Badge className={`text-[8px] sm:text-[10px] px-1 py-0 sm:px-2 sm:py-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[50px] sm:max-w-none ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
                         {getVendorTypeText(vendor.vendor_type)}
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[12%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
+                    <TableCell className="text-[10px] sm:text-xs p-1 sm:p-3 w-[15%] sm:w-[12%]">
+                      <Badge className={`text-[8px] sm:text-[10px] px-1 py-0 sm:px-2 sm:py-0.5 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
                         {getCriticalityText(vendor.criticality_level)}
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[10%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getStatusBadgeStyle(vendor.status)}`}>
+                    <TableCell className="hidden md:table-cell text-[10px] sm:text-xs p-1 sm:p-3 w-[10%]">
+                      <Badge className={`text-[8px] sm:text-[10px] px-1 py-0 sm:px-2 sm:py-0.5 ${getStatusBadgeStyle(vendor.status)}`}>
                         {getStatusText(vendor.status)}
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[8%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
-                        {getRiskLevelText(vendor.risk_score)}
+                    <TableCell className="text-[10px] sm:text-xs p-1 sm:p-3 w-[15%] sm:w-[8%]">
+                      <Badge className={`text-[8px] sm:text-[10px] px-1 py-0 sm:px-2 sm:py-0.5 flex items-center gap-0.5 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
+                        <span className="truncate max-w-[40px] sm:max-w-none">{getRiskLevelText(vendor.risk_score)}</span>
                         {vendor.risk_score && (
-                          <span className="ml-1 opacity-75 text-[10px]">
+                          <span className="opacity-75 text-[8px] sm:text-[10px]">
                             ({vendor.risk_score.toFixed(1)})
                           </span>
                         )}
                       </Badge>
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[12%]">
+                    <TableCell className="hidden lg:table-cell text-[10px] sm:text-xs p-1 sm:p-3 w-[12%]">
                       {(() => {
                         const processStatus = analyzeVendorProcessStatus(vendor);
                         return (
                           <Badge
-                            className={`text-[10px] px-2 py-0.5 ${getProcessStatusBadgeStyle(processStatus.status)}`}
+                            className={`text-[8px] sm:text-[10px] px-1 py-0 sm:px-2 sm:py-0.5 truncate max-w-[80px] sm:max-w-none ${getProcessStatusBadgeStyle(processStatus.status)}`}
                             title={processStatus.description}
                           >
                             {processStatus.label}
@@ -651,9 +657,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                       })()}
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[10%]">
-                      <div className="text-xs text-muted-foreground">
-                        <span className="text-xs">
+                    <TableCell className="hidden lg:table-cell text-[10px] sm:text-xs p-1 sm:p-3 w-[10%]">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                        <span>
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
@@ -665,7 +671,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                       </div>
                     </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[10%]">
+                    <TableCell className="hidden xl:table-cell text-[10px] sm:text-xs p-1 sm:p-3 w-[10%]">
                       {(() => {
                         // Tenta encontrar a data no campo do fornecedor ou na lista de assessments
                         let displayDate = vendor.last_assessment_date;
@@ -687,34 +693,34 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                         }
 
                         return displayDate ? (
-                          <div className="text-xs text-muted-foreground">
-                            <div className="text-xs">{format(new Date(displayDate), 'dd/MM/yy', { locale: ptBR })}</div>
+                          <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                            <div>{format(new Date(displayDate), 'dd/MM/yy', { locale: ptBR })}</div>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Nunca avaliado</span>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground truncate">Nunca avaliado</span>
                         );
                       })()}
                     </TableCell>
 
-                    <TableCell className="p-3 w-[11%]">
-                      <div className="flex items-center gap-1">
+                    <TableCell className="p-1 sm:p-3 w-[10%] sm:w-[11%]">
+                      <div className="flex items-center gap-0.5 sm:gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleEditWithWorkflow(vendor)}
                           title="Editar fornecedor"
-                          className="h-7 w-7 p-0 hover:bg-blue-50"
+                          className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-blue-50"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleDelete(vendor.id)}
-                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                          className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-red-50 hover:text-red-600"
                           title="Excluir fornecedor"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -734,10 +740,10 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mt-4 mb-2">
+          <div className="flex items-center text-xs sm:text-sm text-muted-foreground w-full sm:w-auto justify-center sm:justify-start">
             <span>
-              Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, sortedVendors.length)} de {sortedVendors.length} fornecedores
+              Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, sortedVendors.length)} de {sortedVendors.length}
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -746,17 +752,19 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               variant="outline"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
+              className="h-8 text-xs sm:text-sm"
             >
               Anterior
             </Button>
-            <span className="text-sm text-muted-foreground">
-              Página {currentPage} de {totalPages}
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+              {currentPage} / {totalPages}
             </span>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
+              className="h-8 text-xs sm:text-sm"
             >
               Próxima
             </Button>

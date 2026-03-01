@@ -1542,106 +1542,114 @@ Equipe de Compliance`;
 
 
       {/* Header with Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground">
                   Total Assessments
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
                   {currentAssessments.length}
                 </p>
               </div>
-              <FileCheck className="h-8 w-8 text-primary" />
+              <FileCheck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground">
                   Em Andamento
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
                   {currentAssessments.filter(a => a.status === 'in_progress').length}
                 </p>
               </div>
-              <Clock className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+              <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600 dark:text-orange-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground">
                   Concluídos
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
                   {currentAssessments.filter(a => ['completed', 'approved'].includes(a.status)).length}
                 </p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground">
                   Atrasados
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-lg sm:text-2xl font-bold text-foreground">
                   {currentAssessments.filter(a => new Date(a.due_date) < new Date() && !['completed', 'approved'].includes(a.status)).length}
                 </p>
               </div>
-              <AlertTriangle className="h-8 w-8 text-destructive" />
+              <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-destructive" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      {/* Main Content */}
+      <Card className="w-full overflow-hidden">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center space-x-2">
               <Brain className="h-5 w-5 text-primary" />
-              <CardTitle>Assessments de Fornecedores</CardTitle>
+              <CardTitle className="text-base sm:text-xl">Assessments de Fornecedores</CardTitle>
               {pendingVendorAssessments.length > 0 && (
-                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                <Badge variant="outline" className="hidden sm:inline-flex bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
                   {pendingVendorAssessments.length} aguardando resposta
                 </Badge>
               )}
             </div>
-            <div className="flex items-center space-x-2">
+
+            {pendingVendorAssessments.length > 0 && (
+              <Badge variant="outline" className="sm:hidden w-full justify-center bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                {pendingVendorAssessments.length} aguardando resposta
+              </Badge>
+            )}
+
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
               <Button
                 onClick={() => setShowNewAssessmentDialog(true)}
                 size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full sm:w-auto text-[10px] sm:text-sm h-9 sm:h-10"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
                 Novo Assessment
               </Button>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-0 sm:p-6 w-full">
           {/* Filtros */}
-          <div className="flex items-center justify-between mb-6 p-4 bg-muted/30 rounded-lg">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="filter">Filtrar por:</Label>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-4 sm:mb-6 p-4 sm:bg-muted/30 rounded-none sm:rounded-lg">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 w-full sm:w-auto">
+                <Label htmlFor="filter" className="text-[10px] sm:text-sm">Filtrar por:</Label>
                 <Select value={currentSelectedFilter} onValueChange={setLocalSelectedFilter}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-full sm:w-48 text-[10px] sm:text-sm h-8 sm:h-10">
                     <SelectValue placeholder="Selecione um filtro" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1655,35 +1663,29 @@ Equipe de Compliance`;
                 </Select>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="search">Buscar:</Label>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 w-full sm:w-auto">
+                <Label htmlFor="search" className="text-[10px] sm:text-sm">Buscar:</Label>
                 <Input
                   id="search"
                   placeholder="Nome do assessment ou fornecedor..."
                   value={currentSearchTerm}
                   onChange={(e) => setLocalSearchTerm(e.target.value)}
-                  className="w-64"
+                  className="w-full sm:w-64 text-[10px] sm:text-sm h-8 sm:h-10"
                 />
               </div>
             </div>
-
-            {pendingVendorAssessments.length > 0 && (
-              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
-                {pendingVendorAssessments.length} aguardando resposta do fornecedor
-              </Badge>
-            )}
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="w-full overflow-x-auto scrollbar-none sm:scrollbar-thin pb-4 sm:pb-0">
+            <Table className="w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[28%]">Assessment</TableHead>
-                  <TableHead className="w-[22%]">Fornecedor</TableHead>
-                  <TableHead className="w-[12%]">Status</TableHead>
-                  <TableHead className="w-[12%]">Progresso</TableHead>
-                  <TableHead className="w-[11%]">Prazo</TableHead>
-                  <TableHead className="w-[15%] text-right">Ações</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[30%] sm:w-[28%]">Assessment</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[25%] sm:w-[22%]">Fornecedor</TableHead>
+                  <TableHead className="hidden md:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[12%]">Status</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[20%] sm:w-[12%]">Progresso</TableHead>
+                  <TableHead className="hidden lg:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[11%]">Prazo</TableHead>
+                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[15%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
 
@@ -1693,7 +1695,7 @@ Equipe de Compliance`;
                     <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                        <span className="ml-2">Carregando assessments...</span>
+                        <span className="ml-2 text-xs sm:text-sm">Carregando assessments...</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1701,8 +1703,8 @@ Equipe de Compliance`;
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8">
                       <div className="flex flex-col items-center space-y-2">
-                        <FileCheck className="h-8 w-8 text-gray-400" />
-                        <span className="text-gray-500">Nenhum assessment encontrado</span>
+                        <FileCheck className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                        <span className="text-gray-500 text-[10px] sm:text-sm">Nenhum assessment encontrado</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1711,87 +1713,89 @@ Equipe de Compliance`;
                     <TableRow
                       key={assessment.id}
                       className={`
-                        hover:bg-muted/50 transition-colors
+                        hover:bg-muted/50 transition-colors h-10 sm:h-12
                         ${assessment.status === 'sent' && assessment.public_link && !assessment.responses
                           ? 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-500'
                           : ''
                         }
                       `}
                     >
-                      <TableCell className="font-medium">
-                        <div>
-                          <div className="font-medium text-sm mb-1">{assessment.assessment_name}</div>
-                          <div className="flex flex-wrap items-center gap-1 mb-1">
-                            <Badge variant="outline" className="text-xs capitalize">
+                      <TableCell className="p-1 sm:p-3 w-[30%] sm:w-[28%] font-medium">
+                        <div className="min-w-0">
+                          <div className="font-medium text-[10px] sm:text-sm mb-1 truncate max-w-[120px] sm:max-w-none">{assessment.assessment_name}</div>
+                          <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 mb-1">
+                            <Badge variant="outline" className="text-[8px] sm:text-xs px-1 py-0 sm:px-2 sm:py-0.5 capitalize truncate max-w-[60px] sm:max-w-none">
                               {assessment.assessment_type.replace('_', ' ')}
                             </Badge>
                             {assessment.id.startsWith('vendor-') && (
-                              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
-                                Fornecedor
+                              <Badge variant="outline" className="text-[8px] sm:text-xs px-1 py-0 sm:px-2 sm:py-0.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                                Fornc
                               </Badge>
                             )}
                             {assessment.metadata?.selected_in_onboarding && (
-                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                              <Badge variant="outline" className="hidden sm:inline-flex text-[8px] sm:text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
                                 Onboarding
                               </Badge>
                             )}
                             {assessment.metadata?.pending_creation && (
-                              <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800">
+                              <Badge variant="outline" className="hidden sm:inline-flex text-[8px] sm:text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800">
                                 Pendente
                               </Badge>
                             )}
-                            {getRiskLevelBadge(assessment.risk_level)}
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="text-[9px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">
                             {assessment.vendor_assessment_frameworks?.name || assessment.metadata?.template_name}
                             {assessment.overall_score && (
-                              <span className="ml-2">• Score: {assessment.overall_score.toFixed(1)}</span>
+                              <span className="hidden sm:inline ml-2">• Score: {assessment.overall_score.toFixed(1)}</span>
                             )}
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{assessment.vendor_registry?.name}</div>
-                          <div className="text-sm text-muted-foreground">
+                      <TableCell className="p-1 sm:p-3 w-[25%] sm:w-[22%]">
+                        <div className="min-w-0">
+                          <div className="font-medium text-[10px] sm:text-sm truncate max-w-[100px] sm:max-w-none">{assessment.vendor_registry?.name}</div>
+                          <div className="hidden sm:block text-[10px] sm:text-sm text-muted-foreground truncate max-w-[150px]">
                             {assessment.vendor_registry?.primary_contact_email}
                           </div>
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        {getStatusBadge(assessment.status, assessment.due_date, assessment)}
+                      <TableCell className="hidden md:table-cell p-1 sm:p-3 w-[12%]">
+                        <div className="scale-75 sm:scale-100 origin-left">
+                          {getStatusBadge(assessment.status, assessment.due_date, assessment)}
+                        </div>
                       </TableCell>
 
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Progress value={assessment.progress_percentage || 0} className="w-12 h-2" />
-                          <span className="text-xs text-muted-foreground">
+                      <TableCell className="p-1 sm:p-3 w-[20%] sm:w-[12%]">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center space-x-0 sm:space-x-2 space-y-1 sm:space-y-0">
+                          <Progress value={assessment.progress_percentage || 0} className="w-10 sm:w-12 h-1.5 sm:h-2" />
+                          <span className="text-[9px] sm:text-xs text-muted-foreground">
                             {assessment.progress_percentage || 0}%
                           </span>
                         </div>
                       </TableCell>
 
-                      <TableCell>
-                        <div className="text-sm">
+                      <TableCell className="hidden lg:table-cell p-1 sm:p-3 w-[11%]">
+                        <div className="text-[10px] sm:text-sm truncate">
                           {new Date(assessment.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-right">
+                      <TableCell className="text-right p-1 sm:p-3 w-[15%]">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="h-6 w-6 sm:h-8 sm:w-8 p-0">
+                              <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
                               <span className="sr-only">Abrir menu</span>
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-xs sm:text-sm">Ações</DropdownMenuLabel>
                             <DropdownMenuSeparator />
 
                             <DropdownMenuItem
+                              className="text-xs sm:text-sm"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -1799,11 +1803,12 @@ Equipe de Compliance`;
                                 openAssessmentEditor(assessment);
                               }}
                             >
-                              <Edit className="h-4 w-4 mr-2" />
+                              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                               Editar Assessment
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
+                              className="text-xs sm:text-sm"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -1811,11 +1816,12 @@ Equipe de Compliance`;
                                 openPreviewDialog(assessment);
                               }}
                             >
-                              <Eye className="h-4 w-4 mr-2" />
+                              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                               Assessment Preview
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
+                              className="text-xs sm:text-sm"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -1824,7 +1830,7 @@ Equipe de Compliance`;
                                 setShowAssessmentDetails(true);
                               }}
                             >
-                              <FileText className="h-4 w-4 mr-2" />
+                              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                               Visualizar Detalhes
                             </DropdownMenuItem>
 
@@ -1832,6 +1838,7 @@ Equipe de Compliance`;
 
                             {/* Ações de link público e email - sempre disponíveis para assessments reais */}
                             <DropdownMenuItem
+                              className="text-xs sm:text-sm"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -1839,11 +1846,12 @@ Equipe de Compliance`;
                                 openPublicLinkDialog(assessment);
                               }}
                             >
-                              <Link className="h-4 w-4 mr-2" />
+                              <Link className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                               Gerar/Ver Link Público
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
+                              className="text-xs sm:text-sm"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -1851,7 +1859,7 @@ Equipe de Compliance`;
                                 openEmailDialog(assessment);
                               }}
                             >
-                              <Send className="h-4 w-4 mr-2" />
+                              <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                               Enviar Assessment
                             </DropdownMenuItem>
                           </DropdownMenuContent>

@@ -159,20 +159,20 @@ export function DataDiscoveryPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">Discovery de Dados</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">Discovery de Dados</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Mapeamento automático de dados pessoais em sistemas e aplicações
             </p>
           </div>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+        <Button onClick={() => setShowCreateDialog(true)} className="w-full md:w-auto flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Nova Fonte de Dados
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Fontes Totais</CardTitle>
@@ -257,7 +257,7 @@ export function DataDiscoveryPage() {
         <Button
           variant="outline"
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2"
+          className="w-full md:w-auto flex items-center gap-2"
         >
           <Filter className="w-4 h-4" />
           Filtros
@@ -307,9 +307,9 @@ export function DataDiscoveryPage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="sources">Fontes de Dados ({sources.length})</TabsTrigger>
-          <TabsTrigger value="results">Resultados ({results.length})</TabsTrigger>
+        <TabsList className="flex items-center justify-start overflow-x-auto hide-scrollbar pb-1 sm:pb-0 w-full h-auto p-1">
+          <TabsTrigger value="sources" className="whitespace-nowrap flex-shrink-0">Fontes de Dados ({sources.length})</TabsTrigger>
+          <TabsTrigger value="results" className="whitespace-nowrap flex-shrink-0">Resultados ({results.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="sources" className="space-y-4">

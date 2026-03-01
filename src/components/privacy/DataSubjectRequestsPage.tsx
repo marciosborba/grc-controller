@@ -233,10 +233,10 @@ export function DataSubjectRequestsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">
               Solicitações de Titulares
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gestão de direitos dos titulares de dados pessoais
             </p>
           </div>
@@ -244,7 +244,7 @@ export function DataSubjectRequestsPage() {
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="w-full md:w-auto flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Nova Solicitação
             </Button>
@@ -276,7 +276,7 @@ export function DataSubjectRequestsPage() {
       )}
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Solicitações</CardTitle>
@@ -349,9 +349,9 @@ export function DataSubjectRequestsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <Select onValueChange={(value) => handleFilterChange('status', value)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -366,7 +366,7 @@ export function DataSubjectRequestsPage() {
               </Select>
 
               <Select onValueChange={(value) => handleFilterChange('request_type', value)}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Tipo de Solicitação" />
                 </SelectTrigger>
                 <SelectContent>
@@ -378,7 +378,7 @@ export function DataSubjectRequestsPage() {
               </Select>
 
               <Select onValueChange={(value) => handleFilterChange('verification_status', value)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Verificação" />
                 </SelectTrigger>
                 <SelectContent>
@@ -404,23 +404,23 @@ export function DataSubjectRequestsPage() {
 
       {/* Requests Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="all">
+        <TabsList className="flex items-center justify-start overflow-x-auto hide-scrollbar pb-1 sm:pb-0 w-full h-auto p-1">
+          <TabsTrigger value="all" className="whitespace-nowrap flex-shrink-0">
             Todas ({stats.total})
           </TabsTrigger>
-          <TabsTrigger value="pending">
+          <TabsTrigger value="pending" className="whitespace-nowrap flex-shrink-0">
             Pendentes ({stats.pending})
           </TabsTrigger>
-          <TabsTrigger value="verification">
+          <TabsTrigger value="verification" className="whitespace-nowrap flex-shrink-0">
             Verificação ({stats.verification_pending})
           </TabsTrigger>
-          <TabsTrigger value="in_progress">
+          <TabsTrigger value="in_progress" className="whitespace-nowrap flex-shrink-0">
             Andamento ({stats.in_progress})
           </TabsTrigger>
-          <TabsTrigger value="overdue">
+          <TabsTrigger value="overdue" className="whitespace-nowrap flex-shrink-0">
             Atrasadas ({stats.overdue})
           </TabsTrigger>
-          <TabsTrigger value="completed">
+          <TabsTrigger value="completed" className="whitespace-nowrap flex-shrink-0">
             Concluídas ({stats.completed})
           </TabsTrigger>
         </TabsList>

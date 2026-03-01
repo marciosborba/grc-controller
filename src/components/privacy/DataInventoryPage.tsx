@@ -182,20 +182,20 @@ export function DataInventoryPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">Inventário de Dados Pessoais</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">Inventário de Dados Pessoais</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Catálogo completo de dados pessoais tratados pela organização
             </p>
           </div>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+        <Button onClick={() => setShowCreateDialog(true)} className="w-full md:w-auto flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          Novo Item do Inventário
+          Novo Item
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Itens</CardTitle>
@@ -280,7 +280,7 @@ export function DataInventoryPage() {
         <Button
           variant="outline"
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2"
+          className="w-full md:w-auto flex items-center gap-2"
         >
           <Filter className="w-4 h-4" />
           Filtros
@@ -349,11 +349,11 @@ export function DataInventoryPage() {
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">Todos ({stats.totalItems})</TabsTrigger>
-          <TabsTrigger value="critical">Críticos ({stats.criticalItems})</TabsTrigger>
-          <TabsTrigger value="review">Precisam Revisão ({stats.needsReview})</TabsTrigger>
-          <TabsTrigger value="archived">Arquivados</TabsTrigger>
+        <TabsList className="flex items-center justify-start overflow-x-auto hide-scrollbar pb-1 sm:pb-0 w-full h-auto p-1">
+          <TabsTrigger value="all" className="whitespace-nowrap flex-shrink-0">Todos ({stats.totalItems})</TabsTrigger>
+          <TabsTrigger value="critical" className="whitespace-nowrap flex-shrink-0">Críticos ({stats.criticalItems})</TabsTrigger>
+          <TabsTrigger value="review" className="whitespace-nowrap flex-shrink-0">Precisam Revisão ({stats.needsReview})</TabsTrigger>
+          <TabsTrigger value="archived" className="whitespace-nowrap flex-shrink-0">Arquivados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">

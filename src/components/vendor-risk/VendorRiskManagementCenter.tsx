@@ -22,11 +22,13 @@ import {
   CheckCircle,
   Clock,
   Shield,
-  Zap
+  Zap,
+  Target
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
+import { useVendorActionPlans } from '@/hooks/useVendorActionPlans';
 
 
 // Importar views
@@ -82,6 +84,8 @@ export const VendorRiskManagementCenter: React.FC = () => {
     resetError
   } = useVendorRiskManagement();
 
+  const { plans, fetchPlans } = useVendorActionPlans();
+
   // Detectar mudanças de tema
   useEffect(() => {
     const checkTheme = () => {
@@ -128,8 +132,9 @@ export const VendorRiskManagementCenter: React.FC = () => {
       fetchAssessments();
       fetchDashboardMetrics();
       fetchRiskDistribution();
+      fetchPlans();
     }
-  }, [user?.tenantId, fetchVendors, fetchAssessments, fetchDashboardMetrics, fetchRiskDistribution]);
+  }, [user?.tenantId, fetchVendors, fetchAssessments, fetchDashboardMetrics, fetchRiskDistribution, fetchPlans]);
 
   const getQuickActions = (): QuickAction[] => {
     const highRiskVendors = dashboardMetrics?.critical_vendors || 0;
@@ -200,7 +205,8 @@ export const VendorRiskManagementCenter: React.FC = () => {
         fetchVendors(),
         fetchAssessments(),
         fetchDashboardMetrics(),
-        fetchRiskDistribution()
+        fetchRiskDistribution(),
+        fetchPlans()
       ]);
       toast({
         title: 'Dados atualizados',
@@ -244,34 +250,34 @@ export const VendorRiskManagementCenter: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 vendor-risk-management">
+    <div className="space-y-4 sm:space-y-6 vendor-risk-management min-w-0 w-full overflow-x-hidden">
       {/* Premium Storytelling Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {/* Card 1: Panorama da Base */}
-        <Card className="relative overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all group">
+        <Card className="relative overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between p-1 sm:p-0">
           <div className="absolute top-0 right-0 p-3 opacity-10">
-            <Building className="h-32 w-32 text-blue-500" />
+            <Building className="h-24 w-24 sm:h-32 sm:w-32 text-blue-500" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-blue-700 dark:text-blue-400">
-              <Building className="h-5 w-5" />
-              Panorama da Base
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-6 px-3 sm:px-6 relative z-10">
+            <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-blue-700 dark:text-blue-400">
+              <Building className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Panorama da Base</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
             <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{vendors.length || 0}</span>
-                <span className="text-sm text-muted-foreground">fornecedores totais</span>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">{vendors.length || 0}</span>
+                <span className="text-[10px] sm:text-sm text-muted-foreground truncate">fornecedores</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-tight">
                 Total de parceiros cadastrados.
               </p>
             </div>
 
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
+            <div className="space-y-1.5 sm:space-y-3 pt-1 sm:pt-2">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
                   <CheckCircle className="h-4 w-4 text-green-500" /> Ativos
                 </span>
                 <span className="font-medium text-green-600">
@@ -291,30 +297,30 @@ export const VendorRiskManagementCenter: React.FC = () => {
         </Card>
 
         {/* Card 2: Assessments & Riscos */}
-        <Card className="relative overflow-hidden border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-all group">
+        <Card className="relative overflow-hidden border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between p-1 sm:p-0">
           <div className="absolute top-0 right-0 p-3 opacity-10">
-            <ClipboardCheck className="h-32 w-32 text-orange-500" />
+            <ClipboardCheck className="h-24 w-24 sm:h-32 sm:w-32 text-orange-500" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-700 dark:text-orange-400">
-              <ClipboardCheck className="h-5 w-5" />
-              Assessments & Riscos
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-6 px-3 sm:px-6 relative z-10">
+            <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-orange-700 dark:text-orange-400">
+              <ClipboardCheck className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Assessments</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
             <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{assessments.length || 0}</span>
-                <span className="text-sm text-muted-foreground">avaliações totais</span>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">{assessments.length || 0}</span>
+                <span className="text-[10px] sm:text-sm text-muted-foreground truncate">avaliações</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-tight">
                 Processos de avaliação de risco.
               </p>
             </div>
 
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
+            <div className="space-y-1.5 sm:space-y-3 pt-1 sm:pt-2">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
                   <Clock className="h-4 w-4 text-orange-500" /> Em Andamento
                 </span>
                 <span className="font-bold text-orange-600">
@@ -334,32 +340,32 @@ export const VendorRiskManagementCenter: React.FC = () => {
         </Card>
 
         {/* Card 3: Conformidade & Ações */}
-        <Card className="relative overflow-hidden border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all group">
+        <Card className="relative overflow-hidden border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between p-1 sm:p-0">
           <div className="absolute top-0 right-0 p-3 opacity-10">
-            <CheckCircle className="h-32 w-32 text-green-500" />
+            <CheckCircle className="h-24 w-24 sm:h-32 sm:w-32 text-green-500" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-green-700 dark:text-green-400">
-              <CheckCircle className="h-5 w-5" />
-              Conformidade
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-6 px-3 sm:px-6 relative z-10">
+            <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-green-700 dark:text-green-400">
+              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Conformidade</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
             <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">
                   {vendors.length > 0 ? (vendors.filter(v => v.risk_score < 4.0).length / vendors.length * 100).toFixed(0) : 0}%
                 </span>
-                <span className="text-sm text-muted-foreground">em compliance</span>
+                <span className="text-[10px] sm:text-sm text-muted-foreground truncate">em compliance</span>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Fornecedores dentro do apetite de risco.
+              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-tight">
+                Dentro do apetite de risco.
               </p>
             </div>
 
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
+            <div className="space-y-1.5 sm:space-y-3 pt-1 sm:pt-2">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
                   <Shield className="h-4 w-4 text-green-500" /> Baixo Risco
                 </span>
                 <span className="font-medium">
@@ -377,41 +383,90 @@ export const VendorRiskManagementCenter: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Card 4: Planos de Ação (Gestão Integrada) */}
+        <Card
+          className="relative overflow-hidden border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all group cursor-pointer flex flex-col justify-between p-1 sm:p-0"
+          onClick={() => {
+            setSelectedFilter('all');
+            setViewMode('action_plans');
+          }}
+        >
+          <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Target className="h-24 w-24 sm:h-32 sm:w-32 text-purple-500" />
+          </div>
+          <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-6 px-3 sm:px-6 relative z-10">
+            <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-purple-700 dark:text-purple-400">
+              <Target className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Planos de Ação</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
+            <div>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">{plans.length || 0}</span>
+                <span className="text-[10px] sm:text-sm text-muted-foreground truncate">planos</span>
+              </div>
+              <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-tight hover:underline">
+                Gestão de inconformidades.
+              </p>
+            </div>
+
+            <div className="space-y-1.5 sm:space-y-3 pt-1 sm:pt-2">
+              <div className="flex items-center justify-between text-[10px] sm:text-sm">
+                <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" /> Em Aberto
+                </span>
+                <span className="font-medium text-purple-600">
+                  {plans.filter(p => p.status === 'open' || p.status === 'in_progress').length}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[10px] sm:text-sm">
+                <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" /> Concluídos
+                </span>
+                <span className="font-medium text-green-600">
+                  {plans.filter(p => p.status === 'completed' || p.status === 'verified').length}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Quick Actions Grid - Premium Navigation */}
       <div>
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <Zap className="h-5 w-5 text-primary" />
+        <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6 flex items-center gap-2">
+          <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Funcionalidades
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6">
           {getQuickActions().map((action) => (
             <div
               key={action.id}
               onClick={action.action}
-              className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer"
+              className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer flex flex-col justify-between"
             >
               {/* Gradient Border Overlay */}
               <div className={`absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/10 to-primary/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
 
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
-                    <action.icon className="w-6 h-6" />
+              <div className="p-3 sm:p-6 h-full flex flex-col">
+                <div className="flex items-start justify-between mb-3 sm:mb-4">
+                  <div className="p-2 sm:p-3 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300">
+                    <action.icon className="w-4 h-4 sm:w-6 sm:h-6" />
                   </div>
                   {action.badge && (
-                    <Badge variant={action.id === 'pending-assessments' || action.id === 'communication-center' ? 'destructive' : 'secondary'} className="font-mono text-xs">
+                    <Badge variant={action.id === 'pending-assessments' || action.id === 'communication-center' ? 'destructive' : 'secondary'} className="font-mono text-[10px] sm:text-xs">
                       {action.badge}
                     </Badge>
                   )}
                 </div>
 
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-sm flex items-center gap-2 group-hover:text-primary transition-colors">
+                <div className="space-y-1 mt-auto">
+                  <h3 className="font-semibold text-xs sm:text-sm flex items-center gap-2 group-hover:text-primary transition-colors line-clamp-2">
                     {action.title}
                   </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-snug">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2 leading-snug">
                     {action.description}
                   </p>
                 </div>
@@ -445,7 +500,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
       )}
 
       {/* Navigation Tabs */}
-      <div className="w-full">
+      <div className="w-full min-w-0">
         <Tabs
           value={viewMode}
           onValueChange={(value) => {
@@ -454,31 +509,33 @@ export const VendorRiskManagementCenter: React.FC = () => {
           }}
         >
           <div className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="flex items-center justify-between p-4 md:p-6">
-              <TabsList className="grid w-fit grid-cols-5">
-                <TabsTrigger value="dashboard" className="flex items-center gap-2">
-                  <LayoutDashboard className="h-4 w-4" />
-                  Dashboard
-                </TabsTrigger>
-                <TabsTrigger value="vendors" className="flex items-center gap-2">
-                  <Building className="h-4 w-4" />
-                  Fornecedores
-                </TabsTrigger>
-                <TabsTrigger value="assessments" className="flex items-center gap-2">
-                  <ClipboardCheck className="h-4 w-4" />
-                  Assessments
-                </TabsTrigger>
-                <TabsTrigger value="action_plans" className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4" />
-                  Plano de Ação
-                </TabsTrigger>
-                <TabsTrigger value="kanban" className="flex items-center gap-2">
-                  <Kanban className="h-4 w-4" />
-                  Kanban
-                </TabsTrigger>
-              </TabsList>
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between p-3 sm:p-4 md:p-6 gap-3 sm:gap-4">
+              <div className="overflow-x-auto w-full scrollbar-none">
+                <TabsList className="flex w-max min-w-full sm:w-fit sm:grid sm:grid-cols-5 bg-transparent sm:bg-muted p-0 sm:p-1 gap-1 sm:gap-0">
+                  <TabsTrigger value="dashboard" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
+                    <LayoutDashboard className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Dashboard</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="vendors" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
+                    <Building className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Fornecedores</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="assessments" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
+                    <ClipboardCheck className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Assessments</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="action_plans" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
+                    <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Plano de Ação</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="kanban" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
+                    <Kanban className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Kanban</span>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex w-full lg:w-auto items-center gap-2 shrink-0">
                 {(viewMode === 'vendors' || viewMode === 'assessments') && (
                   <>
                     <div className="relative">
@@ -487,7 +544,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
                         placeholder="Buscar..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-64"
+                        className="pl-9 h-9 sm:h-10 text-xs sm:text-sm w-full sm:w-64"
                       />
                     </div>
                     <Button
@@ -506,8 +563,8 @@ export const VendorRiskManagementCenter: React.FC = () => {
           </div>
 
           {/* Tab Contents */}
-          <div className="py-6">
-            <TabsContent value="dashboard" className="mt-0 h-full">
+          <div className="py-6 min-w-0 w-full">
+            <TabsContent value="dashboard" className="mt-0 h-full min-w-0">
               <VendorDashboardView
                 searchTerm={searchTerm}
                 selectedFilter={selectedFilter}
@@ -519,7 +576,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
               />
             </TabsContent>
 
-            <TabsContent value="vendors" className="mt-0 h-full">
+            <TabsContent value="vendors" className="mt-0 h-full min-w-0">
               <VendorTableView
                 searchTerm={searchTerm}
                 selectedFilter={selectedFilter}

@@ -139,30 +139,33 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 bg-background overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="h-16 border-b flex items-center justify-between px-6 bg-card">
-                    <div className="flex items-center gap-4">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            <Shield className="h-6 w-6 text-primary" />
+                <div className="h-14 lg:h-16 border-b flex items-center justify-between px-3 lg:px-6 bg-card shrink-0 gap-2">
+                    <div className="flex items-center gap-2 lg:gap-4 flex-1 min-w-0">
+                        <div className="p-1.5 lg:p-2 bg-primary/10 rounded-lg shrink-0">
+                            <Shield className="h-4 w-4 lg:h-6 lg:w-6 text-primary" />
                         </div>
-                        <div>
-                            <h2 className="text-lg font-semibold leading-none">
+                        <div className="min-w-0 flex-1 pr-2">
+                            <h2 className="text-sm lg:text-lg font-semibold leading-none truncate">
                                 {assessment?.assessment_name || 'Assessment Preview'}
                             </h2>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                {assessment?.vendor_registry?.name || 'Fornecedor'} • {assessment?.vendor_assessment_frameworks?.name || 'Template'}
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 lg:mt-1.5 truncate">
+                                {(assessment?.vendor_registry?.name || 'Fornecedor')} • {(assessment?.vendor_assessment_frameworks?.name || 'Template')}
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="hidden md:flex flex-col items-end mr-4">
+                    <div className="flex items-center gap-1 lg:gap-4 shrink-0">
+                        <div className="hidden xl:flex flex-col items-end mr-4">
                             <span className="text-sm font-medium">{progress}% Concluído</span>
                             <Progress value={progress} className="w-32 h-2 mt-1" />
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setShowSidebar(!showSidebar)} className="md:hidden">
-                            <Menu className="h-5 w-5" />
+                        <Button variant="ghost" size="icon" onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden shrink-0 h-8 w-8">
+                            <Menu className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" onClick={onClose}>
+                        <Button variant="outline" onClick={onClose} className="hidden lg:flex shrink-0">
                             Fechar Preview
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden shrink-0 h-8 w-8">
+                            <X className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
@@ -172,19 +175,19 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                 ) : (
-                    <div className="flex-1 flex overflow-hidden">
+                    <div className="flex-1 flex overflow-hidden relative">
                         {/* Sidebar Navigation */}
-                        <div className={`${showSidebar ? 'w-80' : 'w-0'} transition-all duration-300 border-r bg-muted/10 flex flex-col overflow-hidden`}>
-                            <ScrollArea className="flex-1 p-4">
-                                <div className="space-y-6">
+                        <div className={`${showSidebar ? 'w-full absolute inset-0 z-10 lg:relative lg:w-80' : 'w-0'} transition-all duration-300 border-r lg:bg-muted/5 flex flex-col overflow-hidden bg-background/95 backdrop-blur-md`}>
+                            <div className="flex-1 p-3 overflow-y-auto overflow-x-hidden w-full min-w-0">
+                                <div className="space-y-4 lg:space-y-6 w-full max-w-full min-w-0 pb-10">
                                     {categories.map((category) => {
                                         const categoryQuestions = questions.filter(q => q.category === category);
                                         return (
-                                            <div key={category} className="space-y-2">
-                                                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2">
+                                            <div key={category} className="space-y-1.5 lg:space-y-2 w-full max-w-full min-w-0">
+                                                <h3 className="text-[10px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 truncate">
                                                     {category}
                                                 </h3>
-                                                <div className="space-y-1">
+                                                <div className="space-y-1 w-full max-w-full min-w-0">
                                                     {categoryQuestions.map((q) => {
                                                         const index = questions.findIndex(quest => quest.id === q.id);
                                                         const isAnswered = !!responses[q.id];
@@ -193,15 +196,20 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                                                         return (
                                                             <button
                                                                 key={q.id}
-                                                                onClick={() => setCurrentStep(index)}
-                                                                className={`w-full text-left px-3 py-2 rounded-md text-sm flex items-start gap-2 transition-colors ${isCurrent ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                                                                onClick={() => {
+                                                                    setCurrentStep(index);
+                                                                    if (window.innerWidth < 1024) {
+                                                                        setShowSidebar(false);
+                                                                    }
+                                                                }}
+                                                                className={`w-full text-left px-2 py-1.5 lg:px-3 lg:py-2 rounded-md text-[11px] lg:text-sm flex items-start gap-2 lg:gap-3 transition-colors max-w-full min-w-0 overflow-hidden ${isCurrent ? 'bg-primary/20 text-primary font-semibold shadow-sm ring-1 ring-primary/30' : 'hover:bg-muted text-foreground/80 hover:text-foreground'
                                                                     }`}
                                                             >
-                                                                <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${isAnswered ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground/40'
+                                                                <div className={`mt-0.5 w-3 h-3 lg:w-4 lg:h-4 rounded-full border flex items-center justify-center shrink-0 ${isAnswered ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground/40'
                                                                     }`}>
-                                                                    {isAnswered && <CheckCircle className="h-3 w-3" />}
+                                                                    {isAnswered && <CheckCircle className="h-2 w-2 lg:h-3 lg:w-3" />}
                                                                 </div>
-                                                                <span className="truncate">{index + 1}. {q.question}</span>
+                                                                <span className="truncate min-w-0 flex-1 leading-snug">{index + 1}. {q.question}</span>
                                                             </button>
                                                         );
                                                     })}
@@ -210,26 +218,26 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                                         );
                                     })}
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </div>
 
                         {/* Main Content */}
                         <div className="flex-1 flex flex-col overflow-hidden bg-secondary/5">
-                            <ScrollArea className="flex-1 p-6 md:p-10">
-                                <div className="max-w-3xl mx-auto space-y-8">
+                            <div className="flex-1 p-4 lg:p-10 overflow-y-auto overflow-x-hidden w-full min-w-0">
+                                <div className="max-w-3xl mx-auto space-y-8 min-w-0 max-w-full">
                                     {currentQuestion && (
-                                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 min-w-0 max-w-full overflow-hidden">
                                             {/* Question Header */}
                                             <div className="space-y-4">
                                                 <div className="flex items-center gap-2">
                                                     <Badge variant="outline">{currentQuestion.category}</Badge>
                                                     {currentQuestion.required && <Badge variant="destructive">Obrigatória</Badge>}
                                                 </div>
-                                                <h1 className="text-2xl font-semibold text-foreground leading-tight">
+                                                <h1 className="text-xl lg:text-2xl font-semibold text-foreground leading-tight break-words whitespace-normal">
                                                     {currentQuestion.question}
                                                 </h1>
                                                 {currentQuestion.description && (
-                                                    <p className="text-muted-foreground text-lg">
+                                                    <p className="text-muted-foreground text-base lg:text-lg break-words whitespace-normal">
                                                         {currentQuestion.description}
                                                     </p>
                                                 )}
@@ -341,7 +349,7 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                                         </div>
                                     )}
                                 </div>
-                            </ScrollArea>
+                            </div>
 
                             {/* Footer Navigation */}
                             <div className="h-20 border-t bg-card flex items-center justify-between px-6 md:px-10">

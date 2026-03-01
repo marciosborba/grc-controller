@@ -713,7 +713,7 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden w-[95vw] sm:w-full p-4 sm:p-6 rounded-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {vendorId ? 'Edição de Fornecedor' : 'Onboarding de Fornecedor'}
@@ -726,11 +726,11 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0 w-full max-w-full overflow-hidden">
           {/* Progress Overview */}
-          <Card>
+          <Card className="overflow-hidden w-full">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <CardTitle className="text-lg">Progresso do Onboarding</CardTitle>
                 <Badge variant="outline" className="bg-blue-50 text-blue-700">
                   {calculateProgress()}% Completo
@@ -741,7 +741,7 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
               <Progress value={calculateProgress()} className="mb-4" />
 
               {/* Steps Timeline - 5 Etapas Compactas */}
-              <div className="flex items-center justify-between mt-4 space-x-2">
+              <div className="flex items-start justify-between mt-4 px-1 pb-4 gap-2 sm:gap-4 relative w-full overflow-hidden">
                 {onboardingSteps.map((step, index) => {
                   // Cores para cada etapa
                   const stepColors = [
@@ -751,13 +751,13 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
                   const color = stepColors[index] || 'blue';
 
                   return (
-                    <div key={step.id} className="flex-1">
-                      <div className="flex flex-col items-center space-y-2">
+                    <div key={step.id} className="flex-1 min-w-0 shrink relative">
+                      <div className="flex flex-col items-center space-y-[10px] sm:space-y-2">
                         {/* Ícone da etapa - Clicável */}
                         <button
                           onClick={() => handleStepNavigation(index)}
                           className={`
-                            w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all
+                            w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold transition-all
                             hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color}-500
                             cursor-pointer
                             ${step.completed
@@ -770,16 +770,16 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
                           title={`Ir para etapa: ${step.title}`}
                         >
                           {step.completed ? (
-                            <CheckCircle className="h-5 w-5" />
+                            <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                           ) : (
                             <span>{index + 1}</span>
                           )}
                         </button>
 
                         {/* Título da etapa */}
-                        <div className="text-center">
+                        <div className="text-center w-full px-0.5">
                           <div className={`
-                            text-xs font-medium leading-tight max-w-20 cursor-pointer
+                            text-[10px] sm:text-xs font-medium leading-tight sm:max-w-20 cursor-pointer tracking-tight
                             ${step.completed
                               ? `text-${color}-600 dark:text-${color}-400 hover:text-${color}-700 dark:hover:text-${color}-300`
                               : index === currentStep
@@ -809,9 +809,9 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
           </Card>
 
           {/* Current Step Content */}
-          <Card>
+          <Card className="overflow-hidden w-full">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     {onboardingSteps[currentStep]?.aiAssisted && (
@@ -869,18 +869,18 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
             </CardContent>
           </Card>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-4 mt-6">
             <Button
               variant="outline"
               onClick={previousStep}
               disabled={currentStep === 0}
+              className="w-full sm:w-auto"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Anterior
             </Button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-start">
               {/* Botão Salvar - disponível em todas as etapas */}
               <Button
                 variant="outline"
@@ -897,12 +897,12 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
             </div>
 
             {currentStep < onboardingSteps.length - 1 ? (
-              <Button onClick={nextStep}>
+              <Button onClick={nextStep} className="w-full sm:w-auto mt-2 sm:mt-0">
                 Próxima
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={completeOnboarding} className="bg-green-600 hover:bg-green-700">
+              <Button onClick={completeOnboarding} className="bg-green-600 hover:bg-green-700 w-full sm:w-auto mt-2 sm:mt-0">
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Finalizar Onboarding
               </Button>
@@ -1666,7 +1666,7 @@ const ContractReviewStep: React.FC<{
         }}
         onAnalysisComplete={(completed, analysis) => {
           if (onAnalysisComplete) {
-            onAnalysisComplete(completed, analysis);
+            onAnalysisComplete(completed);
           }
           if (onContractReviewComplete) {
             onContractReviewComplete(completed);
