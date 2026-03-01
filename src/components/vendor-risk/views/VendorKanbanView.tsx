@@ -655,11 +655,11 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
                     <TabsTrigger
                       key={column.id}
                       value={column.id}
-                      className="inline-flex items-center justify-center whitespace-nowrap rounded-none border-b-2 border-transparent px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:bg-background"
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2 text-xs sm:text-sm sm:px-4 sm:py-3 font-medium text-muted-foreground transition-all hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:bg-background"
                     >
-                      <column.icon className={`mr-2 h-4 w-4 ${column.color}`} />
+                      <column.icon className={`mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4 ${column.color}`} />
                       {column.title}
-                      <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-[10px]">
+                      <Badge variant="secondary" className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[9px] sm:text-[10px]">
                         {assessmentsByStatus[column.id].length}
                       </Badge>
                     </TabsTrigger>

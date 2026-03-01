@@ -34,7 +34,7 @@ import { useVendorActionPlans } from '@/hooks/useVendorActionPlans';
 // Importar views
 import { VendorDashboardView } from './views/VendorDashboardView';
 import { VendorTableView } from './views/VendorTableView';
-import { VendorKanbanView } from './views/VendorKanbanView';
+import { VendorFrameworkManager } from './views/VendorFrameworkManager';
 
 import { VendorAssessmentManager } from './views/VendorAssessmentManager';
 
@@ -43,7 +43,7 @@ import { VendorNotificationSystem } from './notifications/VendorNotificationSyst
 import { VendorActionPlanManager } from './views/VendorActionPlanManager';
 
 // Tipos
-export type VendorViewMode = 'dashboard' | 'vendors' | 'assessments' | 'kanban' | 'action_plans';
+export type VendorViewMode = 'dashboard' | 'vendors' | 'assessments' | 'frameworks' | 'action_plans';
 
 interface QuickAction {
   id: string;
@@ -175,6 +175,17 @@ export const VendorRiskManagementCenter: React.FC = () => {
         badge: pendingAssessments > 0 ? pendingAssessments : undefined
       },
       {
+        id: 'action-plans',
+        title: 'Planos de Ação',
+        description: 'Gerenciar ações corretivas',
+        icon: Target,
+        color: 'rose',
+        action: () => {
+          setSelectedFilter('all');
+          setViewMode('action_plans');
+        }
+      },
+      {
         id: 'communication-center',
         title: 'Comunicação',
         description: 'Gerenciar notificações e lembretes',
@@ -184,14 +195,14 @@ export const VendorRiskManagementCenter: React.FC = () => {
         badge: overdueAssessments > 0 ? overdueAssessments : undefined
       },
       {
-        id: 'kanban-board',
-        title: 'Gestão Visual',
-        description: 'Acompanhar progresso no Kanban',
-        icon: BarChart3,
-        color: 'green',
+        id: 'framework-management',
+        title: 'Frameworks',
+        description: 'Gerenciar questionários base',
+        icon: FileCheck,
+        color: 'indigo',
         action: () => {
           setSelectedFilter('all'); // Ensure filter is reset
-          setViewMode('kanban');
+          setViewMode('frameworks');
         }
       }
     ];
@@ -253,7 +264,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
     <div className="space-y-4 sm:space-y-6 vendor-risk-management min-w-0 w-full overflow-x-hidden">
       {/* Premium Storytelling Metrics Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        {/* Card 1: Panorama da Base */}
+        {/* Card 1: Fornecedores */}
         <Card className="relative overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between p-1 sm:p-0">
           <div className="absolute top-0 right-0 p-3 opacity-10">
             <Building className="h-24 w-24 sm:h-32 sm:w-32 text-blue-500" />
@@ -261,7 +272,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
           <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-6 px-3 sm:px-6 relative z-10">
             <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-blue-700 dark:text-blue-400">
               <Building className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              <span className="truncate">Panorama da Base</span>
+              <span className="truncate">Fornecedores</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
@@ -440,7 +451,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
           <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Funcionalidades
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-6">
           {getQuickActions().map((action) => (
             <div
               key={action.id}
@@ -528,9 +539,9 @@ export const VendorRiskManagementCenter: React.FC = () => {
                     <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
                     <span className="whitespace-nowrap">Plano de Ação</span>
                   </TabsTrigger>
-                  <TabsTrigger value="kanban" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
-                    <Kanban className="h-3 w-3 sm:h-4 sm:w-4" />
-                    <span className="whitespace-nowrap">Kanban</span>
+                  <TabsTrigger value="frameworks" className="flex items-center gap-2 text-xs sm:text-sm rounded-full sm:rounded-md bg-muted sm:bg-transparent data-[state=active]:bg-background">
+                    <FileCheck className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap">Frameworks</span>
                   </TabsTrigger>
                 </TabsList>
               </div>
@@ -597,12 +608,8 @@ export const VendorRiskManagementCenter: React.FC = () => {
               />
             </TabsContent>
 
-            <TabsContent value="kanban" className="mt-0 h-full">
-              <VendorKanbanView
-                assessments={assessments}
-                searchTerm={searchTerm}
-                selectedFilter={selectedFilter}
-              />
+            <TabsContent value="frameworks" className="mt-0 h-full">
+              <VendorFrameworkManager />
             </TabsContent>
 
             <TabsContent value="action_plans" className="mt-0 h-full">

@@ -1796,11 +1796,11 @@ Equipe de Compliance`;
 
                             <DropdownMenuItem
                               className="text-xs sm:text-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Clicou em editar:', assessment.id);
-                                openAssessmentEditor(assessment);
+                              onSelect={() => {
+                                setTimeout(() => {
+                                  console.log('Clicou em editar:', assessment.id);
+                                  openAssessmentEditor(assessment);
+                                }, 0);
                               }}
                             >
                               <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1809,11 +1809,11 @@ Equipe de Compliance`;
 
                             <DropdownMenuItem
                               className="text-xs sm:text-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Clicou em preview:', assessment.id);
-                                openPreviewDialog(assessment);
+                              onSelect={() => {
+                                setTimeout(() => {
+                                  console.log('Clicou em preview:', assessment.id);
+                                  openPreviewDialog(assessment);
+                                }, 0);
                               }}
                             >
                               <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1822,12 +1822,12 @@ Equipe de Compliance`;
 
                             <DropdownMenuItem
                               className="text-xs sm:text-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Clicou em detalhes:', assessment.id);
-                                setSelectedAssessment(assessment);
-                                setShowAssessmentDetails(true);
+                              onSelect={() => {
+                                setTimeout(() => {
+                                  console.log('Clicou em detalhes:', assessment.id);
+                                  setSelectedAssessment(assessment);
+                                  setShowAssessmentDetails(true);
+                                }, 0);
                               }}
                             >
                               <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1839,11 +1839,11 @@ Equipe de Compliance`;
                             {/* Ações de link público e email - sempre disponíveis para assessments reais */}
                             <DropdownMenuItem
                               className="text-xs sm:text-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Clicou em link público:', assessment.id);
-                                openPublicLinkDialog(assessment);
+                              onSelect={() => {
+                                setTimeout(() => {
+                                  console.log('Clicou em link público:', assessment.id);
+                                  openPublicLinkDialog(assessment);
+                                }, 0);
                               }}
                             >
                               <Link className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1852,11 +1852,11 @@ Equipe de Compliance`;
 
                             <DropdownMenuItem
                               className="text-xs sm:text-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Clicou em enviar email:', assessment.id);
-                                openEmailDialog(assessment);
+                              onSelect={() => {
+                                setTimeout(() => {
+                                  console.log('Clicou em enviar email:', assessment.id);
+                                  openEmailDialog(assessment);
+                                }, 0);
                               }}
                             >
                               <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -1943,18 +1943,23 @@ Equipe de Compliance`;
 
       {/* Assessment Details Dialog */}
       <Dialog open={showAssessmentDetails} onOpenChange={setShowAssessmentDetails}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button.absolute]:hidden">
           <DialogHeader className="border-b pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <FileText className="h-6 w-6 text-primary" />
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3 pr-2 sm:pr-6">
+                <div className="p-2 bg-primary/10 rounded-full shrink-0">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg sm:text-xl leading-tight">Detalhes do Assessment</DialogTitle>
+                  <DialogDescription className="mt-1 text-xs sm:text-sm">
+                    Visão geral e métricas do assessment.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-xl">Detalhes do Assessment</DialogTitle>
-                <DialogDescription className="mt-1">
-                  Visão geral e métricas do assessment selecionado.
-                </DialogDescription>
-              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowAssessmentDetails(false)} className="h-8 w-8 text-muted-foreground shrink-0 rounded-full -mr-2 mt-1">
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </DialogHeader>
 
@@ -2114,18 +2119,23 @@ Equipe de Compliance`;
 
       {/* Email Dialog */}
       <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 [&>button.absolute]:hidden">
           <DialogHeader className="border-b pb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-full">
-                <Mail className="h-6 w-6 text-primary" />
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3 pr-2 sm:pr-6">
+                <div className="p-2 bg-primary/10 rounded-full shrink-0">
+                  <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg sm:text-xl leading-tight">Enviar Assessment</DialogTitle>
+                  <DialogDescription className="mt-1 text-xs sm:text-sm">
+                    Envie o convite para o fornecedor responder ao questionário.
+                  </DialogDescription>
+                </div>
               </div>
-              <div>
-                <DialogTitle className="text-xl">Enviar Assessment</DialogTitle>
-                <DialogDescription className="mt-1">
-                  Envie o convite para o fornecedor responder ao questionário de segurança.
-                </DialogDescription>
-              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowEmailDialog(false)} className="h-8 w-8 text-muted-foreground shrink-0 rounded-full -mr-2 mt-1">
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </DialogHeader>
 
@@ -2329,7 +2339,7 @@ Equipe de Compliance`;
                 <SelectContent>
                   {frameworks.map((fw) => (
                     <SelectItem key={fw.id} value={fw.id}>
-                      {fw.nome} ({fw.tipo_framework})
+                      {fw.name} {fw.framework_type ? `(${fw.framework_type.toUpperCase()})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

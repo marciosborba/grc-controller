@@ -247,7 +247,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
     <div className="space-y-6 vendor-risk-management">
       {/* Premium Storytelling Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1: Panorama da Base */}
+        {/* Card 1: Fornecedores */}
         <Card className="relative overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-10">
             <Building className="h-32 w-32 text-blue-500" />
@@ -255,7 +255,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold flex items-center gap-2 text-blue-700 dark:text-blue-400">
               <Building className="h-5 w-5" />
-              Panorama da Base
+              Fornecedores
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

@@ -241,6 +241,43 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
 
       if (error) throw error;
 
+      // Trigger Email Notification completely async
+      try {
+        const { data: vendorData } = await supabase
+          .from('vendor_registry')
+          .select('primary_contact_email, name')
+          .eq('id', selectedThread.vendorId)
+          .single();
+
+        let publicLink = '';
+        if (lastMsgWithAssessment?.assessmentId) {
+          const { data: assessmentData } = await supabase
+            .from('vendor_assessments')
+            .select('public_link')
+            .eq('id', lastMsgWithAssessment.assessmentId)
+            .single();
+          if (assessmentData?.public_link) publicLink = assessmentData.public_link;
+        }
+
+        if (vendorData?.primary_contact_email) {
+          const authUser = await supabase.auth.getUser();
+          const senderName = authUser.data.user?.user_metadata?.first_name || 'Equipe de Compliance';
+
+          await supabase.functions.invoke('vendor-chat-notification', {
+            body: {
+              recipientName: vendorData.name,
+              recipientEmail: vendorData.primary_contact_email,
+              vendorName: vendorData.name,
+              messagePreview: content || (attachments.length > 0 ? '[Anexo enviado]' : 'Nova mensagem'),
+              publicLink: publicLink,
+              senderName: senderName
+            }
+          });
+        }
+      } catch (emailError) {
+        console.error('Error triggering SendPulse email notification, but message was saved:', emailError);
+      }
+
       toast({ title: "Enviado", description: "Mensagem enviada com sucesso." });
       setAttachments([]);
       await fetchMessages();
@@ -260,19 +297,19 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
-        <div className="p-6 border-b bg-muted/10">
+      <DialogContent className="max-w-[95vw] w-[95vw] lg:max-w-4xl h-[90vh] lg:h-[80vh] flex flex-col p-0 gap-0 overflow-hidden bg-background">
+        <div className="p-4 lg:p-6 border-b bg-muted/10">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2.5 bg-primary/10 rounded-xl">
-                <Bell className="h-5 w-5 text-primary" />
+            <DialogTitle className="flex items-center gap-2 lg:gap-3 text-lg lg:text-xl text-left pr-4">
+              <div className="p-2 lg:p-2.5 bg-primary/10 rounded-xl shrink-0">
+                <Bell className="h-4 w-4 lg:h-5 lg:w-5 text-primary" />
               </div>
-              <div>
-                <span className="font-semibold">Central de Dúvidas do Fornecedor</span>
-                <span className="text-muted-foreground font-normal ml-2 text-base">Suporte</span>
+              <div className="min-w-0">
+                <span className="font-semibold block sm:inline">Central de Dúvidas do Fornecedor</span>
+                <span className="text-muted-foreground font-normal mt-0.5 sm:mt-0 sm:ml-2 text-sm lg:text-base block sm:inline">Suporte</span>
               </div>
             </DialogTitle>
-            <DialogDescription className="ml-11">
+            <DialogDescription className="ml-11 lg:ml-12 text-left text-xs lg:text-sm">
               Canal direto para resolver dúvidas e solicitações dos fornecedores.
             </DialogDescription>
           </DialogHeader>
@@ -283,21 +320,21 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
             {!selectedThread ? (
               // THREAD LIST VIEW (Simplified for brevity in plan, but mostly unchanged)
               <div className="flex flex-col h-full">
-                <div className="px-8 py-6 border-b bg-muted/5 flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur z-10 shrink-0">
+                <div className="px-4 lg:px-8 py-4 lg:py-6 border-b bg-muted/5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sticky top-0 bg-background/95 backdrop-blur z-10 shrink-0">
                   <div>
-                    <h3 className="text-lg font-semibold">Conversas</h3>
-                    <p className="text-sm text-muted-foreground mt-1">Selecione um fornecedor para iniciar o atendimento.</p>
+                    <h3 className="text-base lg:text-lg font-semibold">Conversas</h3>
+                    <p className="text-xs lg:text-sm text-muted-foreground mt-1">Selecione um fornecedor para iniciar o atendimento.</p>
                   </div>
-                  <div className="flex gap-2 items-center">
-                    <Button variant="outline" size="sm" onClick={fetchMessages} title="Atualizar">
-                      <Clock className="h-4 w-4 mr-1" />
-                      Atualizar
+                  <div className="flex gap-2 items-center w-full md:w-auto">
+                    <Button variant="outline" size="sm" onClick={fetchMessages} title="Atualizar" className="shrink-0 h-9">
+                      <Clock className="h-4 w-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Atualizar</span>
                     </Button>
-                    <div className="relative">
+                    <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Buscar fornecedor..."
-                        className="pl-9 w-64"
+                        className="pl-9 w-full md:w-64 h-9 text-sm"
                         value={messageSearch}
                         onChange={(e) => setMessageSearch(e.target.value)}
                       />
@@ -305,7 +342,7 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
                   </div>
                 </div>
 
-                <div className="p-8 space-y-3 overflow-y-auto flex-1">
+                <div className="p-4 lg:p-8 space-y-3 overflow-y-auto flex-1">
                   {threads.length > 0 ? (
                     threads.filter(t => t.vendorName.toLowerCase().includes(messageSearch.toLowerCase())).map(thread => (
                       <div

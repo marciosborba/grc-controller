@@ -833,7 +833,7 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenant_id, handleError, resetError]);
+  }, [user?.tenantId, handleError, resetError]);
 
   const fetchRiskDistribution = useCallback(async () => {
     if (!user?.tenantId || user.tenantId === 'default') return;
@@ -849,7 +849,7 @@ export const useVendorRiskManagement = () => {
     } catch (error) {
       handleError(error, 'buscar distribuição de riscos');
     }
-  }, [user?.tenant_id, handleError]);
+  }, [user?.tenantId, handleError]);
 
   const fetchFrameworks = useCallback(async () => {
     if (!user?.tenantId || user.tenantId === 'default') return;
@@ -858,7 +858,7 @@ export const useVendorRiskManagement = () => {
       const { data, error } = await supabase
         .from('vendor_assessment_frameworks')
         .select('*')
-        .or(`tenant_id.eq.${user.tenant_id},tenant_id.eq.00000000-0000-0000-0000-000000000000`)
+        .or(`tenant_id.eq.${user.tenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`)
         .eq('is_active', true)
         .order('name');
 
@@ -868,19 +868,117 @@ export const useVendorRiskManagement = () => {
     } catch (error) {
       handleError(error, 'buscar frameworks');
     }
-  }, [user?.tenant_id, handleError]);
+  }, [user?.tenantId, handleError]);
+
+  const createFramework = useCallback(async (frameworkData: Partial<VendorAssessmentFramework>) => {
+    setLoading(true);
+    resetError();
+
+    try {
+      const { data, error } = await supabase
+        .from('vendor_assessment_frameworks')
+        .insert({
+          ...frameworkData,
+          tenant_id: user?.tenantId,
+          created_by: user?.id,
+          updated_by: user?.id,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFrameworks(prev => [...prev, data]);
+      toast({
+        title: 'Sucesso',
+        description: 'Framework criado com sucesso.',
+      });
+      return data;
+    } catch (error) {
+      handleError(error, 'criar framework');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, handleError, resetError, toast]);
+
+  const updateFramework = useCallback(async (id: string, updates: Partial<VendorAssessmentFramework>) => {
+    setLoading(true);
+    resetError();
+
+    try {
+      const { data, error } = await supabase
+        .from('vendor_assessment_frameworks')
+        .update({
+          ...updates,
+          updated_by: user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('tenant_id', user?.tenantId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFrameworks(prev => prev.map(f => f.id === id ? data : f));
+      toast({
+        title: 'Sucesso',
+        description: 'Framework atualizado com sucesso.',
+      });
+      return data;
+    } catch (error) {
+      handleError(error, 'atualizar framework');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.tenantId, handleError, resetError, toast]);
+
+  const deleteFramework = useCallback(async (id: string) => {
+    setLoading(true);
+    resetError();
+
+    try {
+      // Usamos soft delete marcando como inativo
+      const { error } = await supabase
+        .from('vendor_assessment_frameworks')
+        .update({
+          is_active: false,
+          updated_by: user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('tenant_id', user?.tenantId);
+
+      if (error) throw error;
+
+      setFrameworks(prev => prev.filter(f => f.id !== id));
+      toast({
+        title: 'Sucesso',
+        description: 'Framework removido com sucesso.',
+      });
+      return true;
+    } catch (error) {
+      handleError(error, 'remover framework');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.tenantId, handleError, resetError, toast]);
 
   // ================================================
   // INITIALIZATION
   // ================================================
 
   useEffect(() => {
-    if (user?.tenant_id) {
+    if (user?.tenantId) {
       fetchFrameworks();
       fetchDashboardMetrics();
       fetchRiskDistribution();
     }
-  }, [user?.tenant_id, fetchFrameworks, fetchDashboardMetrics, fetchRiskDistribution]);
+  }, [user?.tenantId, fetchFrameworks, fetchDashboardMetrics, fetchRiskDistribution]);
 
   // ================================================
   // RETURN HOOK INTERFACE
@@ -921,7 +1019,12 @@ export const useVendorRiskManagement = () => {
     // Dashboard Operations
     fetchDashboardMetrics,
     fetchRiskDistribution,
+
+    // Framework Operations
     fetchFrameworks,
+    createFramework,
+    updateFramework,
+    deleteFramework,
 
     // Utility
     resetError,

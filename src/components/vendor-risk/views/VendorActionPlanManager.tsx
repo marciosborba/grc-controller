@@ -239,22 +239,22 @@ export const VendorActionPlanManager: React.FC = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
+        <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Planos de Ação</h2>
-                    <p className="text-muted-foreground">
+                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Planos de Ação</h2>
+                    <p className="text-sm sm:text-base text-muted-foreground">
                         Gerencie ações corretivas e preventivas para fornecedores
                     </p>
                 </div>
                 <Dialog open={showNewPlanDialog} onOpenChange={setShowNewPlanDialog}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button className="w-full sm:w-auto">
                             <Plus className="mr-2 h-4 w-4" />
                             Novo Plano de Ação
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
+                    <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Criar Novo Plano de Ação</DialogTitle>
                             <DialogDescription>
@@ -392,24 +392,26 @@ export const VendorActionPlanManager: React.FC = () => {
                     {selectedPlan ? (
                         <Card className="h-full flex flex-col">
                             <CardHeader className="border-b pb-4">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="text-xl flex items-center gap-2">
-                                            {selectedPlan.title}
-                                        </CardTitle>
+                                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                                    <div className="w-full">
+                                        <div className="flex items-start justify-between">
+                                            <CardTitle className="text-lg sm:text-xl flex items-center gap-2 pr-2">
+                                                {selectedPlan.title}
+                                            </CardTitle>
+                                            <Button size="icon" variant="ghost" onClick={() => openEditPlanDialog(selectedPlan)} className="shrink-0 h-8 w-8">
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                         <CardDescription className="mt-1">
                                             {selectedPlan.description}
                                         </CardDescription>
                                     </div>
-                                    <Button size="sm" onClick={() => setShowNewActivityDialog(true)}>
+                                    <Button size="sm" className="w-full sm:w-auto shrink-0" onClick={() => setShowNewActivityDialog(true)}>
                                         <Plus className="h-4 w-4 mr-1" />
                                         Nova Atividade
                                     </Button>
-                                    <Button size="icon" variant="ghost" onClick={() => openEditPlanDialog(selectedPlan)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
                                 </div>
-                                <div className="flex items-center gap-4 mt-4 text-sm">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 mt-4 text-xs sm:text-sm">
                                     <div className="flex items-center gap-1.5">
                                         <Clock className="text-muted-foreground h-4 w-4" />
                                         <span>Prazo: <span className="font-medium">{selectedPlan.due_date ? format(new Date(selectedPlan.due_date), 'dd/MM/yyyy') : 'N/A'}</span></span>
@@ -515,7 +517,7 @@ export const VendorActionPlanManager: React.FC = () => {
 
             {/* New Activity Dialog */}
             <Dialog open={showNewActivityDialog} onOpenChange={setShowNewActivityDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Nova Atividade</DialogTitle>
                         <DialogDescription>
@@ -572,7 +574,7 @@ export const VendorActionPlanManager: React.FC = () => {
             </Dialog>
             {/* Edit Plan Dialog */}
             <Dialog open={showEditPlanDialog} onOpenChange={setShowEditPlanDialog}>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Editar Plano de Ação</DialogTitle>
                         <DialogDescription>
@@ -642,7 +644,7 @@ export const VendorActionPlanManager: React.FC = () => {
 
             {/* Edit Activity Dialog */}
             <Dialog open={showEditActivityDialog} onOpenChange={setShowEditActivityDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Editar Atividade</DialogTitle>
                         <DialogDescription>
@@ -709,6 +711,6 @@ export const VendorActionPlanManager: React.FC = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };

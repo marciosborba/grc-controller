@@ -127,8 +127,6 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
         }
     };
 
-    if (!isOpen) return null;
-
     const currentQuestion = questions[currentStep];
     const progress = questions.length > 0 ? Math.round((Object.keys(responses).length / questions.length) * 100) : 0;
 
@@ -137,11 +135,14 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 bg-background overflow-hidden flex flex-col">
+            <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] p-0 gap-0 bg-background overflow-hidden flex flex-col [&>button.absolute]:hidden">
                 {/* Header */}
-                <div className="h-14 lg:h-16 border-b flex items-center justify-between px-3 lg:px-6 bg-card shrink-0 gap-2">
+                <div className="py-3 lg:py-4 min-h-[72px] border-b flex items-center justify-between px-3 lg:px-6 bg-card shrink-0 gap-2">
                     <div className="flex items-center gap-2 lg:gap-4 flex-1 min-w-0">
-                        <div className="p-1.5 lg:p-2 bg-primary/10 rounded-lg shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden shrink-0 h-8 w-8 -ml-1 text-muted-foreground">
+                            <Menu className="h-5 w-5" />
+                        </Button>
+                        <div className="hidden lg:flex p-1.5 lg:p-2 bg-primary/10 rounded-lg shrink-0">
                             <Shield className="h-4 w-4 lg:h-6 lg:w-6 text-primary" />
                         </div>
                         <div className="min-w-0 flex-1 pr-2">
@@ -158,14 +159,11 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                             <span className="text-sm font-medium">{progress}% Concluído</span>
                             <Progress value={progress} className="w-32 h-2 mt-1" />
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden shrink-0 h-8 w-8">
-                            <Menu className="h-4 w-4" />
-                        </Button>
                         <Button variant="outline" onClick={onClose} className="hidden lg:flex shrink-0">
                             Fechar Preview
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden shrink-0 h-8 w-8">
-                            <X className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={onClose} className="lg:hidden shrink-0 h-8 w-8 -mr-1 text-muted-foreground">
+                            <X className="h-5 w-5" />
                         </Button>
                     </div>
                 </div>
@@ -179,12 +177,12 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                         {/* Sidebar Navigation */}
                         <div className={`${showSidebar ? 'w-full absolute inset-0 z-10 lg:relative lg:w-80' : 'w-0'} transition-all duration-300 border-r lg:bg-muted/5 flex flex-col overflow-hidden bg-background/95 backdrop-blur-md`}>
                             <div className="flex-1 p-3 overflow-y-auto overflow-x-hidden w-full min-w-0">
-                                <div className="space-y-4 lg:space-y-6 w-full max-w-full min-w-0 pb-10">
+                                <div className="space-y-4 lg:space-y-6 w-full max-w-full min-w-0 pb-32 lg:pb-10">
                                     {categories.map((category) => {
                                         const categoryQuestions = questions.filter(q => q.category === category);
                                         return (
                                             <div key={category} className="space-y-1.5 lg:space-y-2 w-full max-w-full min-w-0">
-                                                <h3 className="text-[10px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 truncate">
+                                                <h3 className="text-[10px] lg:text-xs font-semibold text-muted-foreground uppercase tracking-wider px-2 break-words whitespace-normal leading-relaxed">
                                                     {category}
                                                 </h3>
                                                 <div className="space-y-1 w-full max-w-full min-w-0">
@@ -209,7 +207,7 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                                                                     }`}>
                                                                     {isAnswered && <CheckCircle className="h-2 w-2 lg:h-3 lg:w-3" />}
                                                                 </div>
-                                                                <span className="truncate min-w-0 flex-1 leading-snug">{index + 1}. {q.question}</span>
+                                                                <span className="break-words whitespace-normal text-left min-w-0 flex-1 leading-snug">{index + 1}. {q.question}</span>
                                                             </button>
                                                         );
                                                     })}
@@ -224,20 +222,20 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                         {/* Main Content */}
                         <div className="flex-1 flex flex-col overflow-hidden bg-secondary/5">
                             <div className="flex-1 p-4 lg:p-10 overflow-y-auto overflow-x-hidden w-full min-w-0">
-                                <div className="max-w-3xl mx-auto space-y-8 min-w-0 max-w-full">
+                                <div className="max-w-3xl mx-auto space-y-5 lg:space-y-8 min-w-0 max-w-full pb-10">
                                     {currentQuestion && (
-                                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 min-w-0 max-w-full overflow-hidden">
+                                        <div className="space-y-4 lg:space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 min-w-0 max-w-full overflow-hidden">
                                             {/* Question Header */}
-                                            <div className="space-y-4">
+                                            <div className="space-y-3 lg:space-y-4">
                                                 <div className="flex items-center gap-2">
-                                                    <Badge variant="outline">{currentQuestion.category}</Badge>
-                                                    {currentQuestion.required && <Badge variant="destructive">Obrigatória</Badge>}
+                                                    <Badge variant="outline" className="text-[10px] lg:text-xs">{currentQuestion.category}</Badge>
+                                                    {currentQuestion.required && <Badge variant="destructive" className="text-[10px] lg:text-xs">Obrigatória</Badge>}
                                                 </div>
-                                                <h1 className="text-xl lg:text-2xl font-semibold text-foreground leading-tight break-words whitespace-normal">
+                                                <h1 className="text-lg lg:text-2xl font-semibold text-foreground leading-snug break-words whitespace-normal">
                                                     {currentQuestion.question}
                                                 </h1>
                                                 {currentQuestion.description && (
-                                                    <p className="text-muted-foreground text-base lg:text-lg break-words whitespace-normal">
+                                                    <p className="text-muted-foreground text-sm lg:text-lg break-words whitespace-normal leading-relaxed">
                                                         {currentQuestion.description}
                                                     </p>
                                                 )}
@@ -247,7 +245,7 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
 
                                             {/* Answer Section (Read Only / Interactive Simulation) */}
                                             <Card>
-                                                <CardContent className="p-6">
+                                                <CardContent className="p-4 lg:p-6">
                                                     {/* We can reuse the rendering logic from EditAssessmentModal but simplified/read-only or interactive if desired. 
                                                         Since it's a preview, interactive is good but maybe clearly marked as "Preview Mode".
                                                         For now, I'll just show the answer state if it exists, or allow interaction but not save?
@@ -265,18 +263,18 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                                                         return (
                                                             <div className="space-y-6">
                                                                 {q.type === 'yes_no' && (
-                                                                    <div className="flex gap-4">
+                                                                    <div className="flex gap-3 lg:gap-4">
                                                                         <Button
                                                                             variant={answer === 'yes' ? 'default' : 'outline'}
                                                                             onClick={() => setResponses({ ...responses, [q.id]: 'yes' })}
-                                                                            className="w-32 h-12 text-lg"
+                                                                            className="flex-1 h-12 text-base lg:text-lg"
                                                                         >
                                                                             Sim
                                                                         </Button>
                                                                         <Button
                                                                             variant={answer === 'no' ? 'default' : 'outline'}
                                                                             onClick={() => setResponses({ ...responses, [q.id]: 'no' })}
-                                                                            className="w-32 h-12 text-lg"
+                                                                            className="flex-1 h-12 text-base lg:text-lg"
                                                                         >
                                                                             Não
                                                                         </Button>
@@ -311,19 +309,19 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
 
                                                                 {q.type === 'scale' && (
                                                                     <div className="space-y-4">
-                                                                        <div className="flex items-center justify-between gap-2">
+                                                                        <div className="flex flex-wrap items-center justify-between gap-2 max-w-full">
                                                                             {Array.from({ length: q.scale_max || 5 }, (_, i) => i + (q.scale_min || 1)).map((val) => (
                                                                                 <Button
                                                                                     key={val}
                                                                                     variant={answer === val ? 'default' : 'outline'}
                                                                                     onClick={() => setResponses({ ...responses, [q.id]: val })}
-                                                                                    className="h-12 w-12 text-lg font-bold rounded-full"
+                                                                                    className="h-10 w-10 sm:h-12 sm:w-12 text-base sm:text-lg font-bold rounded-full"
                                                                                 >
                                                                                     {val}
                                                                                 </Button>
                                                                             ))}
                                                                         </div>
-                                                                        <div className="flex justify-between text-sm text-muted-foreground px-2">
+                                                                        <div className="flex justify-between text-xs lg:text-sm text-muted-foreground px-1 lg:px-2">
                                                                             <span>{q.scale_labels?.[0] || 'Menor'}</span>
                                                                             <span>{q.scale_labels?.[q.scale_labels.length - 1] || 'Maior'}</span>
                                                                         </div>
@@ -352,22 +350,43 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
                             </div>
 
                             {/* Footer Navigation */}
-                            <div className="h-20 border-t bg-card flex items-center justify-between px-6 md:px-10">
+                            <div className="h-16 lg:h-20 border-t bg-card flex items-center justify-between px-4 lg:px-10 shrink-0">
                                 <Button
                                     variant="outline"
                                     onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
                                     disabled={currentStep === 0}
+                                    size="sm"
+                                    className="hidden sm:flex"
                                 >
                                     <ChevronLeft className="mr-2 h-4 w-4" /> Anterior
                                 </Button>
-                                <div className="text-sm text-muted-foreground">
-                                    Questão {currentStep + 1} de {questions.length}
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+                                    disabled={currentStep === 0}
+                                    className="sm:hidden"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <div className="text-xs sm:text-sm text-muted-foreground font-medium">
+                                    {currentStep + 1} de {questions.length}
                                 </div>
                                 <Button
                                     onClick={() => setCurrentStep(Math.min(questions.length - 1, currentStep + 1))}
                                     disabled={currentStep === questions.length - 1}
+                                    size="sm"
+                                    className="hidden sm:flex"
                                 >
                                     Próxima <ChevronRight className="ml-2 h-4 w-4" />
+                                </Button>
+                                <Button
+                                    size="icon"
+                                    onClick={() => setCurrentStep(Math.min(questions.length - 1, currentStep + 1))}
+                                    disabled={currentStep === questions.length - 1}
+                                    className="sm:hidden"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
