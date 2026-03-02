@@ -179,7 +179,7 @@ export const GeneralSettingsPage = () => {
           <Button
             size="sm"
             onClick={() => setIsDocumentationOpen(true)}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20 h-9 flex-1 sm:flex-none"
+            className="bg-[#2dd4bf] hover:bg-[#14b8a6] text-white shadow-lg shadow-[#2dd4bf]/20 h-9 flex-1 sm:flex-none"
           >
             <ExternalLink className="h-4 w-4 mr-1 sm:mr-2" />
             <span className="text-xs sm:text-sm whitespace-nowrap">Documentação</span>

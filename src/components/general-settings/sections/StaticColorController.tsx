@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { 
-  Palette, 
-  Save, 
-  RotateCcw, 
-  Download, 
-  Upload, 
+import {
+  Palette,
+  Save,
+  RotateCcw,
+  Download,
+  Upload,
   Eye,
   EyeOff,
   Monitor,
@@ -62,7 +62,7 @@ const defaultPalette: ColorPalette = {
       description: 'Efeito glow do primary',
       category: 'core'
     },
-    
+
     // Layout Colors
     background: {
       hsl: '0 0% 100%',
@@ -155,7 +155,7 @@ const defaultPalette: ColorPalette = {
       description: 'Texto de popovers',
       category: 'layout'
     },
-    
+
     // Status Colors
     success: {
       hsl: '142 76% 36%',
@@ -199,7 +199,7 @@ const defaultPalette: ColorPalette = {
       description: 'Texto sobre cor de perigo',
       category: 'status'
     },
-    
+
     // GRC Risk Colors
     'risk-critical': {
       hsl: '0 84% 60%',
@@ -229,7 +229,7 @@ const defaultPalette: ColorPalette = {
       description: 'Risco baixo',
       category: 'risk'
     },
-    
+
     // Sidebar Colors
     'sidebar-background': {
       hsl: '0 0% 98%',
@@ -269,7 +269,7 @@ const defaultPalette: ColorPalette = {
       description: 'Efeito glow do primary',
       category: 'core'
     },
-    
+
     // Layout Colors Dark
     background: {
       hsl: '222 18% 4%',
@@ -362,7 +362,7 @@ const defaultPalette: ColorPalette = {
       description: 'Texto de popovers dark',
       category: 'layout'
     },
-    
+
     // Status Colors Dark (mais claras)
     success: {
       hsl: '142 76% 46%',
@@ -406,7 +406,7 @@ const defaultPalette: ColorPalette = {
       description: 'Texto sobre cor de perigo dark',
       category: 'status'
     },
-    
+
     // GRC Risk Colors Dark
     'risk-critical': {
       hsl: '0 84% 70%',
@@ -436,7 +436,7 @@ const defaultPalette: ColorPalette = {
       description: 'Risco baixo dark',
       category: 'risk'
     },
-    
+
     // Sidebar Colors Dark
     'sidebar-background': {
       hsl: '215 8% 12%',
@@ -494,17 +494,17 @@ export const StaticColorController: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState('core');
   const [previewRefresh, setPreviewRefresh] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Detectar tema atual do sistema
   useEffect(() => {
     const checkTheme = () => {
       const isDark = document.documentElement.classList.contains('dark');
       setActiveMode(isDark ? 'dark' : 'light');
     };
-    
+
     // Verificar tema inicial
     checkTheme();
-    
+
     // Observer para mudanças na classe dark
     const observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -513,15 +513,15 @@ export const StaticColorController: React.FC = () => {
         }
       });
     });
-    
+
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ['class']
     });
-    
+
     return () => observer.disconnect();
   }, []);
-  
+
   // Use the new color manager hook
   const {
     palette,
@@ -552,16 +552,16 @@ export const StaticColorController: React.FC = () => {
     console.log('🔍 PALETA MUDOU:', palette?.light?.primary?.hex);
     console.log('🔍 Cor primária atual:', palette?.light?.primary);
   }, [palette]);
-  
+
   // Forçar atualização do preview quando cores mudarem
   useEffect(() => {
     setPreviewRefresh(prev => prev + 1);
-    
+
     // Forçar re-render após um pequeno delay para garantir que as variáveis CSS foram atualizadas
     setTimeout(() => {
       setPreviewRefresh(prev => prev + 1);
     }, 100);
-    
+
     // Forçar mais uma atualização após 500ms para casos onde o CSS demora para ser aplicado
     setTimeout(() => {
       setPreviewRefresh(prev => prev + 1);
@@ -570,7 +570,7 @@ export const StaticColorController: React.FC = () => {
 
   // Aplicar cores do modo ativo apenas quando explicitamente solicitado
   // Removido useEffect automático que estava causando mudanças indesejadas
-  
+
   // Função para alternar modo de configuração
   const setConfigurationMode = (mode: 'light' | 'dark') => {
     // Apenas alternar o tema visual (light/dark) sem modificar cores
@@ -579,10 +579,10 @@ export const StaticColorController: React.FC = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    
+
     // Apenas atualizar o estado do modo ativo
     setActiveMode(mode);
-    
+
     // Toast informativo
     toast.success(`🎨 Modo ${mode === 'dark' ? 'Dark' : 'Light'} selecionado`, {
       description: `Agora você pode configurar as cores para o modo ${mode}. Use os seletores abaixo.`
@@ -599,36 +599,36 @@ export const StaticColorController: React.FC = () => {
     try {
       const match = hsl.match(/(\d+\.?\d*)\s+(\d+\.?\d*)%\s+(\d+\.?\d*)%/);
       if (!match) return '#000000';
-      
+
       const h = parseFloat(match[1]) / 360;
       const s = parseFloat(match[2]) / 100;
       const l = parseFloat(match[3]) / 100;
-      
+
       const hue2rgb = (p: number, q: number, t: number) => {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
-        if (t < 1/6) return p + (q - p) * 6 * t;
-        if (t < 1/2) return q;
-        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
         return p;
       };
-      
+
       let r, g, b;
       if (s === 0) {
         r = g = b = l;
       } else {
         const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
         const p = 2 * l - q;
-        r = hue2rgb(p, q, h + 1/3);
+        r = hue2rgb(p, q, h + 1 / 3);
         g = hue2rgb(p, q, h);
-        b = hue2rgb(p, q, h - 1/3);
+        b = hue2rgb(p, q, h - 1 / 3);
       }
-      
+
       const toHex = (c: number) => {
         const hex = Math.round(c * 255).toString(16);
         return hex.length === 1 ? '0' + hex : hex;
       };
-      
+
       return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
     } catch {
       return '#000000';
@@ -640,12 +640,12 @@ export const StaticColorController: React.FC = () => {
     try {
       // Múltiplas tentativas para obter o valor CSS
       let computedValue = '';
-      
+
       // Tentativa 1: getComputedStyle padrão
       computedValue = getComputedStyle(document.documentElement)
         .getPropertyValue(`--${colorKey}`)
         .trim();
-      
+
       // Tentativa 2: Forçar recalculo do estilo
       if (!computedValue) {
         document.documentElement.style.getPropertyValue(`--${colorKey}`);
@@ -653,13 +653,13 @@ export const StaticColorController: React.FC = () => {
           .getPropertyValue(`--${colorKey}`)
           .trim();
       }
-      
+
       // Tentativa 3: Verificar se a variável está definida diretamente no :root
       if (!computedValue) {
         const rootStyles = document.documentElement.style;
         computedValue = rootStyles.getPropertyValue(`--${colorKey}`).trim();
       }
-      
+
       // Debug para primary-hover e primary-glow
       if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
         console.log(`🔍 DEBUG ${colorKey}:`, {
@@ -671,7 +671,7 @@ export const StaticColorController: React.FC = () => {
           activeMode,
           previewRefresh
         });
-        
+
         // Teste direto dos valores conhecidos
         if (!computedValue) {
           console.log(`🔧 Testando valores diretos para ${colorKey}`);
@@ -683,7 +683,7 @@ export const StaticColorController: React.FC = () => {
             console.log(`🔧 Usando valor direto para primary-glow: ${computedValue}`);
           }
         }
-        
+
         // Teste de conversão para verificar se está correta
         if (colorKey === 'primary-hover') {
           const testConversion = hslToHex('173 88% 54%');
@@ -696,7 +696,7 @@ export const StaticColorController: React.FC = () => {
           console.log(`🧪 Valor atual na paleta: ${palette[activeMode][colorKey]?.hex}`);
         }
       }
-      
+
       if (computedValue) {
         // Se é HSL (contém espaços e %), converter para hex
         if (computedValue.includes(' ') && computedValue.includes('%')) {
@@ -729,7 +729,7 @@ export const StaticColorController: React.FC = () => {
     } catch (error) {
       console.warn(`Erro ao obter cor para ${colorKey}:`, error);
     }
-    
+
     // Fallback para a cor da paleta
     const fallback = palette[activeMode][colorKey]?.hex || '#000000';
     if (colorKey === 'primary-hover' || colorKey === 'primary-glow') {
@@ -804,7 +804,7 @@ export const StaticColorController: React.FC = () => {
               <Label>Configurar Modo:</Label>
               <div className="flex rounded-lg border p-1">
                 <Button
-                  variant={activeMode === 'light' ? 'default' : 'ghost'}
+                  variant={activeMode === 'light' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setConfigurationMode('light')}
                   className="rounded-md"
@@ -813,7 +813,7 @@ export const StaticColorController: React.FC = () => {
                   Light
                 </Button>
                 <Button
-                  variant={activeMode === 'dark' ? 'default' : 'ghost'}
+                  variant={activeMode === 'dark' ? 'secondary' : 'ghost'}
                   size="sm"
                   onClick={() => setConfigurationMode('dark')}
                   className="rounded-md"
@@ -843,13 +843,13 @@ export const StaticColorController: React.FC = () => {
               )}
               {isApplying ? 'Aplicando...' : 'Aplicar Cores'}
             </Button>
-            
+
             {hasChanges && (
               <div className="text-xs text-muted-foreground">
                 ⚡ Aplicação instantânea na interface
               </div>
             )}
-            
+
             {/* Indicador do modo ativo */}
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               {activeMode === 'dark' ? <Moon className="h-3 w-3" /> : <Sun className="h-3 w-3" />}
@@ -928,13 +928,13 @@ export const StaticColorController: React.FC = () => {
                                 --{colorKey}
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-3">
                               {/* Color Preview - Agora clicável como seletor */}
                               <div className="relative">
                                 <div
                                   className="w-12 h-12 rounded-lg border-2 border-border flex-shrink-0 cursor-pointer hover:border-primary transition-colors"
-                                  style={{ 
+                                  style={{
                                     backgroundColor: getRealAppliedColor(colorKey)
                                   }}
                                   title={`Clique para alterar cor | Atual: ${getRealAppliedColor(colorKey)} | CSS: var(--${colorKey})`}
@@ -946,20 +946,20 @@ export const StaticColorController: React.FC = () => {
                                     colorInput.style.position = 'absolute';
                                     colorInput.style.opacity = '0';
                                     colorInput.style.pointerEvents = 'none';
-                                    
+
                                     colorInput.addEventListener('change', (e) => {
                                       const newColor = (e.target as HTMLInputElement).value;
                                       console.log('🎨 COR SELECIONADA:', newColor);
                                       handleColorUpdate(colorKey, newColor);
                                       document.body.removeChild(colorInput);
                                     });
-                                    
+
                                     document.body.appendChild(colorInput);
                                     colorInput.click();
                                   }}
                                 />
                               </div>
-                              
+
                               {/* Color Input - CAMPOS DE TEXTO */}
                               <div className="flex-1 space-y-2">
                                 <div className="grid grid-cols-2 gap-2 text-xs">
@@ -983,7 +983,7 @@ export const StaticColorController: React.FC = () => {
                                     title={`HSL: ${color.hsl}`}
                                   />
                                 </div>
-                                
+
                                 {/* Botão de teste direto */}
                                 <button
                                   type="button"
@@ -1005,7 +1005,7 @@ export const StaticColorController: React.FC = () => {
                                 </button>
                               </div>
                             </div>
-                            
+
                             <p className="text-xs text-muted-foreground">
                               {color.description}
                             </p>
@@ -1061,15 +1061,15 @@ export const StaticColorController: React.FC = () => {
       <Alert className={pendingColorsDetected ? "border-blue-200 bg-blue-50 dark:bg-blue-950" : hasChanges ? "border-orange-200 bg-orange-50 dark:bg-orange-950" : "border-green-200 bg-green-50 dark:bg-green-950"}>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>APP Color System:</strong> 
+          <strong>APP Color System:</strong>
           {pendingColorsDetected ? (
             <span className="text-blue-700 dark:text-blue-300">
-              ✅ Cores personalizadas aplicadas temporariamente! 
+              ✅ Cores personalizadas aplicadas temporariamente!
               <br />Para torná-las <strong>permanentes</strong>, copie o código CSS do modal e substitua o arquivo <code>src/styles/static-colors.css</code>.
             </span>
           ) : hasChanges ? (
             <span className="text-orange-700 dark:text-orange-300">
-              ⚠️ Você tem alterações não aplicadas. 
+              ⚠️ Você tem alterações não aplicadas.
               <br />Clique em <strong>"Aplicar Cores"</strong> para ver as mudanças na interface.
             </span>
           ) : (
@@ -1080,7 +1080,7 @@ export const StaticColorController: React.FC = () => {
           )}
         </AlertDescription>
       </Alert>
-      
+
       {/* Quick Start Guide */}
       <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
         <CardHeader>
@@ -1126,7 +1126,7 @@ export const StaticColorController: React.FC = () => {
               Siga o passo a passo abaixo para alterar a cor primária permanentemente. É necessário atualizar <strong>AMBOS</strong> os arquivos para garantir que as cores sejam aplicadas corretamente.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 max-h-[calc(95vh-120px)] overflow-y-auto pr-2">
             <Alert>
               <Info className="h-4 w-4" />
@@ -1144,7 +1144,7 @@ export const StaticColorController: React.FC = () => {
                 </div>
               </AlertDescription>
             </Alert>
-            
+
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="static-colors" className="gap-2">
@@ -1154,7 +1154,7 @@ export const StaticColorController: React.FC = () => {
                   ⚙️ index.css
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="static-colors" className="space-y-4 mt-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1174,7 +1174,7 @@ export const StaticColorController: React.FC = () => {
                     Copiar Código
                   </Button>
                 </div>
-                
+
                 <Textarea
                   value={staticColorsCode}
                   readOnly
@@ -1182,7 +1182,7 @@ export const StaticColorController: React.FC = () => {
                   placeholder="Código CSS será gerado aqui..."
                 />
               </TabsContent>
-              
+
               <TabsContent value="index-css" className="space-y-4 mt-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1202,7 +1202,7 @@ export const StaticColorController: React.FC = () => {
                     Copiar Código
                   </Button>
                 </div>
-                
+
                 <Textarea
                   value={indexCSSCode}
                   readOnly
@@ -1211,7 +1211,7 @@ export const StaticColorController: React.FC = () => {
                 />
               </TabsContent>
             </Tabs>
-            
+
             <Alert className="border-green-200 bg-green-50 dark:bg-green-950">
               <Check className="h-4 w-4" />
               <AlertDescription>
@@ -1221,7 +1221,7 @@ export const StaticColorController: React.FC = () => {
                 </div>
               </AlertDescription>
             </Alert>
-            
+
             {/* Botão para fechar */}
             <div className="flex justify-end pt-4">
               <Button

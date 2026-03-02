@@ -1,14 +1,338 @@
-/* Controller GRC - Static Design System */
+// File manager for updating static colors directly in the CSS file
+import type { ColorPalette } from '@/types/colors';
+
+const STATIC_COLORS_FILE_PATH = '/src/styles/static-colors.css';
+
+// Generate complete CSS content for BOTH files (static-colors.css + index.css fallbacks)
+export const generateCompleteStaticCSS = (palette: ColorPalette): { staticColorsCSS: string; indexCSSFallbacks: string } => {
+  const lightColors = Object.entries(palette.light)
+    .map(([key, value]) => `    --${key}: ${value.hsl};`)
+    .join('\n');
+    
+  const darkColors = Object.entries(palette.dark)
+    .map(([key, value]) => `    --${key}: ${value.hsl};`)
+    .join('\n');
+
+  const staticColorsCSS = `/* ============================================================================ */
+/* SISTEMA DE CORES ESTÁTICO - GRC CONTROLLER */
+/* ============================================================================ */
+/* Arquivo gerado automaticamente pelo Static Color Controller */
+/* Última atualização: ${new Date().toLocaleString('pt-BR')} */
+
+/* CORES ESTÁTICAS - SEM @layer utilities para evitar conflitos com Tailwind */
+  /* ========================================================================== */
+  /* LIGHT MODE - CORES PRINCIPAIS */
+  /* ========================================================================== */
+  :root {
+${lightColors}
+    /* Additional system variables */
+    --input: var(--border);
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --success-light: var(--success);
+    --warning-light: var(--warning);
+    --danger-light: var(--danger);
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+
+  /* ========================================================================== */
+  /* DARK MODE - CORES PRINCIPAIS */  
+  /* ========================================================================== */
+  .dark {
+${darkColors}
+    /* Additional system variables */
+    --input: var(--border);
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --success-light: var(--success);
+    --warning-light: var(--warning);
+    --danger-light: var(--danger);
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* ========================================================================== */
+  /* TAILWIND UTILITY CLASSES */
+  /* ========================================================================== */
+  
+  /* Background utilities */
+  .bg-background { background-color: hsl(var(--background)) !important; }
+  .bg-foreground { background-color: hsl(var(--foreground)) !important; }
+  .bg-card { background-color: hsl(var(--card)) !important; }
+  .bg-card-foreground { background-color: hsl(var(--card-foreground)) !important; }
+  .bg-popover { background-color: hsl(var(--popover)) !important; }
+  .bg-popover-foreground { background-color: hsl(var(--popover-foreground)) !important; }
+  .bg-primary { background-color: hsl(var(--primary)) !important; }
+  .bg-primary-foreground { background-color: hsl(var(--primary-foreground)) !important; }
+  .bg-secondary { background-color: hsl(var(--secondary)) !important; }
+  .bg-secondary-foreground { background-color: hsl(var(--secondary-foreground)) !important; }
+  .bg-muted { background-color: hsl(var(--muted)) !important; }
+  .bg-muted-foreground { background-color: hsl(var(--muted-foreground)) !important; }
+  .bg-accent { background-color: hsl(var(--accent)) !important; }
+  .bg-accent-foreground { background-color: hsl(var(--accent-foreground)) !important; }
+  .bg-destructive { background-color: hsl(var(--destructive)) !important; }
+  .bg-destructive-foreground { background-color: hsl(var(--destructive-foreground)) !important; }
+  .bg-border { background-color: hsl(var(--border)) !important; }
+  .bg-input { background-color: hsl(var(--input)) !important; }
+  .bg-ring { background-color: hsl(var(--ring)) !important; }
+
+  /* Text color utilities */
+  .text-background { color: hsl(var(--background)) !important; }
+  .text-foreground { color: hsl(var(--foreground)) !important; }
+  .text-card { color: hsl(var(--card)) !important; }
+  .text-card-foreground { color: hsl(var(--card-foreground)) !important; }
+  .text-popover { color: hsl(var(--popover)) !important; }
+  .text-popover-foreground { color: hsl(var(--popover-foreground)) !important; }
+  .text-primary { color: hsl(var(--primary)) !important; }
+  .text-primary-foreground { color: hsl(var(--primary-foreground)) !important; }
+  .text-primary-text { color: hsl(var(--primary-text)) !important; }
+  .text-secondary { color: hsl(var(--secondary)) !important; }
+  .text-secondary-foreground { color: hsl(var(--secondary-foreground)) !important; }
+  .text-muted { color: hsl(var(--muted)) !important; }
+  .text-muted-foreground { color: hsl(var(--muted-foreground)) !important; }
+  .text-accent { color: hsl(var(--accent)) !important; }
+  .text-accent-foreground { color: hsl(var(--accent-foreground)) !important; }
+  .text-destructive { color: hsl(var(--destructive)) !important; }
+  .text-destructive-foreground { color: hsl(var(--destructive-foreground)) !important; }
+
+  /* Border utilities */
+  .border { border-color: hsl(var(--border)) !important; }
+  .border-background { border-color: hsl(var(--background)) !important; }
+  .border-foreground { border-color: hsl(var(--foreground)) !important; }
+  .border-card { border-color: hsl(var(--card)) !important; }
+  .border-card-foreground { border-color: hsl(var(--card-foreground)) !important; }
+  .border-popover { border-color: hsl(var(--popover)) !important; }
+  .border-popover-foreground { border-color: hsl(var(--popover-foreground)) !important; }
+  .border-primary { border-color: hsl(var(--primary)) !important; }
+  .border-primary-foreground { border-color: hsl(var(--primary-foreground)) !important; }
+  .border-secondary { border-color: hsl(var(--secondary)) !important; }
+  .border-secondary-foreground { border-color: hsl(var(--secondary-foreground)) !important; }
+  .border-muted { border-color: hsl(var(--muted)) !important; }
+  .border-muted-foreground { border-color: hsl(var(--muted-foreground)) !important; }
+  .border-accent { border-color: hsl(var(--accent)) !important; }
+  .border-accent-foreground { border-color: hsl(var(--accent-foreground)) !important; }
+  .border-destructive { border-color: hsl(var(--destructive)) !important; }
+  .border-destructive-foreground { border-color: hsl(var(--destructive-foreground)) !important; }
+  .border-input { border-color: hsl(var(--input)) !important; }
+
+  /* ========================================================================== */
+  /* COMPONENT SPECIFIC STYLES */
+  /* ========================================================================== */
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões */
+  button {
+    border-color: hsl(var(--border));
+  }
+
+  /* Botões primários com hover */
+  button[class*="bg-primary"]:hover,
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover)) !important;
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Estados de risco GRC */
+  .risk-critical, [data-risk="critical"] {
+    background-color: hsl(var(--risk-critical));
+    color: hsl(var(--danger-foreground));
+  }
+
+  .risk-high, [data-risk="high"] {
+    background-color: hsl(var(--risk-high));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-medium, [data-risk="medium"] {
+    background-color: hsl(var(--risk-medium));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-low, [data-risk="low"] {
+    background-color: hsl(var(--risk-low));
+    color: hsl(var(--success-foreground));
+  }
+
+  /* Estados funcionais */
+  .status-success, [data-status="success"] {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+
+  .status-warning, [data-status="warning"] {
+    background-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .status-danger, [data-status="danger"] {
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+  /* Popover and dropdowns */
+  .popover, [data-radix-popper-content-wrapper] {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões primários com hover */
+  button[class*="bg-primary"]:hover,
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover)) !important;
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+}`;
+
+  // Gerar arquivo index.css COMPLETO com fallbacks atualizados
+  const primaryColor = palette.light.primary?.hsl || '173 88% 58%';
+  const primaryHover = palette.light['primary-hover']?.hsl || '173 88% 54%';
+  const primaryGlow = palette.light['primary-glow']?.hsl || '173 95% 78%';
+  
+  const indexCSSComplete = `/* Controller GRC - Static Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Cores de fallback ANTES do import para menor prioridade */
 @layer base {
   :root {
-    /* CORES PRINCIPAIS */
-    --primary: 173 88% 58%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
+    /* FALLBACKS - Menor prioridade que static-colors.css */
+    --primary: ${primaryColor};
+    --primary-hover: ${primaryHover};
+    --primary-glow: ${primaryGlow};
     --primary-foreground: 0 0% 100%;
     --primary-text: 225 71% 12%;
     --secondary: 210 40% 98%;
@@ -28,52 +352,13 @@
     --risk-low: 142 76% 36%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-
-    /* Fallback colors básicos - apenas se static-colors.css não carregar */
-    --background: 0 0% 100%;
-    --foreground: 225 71% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 225 71% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 225 71% 12%;
-
-    /* Variáveis derivadas que referenciam as cores principais */
-    --ring: var(--primary);
-    --accent: var(--secondary);
-    --destructive: var(--danger);
-    --destructive-foreground: var(--danger-foreground);
-    --input: var(--border);
-
-    /* Variáveis de sidebar que referenciam as cores principais */
-    --sidebar-primary: var(--sidebar-foreground);
-    --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--primary);
-
-    /* Gradients */
-    --gradient-brand: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 50%));
-    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)), hsl(0 84% 70%));
-    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
-
-    /* Shadows */
-    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-
-    /* Border radius */
-    --radius: 7px;
   }
-
+  
   .dark {
-    /* CORES PRINCIPAIS DARK MODE */
-    --primary: 173 88% 58%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
+    /* FALLBACKS DARK - Menor prioridade que static-colors.css */
+    --primary: ${primaryColor};
+    --primary-hover: ${primaryHover};
+    --primary-glow: ${primaryGlow};
     --primary-foreground: 0 0% 0%;
     --primary-text: 0 0% 100%;
     --secondary: 215 8% 12%;
@@ -93,7 +378,66 @@
     --risk-low: 142 76% 46%;
     --sidebar-background: 215 8% 12%;
     --sidebar-foreground: 0 0% 100%;
+  }
+}
 
+/* Import static colors AFTER fallbacks for higher priority */
+@import './styles/static-colors.css';
+
+@layer base {
+  :root {
+    /* 
+     * CORES PRINCIPAIS DEFINIDAS EM static-colors.css
+     * Este arquivo apenas define variáveis derivadas
+     * As cores primárias são carregadas de src/styles/static-colors.css
+     */
+    
+    /* Fallback colors básicos - apenas se static-colors.css não carregar */
+    --background: 0 0% 100%;
+    --foreground: 225 71% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 71% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 71% 12%;
+    
+    /* Variáveis derivadas que referenciam as cores principais */
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --input: var(--border);
+    
+    /* Variáveis de sidebar que referenciam as cores principais */
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+    
+    /* Gradients */
+    --gradient-brand: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 50%));
+    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)), hsl(0 84% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Border radius */
+    --radius: 0.4375rem;
+  }
+
+  .dark {
+    /* 
+     * DARK MODE: Cores principais definidas em static-colors.css
+     * Este arquivo apenas define variáveis derivadas
+     */
+    
     /* Fallback colors básicos - apenas se static-colors.css não carregar */
     --background: 222 18% 4%;
     --foreground: 0 0% 100%;
@@ -101,14 +445,14 @@
     --card-foreground: 0 0% 100%;
     --popover: 222 13% 11%;
     --popover-foreground: 0 0% 100%;
-
+    
     /* Variáveis derivadas que referenciam as cores principais */
     --ring: var(--primary);
     --accent: var(--secondary);
     --destructive: var(--danger);
     --destructive-foreground: var(--danger-foreground);
     --input: var(--border);
-
+    
     /* Variáveis de sidebar que referenciam as cores principais */
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--sidebar-background);
@@ -143,11 +487,9 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     text-size-adjust: 100%;
-    /* Ensure dark mode colors are applied with smooth transitions */
+    /* Ensure dark mode colors are applied */
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    /* Smooth transitions to prevent flash */
-    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   /* Improve rendering for all elements */
@@ -175,48 +517,27 @@
   }
 
   /* High DPI display optimizations */
-  @media (-webkit-min-device-pixel-ratio: 2),
-  (min-resolution: 192dpi) {
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
     html {
       -webkit-font-smoothing: subpixel-antialiased;
     }
   }
 
   /* Improve text contrast and readability */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.2;
   }
 
-  p,
-  span,
-  div {
+  p, span, div {
     line-height: 1.5;
   }
 
-  /* Improve card rendering for all cards and fix mobile overflow */
-  .card,
-  [className*="rounded-xl border bg-card"]
-
-  /* shadcn Card generic selector */
-    {
+  /* Improve card rendering for all cards */
+  .card {
     transform: translateZ(0);
     backface-visibility: hidden;
-    max-width: 100%;
-  }
-
-  /* Force responsive tables inside cards */
-  .card .overflow-x-auto,
-  [className*="rounded-xl border bg-card"] .overflow-x-auto {
-    width: 100%;
-    max-width: 100vw;
-    /* Prevent breaking the viewport */
   }
 
   /* Risk level indicators */
@@ -279,7 +600,7 @@
   .dark div[class*="border"] {
     border-color: hsl(215 10% 22%) !important;
   }
-
+  
   .dark .border,
   .dark .border-border {
     border-color: hsl(215 10% 22%) !important;
@@ -294,13 +615,22 @@
   }
 
   /* More aggressive dark mode border override */
+  html.dark *,
+  .dark * {
+    border-color: hsl(215 10% 22%) !important;
+  }
 
+  /* Specific overrides for light elements in dark mode */
+  html.dark [style*="border"],
+  .dark [style*="border"] {
+    border-color: hsl(215 10% 22%) !important;
+  }
 
   /* Sidebar consistency with cards in dark mode */
   .dark [data-sidebar="sidebar"] {
     background-color: hsl(215 8% 12%) !important;
   }
-
+  
   .dark [data-sidebar="sidebar"] [data-sidebar="content"] {
     background-color: hsl(215 8% 12%) !important;
   }
@@ -372,14 +702,14 @@
   /* Force sidebar background for all navigation items */
   [data-sidebar="sidebar"] a,
   [data-sidebar="sidebar"] [data-sidebar-menu-button],
-  [data-sidebar="sidebar"] [data-sidebar-menu-item]>*,
+  [data-sidebar="sidebar"] [data-sidebar-menu-item] > *,
   [data-sidebar="sidebar"] .group {
     background-color: hsl(var(--sidebar-background)) !important;
   }
 
   .dark [data-sidebar="sidebar"] a,
   .dark [data-sidebar="sidebar"] [data-sidebar-menu-button],
-  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item]>*,
+  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item] > *,
   .dark [data-sidebar="sidebar"] .group {
     background-color: hsl(var(--sidebar-background)) !important;
   }
@@ -422,24 +752,24 @@
   }
 
   /* Override shadcn/ui sidebar accent colors */
-  [data-sidebar="menu-button"].hover\:bg-sidebar-accent,
-  [data-sidebar="menu-button"]:not(:hover).active\:bg-sidebar-accent,
+  [data-sidebar="menu-button"].hover\\:bg-sidebar-accent,
+  [data-sidebar="menu-button"]:not(:hover).active\\:bg-sidebar-accent,
   [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
     background-color: transparent !important;
   }
 
-  .dark [data-sidebar="menu-button"].hover\:bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"]:not(:hover).active\:bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"].hover\\:bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"]:not(:hover).active\\:bg-sidebar-accent,
   .dark [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
     background-color: transparent !important;
   }
 
   /* Very specific override for any background on menu buttons */
-  [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\:bg-) {
+  [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\\:bg-) {
     background-color: transparent !important;
   }
 
-  .dark [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\:bg-) {
+  .dark [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\\:bg-) {
     background-color: transparent !important;
   }
 
@@ -458,8 +788,8 @@
 
   /* Force override all Tailwind bg classes */
   [data-sidebar="menu-button"].bg-sidebar-accent,
-  [data-sidebar="menu-button"].hover\:bg-sidebar-accent:not(:hover),
-  [data-sidebar="menu-button"].active\:bg-sidebar-accent:not(:active),
+  [data-sidebar="menu-button"].hover\\:bg-sidebar-accent:not(:hover),
+  [data-sidebar="menu-button"].active\\:bg-sidebar-accent:not(:active),
   [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
   [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
     background-color: transparent !important;
@@ -467,8 +797,8 @@
   }
 
   .dark [data-sidebar="menu-button"].bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"].hover\:bg-sidebar-accent:not(:hover),
-  .dark [data-sidebar="menu-button"].active\:bg-sidebar-accent:not(:active),
+  .dark [data-sidebar="menu-button"].hover\\:bg-sidebar-accent:not(:hover),
+  .dark [data-sidebar="menu-button"].active\\:bg-sidebar-accent:not(:active),
   .dark [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
   .dark [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
     background-color: transparent !important;
@@ -502,7 +832,7 @@
   .dark [role="dialog"] {
     background-color: hsl(var(--card)) !important;
     border: 1px solid hsl(215 15% 18%) !important;
-    box-shadow:
+    box-shadow: 
       0 0 0 1px hsl(215 15% 18%),
       0 20px 25px -5px hsl(0 0% 0% / 0.4),
       0 10px 10px -5px hsl(0 0% 0% / 0.2) !important;
@@ -546,75 +876,63 @@
   }
 
   /* Redução do espaçamento entre cards - diminui 10px (de 24px para 14px) */
-
+  
   /* space-y-6: de 24px para 14px */
-  .space-y-6>*+* {
-    margin-top: 0.875rem !important;
-    /* 14px ao invés de 24px (redução de 10px) */
+  .space-y-6 > * + * {
+    margin-top: 0.875rem !important; /* 14px ao invés de 24px (redução de 10px) */
   }
-
+  
   /* gap-6: de 24px para 14px */
   .gap-6 {
-    gap: 0.875rem !important;
-    /* 14px ao invés de 24px (redução de 10px) */
+    gap: 0.875rem !important; /* 14px ao invés de 24px (redução de 10px) */
   }
-
+  
   /* Para grids que usam gap-6 */
   .grid.gap-6 {
-    gap: 0.875rem !important;
-    /* 14px ao invés de 24px */
+    gap: 0.875rem !important; /* 14px ao invés de 24px */
   }
-
+  
   /* space-y-8: de 32px para 22px (redução de 10px) */
-  .space-y-8>*+* {
-    margin-top: 1.375rem !important;
-    /* 22px ao invés de 32px */
+  .space-y-8 > * + * {
+    margin-top: 1.375rem !important; /* 22px ao invés de 32px */
   }
-
+  
   /* gap-8: de 32px para 22px (redução de 10px) */
-  .gap-8,
-  .grid.gap-8 {
-    gap: 1.375rem !important;
-    /* 22px ao invés de 32px */
+  .gap-8, .grid.gap-8 {
+    gap: 1.375rem !important; /* 22px ao invés de 32px */
   }
 
   /* Redução do espaçamento entre sidebar e conteúdo - diminui 10px */
   main.flex-1 {
-    padding-left: calc(1.5rem - 10px) !important;
-    /* Mobile: 24px → 14px */
+    padding-left: calc(1.5rem - 10px) !important; /* Mobile: 24px → 14px */
   }
-
+  
   @media (min-width: 640px) {
     main.flex-1 {
-      padding-left: calc(2rem - 10px) !important;
-      /* SM: 32px → 22px */
+      padding-left: calc(2rem - 10px) !important; /* SM: 32px → 22px */
     }
   }
-
+  
   @media (min-width: 1024px) {
     main.flex-1 {
-      padding-left: calc(2.5rem - 10px) !important;
-      /* LG: 40px → 30px */
+      padding-left: calc(2.5rem - 10px) !important; /* LG: 40px → 30px */
     }
   }
 
   /* Redução da margem superior do conteúdo (abaixo do cabeçalho) - diminui 10px */
   main.flex-1 {
-    padding-top: calc(1rem - 10px) !important;
-    /* Mobile: 16px → 6px */
+    padding-top: calc(1rem - 10px) !important; /* Mobile: 16px → 6px */
   }
-
+  
   @media (min-width: 640px) {
     main.flex-1 {
-      padding-top: calc(1.5rem - 10px) !important;
-      /* SM: 24px → 14px */
+      padding-top: calc(1.5rem - 10px) !important; /* SM: 24px → 14px */
     }
   }
-
+  
   @media (min-width: 1024px) {
     main.flex-1 {
-      padding-top: calc(2rem - 10px) !important;
-      /* LG: 32px → 22px */
+      padding-top: calc(2rem - 10px) !important; /* LG: 32px → 22px */
     }
   }
 
@@ -631,99 +949,6 @@
     transition: all 0.2s ease !important;
   }
 
-  /* Professional Workflow Canvas Styles */
-  .workflow-canvas {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    position: relative;
-  }
-
-  .workflow-canvas::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
-    background-size: 20px 20px;
-    pointer-events: none;
-    opacity: 0.3;
-  }
-
-  .workflow-node {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    filter: drop-shadow(0 10px 15px -3px rgba(0, 0, 0, 0.1)) drop-shadow(0 4px 6px -2px rgba(0, 0, 0, 0.05));
-  }
-
-  .workflow-node:hover {
-    filter: drop-shadow(0 25px 25px -5px rgba(0, 0, 0, 0.25)) drop-shadow(0 10px 10px -5px rgba(0, 0, 0, 0.04));
-    transform: translateY(-2px) scale(1.02) !important;
-  }
-
-  .workflow-node-selected {
-    filter: drop-shadow(0 25px 25px -5px rgba(59, 130, 246, 0.25)) drop-shadow(0 10px 10px -5px rgba(59, 130, 246, 0.1));
-    animation: node-selected-pulse 2s ease-in-out infinite;
-    transform: scale(1.05) !important;
-  }
-
-  @keyframes node-selected-pulse {
-
-    0%,
-    100% {
-      transform: scale(1.05);
-      filter: drop-shadow(0 25px 25px -5px rgba(59, 130, 246, 0.25)) drop-shadow(0 10px 10px -5px rgba(59, 130, 246, 0.1));
-    }
-
-    50% {
-      transform: scale(1.08);
-      filter: drop-shadow(0 30px 30px -5px rgba(59, 130, 246, 0.35)) drop-shadow(0 15px 15px -5px rgba(59, 130, 246, 0.15));
-    }
-  }
-
-  @keyframes animate-in {
-    0% {
-      opacity: 0;
-      transform: translateY(-10px) scale(0.95);
-    }
-
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes slide-in-from-top-2 {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, -20px);
-    }
-
-    100% {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-  }
-
-  .animate-in {
-    animation: animate-in 0.3s ease-out;
-  }
-
-  .slide-in-from-top-2 {
-    animation: slide-in-from-top-2 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .animate-pulse-slow {
-    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-
-  /* Border width utilities */
-  .border-3 {
-    border-width: 3px;
-  }
-
-  /* Connection lines enhanced visibility */
-  .workflow-connection {
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-  }
-
   .dark [role="dialog"] input:focus,
   .dark [role="dialog"] textarea:focus,
   .dark [role="dialog"] select:focus,
@@ -731,7 +956,7 @@
   .dark [role="dialog"] [data-radix-select-trigger]:focus {
     background-color: hsl(215 18% 14%) !important;
     border-color: hsl(var(--primary)) !important;
-    box-shadow:
+    box-shadow: 
       inset 0 1px 2px hsl(0 0% 0% / 0.1),
       0 0 0 3px hsl(var(--primary) / 0.1) !important;
   }
@@ -766,7 +991,7 @@
   .dark [role="dialog"] button[class*="bg-primary"] {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.9)) !important;
     color: hsl(var(--primary-foreground)) !important;
-    box-shadow:
+    box-shadow: 
       0 2px 4px hsl(var(--primary) / 0.2),
       0 1px 2px hsl(0 0% 0% / 0.1) !important;
   }
@@ -774,7 +999,7 @@
   .dark [role="dialog"] button[class*="bg-primary"]:hover {
     background: linear-gradient(135deg, hsl(var(--primary) / 0.9), hsl(var(--primary) / 0.8)) !important;
     transform: translateY(-1px) !important;
-    box-shadow:
+    box-shadow: 
       0 4px 8px hsl(var(--primary) / 0.3),
       0 2px 4px hsl(0 0% 0% / 0.1) !important;
   }
@@ -795,7 +1020,7 @@
   /* Dialog color preview boxes - elevated */
   .dark [role="dialog"] [title*="Clique para abrir"] {
     border: 2px solid hsl(215 15% 25%) !important;
-    box-shadow:
+    box-shadow: 
       0 2px 4px hsl(0 0% 0% / 0.1),
       inset 0 1px 2px hsl(255 255% 255% / 0.1) !important;
     transition: all 0.2s ease !important;
@@ -804,7 +1029,7 @@
   .dark [role="dialog"] [title*="Clique para abrir"]:hover {
     border-color: hsl(var(--primary)) !important;
     transform: scale(1.05) !important;
-    box-shadow:
+    box-shadow: 
       0 4px 8px hsl(0 0% 0% / 0.15),
       0 0 0 2px hsl(var(--primary) / 0.2) !important;
   }
@@ -845,10 +1070,10 @@
 
   /* Dialog sections with beautiful backgrounds */
   .dark [role="dialog"] .p-4[class*="bg-gradient"] {
-    background: linear-gradient(135deg,
-        hsl(220 20% 10%) 0%,
-        hsl(220 25% 8%) 50%,
-        hsl(215 30% 6%) 100%) !important;
+    background: linear-gradient(135deg, 
+      hsl(220 20% 10%) 0%, 
+      hsl(220 25% 8%) 50%, 
+      hsl(215 30% 6%) 100%) !important;
     border: 1px solid hsl(215 15% 20%) !important;
     box-shadow: inset 0 1px 0 hsl(255 255% 255% / 0.05) !important;
   }
@@ -858,7 +1083,7 @@
     background: linear-gradient(135deg, hsl(215 20% 12%), hsl(215 20% 10%)) !important;
     border: 1px solid hsl(215 15% 25%) !important;
     color: hsl(0 0% 95%) !important;
-    box-shadow:
+    box-shadow: 
       0 10px 25px hsl(0 0% 0% / 0.3),
       0 4px 10px hsl(0 0% 0% / 0.1) !important;
   }
@@ -1096,7 +1321,6 @@
     opacity: 0;
     transform: translateY(10px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1108,7 +1332,6 @@
     opacity: 0;
     transform: translateY(20px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1116,288 +1339,146 @@
 }
 
 @keyframes pulseGlow {
-
-  0%,
-  100% {
+  0%, 100% {
     box-shadow: 0 0 20px hsl(var(--primary-glow) / 0.3);
   }
-
   50% {
     box-shadow: 0 0 40px hsl(var(--primary-glow) / 0.6);
   }
-}
+}`;
 
-/* Canvas Layout Fixed Proportions - Prevents canvas expansion */
-@layer utilities {
+  return {
+    staticColorsCSS,
+    indexCSSFallbacks: indexCSSComplete
+  };
+};
 
-  /* Hide scrollbar but keep scroll functionality */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+// Create a mock API endpoint simulation for development
+// In a real implementation, this would call a backend API
+export const writeStaticColorsFile = async (palette: ColorPalette): Promise<boolean> => {
+  try {
+    const cssContent = generateCompleteStaticCSS(palette);
+    
+    // For development: Use localStorage to persist the changes temporarily
+    // and provide instructions for manual file update
+    localStorage.setItem('grc-pending-colors', JSON.stringify({
+      palette,
+      cssContent,
+      timestamp: new Date().toISOString()
+    }));
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // In production, this would be replaced with:
+    // const response = await fetch('/api/update-colors', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ cssContent, filePath: STATIC_COLORS_FILE_PATH })
+    // });
+    // return response.ok;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to write colors file:', error);
+    return false;
+  }
+};
+
+// Load pending colors from localStorage and apply them
+export const loadPendingColors = (): { palette: ColorPalette; cssContent: string } | null => {
+  try {
+    const pending = localStorage.getItem('grc-pending-colors');
+    if (pending) {
+      return JSON.parse(pending);
+    }
+  } catch (error) {
+    console.error('Failed to load pending colors:', error);
+  }
+  return null;
+};
+
+// Apply CSS content to a <style> element for immediate effect
+export const injectCSS = (cssContent: string, id = 'dynamic-colors') => {
+  // Remove existing dynamic styles
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
   }
 
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  // Create and inject new style element with highest priority
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = cssContent;
+  
+  // Insert at the beginning of head for highest priority
+  document.head.insertBefore(style, document.head.firstChild);
+};
+
+// Remove injected CSS
+export const removeInjectedCSS = (id = 'dynamic-colors') => {
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
   }
+};
 
-  .canvas-layout-fixed {
-    display: flex;
-    overflow: hidden;
-    min-height: 0;
-    width: 100%;
-  }
+// Check if there are pending color changes
+export const hasPendingColors = (): boolean => {
+  return !!localStorage.getItem('grc-pending-colors');
+};
 
-  .canvas-sidebar-left {
-    width: 12rem;
-    /* w-48 */
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
+// Clear pending colors
+export const clearPendingColors = () => {
+  localStorage.removeItem('grc-pending-colors');
+};
 
-  .canvas-main-area {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    display: flex;
-  }
+// Download file with instructions
+export const downloadWithInstructions = (palette: ColorPalette) => {
+  const cssContent = generateCompleteStaticCSS(palette);
+  
+  const instructionsContent = `# INSTRUÇÕES PARA APLICAR AS CORES
 
-  .canvas-content {
-    flex: 1;
-    min-width: 0;
-    overflow-y: auto;
-    max-width: none !important;
-  }
+## Arquivo Gerado
+- static-colors.css - Substitua o arquivo em src/styles/static-colors.css
 
-  .canvas-sidebar-right {
-    width: 16rem;
-    /* w-64 */
-    flex-shrink: 0;
-    overflow-y: auto;
-  }
+## Como aplicar:
+1. Faça backup do arquivo atual src/styles/static-colors.css
+2. Substitua o arquivo pela versão baixada
+3. Reinicie o servidor de desenvolvimento (npm run dev)
+4. As cores serão aplicadas automaticamente
 
-  /* Prevent max-width containers from interfering */
-  .canvas-content .max-w-6xl,
-  .canvas-content .max-w-5xl,
-  .canvas-content .max-w-4xl {
-    max-width: none !important;
-    width: 100% !important;
-  }
+## Verificação:
+- ✅ Recarregue a página para confirmar as mudanças
+- ✅ Teste tanto light mode quanto dark mode
+- ✅ Verifique se todos os componentes estão usando as novas cores
 
-  /* Stabilize drag and drop areas */
-  .drag-drop-stable {
-    transition: all 200ms ease;
-    will-change: auto;
-  }
+Última atualização: ${new Date().toLocaleString('pt-BR')}
+`;
 
-  .drag-drop-stable:not(.dragging) {
-    contain: layout style;
-  }
+  // Create zip-like download with both files
+  const blob1 = new Blob([cssContent], { type: 'text/css' });
+  const blob2 = new Blob([instructionsContent], { type: 'text/plain' });
+  
+  // Download CSS file
+  const url1 = URL.createObjectURL(blob1);
+  const a1 = document.createElement('a');
+  a1.href = url1;
+  a1.download = 'static-colors.css';
+  document.body.appendChild(a1);
+  a1.click();
+  document.body.removeChild(a1);
+  URL.revokeObjectURL(url1);
 
-  /* Grid Layout Fixes for Form Builder */
-  .form-builder-grid {
-    display: grid !important;
-    grid-template-columns: 176px 1fr 256px !important;
-    overflow: hidden !important;
-    gap: 1.5rem !important;
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-
-  .form-builder-grid>* {
-    min-width: 0 !important;
-    overflow: hidden !important;
-    max-width: 100% !important;
-  }
-
-  /* Force canvas center area to respect container */
-  .form-builder-grid>div:nth-child(2) {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .form-builder-grid>div:nth-child(2) * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Prevent internal grids from expanding */
-  .form-builder-grid .grid[style*="gridTemplateColumns"] {
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  .form-builder-grid .grid[style*="gridTemplateColumns"]>* {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-  }
-
-  /* Prevent flexbox from interfering with grid */
-  .form-builder-grid .flex-1 {
-    flex: none !important;
-  }
-
-  .form-builder-grid .flex-shrink-0 {
-    flex-shrink: 0 !important;
-  }
-
-  /* Nuclear option: force all children to respect boundaries */
-  .form-builder-grid * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* ================ WORKFLOW ENGINE GRID LAYOUT ================ */
-  /* Completely rewrite workflow layout to prevent expansion */
-  .workflow-engine-grid {
-    display: grid !important;
-    grid-template-columns: 224px 1fr 256px !important;
-    grid-template-rows: 1fr !important;
-    overflow: hidden !important;
-    gap: 1rem !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 100% !important;
-    contain: layout size style !important;
-  }
-
-  /* Workflow Sidebar (Elements Palette) */
-  .workflow-sidebar {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-    width: 224px !important;
-    max-width: 224px !important;
-    min-width: 224px !important;
-    overflow: hidden !important;
-    contain: layout size !important;
-  }
-
-  /* Workflow Canvas (Center Area) */
-  .workflow-canvas {
-    grid-column: 2 !important;
-    grid-row: 1 !important;
-    overflow: hidden !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
-    contain: layout size style !important;
-  }
-
-  /* Workflow Properties (Right Sidebar) */
-  .workflow-properties {
-    grid-column: 3 !important;
-    grid-row: 1 !important;
-    width: 256px !important;
-    max-width: 256px !important;
-    min-width: 256px !important;
-    overflow: hidden !important;
-    contain: layout size !important;
-  }
-
-  /* Force all workflow canvas content to respect boundaries */
-  .workflow-canvas * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Specifically target the problematic canvas div */
-  .workflow-canvas .relative.w-full.bg-gray-50,
-  .workflow-canvas [style*="height: 600px"] {
-    width: 100% !important;
-    max-width: 100% !important;
-    contain: layout size !important;
-    overflow: hidden !important;
-  }
-
-  /* Force center content alignment without expansion */
-  .workflow-canvas .flex.items-center.justify-center.h-full {
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
-    contain: layout size !important;
-  }
-
-  /* Nuclear option for workflow: prevent ALL expansion */
-  .workflow-engine-grid * {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Additional containment for workflow nodes and elements */
-  .workflow-engine-grid .text-center.text-gray-500,
-  .workflow-engine-grid .text-center {
-    max-width: 100% !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-  }
-
-  /* Switch thumb - ONLY for specific toggle IDs */
-  #lgpd span[class*="rounded-full"],
-  #sox span[class*="rounded-full"],
-  #acn span[class*="rounded-full"],
-  #internet span[class*="rounded-full"] {
-    background-color: white !important;
-    border: 1px solid rgba(0, 0, 0, 0.15) !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-  }
-
-  /* Ensure thumb is visible in both states - ONLY for our specific toggles */
-  #lgpd[data-state="checked"] span[class*="rounded-full"],
-  #lgpd[data-state="unchecked"] span[class*="rounded-full"],
-  #sox[data-state="checked"] span[class*="rounded-full"],
-  #sox[data-state="unchecked"] span[class*="rounded-full"],
-  #acn[data-state="checked"] span[class*="rounded-full"],
-  #acn[data-state="unchecked"] span[class*="rounded-full"],
-  #internet[data-state="checked"] span[class*="rounded-full"],
-  #internet[data-state="unchecked"] span[class*="rounded-full"] {
-    background-color: white !important;
-    border: 1px solid rgba(0, 0, 0, 0.15) !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-  }
-}
-
-/* Override for all switches within the application to use proper theme colors */
-button[role="switch"][data-state="checked"],
-html.dark [role="dialog"] button[role="switch"][data-state="checked"],
-html.dark button[role="switch"][data-state="checked"] {
-  background-color: hsl(var(--primary)) !important;
-}
-
-button[role="switch"][data-state="unchecked"],
-html.dark [role="dialog"] button[role="switch"][data-state="unchecked"],
-html.dark button[role="switch"][data-state="unchecked"] {
-  background-color: hsl(var(--input)) !important;
-}
-
-.peer[role="switch"][data-state="checked"],
-html.dark [role="dialog"] .peer[role="switch"][data-state="checked"],
-html.dark .peer[role="switch"][data-state="checked"] {
-  background-color: hsl(var(--primary)) !important;
-}
-
-.peer[role="switch"][data-state="unchecked"],
-html.dark [role="dialog"] .peer[role="switch"][data-state="unchecked"],
-html.dark .peer[role="switch"][data-state="unchecked"] {
-  background-color: hsl(var(--input)) !important;
-}
-
-
-
-/* Switch thumb - ONLY for specific toggle IDs */
-#lgpd span[class*="rounded-full"],
-#sox span[class*="rounded-full"],
-#acn span[class*="rounded-full"],
-#internet span[class*="rounded-full"] {
-  background-color: white !important;
-  border: 1px solid rgba(0, 0, 0, 0.15) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-}
-
-#lgpd[data-state="unchecked"] span[class*="rounded-full"],
-#sox[data-state="unchecked"] span[class*="rounded-full"],
-#acn[data-state="unchecked"] span[class*="rounded-full"],
-#internet[data-state="unchecked"] span[class*="rounded-full"] {
-  background-color: white !important;
-  border: 1px solid rgba(0, 0, 0, 0.15) !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
-}
+  // Download instructions
+  setTimeout(() => {
+    const url2 = URL.createObjectURL(blob2);
+    const a2 = document.createElement('a');
+    a2.href = url2;
+    a2.download = 'INSTRUÇÕES.txt';
+    document.body.appendChild(a2);
+    a2.click();
+    document.body.removeChild(a2);
+    URL.revokeObjectURL(url2);
+  }, 500);
+};
