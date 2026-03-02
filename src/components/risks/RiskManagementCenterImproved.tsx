@@ -192,16 +192,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       category: 'secondary',
       badge: '50+ templates'
     },
-    {
-      id: 'reports',
-      title: 'Relatórios',
-      description: 'Dashboards executivos',
-      icon: BarChart3,
-      color: 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700',
-      action: () => handleReports(),
-      category: 'secondary',
-      badge: metrics?.totalRisks > 0 ? metrics.totalRisks : undefined
-    },
+
 
     // Integrações
     {
@@ -370,165 +361,58 @@ export const RiskManagementCenterImproved: React.FC = () => {
       <QuickMetrics metrics={metrics} isLoading={isLoadingMetrics} />
 
       {/* Ações Rápidas Organizadas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
-            <span>Centro de Ações Integradas</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Ações Primárias */}
-          <div className="mb-6">
-            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Ações Principais</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {getQuickActions().filter(action => action.category === 'primary').map((action) => {
-                const Icon = action.icon;
+      <div className="mb-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+          <h2 className="text-lg font-semibold">Centro de Ações Integradas</h2>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {getQuickActions().map((action) => {
+            const Icon = action.icon;
 
-                // Extraindo cor base do gradiente (fallback simples)
-                const baseColorClass = action.color.includes('blue') ? 'blue' :
-                  action.color.includes('purple') ? 'purple' :
-                    action.color.includes('green') ? 'green' : 'gray';
-
-                return (
-                  <Card
-                    key={action.id}
-                    className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500`}
-                    onClick={action.action}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Icon className={`h-24 w-24 text-${baseColorClass}-500`} />
-                    </div>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className={`p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors`}>
-                          <Icon className={`h-6 w-6 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
-                        </div>
-                        {action.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        {action.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center text-sm font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
-                          Acessar <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700`}>
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Ações Secundárias */}
-          <div className="mb-6">
-            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Análise e Relatórios</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {getQuickActions().filter(action => action.category === 'secondary').map((action) => {
-                const Icon = action.icon;
-
-                // Extraindo cor base do gradiente (fallback simples)
-                const baseColorClass = action.color.includes('orange') || action.color.includes('red') ? 'orange' :
-                  action.color.includes('cyan') || action.color.includes('blue') ? 'cyan' :
+            const baseColorClass = action.color.includes('blue') ? 'blue' :
+              action.color.includes('purple') ? 'purple' :
+                action.color.includes('green') || action.color.includes('emerald') ? 'emerald' :
+                  action.color.includes('orange') || action.color.includes('amber') || action.color.includes('red') ? 'orange' :
                     action.color.includes('indigo') ? 'indigo' : 'gray';
 
-                return (
-                  <Card
-                    key={action.id}
-                    className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500`}
-                    onClick={action.action}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Icon className={`h-24 w-24 text-${baseColorClass}-500`} />
+            return (
+              <Card
+                key={action.id}
+                className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500 flex flex-col`}
+                onClick={action.action}
+              >
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Icon className={`h-16 w-16 sm:h-24 sm:w-24 text-${baseColorClass}-500`} />
+                </div>
+                <CardHeader className="p-3 sm:p-5 pb-1 sm:pb-2">
+                  <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-sm sm:text-base leading-tight">
+                    <div className={`p-1.5 sm:p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors shrink-0`}>
+                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
                     </div>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className={`p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors`}>
-                          <Icon className={`h-6 w-6 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
-                        </div>
-                        {action.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        {action.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center text-sm font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
-                          Visualizar <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700`}>
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Integrações */}
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Workflow Integrado</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {getQuickActions().filter(action => action.category === 'integration').map((action) => {
-                const Icon = action.icon;
-
-                // Extraindo cor base do gradiente (fallback simples)
-                const baseColorClass = action.color.includes('emerald') || action.color.includes('green') ? 'emerald' :
-                  action.color.includes('amber') || action.color.includes('orange') ? 'amber' :
-                    action.color.includes('pink') || action.color.includes('red') ? 'pink' : 'gray';
-
-                return (
-                  <Card
-                    key={action.id}
-                    className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500`}
-                    onClick={action.action}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Icon className={`h-24 w-24 text-${baseColorClass}-500`} />
+                    <span className="font-semibold line-clamp-2 sm:line-clamp-1">{action.title}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-5 pt-1 sm:pt-2 flex flex-col flex-1 justify-between">
+                  <p className="text-muted-foreground mb-3 text-[10px] sm:text-xs leading-relaxed line-clamp-2 flex-1">
+                    {action.description}
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-auto">
+                    <div className={`flex items-center text-[10px] sm:text-xs font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
+                      Acessar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                     </div>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className={`p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors`}>
-                          <Icon className={`h-6 w-6 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
-                        </div>
-                        {action.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        {action.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center text-sm font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
-                          Gerenciar <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700`}>
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    {action.badge && (
+                      <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700 text-[9px] sm:text-[10px] px-1.5 py-0 h-4 sm:h-5`}>
+                        {action.badge}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Área Principal de Conteúdo */}
       <div className="space-y-6">
@@ -852,7 +736,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };
 

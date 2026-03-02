@@ -167,29 +167,29 @@ export function AuditDashboardNew() {
 
       {/* Métricas Principais */}
       {/* Premium Storytelling Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
 
         {/* Card 1: Dynamic Narrative Card - Execution Status */}
         <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
           <div className={`absolute top-0 right-0 p-3 opacity-10`}>
-            {(metrics?.apontamentos_criticos || 0) > 0 ? <AlertTriangle className="h-24 w-24" /> :
-              (metrics?.projetos_atrasados || 0) > 0 ? <Clock className="h-24 w-24" /> : <CheckCircle className="h-24 w-24" />}
+            {(metrics?.apontamentos_criticos || 0) > 0 ? <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" /> :
+              (metrics?.projetos_atrasados || 0) > 0 ? <Clock className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" /> : <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" />}
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-lg font-bold flex items-center gap-2 ${(metrics?.apontamentos_criticos || 0) > 0 ? 'text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
-              {(metrics?.apontamentos_criticos || 0) > 0 ? 'Pontos Críticos' :
-                (metrics?.projetos_atrasados || 0) > 0 ? 'Atrasos no Plano' : 'Execução Normal'}
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <CardTitle className={`text-xs sm:text-sm md:text-lg font-bold flex items-center gap-1.5 sm:gap-2 leading-tight ${(metrics?.apontamentos_criticos || 0) > 0 ? 'text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
+              <span className="truncate">{(metrics?.apontamentos_criticos || 0) > 0 ? 'Pontos Críticos' :
+                (metrics?.projetos_atrasados || 0) > 0 ? 'Atrasos no Plano' : 'Execução Normal'}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+          <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
+            <p className="text-muted-foreground font-medium text-[9px] sm:text-xs md:text-sm leading-tight sm:leading-relaxed line-clamp-3 md:line-clamp-none">
               {(metrics?.apontamentos_criticos || 0) > 0
-                ? `${metrics?.apontamentos_criticos} apontamentos críticos detectados nos projetos ativos.`
+                ? `${metrics?.apontamentos_criticos} pontos críticos.`
                 : (metrics?.projetos_atrasados || 0) > 0
-                  ? 'Existem projetos com cronograma atrasado. Verifique os prazos.'
-                  : 'Todos os projetos de auditoria estão seguindo o cronograma previsto.'}
+                  ? 'Existem atrasos no plano.'
+                  : 'Projetos no cronograma.'}
             </p>
-            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(metrics?.apontamentos_criticos || 0) > 0 ? 'bg-red-500/10 text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            <div className={`mt-2 sm:mt-4 inline-flex items-center px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] md:text-xs font-medium ${(metrics?.apontamentos_criticos || 0) > 0 ? 'bg-red-500/10 text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
               {(metrics?.apontamentos_criticos || 0) > 0 ? 'Ação Requerida' : (metrics?.projetos_atrasados || 0) > 0 ? 'Atenção ao Prazo' : 'Em Conformidade'}
             </div>
           </CardContent>
@@ -198,16 +198,16 @@ export function AuditDashboardNew() {
         {/* Card 2: Total Projects (Reliable Data) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Target className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
+            <Target className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-blue-500" />
           </div>
-          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl shrink-0">
-              <Target className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-3 sm:p-4 md:p-6 flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10">
+            <div className="p-1.5 sm:p-2 md:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl md:rounded-2xl shrink-0">
+              <Target className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total de Projetos</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics?.total_projetos || 0}</h3>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+            <div className="min-w-0">
+              <p className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full truncate leading-none mb-0.5 md:mb-1">Total de Projetos</p>
+              <h3 className="text-lg sm:text-xl md:text-3xl font-bold text-foreground leading-none">{metrics?.total_projetos || 0}</h3>
+              <p className="text-[7px] sm:text-[9px] md:text-xs text-muted-foreground mt-0.5 lg:mt-1 truncate">
                 {metrics?.projetos_concluidos || 0} concluídos
               </p>
             </div>
@@ -217,17 +217,17 @@ export function AuditDashboardNew() {
         {/* Card 3: Active Execution */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <PlayCircle className="h-16 w-16 sm:h-24 sm:w-24 text-purple-500" />
+            <PlayCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-purple-500" />
           </div>
-          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl sm:rounded-2xl shrink-0">
-              <PlayCircle className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 dark:text-purple-400" />
+          <CardContent className="p-3 sm:p-4 md:p-6 flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10">
+            <div className="p-1.5 sm:p-2 md:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg sm:rounded-xl md:rounded-2xl shrink-0">
+              <PlayCircle className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground">Em Execução</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics?.projetos_ativos || 0}</h3>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                Atividades em andamento
+            <div className="min-w-0">
+              <p className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full truncate leading-none mb-0.5 md:mb-1">Em Execução</p>
+              <h3 className="text-lg sm:text-xl md:text-3xl font-bold text-foreground leading-none">{metrics?.projetos_ativos || 0}</h3>
+              <p className="text-[7px] sm:text-[9px] md:text-xs text-muted-foreground mt-0.5 lg:mt-1 truncate">
+                Atividades ativas
               </p>
             </div>
           </CardContent>
@@ -236,22 +236,22 @@ export function AuditDashboardNew() {
         {/* Card 4: Compliance Rate */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <CheckCircle className="h-16 w-16 sm:h-24 sm:w-24 text-green-500" />
+            <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-green-500" />
           </div>
-          <CardHeader className="pb-1 sm:pb-2 pt-4 sm:pt-6 px-4 sm:px-6">
-            <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
+          <CardHeader className="pb-0.5 sm:pb-1 md:pb-2 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 relative z-10">
+            <CardTitle className="text-xs sm:text-sm md:text-lg font-bold text-foreground leading-tight truncate">
               Taxa de Conclusão
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            <div className="flex items-baseline gap-1 sm:gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-green-600">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
-              <span className="text-[10px] sm:text-sm text-muted-foreground">geral</span>
+          <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-6 md:pb-6 relative z-10">
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-lg sm:text-xl md:text-3xl font-bold text-green-600 leading-none">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
+              <span className="text-[8px] sm:text-[10px] md:text-sm text-muted-foreground truncate">geral</span>
             </div>
-            <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-              Percentual médio de avanço dos projetos.
+            <p className="text-[8px] sm:text-[9px] md:text-sm text-muted-foreground mt-0.5 sm:mt-1 md:mt-2 truncate">
+              Avanço médio dos projetos.
             </p>
-            <div className="mt-3 sm:mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 sm:mt-3 md:mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
               <div className="bg-green-500 h-full rounded-full" style={{ width: `${Math.round(metrics?.taxa_conclusao || 0)}%` }}></div>
             </div>
           </CardContent>

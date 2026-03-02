@@ -449,7 +449,7 @@ const PolicyLifecycle: React.FC<PolicyLifecycleProps> = ({
       {/* Estatísticas do ciclo de vida */}
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-6">
         {/* Lista de políticas */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Políticas por Status</h3>

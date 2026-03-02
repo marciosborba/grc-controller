@@ -195,28 +195,28 @@ export const VendorFrameworkManager: React.FC = () => {
                         <DialogTitle className="text-lg">
                             {editingFramework ? 'Editar Framework' : 'Novo Framework'}
                         </DialogTitle>
-                        <DialogDescription className="text-xs">
-                            Utilize este formulário para configurar as propriedades básicas do seu questionário
+                        <DialogDescription className="text-xs sm:text-sm">
+                            Utilize este formulário para configurar as propriedades do seu questionário
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
-                            <Label htmlFor="name" className="text-xs">Nome do Framework</Label>
+                            <Label htmlFor="name" className="text-xs sm:text-sm">Nome do Framework</Label>
                             <Input
                                 id="name"
                                 value={formState.name}
                                 onChange={(e) => setFormState({ ...formState, name: e.target.value })}
                                 placeholder="Ex: Avaliação de Segurança Básica"
-                                className="text-xs h-8"
+                                className="text-xs sm:text-sm h-8 sm:h-10"
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="type" className="text-xs">Tipo</Label>
+                            <Label htmlFor="type" className="text-xs sm:text-sm">Tipo</Label>
                             <Select
                                 value={formState.framework_type}
                                 onValueChange={(value: any) => setFormState({ ...formState, framework_type: value })}
                             >
-                                <SelectTrigger className="text-xs h-8">
+                                <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
                                     <SelectValue placeholder="Selecione tipo de framework" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -228,20 +228,20 @@ export const VendorFrameworkManager: React.FC = () => {
                             </Select>
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="desc" className="text-xs">Descrição</Label>
+                            <Label htmlFor="desc" className="text-xs sm:text-sm">Descrição</Label>
                             <Textarea
                                 id="desc"
                                 value={formState.description}
                                 onChange={(e) => setFormState({ ...formState, description: e.target.value })}
                                 placeholder="Breve descrição dos objetivos deste formulário"
                                 rows={3}
-                                className="text-xs resize-y"
+                                className="text-xs sm:text-sm resize-y"
                             />
                         </div>
 
                         <div className="grid gap-4 mt-4 border-t pt-4">
                             <div className="flex justify-between items-center">
-                                <Label className="text-sm font-semibold">Controles e Questões</Label>
+                                <Label className="text-sm sm:text-base font-semibold">Controles e Questões</Label>
                                 <Button size="sm" variant="outline" onClick={handleAddQuestion}>
                                     <Plus className="h-4 w-4 mr-2" />
                                     Adicionar Questão
@@ -253,7 +253,7 @@ export const VendorFrameworkManager: React.FC = () => {
                                     formState.questions.map((q: any, index: number) => (
                                         <div key={q.id || index} className="flex flex-col sm:flex-row gap-3 bg-muted/30 p-4 rounded-lg border">
                                             <div className="flex justify-between items-center sm:hidden mb-1">
-                                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Questão {index + 1}</div>
+                                                <div className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">Questão {index + 1}</div>
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
@@ -273,7 +273,7 @@ export const VendorFrameworkManager: React.FC = () => {
                                                         value={q.text}
                                                         onChange={(e) => handleUpdateQuestion(q.id, 'text', e.target.value)}
                                                         placeholder="Digite a questão ou controle..."
-                                                        className="text-xs min-h-[60px] resize-y"
+                                                        className="text-xs sm:text-sm min-h-[60px] resize-y"
                                                         rows={2}
                                                     />
                                                 </div>
@@ -282,13 +282,13 @@ export const VendorFrameworkManager: React.FC = () => {
                                                         value={q.category || ''}
                                                         onChange={(e) => handleUpdateQuestion(q.id, 'category', e.target.value)}
                                                         placeholder="Categoria (ex: Segurança)"
-                                                        className="w-full sm:w-1/3 h-8 text-xs"
+                                                        className="w-full sm:w-1/3 h-8 sm:h-10 text-xs sm:text-sm"
                                                     />
                                                     <Select
                                                         value={q.type || 'yes_no'}
                                                         onValueChange={(value) => handleUpdateQuestion(q.id, 'type', value)}
                                                     >
-                                                        <SelectTrigger className="w-full sm:w-1/3 h-8 text-xs">
+                                                        <SelectTrigger className="w-full sm:w-1/3 h-8 sm:h-10 text-xs sm:text-sm">
                                                             <SelectValue placeholder="Tipo de resposta" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -298,14 +298,14 @@ export const VendorFrameworkManager: React.FC = () => {
                                                             <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-1/3 h-8 border rounded-md px-2 bg-background">
-                                                        <span className="text-xs text-muted-foreground whitespace-nowrap">Peso:</span>
+                                                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-1/3 h-8 sm:h-10 border rounded-md px-2 bg-background">
+                                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Peso:</span>
                                                         <Input
                                                             type="number"
                                                             min={1}
                                                             value={q.weight || 1}
                                                             onChange={(e) => handleUpdateQuestion(q.id, 'weight', e.target.value)}
-                                                            className="h-6 w-16 px-1 py-0 text-xs border-none focus-visible:ring-0 shadow-none text-right sm:text-left"
+                                                            className="h-6 sm:h-8 w-16 px-1 py-0 text-xs sm:text-sm border-none focus-visible:ring-0 shadow-none text-right sm:text-left"
                                                         />
                                                     </div>
                                                 </div>
@@ -316,16 +316,17 @@ export const VendorFrameworkManager: React.FC = () => {
                                                                 value={q.options || ''}
                                                                 onChange={(e) => handleUpdateQuestion(q.id, 'options', e.target.value)}
                                                                 placeholder="Opções separadas por vírgula (Ex: Alta, Média, Baixa)"
-                                                                className="h-8 text-xs w-full"
+                                                                className="h-8 sm:h-10 text-xs sm:text-sm w-full"
                                                             />
                                                         </div>
                                                     ) : <div className="flex-1 hidden sm:block" />}
                                                     <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0 border sm:border-none p-2 sm:p-0 rounded-md sm:rounded-none bg-background/50 sm:bg-transparent">
-                                                        <Label className="text-xs cursor-pointer" htmlFor={`req-ev-${q.id}`}>Exigir Evidência</Label>
+                                                        <Label className="text-xs sm:text-sm cursor-pointer" htmlFor={`req-ev-${q.id}`}>Exigir Evidência</Label>
                                                         <Switch
                                                             id={`req-ev-${q.id}`}
                                                             checked={!!q.requires_evidence}
                                                             onCheckedChange={(checked) => handleUpdateQuestion(q.id, 'requires_evidence', checked as any)}
+                                                            className="data-[state=checked]:!bg-primary"
                                                         />
                                                     </div>
                                                 </div>

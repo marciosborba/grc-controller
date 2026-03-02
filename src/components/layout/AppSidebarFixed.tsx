@@ -512,9 +512,9 @@ export function AppSidebarFixed() {
       <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
         {!collapsed && (
           <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+            <img src="/logo.png?v=2" alt="GEPRIV Logo" className="h-6 w-6 sm:h-8 sm:w-8 object-contain flex-shrink-0" />
             <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GRC Controller</h1>
+              <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GEPRIV</h1>
               <div className="flex items-center gap-1">
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{getTenantDisplayName(user?.tenant)}</p>
                 {isTestingRole && currentTestRole && (

@@ -190,7 +190,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
       )}
 
       {/* Gráficos e análises */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-6">
         {/* Distribuição por status */}
         <Card>
           <CardHeader>

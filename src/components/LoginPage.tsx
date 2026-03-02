@@ -160,10 +160,10 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <Shield className="h-12 w-12 text-primary" />
+          <div className="flex justify-center mb-4 text-center items-center flex-col">
+            <img src="/logo.png?v=2" alt="GEPRIV Logo" className="h-16 w-auto object-contain mb-2" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">GRC Controller</h1>
+          <h1 className="text-3xl font-bold text-foreground">GEPRIV</h1>
           <p className="mt-2 text-sm font-semibold text-muted-foreground">Plataforma de Governança Enterprise</p>
         </div>
 

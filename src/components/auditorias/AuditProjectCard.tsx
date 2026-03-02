@@ -227,32 +227,32 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
           <div className="flex items-center gap-1.5 p-1.5 bg-muted/40 rounded-md">
             <User className="h-3 w-3 text-muted-foreground" />
             <div>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Auditor Líder</p>
-              <p className="text-[10px] sm:text-xs font-medium truncate w-full max-w-[100px]">{project.auditor_lider}</p>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Auditor Líder</p>
+              <p className="text-[10px] sm:text-xs md:text-sm font-medium truncate w-full max-w-[100px] md:max-w-none">{project.auditor_lider}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 p-1.5 bg-muted/40 rounded-md">
             <Calendar className="h-3 w-3 text-muted-foreground" />
             <div>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Prazo</p>
-              <p className="text-[10px] sm:text-xs font-medium">{formatDate(project.data_fim_prevista)}</p>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Prazo</p>
+              <p className="text-[10px] sm:text-xs md:text-sm font-medium">{formatDate(project.data_fim_prevista)}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 p-1.5 bg-muted/40 rounded-md">
             <BarChart3 className="h-3 w-3 text-muted-foreground" />
             <div>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Progresso</p>
-              <p className="text-[10px] sm:text-xs font-medium">{Math.round(getOverallProgress())}%</p>
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Progresso</p>
+              <p className="text-[10px] sm:text-xs md:text-sm font-medium">{Math.round(getOverallProgress())}%</p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 p-1.5 bg-muted/40 rounded-md">
             <AlertTriangle className="h-3 w-3 text-muted-foreground" />
             <div>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Apontamentos</p>
-              <p className="text-[10px] sm:text-xs font-medium">
+              <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Apontamentos</p>
+              <p className="text-[10px] sm:text-xs md:text-sm font-medium">
                 {project.total_apontamentos}
                 {project.apontamentos_criticos > 0 && (
                   <span className="text-red-500 ml-1">({project.apontamentos_criticos})</span>
@@ -264,9 +264,9 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
 
         {/* Barra de Progresso Geral */}
         <div className="mb-4">
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-[9px] sm:text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Progresso Geral</span>
-            <span className="text-[10px] sm:text-xs font-bold">{Math.round(getOverallProgress())}%</span>
+          <div className="flex justify-between items-center mb-1.5 md:mb-2">
+            <span className="text-[9px] sm:text-[10px] md:text-xs uppercase font-semibold text-muted-foreground tracking-wider">Progresso Geral</span>
+            <span className="text-[10px] sm:text-xs md:text-sm font-bold">{Math.round(getOverallProgress())}%</span>
           </div>
           <Progress value={getOverallProgress()} className="h-1.5 sm:h-2" />
         </div>
@@ -290,10 +290,10 @@ export function AuditProjectCard({ project, isExpanded, onToggleExpand, viewMode
                   }`}
               >
                 <div className="flex flex-col items-center justify-center text-center">
-                  <IconComponent className={`h-3 w-3 sm:h-3.5 sm:w-3.5 mb-0.5 ${isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
+                  <IconComponent className={`h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mb-0.5 md:mb-1 ${isActive ? 'text-primary' : isCompleted ? 'text-primary' : 'text-muted-foreground'
                     }`} />
-                  <span className="text-[8px] sm:text-[9px] font-medium leading-none truncate w-full" title={phase.name}>{phase.name}</span>
-                  <span className="text-[8px] sm:text-[9px] text-muted-foreground mt-0.5">{Math.round(completeness)}%</span>
+                  <span className="text-[8px] sm:text-[9px] md:text-xs font-medium leading-none truncate w-full" title={phase.name}>{phase.name}</span>
+                  <span className="text-[8px] sm:text-[9px] md:text-xs text-muted-foreground mt-0.5">{Math.round(completeness)}%</span>
                 </div>
               </div>
             );

@@ -154,25 +154,25 @@ export default function AssessmentsDashboard() {
       </div>
 
       {/* Premium Storytelling Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
 
         {/* Card 1: Dynamic Narrative Card */}
         <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
           <div className={`absolute top-0 right-0 p-3 opacity-10`}>
-            {metrics.overdue > 0 ? <AlertTriangle className="h-16 w-16 sm:h-24 sm:w-24" /> : <CheckCircle className="h-16 w-16 sm:h-24 sm:w-24" />}
+            {metrics.overdue > 0 ? <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" /> : <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" />}
           </div>
-          <CardHeader className="pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
-            <CardTitle className={`text-base sm:text-lg font-bold flex items-center gap-2 ${metrics.overdue > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-              {metrics.overdue > 0 ? 'Atenção Necessária' : 'Boa Conformidade'}
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <CardTitle className={`text-xs sm:text-sm md:text-lg font-bold flex items-center gap-1.5 sm:gap-2 leading-tight ${metrics.overdue > 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+              <span className="truncate">{metrics.overdue > 0 ? 'Atenção Necessária' : 'Boa Conformidade'}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+          <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
+            <p className="text-muted-foreground font-medium text-[9px] sm:text-xs md:text-sm leading-tight sm:leading-relaxed line-clamp-3 md:line-clamp-none">
               {metrics.overdue > 0
-                ? `${metrics.overdue} assessments estão atrasados e requerem ação imediata.`
-                : 'Todos os assessments estão dentro do prazo previsto.'}
+                ? `${metrics.overdue} assessments atrasados.`
+                : 'Todos os assessments no prazo.'}
             </p>
-            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${metrics.overdue > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            <div className={`mt-2 sm:mt-4 inline-flex items-center px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] md:text-xs font-medium ${metrics.overdue > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
               {metrics.overdue > 0 ? 'Atrasos Detectados' : 'Em Dia'}
             </div>
           </CardContent>
@@ -181,16 +181,16 @@ export default function AssessmentsDashboard() {
         {/* Card 2: Total Assessments (Reliable Data) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <FileText className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
+            <FileText className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-blue-500" />
           </div>
-          <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
-            <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl">
-              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-3 sm:p-4 md:p-6 flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10">
+            <div className="p-1.5 sm:p-2 md:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl md:rounded-2xl shrink-0">
+              <FileText className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full">Total de Assessments</p>
-              <h3 className="text-2xl sm:text-3xl font-bold text-foreground">{metrics.total}</h3>
-              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">Registrados na base</p>
+            <div className="min-w-0">
+              <p className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full truncate leading-none mb-0.5 md:mb-1">Total de Assessments</p>
+              <h3 className="text-lg sm:text-xl md:text-3xl font-bold text-foreground leading-none">{metrics.total}</h3>
+              <p className="text-[7px] sm:text-[9px] md:text-xs text-muted-foreground mt-0.5 lg:mt-1 truncate">Registrados na base</p>
             </div>
           </CardContent>
         </Card>
@@ -198,22 +198,22 @@ export default function AssessmentsDashboard() {
         {/* Card 3: Compliance Rate */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Award className="h-16 w-16 sm:h-24 sm:w-24 text-emerald-500" />
+            <Award className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-emerald-500" />
           </div>
-          <CardHeader className="pb-1 sm:pb-2 px-4 sm:px-6 pt-4 sm:pt-6">
-            <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
+          <CardHeader className="pb-0.5 sm:pb-1 md:pb-2 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 relative z-10">
+            <CardTitle className="text-xs sm:text-sm md:text-lg font-bold text-foreground leading-tight truncate">
               Taxa de Conclusão
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-bold text-emerald-600">{metrics.complianceRate}%</span>
-              <span className="text-[10px] sm:text-sm text-muted-foreground">do total</span>
+          <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-6 md:pb-6 relative z-10">
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-lg sm:text-xl md:text-3xl font-bold text-emerald-600 leading-none">{metrics.complianceRate}%</span>
+              <span className="text-[8px] sm:text-[10px] md:text-sm text-muted-foreground truncate">do total</span>
             </div>
-            <p className="text-[9px] sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-              {metrics.completed} de {metrics.total} assessments finalizados.
+            <p className="text-[8px] sm:text-[9px] md:text-sm text-muted-foreground mt-0.5 sm:mt-1 md:mt-2 truncate">
+              {metrics.completed} de {metrics.total} ass. finalizados.
             </p>
-            <div className="mt-3 sm:mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 sm:mt-3 md:mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
               <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${metrics.complianceRate}%` }}></div>
             </div>
           </CardContent>
@@ -222,23 +222,23 @@ export default function AssessmentsDashboard() {
         {/* Card 4: Active Status Distribution */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Activity className="h-16 w-16 sm:h-24 sm:w-24 text-purple-500" />
+            <Activity className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-purple-500" />
           </div>
-          <CardContent className="p-4 sm:p-6 pb-4 sm:pb-6">
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-sm font-medium text-muted-foreground">Em Andamento</span>
-                <span className="text-sm sm:text-base font-bold text-purple-600">{metrics.active}</span>
+          <CardContent className="p-3 sm:p-4 md:p-6 pb-3 sm:pb-4 md:pb-6 relative z-10 flex flex-col justify-center h-full">
+            <div className="space-y-2 sm:space-y-3 md:space-y-4">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground truncate flex-1">Em Andamento</span>
+                <span className="text-xs sm:text-sm md:text-base font-bold text-purple-600 shrink-0">{metrics.active}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-sm font-medium text-muted-foreground">Aguardando Revisão</span>
-                <span className="text-sm sm:text-base font-bold text-orange-600">{metrics.reviewPending}</span>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground truncate flex-1">Rev. Pendente</span>
+                <span className="text-xs sm:text-sm md:text-base font-bold text-orange-600 shrink-0">{metrics.reviewPending}</span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] sm:text-sm font-medium text-muted-foreground">Planejados</span>
-                <span className="text-sm sm:text-base font-bold text-blue-600">{metrics.pending}</span>
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground truncate flex-1">Planejados</span>
+                <span className="text-xs sm:text-sm md:text-base font-bold text-blue-600 shrink-0">{metrics.pending}</span>
               </div>
-              <div className="w-full bg-secondary h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 sm:mt-2">
+              <div className="w-full bg-secondary h-1 sm:h-1.5 rounded-full overflow-hidden mt-0.5 sm:mt-1 md:mt-2">
                 <div className="bg-purple-500 h-full rounded-full" style={{ width: `${(metrics.active / Math.max(metrics.total, 1)) * 100}%` }}></div>
               </div>
             </div>

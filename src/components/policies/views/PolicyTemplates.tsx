@@ -299,7 +299,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
       </Card>
 
       {/* Grid de Templates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
         {filteredTemplates.map((template) => {
           const CategoryIcon = getCategoryIcon(template.category);
           const TypeIcon = getTypeIcon(template.document_type);

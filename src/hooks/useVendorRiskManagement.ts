@@ -397,7 +397,7 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenantId, user?.tenant_id, handleError, resetError]);
+  }, [user?.tenantId, handleError, resetError]);
 
   const createVendor = useCallback(async (vendor: Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
     if (!user?.tenantId || user.tenantId === 'default') return null;
@@ -406,7 +406,7 @@ export const useVendorRiskManagement = () => {
     resetError();
 
     try {
-      const tenantId = user.tenantId || user.tenant_id;
+      const tenantId = user.tenantId;
       const { data, error } = await supabase
         .from('vendor_registry')
         .insert({
@@ -740,7 +740,7 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenant_id, handleError, resetError]);
+  }, [user?.tenantId, handleError, resetError]);
 
   const createRisk = useCallback(async (risk: Omit<VendorRisk, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
     if (!user?.tenantId || user.tenantId === 'default') return null;
@@ -916,7 +916,7 @@ export const useVendorRiskManagement = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .eq('tenant_id', user?.tenantId)
+        .or(`tenant_id.eq.${user?.tenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`)
         .select()
         .single();
 
@@ -950,7 +950,7 @@ export const useVendorRiskManagement = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .eq('tenant_id', user?.tenantId);
+        .or(`tenant_id.eq.${user?.tenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`);
 
       if (error) throw error;
 
