@@ -112,7 +112,6 @@ const ActivityLogsPage = lazy(() => import("@/components/settings/ActivityLogsPa
 // GeneralSettingsPage agora é importado diretamente acima
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
 const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
-const PlatformAdminMigration = lazy(() => import("@/components/admin/PlatformAdminMigration"));
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 
 // AI Manager - New modular structure
@@ -784,13 +783,6 @@ const App = () => (
                         <PlatformAdminRoute>
                           <Suspense fallback={<PageLoader />}>
                             <SystemDiagnosticPage />
-                          </Suspense>
-                        </PlatformAdminRoute>
-                      } />
-                      <Route path="admin/platform-migration" element={
-                        <PlatformAdminRoute>
-                          <Suspense fallback={<PageLoader />}>
-                            <PlatformAdminMigration />
                           </Suspense>
                         </PlatformAdminRoute>
                       } />

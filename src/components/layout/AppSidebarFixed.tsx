@@ -164,13 +164,6 @@ const navigationItems = [{
       description: 'Diagnóstico e monitoramento do sistema'
     },
     {
-      title: 'Migração Platform Admin',
-      url: '/admin/platform-migration',
-      icon: Shield,
-      permissions: ['platform_admin'],
-      description: 'Migração de segurança para tabela platform_admins'
-    },
-    {
       title: 'Tenants',
       url: '/admin/tenants',
       icon: Building2,
