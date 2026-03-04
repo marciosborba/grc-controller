@@ -9,8 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { PlayCircle, Plus, Edit, Trash2, Save, FileText, CheckCircle2, GripVertical } from 'lucide-react';
-import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
-import { VendorAssessmentFramework } from '@/hooks/useVendorRiskManagement';
+import useVendorRiskManagement, { VendorAssessmentFramework, VendorAssessmentQuestion } from '@/hooks/useVendorRiskManagement';
 
 export const VendorFrameworkManager: React.FC = () => {
     const { frameworks, createFramework, updateFramework, deleteFramework, loading } = useVendorRiskManagement();
@@ -30,13 +29,15 @@ export const VendorFrameworkManager: React.FC = () => {
     });
 
     const handleAddQuestion = () => {
-        const newQuestion = {
+        const newQuestion: VendorAssessmentQuestion = {
             id: crypto.randomUUID(),
             text: '',
+            question: '', // added for backward compat
             category: 'Geral',
             type: 'yes_no_na',
-            weight: 1,
-            requires_evidence: false
+            criticality: 'medio',
+            requires_evidence: false,
+            required: true // default to true
         };
         setFormState(prev => ({
             ...prev,
@@ -190,7 +191,7 @@ export const VendorFrameworkManager: React.FC = () => {
 
             {/* Create / Edit Dialog */}
             <Dialog open={showFrameworkDialog} onOpenChange={setShowFrameworkDialog}>
-                <DialogContent className="max-w-[95vw] md:max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] md:max-w-6xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-lg">
                             {editingFramework ? 'Editar Framework' : 'Novo Framework'}
@@ -248,12 +249,21 @@ export const VendorFrameworkManager: React.FC = () => {
                                 </Button>
                             </div>
 
-                            <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-2">
+                            <div className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
+                                <span className="font-medium text-primary">{(formState.questions || []).length}</span> questão(ões) neste framework.
+                                <span>• Use o campo <code className="bg-muted px-1 rounded text-[10px]">#</code> para identificar / reordenar questões visualmente.</span>
+                            </div>
+                            <div className="space-y-3 max-h-[58vh] overflow-y-auto pr-2">
                                 {formState.questions && formState.questions.length > 0 ? (
                                     formState.questions.map((q: any, index: number) => (
                                         <div key={q.id || index} className="flex flex-col sm:flex-row gap-3 bg-muted/30 p-4 rounded-lg border">
                                             <div className="flex justify-between items-center sm:hidden mb-1">
-                                                <div className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">Questão {index + 1}</div>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex items-center justify-center bg-primary/10 rounded px-2 py-0.5">
+                                                        <span className="text-xs font-bold text-primary">#{index + 1}</span>
+                                                    </div>
+                                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">de {(formState.questions || []).length}</div>
+                                                </div>
                                                 <Button
                                                     size="icon"
                                                     variant="ghost"
@@ -264,14 +274,25 @@ export const VendorFrameworkManager: React.FC = () => {
                                                 </Button>
                                             </div>
 
-                                            <div className="hidden sm:block mt-2 text-muted-foreground cursor-grab">
-                                                <GripVertical className="h-5 w-5" />
+                                            <div className="hidden sm:flex items-center gap-2 mt-2">
+                                                <div className="flex items-center justify-center bg-muted rounded-md border w-8 h-8 shrink-0 cursor-grab" title="Arraste para reordenar">
+                                                    <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                                </div>
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-[9px] text-muted-foreground uppercase font-semibold leading-none mb-0.5">#</span>
+                                                    <div className="h-8 w-14 flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 text-primary text-xs font-bold select-none">
+                                                        {index + 1}
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div className="grid gap-3 flex-1">
                                                 <div className="grid gap-1">
                                                     <Textarea
-                                                        value={q.text}
-                                                        onChange={(e) => handleUpdateQuestion(q.id, 'text', e.target.value)}
+                                                        value={q.text || q.question || ''}
+                                                        onChange={(e) => {
+                                                            handleUpdateQuestion(q.id, 'text', e.target.value);
+                                                            handleUpdateQuestion(q.id, 'question', e.target.value);
+                                                        }}
                                                         placeholder="Digite a questão ou controle..."
                                                         className="text-xs sm:text-sm min-h-[60px] resize-y"
                                                         rows={2}
@@ -296,32 +317,148 @@ export const VendorFrameworkManager: React.FC = () => {
                                                             <SelectItem value="yes_no_na">Sim / Não / N/A</SelectItem>
                                                             <SelectItem value="text">Texto Livre</SelectItem>
                                                             <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
+                                                            <SelectItem value="checkbox">Checkbox</SelectItem>
                                                         </SelectContent>
                                                     </Select>
-                                                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-1/3 h-8 sm:h-10 border rounded-md px-2 bg-background">
-                                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Peso:</span>
-                                                        <Input
-                                                            type="number"
-                                                            min={1}
-                                                            value={q.weight || 1}
-                                                            onChange={(e) => handleUpdateQuestion(q.id, 'weight', e.target.value)}
-                                                            className="h-6 sm:h-8 w-16 px-1 py-0 text-xs sm:text-sm border-none focus-visible:ring-0 shadow-none text-right sm:text-left"
-                                                        />
+                                                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-1/3 h-8 sm:h-10">
+                                                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Criticidade:</span>
+                                                        <Select
+                                                            value={q.criticality || 'medio'}
+                                                            onValueChange={(value) => handleUpdateQuestion(q.id, 'criticality', value)}
+                                                        >
+                                                            <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm flex-1 min-w-0">
+                                                                <SelectValue placeholder="Criticidade" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="baixo">Baixo</SelectItem>
+                                                                <SelectItem value="medio">Médio</SelectItem>
+                                                                <SelectItem value="alto">Alto</SelectItem>
+                                                                <SelectItem value="critico">Crítico</SelectItem>
+                                                                <SelectItem value="info">Info (Risco)</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
+                                                    {q.criticality === 'info' && (
+                                                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                                                            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Peso Risco:</span>
+                                                            <Input
+                                                                type="number"
+                                                                min={0}
+                                                                max={10}
+                                                                step={0.5}
+                                                                value={q.riskWeight ?? 5}
+                                                                onChange={(e) => handleUpdateQuestion(q.id, 'riskWeight', e.target.value)}
+                                                                className="h-8 sm:h-10 w-20 text-xs sm:text-sm text-center"
+                                                                placeholder="0-10"
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mt-1">
-                                                    {q.type === 'multiple_choice' ? (
-                                                        <div className="flex-1 w-full">
-                                                            <Input
-                                                                value={q.options || ''}
-                                                                onChange={(e) => handleUpdateQuestion(q.id, 'options', e.target.value)}
-                                                                placeholder="Opções separadas por vírgula (Ex: Alta, Média, Baixa)"
-                                                                className="h-8 sm:h-10 text-xs sm:text-sm w-full"
-                                                            />
+                                                    {(q.type === 'multiple_choice' || q.type === 'checkbox') ? (
+                                                        <div className="flex-1 w-full space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-xs text-muted-foreground font-medium">Opções de resposta e seus pesos:</span>
+                                                                <Button
+                                                                    type="button"
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-6 text-xs px-2"
+                                                                    onClick={() => {
+                                                                        const current = q.optionWeights || [];
+                                                                        const updated = [...current, { label: '', weight: 0 }];
+                                                                        handleUpdateQuestion(q.id, 'optionWeights', updated as any);
+                                                                        // Keep options in sync
+                                                                        handleUpdateQuestion(q.id, 'options', updated.map((o: any) => o.label).join(','));
+                                                                    }}
+                                                                >
+                                                                    <Plus className="h-3 w-3 mr-1" /> Opção
+                                                                </Button>
+                                                            </div>
+                                                            {(() => {
+                                                                // Backward compat: convert old comma-separated to structured
+                                                                let opts: Array<{ label: string; weight: number }> = q.optionWeights || [];
+                                                                if (opts.length === 0 && q.options) {
+                                                                    const labels = typeof q.options === 'string' ? q.options.split(',').map((s: string) => s.trim()) : q.options;
+                                                                    if (Array.isArray(labels) && labels.length > 0) {
+                                                                        opts = labels.map((l: string, i: number) => ({
+                                                                            label: l,
+                                                                            weight: Math.round((i / Math.max(labels.length - 1, 1)) * 2 * 10) / 10,
+                                                                        }));
+                                                                    }
+                                                                }
+                                                                if (opts.length === 0) {
+                                                                    opts = [
+                                                                        { label: 'Inexistente', weight: 0 },
+                                                                        { label: 'Inicial', weight: 0.5 },
+                                                                        { label: 'Básico', weight: 1 },
+                                                                        { label: 'Gerenciado', weight: 1.5 },
+                                                                        { label: 'Otimizado', weight: 2 },
+                                                                    ];
+                                                                    // Auto-set on first render
+                                                                    setTimeout(() => {
+                                                                        handleUpdateQuestion(q.id, 'optionWeights', opts as any);
+                                                                        handleUpdateQuestion(q.id, 'options', opts.map(o => o.label).join(','));
+                                                                    }, 0);
+                                                                }
+                                                                return opts.map((opt, optIdx) => (
+                                                                    <div key={optIdx} className="flex items-center gap-2">
+                                                                        <span className="text-[10px] text-muted-foreground w-4 shrink-0">{optIdx + 1}.</span>
+                                                                        <Input
+                                                                            value={opt.label}
+                                                                            onChange={(e) => {
+                                                                                const updated = [...opts];
+                                                                                updated[optIdx] = { ...updated[optIdx], label: e.target.value };
+                                                                                handleUpdateQuestion(q.id, 'optionWeights', updated as any);
+                                                                                handleUpdateQuestion(q.id, 'options', updated.map(o => o.label).join(','));
+                                                                            }}
+                                                                            placeholder={`Opção ${optIdx + 1}`}
+                                                                            className="h-7 text-xs flex-1 min-w-0"
+                                                                        />
+                                                                        <div className="flex items-center gap-1 shrink-0">
+                                                                            <span className="text-[10px] text-muted-foreground">Peso:</span>
+                                                                            <Input
+                                                                                type="number"
+                                                                                step={0.1}
+                                                                                min={0}
+                                                                                max={10}
+                                                                                value={opt.weight}
+                                                                                onChange={(e) => {
+                                                                                    const updated = [...opts];
+                                                                                    updated[optIdx] = { ...updated[optIdx], weight: parseFloat(e.target.value) || 0 };
+                                                                                    handleUpdateQuestion(q.id, 'optionWeights', updated as any);
+                                                                                }}
+                                                                                className="h-7 w-16 text-xs text-center"
+                                                                            />
+                                                                        </div>
+                                                                        <Button
+                                                                            type="button"
+                                                                            size="icon"
+                                                                            variant="ghost"
+                                                                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                                                                            onClick={() => {
+                                                                                const updated = opts.filter((_, i) => i !== optIdx);
+                                                                                handleUpdateQuestion(q.id, 'optionWeights', updated as any);
+                                                                                handleUpdateQuestion(q.id, 'options', updated.map(o => o.label).join(','));
+                                                                            }}
+                                                                        >
+                                                                            <Trash2 className="h-3 w-3" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ));
+                                                            })()}
                                                         </div>
                                                     ) : <div className="flex-1 hidden sm:block" />}
                                                     <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0 border sm:border-none p-2 sm:p-0 rounded-md sm:rounded-none bg-background/50 sm:bg-transparent">
-                                                        <Label className="text-xs sm:text-sm cursor-pointer" htmlFor={`req-ev-${q.id}`}>Exigir Evidência</Label>
+                                                        <Label className="text-xs sm:text-sm cursor-pointer" htmlFor={`req-${q.id}`}>Obrigatória</Label>
+                                                        <Switch
+                                                            id={`req-${q.id}`}
+                                                            checked={q.required !== false}
+                                                            onCheckedChange={(checked) => handleUpdateQuestion(q.id, 'required', checked as any)}
+                                                            className="data-[state=checked]:!bg-primary mr-2"
+                                                        />
+
+                                                        <Label className="text-xs sm:text-sm cursor-pointer border-l pl-2" htmlFor={`req-ev-${q.id}`}>Exigir Evidência</Label>
                                                         <Switch
                                                             id={`req-ev-${q.id}`}
                                                             checked={!!q.requires_evidence}

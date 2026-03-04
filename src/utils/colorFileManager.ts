@@ -8,7 +8,7 @@ export const generateCompleteStaticCSS = (palette: ColorPalette): { staticColors
   const lightColors = Object.entries(palette.light)
     .map(([key, value]) => `    --${key}: ${value.hsl};`)
     .join('\n');
-    
+
   const darkColors = Object.entries(palette.dark)
     .map(([key, value]) => `    --${key}: ${value.hsl};`)
     .join('\n');
@@ -36,8 +36,6 @@ ${lightColors}
     --danger-light: var(--danger);
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -58,8 +56,6 @@ ${darkColors}
     --danger-light: var(--danger);
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -96,7 +92,11 @@ ${darkColors}
   const primaryColor = palette.light.primary?.hsl || '173 88% 58%';
   const primaryHover = palette.light['primary-hover']?.hsl || '173 88% 54%';
   const primaryGlow = palette.light['primary-glow']?.hsl || '173 95% 78%';
-  
+
+  const darkPrimaryColor = palette.dark.primary?.hsl || '173 88% 58%';
+  const darkPrimaryHover = palette.dark['primary-hover']?.hsl || '173 88% 54%';
+  const darkPrimaryGlow = palette.dark['primary-glow']?.hsl || '173 95% 78%';
+
   const indexCSSComplete = `/* Controller GRC - Static Design System */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin');
 
@@ -130,13 +130,14 @@ ${darkColors}
     --risk-low: 142 76% 36%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
   }
-  
   .dark {
     /* FALLBACKS DARK - Menor prioridade que static-colors.css */
-    --primary: ${primaryColor};
-    --primary-hover: ${primaryHover};
-    --primary-glow: ${primaryGlow};
+    --primary: ${darkPrimaryColor};
+    --primary-hover: ${darkPrimaryHover};
+    --primary-glow: ${darkPrimaryGlow};
     --primary-foreground: 0 0% 0%;
     --primary-text: 0 0% 100%;
     --secondary: 215 8% 12%;
@@ -156,6 +157,8 @@ ${darkColors}
     --risk-low: 142 76% 46%;
     --sidebar-background: 215 8% 12%;
     --sidebar-foreground: 0 0% 100%;
+    --sidebar-accent: 215 12% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
   }
 }
 
@@ -187,9 +190,8 @@ ${darkColors}
     
     /* VariÃ¡veis de sidebar que referenciam as cores principais */
     --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
     
@@ -233,9 +235,8 @@ ${darkColors}
     
     /* VariÃ¡veis de sidebar que referenciam as cores principais */
     --sidebar-primary: var(--primary);
+    --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -414,7 +415,7 @@ ${darkColors}
 export const writeStaticColorsFile = async (palette: ColorPalette): Promise<boolean> => {
   try {
     const cssContent = generateCompleteStaticCSS(palette);
-    
+
     // For development: Use localStorage to persist the changes temporarily
     // and provide instructions for manual file update
     localStorage.setItem('grc-pending-colors', JSON.stringify({
@@ -425,7 +426,7 @@ export const writeStaticColorsFile = async (palette: ColorPalette): Promise<bool
 
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // In production, this would be replaced with:
     // const response = await fetch('/api/update-colors', {
     //   method: 'POST',
@@ -466,7 +467,7 @@ export const injectCSS = (cssContent: string, id = 'dynamic-colors') => {
   const style = document.createElement('style');
   style.id = id;
   style.textContent = cssContent;
-  
+
   // Insert at the beginning of head for highest priority
   document.head.insertBefore(style, document.head.firstChild);
 };
@@ -492,7 +493,7 @@ export const clearPendingColors = () => {
 // Download file with instructions
 export const downloadWithInstructions = (palette: ColorPalette) => {
   const cssContent = generateCompleteStaticCSS(palette);
-  
+
   const instructionsContent = `# INSTRUÃ‡Ã•ES PARA APLICAR AS CORES
 
 ## Arquivo Gerado
@@ -513,9 +514,9 @@ export const downloadWithInstructions = (palette: ColorPalette) => {
 `;
 
   // Create zip-like download with both files
-  const blob1 = new Blob([cssContent], { type: 'text/css' });
+  const blob1 = new Blob([cssContent.staticColorsCSS], { type: 'text/css' });
   const blob2 = new Blob([instructionsContent], { type: 'text/plain' });
-  
+
   // Download CSS file
   const url1 = URL.createObjectURL(blob1);
   const a1 = document.createElement('a');

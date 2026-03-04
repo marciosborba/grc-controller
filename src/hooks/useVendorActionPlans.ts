@@ -8,7 +8,7 @@ export interface ActionPlan {
     id: string;
     title: string;
     description: string;
-    status: 'open' | 'in_progress' | 'completed' | 'verified';
+    status: 'open' | 'in_progress' | 'completed' | 'verified' | 'pending_validation' | 'available_to_vendor';
     priority: 'low' | 'medium' | 'high' | 'critical';
     vendor_id: string;
     created_at: string;
@@ -58,17 +58,21 @@ const mapStatusToDB = (status: string): string => {
         'open': 'planejado',
         'in_progress': 'em_andamento',
         'completed': 'concluido',
-        'verified': 'concluido' // Map verified to concluido for now
+        'verified': 'concluido',
+        'pending_validation': 'aguardando_validacao',
+        'available_to_vendor': 'disponivel_fornecedor',
     };
     return map[status] || 'planejado';
 };
 
-const mapStatusFromDB = (status: string): 'open' | 'in_progress' | 'completed' | 'verified' => {
-    const map: Record<string, 'open' | 'in_progress' | 'completed' | 'verified'> = {
+const mapStatusFromDB = (status: string): 'open' | 'in_progress' | 'completed' | 'verified' | 'pending_validation' | 'available_to_vendor' => {
+    const map: Record<string, 'open' | 'in_progress' | 'completed' | 'verified' | 'pending_validation' | 'available_to_vendor'> = {
         'planejado': 'open',
         'em_andamento': 'in_progress',
         'concluido': 'completed',
-        'cancelado': 'completed' // Handle cancelled as completed/closed for now or add new status
+        'cancelado': 'completed',
+        'aguardando_validacao': 'pending_validation',
+        'disponivel_fornecedor': 'available_to_vendor',
     };
     return map[status?.toLowerCase()] || 'open';
 };
@@ -436,6 +440,44 @@ export const useVendorActionPlans = () => {
     };
 
 
+    /** Approve a pending_validation plan → makes it available to vendor */
+    const approvePlan = async (planId: string) => {
+        try {
+            const { error } = await supabase
+                .from('action_plans')
+                .update({ status: 'disponivel_fornecedor', updated_at: new Date().toISOString() })
+                .eq('id', planId);
+            if (error) throw error;
+            toast({ title: 'Plano Aprovado', description: 'O plano foi aprovado e está disponível para o fornecedor.' });
+            fetchPlans();
+            return true;
+        } catch (error: any) {
+            toast({ title: 'Erro', description: 'Não foi possível aprovar o plano.', variant: 'destructive' });
+            return false;
+        }
+    };
+
+    /** Reject a pending_validation plan → moves back to planejado for editing */
+    const rejectPlan = async (planId: string, reason?: string) => {
+        try {
+            const { error } = await supabase
+                .from('action_plans')
+                .update({
+                    status: 'planejado',
+                    descricao: reason ? `[REJEITADO] ${reason}` : undefined,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', planId);
+            if (error) throw error;
+            toast({ title: 'Plano Rejeitado', description: 'O plano foi devolvido para revisão.' });
+            fetchPlans();
+            return true;
+        } catch (error: any) {
+            toast({ title: 'Erro', description: 'Não foi possível rejeitar o plano.', variant: 'destructive' });
+            return false;
+        }
+    };
+
     return {
         plans,
         loading,
@@ -445,6 +487,8 @@ export const useVendorActionPlans = () => {
         updateActivityStatus,
         deleteActivity,
         updatePlan,
-        updateActivity
+        updateActivity,
+        approvePlan,
+        rejectPlan,
     };
 };

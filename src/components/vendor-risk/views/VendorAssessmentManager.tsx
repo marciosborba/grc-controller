@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { DEFAULT_ASSESSMENT_QUESTIONS } from '@/components/vendor-risk/shared/RiskAssessmentManager';
 import { EditAssessmentModal } from './EditAssessmentModal';
 import { AssessmentPreviewModal } from './AssessmentPreviewModal';
+import { AssessmentValidationModal } from './AssessmentValidationModal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useEffectiveTenant } from '@/hooks/useEffectiveTenant';
 import {
   Plus,
   FileCheck,
@@ -77,6 +80,11 @@ import {
   AlertCircle as AlertCircleIcon,
   RotateCcw,
   User,
+  ChevronDown,
+  ChevronUp,
+  ActivitySquare,
+  ShieldCheck,
+  KeyRound,
 } from 'lucide-react';
 
 interface VendorAssessment {
@@ -85,7 +93,7 @@ interface VendorAssessment {
   framework_id: string;
   assessment_name: string;
   assessment_type: 'initial' | 'annual' | 'reassessment' | 'incident_triggered' | 'ad_hoc';
-  status: 'draft' | 'sent' | 'in_progress' | 'completed' | 'approved' | 'rejected' | 'expired';
+  status: 'draft' | 'sent' | 'in_progress' | 'pending_validation' | 'completed' | 'approved' | 'rejected' | 'expired';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date: string;
   progress_percentage: number;
@@ -131,6 +139,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   showFilters = false
 }) => {
   const { user } = useAuth();
+  const { effectiveTenantId, isPlatformAdmin } = useEffectiveTenant();
   const { toast } = useToast();
   const [assessments, setAssessments] = useState<VendorAssessment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,35 +158,94 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   const [emailForm, setEmailForm] = useState({ email: '', subject: '', message: '' });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [previewAssessment, setPreviewAssessment] = useState<VendorAssessment | null>(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationAssessment, setValidationAssessment] = useState<VendorAssessment | null>(null);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchAssessment, setDispatchAssessment] = useState<VendorAssessment | null>(null);
+  const [dispatchPlans, setDispatchPlans] = useState<any[]>([]);
+  const [dispatchLoading, setDispatchLoading] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingPlanData, setEditingPlanData] = useState<{ title: string; description: string; due_date: string; priority: string } | null>(null);
+
+  // Expanded cards state
+  const [expandedCards, setExpandedCards] = useState<string[]>([]);
+
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev =>
+      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    );
+  };
+
+  // Password Reset State
+  const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
+  const [passwordResetVendor, setPasswordResetVendor] = useState<any>(null);
+  const [vendorAccesses, setVendorAccesses] = useState<{ email: string; password: string; isExisting: boolean }[]>([]);
+  const [isManagingAccess, setIsManagingAccess] = useState(false);
+  const [isLoadingAccess, setIsLoadingAccess] = useState(false);
 
   // New Assessment State
   const [frameworks, setFrameworks] = useState<any[]>([]);
+  const [modalVendors, setModalVendors] = useState<any[]>([]);
   const [newAssessmentForm, setNewAssessmentForm] = useState({
     name: '',
     vendor_id: '',
     framework_id: '',
     priority: 'medium',
-    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    vendor_emails: [{ email: '', password: '' }] as { email: string; password: string }[],
   });
 
   // Fetch frameworks
   useEffect(() => {
     const fetchFrameworks = async () => {
-      if (!user?.tenantId) return;
-      const { data } = await supabase
-        .from('assessment_frameworks')
-        .select('id, nome, tipo_framework')
-        .eq('tenant_id', user.tenantId);
-      if (data) setFrameworks(data);
+      let query = supabase
+        .from('vendor_assessment_frameworks')
+        .select('*');
+
+      if (effectiveTenantId && effectiveTenantId !== 'default') {
+        query = query.or(`tenant_id.eq.${effectiveTenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`);
+      } else if (!isPlatformAdmin) {
+        return; // require tenantid for non-admins
+      }
+
+      const { data, error } = await query
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) {
+        console.error('❌ Erro ao buscar frameworks:', error);
+        return;
+      }
+      if (data) {
+        // Map DB columns to expected UI names (handle both column naming conventions)
+        setFrameworks(data.map((fw: any) => ({
+          id: fw.id,
+          name: fw.nome || fw.name,
+          framework_type: fw.tipo_framework || fw.framework_type,
+        })));
+        console.log('✅ Frameworks carregados:', data.length);
+      }
     };
     fetchFrameworks();
+    // Also load vendors for the new assessment modal
+    const fetchVendorsForModal = async () => {
+      if (!user?.tenantId) return;
+      const { data } = await supabase
+        .from('vendor_registry')
+        .select('id, name, status, primary_contact_email')
+        .eq('tenant_id', user.tenantId)
+        .order('name');
+      if (data) setModalVendors(data);
+    };
+    fetchVendorsForModal();
   }, [user]);
 
   const handleCreateAssessment = async () => {
-    if (!newAssessmentForm.name || !newAssessmentForm.vendor_id || !newAssessmentForm.framework_id) {
+    const validEmails = newAssessmentForm.vendor_emails.filter(e => e.email.trim() && e.password.trim());
+    if (!newAssessmentForm.name || !newAssessmentForm.vendor_id || !newAssessmentForm.framework_id || validEmails.length === 0) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios. Adicione ao menos um e-mail e senha para o Portal.",
         variant: "destructive"
       });
       return;
@@ -185,19 +253,99 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
     try {
       setLoading(true);
+
+      const selectedVendor = (modalVendors.length > 0 ? modalVendors : propVendors).find(v => v.id === newAssessmentForm.vendor_id);
+      if (!selectedVendor) {
+        toast({ title: "Erro", description: "Fornecedor não encontrado.", variant: "destructive" });
+        setLoading(false);
+        return;
+      }
+
+      // 1. Create Vendor Auth Users for each email
+      const createdEmails: string[] = [];
+      const tenantIdToUse = effectiveTenantId === 'default' ? null : (effectiveTenantId || null);
+      console.log('[handleCreateAssessment] effectiveTenantId:', effectiveTenantId, '→ tenantIdToUse:', tenantIdToUse);
+
+      for (const entry of validEmails) {
+        const emailToUse = entry.email.trim().toLowerCase();
+        const { data: rpcData, error: rpcError } = await supabase.rpc('create_vendor_auth_user', {
+          p_email: emailToUse,
+          p_password: entry.password.trim(),
+          p_name: selectedVendor.name,
+          p_vendor_id: selectedVendor.id,
+          p_tenant_id: tenantIdToUse
+        });
+
+        console.log('[create_vendor_auth_user] rpcData:', rpcData, 'rpcError:', rpcError);
+
+        if (rpcError) {
+          toast({ title: "Erro ao criar acesso", description: `${emailToUse}: ${rpcError.message}`, variant: "destructive" });
+          throw new Error(rpcError.message);
+        } else if (rpcData && !rpcData.success) {
+          if (!rpcData.error?.includes('Usuário já existe')) {
+            toast({ title: "Aviso ao criar acesso", description: `${emailToUse}: ${rpcData.error}`, variant: "destructive" });
+            throw new Error(rpcData.error);
+          }
+          // User already exists - that's OK, just add to list
+        }
+        createdEmails.push(emailToUse);
+      }
+
+
+      // The vendor_assessment_frameworks ID from the dropdown
+      const vendorFrameworkId = newAssessmentForm.framework_id;
+
+      // Fetch the vendor framework data (questions, name, etc.)
+      const { data: vendorFramework } = await supabase
+        .from('vendor_assessment_frameworks')
+        .select('*')
+        .eq('id', vendorFrameworkId)
+        .single();
+
+      // Try to find a matching framework in assessment_frameworks (FK target table)
+      let assessmentFrameworkId: string | null = null;
+      if (vendorFramework) {
+        const fwName = vendorFramework.nome || vendorFramework.name;
+        const { data: matchingFw } = await supabase
+          .from('assessment_frameworks')
+          .select('id')
+          .eq('tenant_id', effectiveTenantId === 'default' ? null : effectiveTenantId)
+          .ilike('nome', `%${fwName}%`)
+          .limit(1);
+
+        if (matchingFw && matchingFw.length > 0) {
+          assessmentFrameworkId = matchingFw[0].id;
+        }
+      }
+
+      // Build insert payload
+      const insertPayload: any = {
+        tenant_id: effectiveTenantId === 'default' ? null : effectiveTenantId,
+        vendor_id: newAssessmentForm.vendor_id,
+        assessment_name: newAssessmentForm.name,
+        assessment_type: 'initial',
+        status: 'draft',
+        priority: newAssessmentForm.priority,
+        due_date: new Date(newAssessmentForm.due_date).toISOString(),
+        created_by: user?.id,
+        metadata: {
+          vendor_framework_id: vendorFrameworkId,
+          vendor_framework_name: vendorFramework?.nome || vendorFramework?.name,
+          // Snapshot either the framework questions, or the defaults if it's empty, ensuring absolute consistency
+          questions: vendorFramework?.questions?.length > 0
+            ? vendorFramework.questions
+            : DEFAULT_ASSESSMENT_QUESTIONS
+        }
+      };
+
+      // Only set framework_id if we found a match in assessment_frameworks
+      if (assessmentFrameworkId) {
+        insertPayload.framework_id = assessmentFrameworkId;
+      }
+
       const { data, error } = await supabase
         .from('vendor_assessments')
-        .insert({
-          tenant_id: user?.tenantId,
-          vendor_id: newAssessmentForm.vendor_id,
-          framework_id: newAssessmentForm.framework_id,
-          assessment_name: newAssessmentForm.name,
-          assessment_type: 'initial',
-          status: 'draft',
-          priority: newAssessmentForm.priority,
-          due_date: new Date(newAssessmentForm.due_date).toISOString(),
-          created_by: user?.id
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -215,7 +363,8 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         vendor_id: '',
         framework_id: '',
         priority: 'medium',
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        vendor_emails: [{ email: '', password: '' }],
       });
 
     } catch (error: any) {
@@ -230,14 +379,19 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   };
 
   // Load assessments from vendor registry
-  const loadAssessments = async () => {
-    if (!user?.tenantId) return;
+  const loadAssessments = useCallback(async () => {
+    if (!effectiveTenantId && !isPlatformAdmin) {
+      console.log('⚠️ [VendorAssessmentManager] Skipping loadAssessments: no effectiveTenantId and not platform admin');
+      return;
+    }
+
+    console.log('🔄 [VendorAssessmentManager] loadAssessments called', { effectiveTenantId, isPlatformAdmin });
 
     try {
       setLoading(true);
 
       // Primeiro, buscar assessments da tabela vendor_assessments (incluindo os criados no onboarding)
-      const { data: vendorAssessments, error: assessmentError } = await supabase
+      let assessmentsQuery = supabase
         .from('vendor_assessments')
         .select(`
           *,
@@ -245,17 +399,82 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
             name,
             primary_contact_email,
             primary_contact_name
-          ),
-          vendor_assessment_frameworks:framework_id (
-            name:nome,
-            framework_type:tipo_framework
           )
-        `)
-        .eq('tenant_id', user?.tenantId)
-        .order('created_at', { ascending: false });
+        `);
+
+      if (effectiveTenantId && effectiveTenantId !== 'default') {
+        assessmentsQuery = assessmentsQuery.eq('tenant_id', effectiveTenantId);
+      }
+
+      const { data: vendorAssessments, error: assessmentError } = await assessmentsQuery.order('created_at', { ascending: false });
+
+      // If joined query failed, try simple query without joins
+      let finalAssessments = vendorAssessments;
+      if (assessmentError || !vendorAssessments) {
+        console.warn('⚠️ [loadAssessments] Joined query failed, trying simple query...');
+
+        let simpleQuery = supabase
+          .from('vendor_assessments')
+          .select('*');
+
+        if (effectiveTenantId && effectiveTenantId !== 'default') {
+          simpleQuery = simpleQuery.eq('tenant_id', effectiveTenantId);
+        }
+
+        const { data: simpleData, error: simpleError } = await simpleQuery.order('created_at', { ascending: false });
+
+        if (simpleError) {
+          console.error('❌ [loadAssessments] Simple query also failed:', simpleError);
+        } else {
+          console.log('✅ [loadAssessments] Simple query returned:', simpleData?.length, 'assessments');
+          // Enrich with vendor info
+          if (simpleData) {
+            const vendorIds = [...new Set(simpleData.map((a: any) => a.vendor_id).filter(Boolean))];
+            const { data: vendors } = await supabase
+              .from('vendor_registry')
+              .select('id, name, primary_contact_email, primary_contact_name')
+              .in('id', vendorIds);
+
+            finalAssessments = simpleData.map((a: any) => ({
+              ...a,
+              vendor_registry: vendors?.find((v: any) => v.id === a.vendor_id) || null,
+            }));
+          }
+        }
+      }
+      // Map metadata.validation.overallScore or metadata.submission_summary.maturity_score to overall_score property for UI
+      if (finalAssessments) {
+        finalAssessments = finalAssessments.map((a: any) => {
+          const meta = typeof a.metadata === 'string' ? JSON.parse(a.metadata) : (a.metadata || {});
+          let status = a.status;
+
+          // Fix for public submission: RPC sets status to 'completed', but it still needs validation
+          if (status === 'completed' && (!a.internal_review_status || a.internal_review_status === 'pending')) {
+            status = 'pending_validation';
+          }
+
+          return {
+            ...a,
+            status,
+            metadata: meta,
+            overall_score: meta?.validation?.overallScore ?? meta?.submission_summary?.maturity_score ?? null
+          };
+        });
+      }
+
+      console.log('📋 [loadAssessments] finalAssessments:', finalAssessments?.length);
+      if (finalAssessments.length > 0) {
+        console.log('🧪 First item keys:', Object.keys(finalAssessments[0]).join(', '));
+        console.log('🧪 First item data:', JSON.stringify({
+          id: finalAssessments[0].id,
+          assessment_name: finalAssessments[0].assessment_name,
+          status: finalAssessments[0].status,
+          tenant_id: (finalAssessments[0] as any).tenant_id,
+        }));
+      }
 
       // Segundo, buscar fornecedores que têm assessments cadastrados
-      const { data: vendorsWithAssessments, error: vendorError } = await supabase
+      let vendorsQuery = supabase
         .from('vendor_registry')
         .select(`
           id,
@@ -269,8 +488,13 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
           status,
           created_at,
           updated_at
-        `)
-        .eq('tenant_id', user?.tenantId)
+        `);
+
+      if (effectiveTenantId && effectiveTenantId !== 'default') {
+        vendorsQuery = vendorsQuery.eq('tenant_id', effectiveTenantId);
+      }
+
+      const { data: vendorsWithAssessments, error: vendorError } = await vendorsQuery
         .not('last_assessment_date', 'is', null)
         .order('last_assessment_date', { ascending: false });
 
@@ -288,8 +512,8 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       const combinedAssessments = [];
 
       // Adicionar assessments formais
-      if (vendorAssessments) {
-        combinedAssessments.push(...vendorAssessments);
+      if (finalAssessments) {
+        combinedAssessments.push(...finalAssessments);
       }
 
       // Verificar assessments selecionados no localStorage que ainda não foram criados no banco
@@ -302,7 +526,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
             const vendorId = templateInfo.vendorId;
 
             // Verificar se já existe um assessment formal para este fornecedor
-            const existingAssessment = vendorAssessments?.find(a => a.vendor_id === vendorId);
+            const existingAssessment = finalAssessments?.find(a => a.vendor_id === vendorId);
 
             if (!existingAssessment && templateInfo.templateId && templateInfo.templateName) {
               // Buscar informações do fornecedor
@@ -397,19 +621,31 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime()
       );
 
+      console.log('🧪 [VendorAssessmentManager] combinedAssessments:', combinedAssessments.length);
+      if (combinedAssessments.length > 0) {
+        console.log('🧪 First item keys:', Object.keys(combinedAssessments[0]).join(', '));
+        console.log('🧪 First item data:', JSON.stringify({
+          id: combinedAssessments[0].id,
+          assessment_name: combinedAssessments[0].assessment_name,
+          status: combinedAssessments[0].status,
+          tenant_id: (combinedAssessments[0] as any).tenant_id,
+        }));
+      }
+
       setAssessments(combinedAssessments);
     } catch (error) {
-      // Unexpected error
+      console.error('❌ [VendorAssessmentManager] Unexpected error in loadAssessments:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [effectiveTenantId, isPlatformAdmin, supabase, toast]);
+
 
   useEffect(() => {
     loadAssessments();
 
     // Removed debugging functions - preview should work now
-  }, [user?.tenantId]);
+  }, [effectiveTenantId, isPlatformAdmin]);
 
   // Verificar periodicamente por novos assessments criados durante onboarding
   useEffect(() => {
@@ -418,32 +654,38 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
       const recentTime = new Date(Date.now() - 30000).toISOString();
 
       // Recarregar assessments se houver atividade recente
-      if (user?.tenantId) {
+      if (effectiveTenantId || isPlatformAdmin) {
         loadAssessments();
       }
     }, 30000); // Verificar a cada 30 segundos
 
     return () => clearInterval(interval);
-  }, [user?.tenantId, loadAssessments]);
+  }, [effectiveTenantId, isPlatformAdmin]);
 
-  // Use props assessments if available, otherwise use internal state
-  const currentAssessments = propAssessments.length > 0 ? propAssessments : assessments;
-  const currentLoading = propAssessments.length > 0 ? propLoading : loading;
+  // Always use internal state (loaded by loadAssessments) - it merges all sources
+  // Note: never use propLoading because for platform admins, propAssessments never gets populated
+  // and propLoading stays true forever (parent hook skips fetch when tenantId is not set)
+  const currentAssessments = assessments.length > 0 ? assessments : propAssessments;
+  const currentLoading = loading; // Always use internal loading state
   const currentSearchTerm = searchTerm || localSearchTerm;
   const currentSelectedFilter = selectedFilter || localSelectedFilter;
 
   // Filter assessments based on search and filters
   const filteredAssessments = currentAssessments.filter(assessment => {
+    const assessmentName = assessment.assessment_name || (assessment as any).title || '';
+    const vendorName = assessment.vendor_registry?.name || '';
+
     const matchesSearch = !currentSearchTerm ||
-      assessment.assessment_name.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
-      assessment.vendor_registry?.name.toLowerCase().includes(currentSearchTerm.toLowerCase());
+      assessmentName.toLowerCase().includes(currentSearchTerm.toLowerCase()) ||
+      vendorName.toLowerCase().includes(currentSearchTerm.toLowerCase());
 
     const matchesFilter = currentSelectedFilter === 'all' ||
       (currentSelectedFilter === 'pending' && ['draft', 'sent'].includes(assessment.status)) ||
       (currentSelectedFilter === 'awaiting_response' && assessment.status === 'sent' && assessment.public_link && !assessment.responses) ||
       (currentSelectedFilter === 'in_progress' && assessment.status === 'in_progress') ||
-      (currentSelectedFilter === 'completed' && assessment.status === 'completed') ||
-      (currentSelectedFilter === 'overdue' && new Date(assessment.due_date) < new Date() && !['completed', 'approved'].includes(assessment.status));
+      (currentSelectedFilter === 'pending_validation' && assessment.status === 'pending_validation') ||
+      (currentSelectedFilter === 'completed' && ['completed', 'approved'].includes(assessment.status)) ||
+      (currentSelectedFilter === 'overdue' && assessment.due_date && new Date(assessment.due_date) < new Date() && !['completed', 'approved'].includes(assessment.status));
 
     return matchesSearch && matchesFilter;
   });
@@ -641,22 +883,24 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     // Assessment has public link, proceeding to open modal
     setSelectedAssessmentForEmail(assessment);
 
-    // Pre-fill email form with default values
+    // Provide portal URL
+    const portalUrl = `${window.location.origin}/vendor-portal/login`;
     const defaultSubject = `Assessment de Segurança - ${assessment.assessment_name}`;
-    const publicUrl = `${window.location.origin}/vendor-assessment/${assessment.public_link}`;
     const defaultMessage = `Olá,
 
-Você foi convidado(a) para responder um assessment de segurança.
+Você foi convidado(a) para responder um assessment de segurança através do nosso Portal de Fornecedores.
 
 **Detalhes do Assessment:**
 • Nome: ${assessment.assessment_name}
 • Fornecedor: ${assessment.vendor_registry?.name}
 • Prazo: ${new Date(assessment.due_date).toLocaleDateString('pt-BR')}
 
-**Link para responder:**
-${publicUrl}
+**Acesso ao Portal:**
+Link: ${portalUrl}
+Seu Email: (Este endereço de email)
+Sua Senha temporária: (Será gerada e exibida no sistema, ou use seu login existente)
 
-Este link expira em 30 dias. Por favor, complete o assessment até a data limite.
+Por favor, faça login, verifique o assessment pendente e complete-o até a data limite.
 
 Caso tenha dúvidas, entre em contato conosco.
 
@@ -674,7 +918,7 @@ Equipe de Compliance`;
     // Email dialog should now be open
   };
 
-  // Send assessment via email
+  // Send assessment via email and provision vendor user
   const sendAssessmentEmail = async () => {
     if (!selectedAssessmentForEmail || !emailForm.email) {
       toast({
@@ -686,11 +930,7 @@ Equipe de Compliance`;
     }
 
     try {
-      // Here you would integrate with your email service
-      // For now, we'll simulate the email sending
-      // Sending email simulation
-
-      // Update vendor contact email if it was empty
+      // 1. Update vendor contact email if it was empty
       if (!selectedAssessmentForEmail.vendor_registry?.primary_contact_email && emailForm.email) {
         await supabase
           .from('vendor_registry')
@@ -698,9 +938,68 @@ Equipe de Compliance`;
           .eq('id', selectedAssessmentForEmail.vendor_id);
       }
 
+      // 2. Check if user exists in vendor_users
+      const { data: existingVendorUser, error: vendorUserError } = await supabase
+        .from('vendor_users')
+        .select('id, auth_user_id')
+        .eq('email', emailForm.email)
+        .eq('vendor_id', selectedAssessmentForEmail.vendor_id)
+        .maybeSingle();
+
+      let tempPassword = "";
+
+      // 3. If no auth_user_id mapping, we need to create/map the user
+      if (!existingVendorUser || !existingVendorUser.auth_user_id) {
+        // Generate random password
+        tempPassword = Math.random().toString(36).slice(-8) + "A1!";
+
+        // Use Edge function to create user
+        const functionData = {
+          email: emailForm.email,
+          password: tempPassword,
+          full_name: selectedAssessmentForEmail.vendor_registry?.primary_contact_name || 'Contato do Fornecedor',
+          tenant_id: user?.tenantId,
+          roles: ['vendor'], // Especial vendor role
+          send_invitation: false,
+        };
+
+        const { data: result, error: functionError } = await supabase.functions.invoke('create-user-admin', {
+          body: functionData
+        });
+
+        // Even if user exists in Auth, if create-user-admin handles it gracefully, we get the ID.
+        // For simplicity, let's assume we get an auth UID back (result.user.id)
+        let authUid = result?.user?.id;
+
+        if (functionError || !authUid) {
+          console.error("User creation error or user already exists. We will just register the vendor_users entry.");
+          // Fallback if edge function fails (e.g., user exists): store just the email mapping
+        }
+
+        // Upsert into vendor_users
+        await supabase
+          .from('vendor_users')
+          .upsert({
+            vendor_id: selectedAssessmentForEmail.vendor_id,
+            email: emailForm.email,
+            name: selectedAssessmentForEmail.vendor_registry?.primary_contact_name || 'Contato',
+            auth_user_id: authUid || null, // Might be null if fallback occurs
+            is_active: true
+          }, { onConflict: 'vendor_id, email' });
+      }
+
+      // 4. Update the assessment status from draft to sent
+      if (selectedAssessmentForEmail.status === 'draft') {
+        await supabase
+          .from('vendor_assessments')
+          .update({ status: 'sent', updated_at: new Date().toISOString() })
+          .eq('id', selectedAssessmentForEmail.id);
+      }
+
       toast({
-        title: "✅ Assessment Enviado",
-        description: `Assessment enviado para ${emailForm.email}`,
+        title: "✅ Acesso Criado e Assessment Enviado",
+        description: tempPassword ? `Uma senha temporária foi gerada: ${tempPassword}` : `Assessment enviado com sucesso.`,
+        duration: 10000,
       });
 
       setShowEmailDialog(false);
@@ -709,11 +1008,11 @@ Equipe de Compliance`;
       // Reload assessments to reflect any updates
       await loadAssessments();
 
-    } catch (error) {
-      // Error sending email
+    } catch (error: any) {
+      console.error('Error in sendAssessmentEmail:', error);
       toast({
         title: "❌ Erro ao Enviar",
-        description: "Não foi possível enviar o email. Tente novamente.",
+        description: `Não foi possível gerar acesso e enviar o email: ${error.message}`,
         variant: "destructive"
       });
     }
@@ -1091,7 +1390,7 @@ Equipe de Compliance`;
       console.log('✅ User has basic table access');
       toast({
         title: "Permissões Verificadas",
-        description: `Usuário tem acesso à tabela. Encontrados ${count || 0} assessments.`,
+        description: `Usuário tem acesso à tabela.Encontrados ${count || 0} assessments.`,
       });
       return true;
 
@@ -1099,7 +1398,7 @@ Equipe de Compliance`;
       console.error('❌ Permission check failed:', error);
       toast({
         title: "Erro na Verificação",
-        description: `Falha ao verificar permissões: ${error.message}`,
+        description: `Falha ao verificar permissões: ${error.message} `,
         variant: "destructive"
       });
       return false;
@@ -1174,7 +1473,7 @@ Equipe de Compliance`;
         console.error('❌ READ ERROR:', readError);
         toast({
           title: "Erro de Leitura",
-          description: `Não conseguiu ler assessment: ${readError.message}`,
+          description: `Não conseguiu ler assessment: ${readError.message} `,
           variant: "destructive"
         });
         return;
@@ -1183,8 +1482,8 @@ Equipe de Compliance`;
       console.log('🔍 STEP 5: Generate Test Link ID');
       const timestamp = Date.now();
       const randomStr = Math.random().toString(36).substring(2, 15);
-      const secureHash = btoa(`${testAssessment.id}_${timestamp}_${randomStr}`).replace(/[+/=]/g, '');
-      const testLinkId = `${secureHash.substring(0, 16)}_${timestamp.toString(36)}`;
+      const secureHash = btoa(`${testAssessment.id}_${timestamp}_${randomStr} `).replace(/[+/=]/g, '');
+      const testLinkId = `${secureHash.substring(0, 16)}_${timestamp.toString(36)} `;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30);
 
@@ -1227,7 +1526,7 @@ Equipe de Compliance`;
 
         toast({
           title: "Erro de Atualização",
-          description: `${updateError.code}: ${updateError.message}`,
+          description: `${updateError.code}: ${updateError.message} `,
           variant: "destructive"
         });
         return;
@@ -1274,7 +1573,7 @@ Equipe de Compliance`;
       console.error('❌ DEBUG FAILED:', error);
       toast({
         title: "Erro no Debug",
-        description: `Falha durante debug: ${error.message}`,
+        description: `Falha durante debug: ${error.message} `,
         variant: "destructive"
       });
     } finally {
@@ -1402,7 +1701,7 @@ Equipe de Compliance`;
         } else if (error.code === 'PGRST116') {
           throw new Error('Erro PGRST116: Assessment não encontrado ou sem permissão');
         } else {
-          throw new Error(`Erro ${error.code}: ${error.message}`);
+          throw new Error(`Erro ${error.code}: ${error.message} `);
         }
       }
 
@@ -1491,9 +1790,261 @@ Equipe de Compliance`;
     setShowEditDialog(true);
   };
 
+  // Open validation modal
+  const openValidationModal = (assessment: VendorAssessment) => {
+    setValidationAssessment(assessment);
+    setShowValidationModal(true);
+  };
 
+  // Open password reset modal
+  const openPasswordResetModal = async (assessment: VendorAssessment) => {
+    setPasswordResetVendor({ id: assessment.vendor_id, name: assessment.vendor_registry?.name || 'Fornecedor' });
+    setVendorAccesses([]);
+    setShowPasswordResetModal(true);
+    setIsLoadingAccess(true);
+    try {
+      const { data, error } = await supabase
+        .from('vendor_portal_users')
+        .select('email')
+        .eq('vendor_id', assessment.vendor_id);
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setVendorAccesses(data.map(u => ({ email: u.email, password: '', isExisting: true })));
+      } else {
+        setVendorAccesses([{ email: '', password: '', isExisting: false }]);
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Erro", description: "Falha ao buscar e-mails do fornecedor.", variant: "destructive" });
+    } finally {
+      setIsLoadingAccess(false);
+    }
+  };
 
+  const submitAccessManagement = async () => {
+    // Validate
+    const hasInvalidRow = vendorAccesses.some(v =>
+      (!v.isExisting && (!v.email.trim() || v.password.length < 6)) ||
+      (v.isExisting && v.password.length > 0 && v.password.length < 6)
+    );
 
+    if (hasInvalidRow) {
+      toast({ title: "Incompleto", description: "Preencha e-mail e senha (mín. 6 chars) para novos acessos. Senhas atualizadas também exigem 6 caracteres.", variant: "destructive" });
+      return;
+    }
+
+    setIsManagingAccess(true);
+    let successCount = 0;
+    const tenantIdToUse = effectiveTenantId === 'default' ? null : (effectiveTenantId || null);
+    console.log('[submitAccessManagement] effectiveTenantId:', effectiveTenantId, '→ tenantIdToUse:', tenantIdToUse);
+
+    try {
+      for (const access of vendorAccesses) {
+        const emailToUse = access.email.trim().toLowerCase();
+
+        if (access.isExisting && access.password.length >= 6) {
+          // Update password for existing user
+          const { error } = await supabase.rpc('update_vendor_portal_password', {
+            p_email: emailToUse,
+            p_new_password: access.password
+          });
+          if (error) throw error;
+          successCount++;
+        } else if (!access.isExisting && emailToUse && access.password.length >= 6) {
+          // Create new user
+          const { data: rpcData, error: rpcError } = await supabase.rpc('create_vendor_auth_user', {
+            p_email: emailToUse,
+            p_password: access.password.trim(),
+            p_name: passwordResetVendor.name,
+            p_vendor_id: passwordResetVendor.id,
+            p_tenant_id: tenantIdToUse
+          });
+
+          console.log('[create_vendor_auth_user] rpcData:', rpcData, 'rpcError:', rpcError);
+
+          if (rpcError) throw rpcError;
+          if (rpcData && !rpcData.success && !rpcData.error?.includes('Usuário já existe')) {
+            throw new Error(rpcData.error || 'Erro desconhecido ao criar usuário');
+          }
+
+          successCount++;
+        }
+      }
+
+      toast({ title: "Sucesso", description: `Acessos atualizados: ${successCount}. O fornecedor deverá alterar as senhas provisórias no próximo login.` });
+      setShowPasswordResetModal(false);
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: "Erro", description: error.message || "Falha ao atualizar acessos.", variant: "destructive" });
+    } finally {
+      setIsManagingAccess(false);
+    }
+  };
+
+  // Open dispatch action plans modal
+  const openDispatchModal = async (assessment: VendorAssessment) => {
+    setDispatchAssessment(assessment);
+    setDispatchLoading(true);
+    setShowDispatchModal(true);
+    setEditingPlanId(null);
+    setEditingPlanData(null);
+
+    try {
+      const { data, error } = await supabase
+        .from('action_plans')
+        .select('*')
+        .eq('modulo_origem', 'vendor_risk')
+        .eq('entidade_origem_id', assessment.vendor_id)
+        .in('status', ['aguardando_validacao', 'planejado', 'disponivel_fornecedor'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setDispatchPlans(data || []);
+    } catch (err: any) {
+      toast({ title: 'Erro', description: 'Não foi possível carregar os planos de ação.', variant: 'destructive' });
+    } finally {
+      setDispatchLoading(false);
+    }
+  };
+
+  const handleDispatchSavePlan = async (planId: string) => {
+    if (!editingPlanData) return;
+    try {
+      const { error } = await supabase.from('action_plans').update({
+        titulo: editingPlanData.title,
+        descricao: editingPlanData.description,
+        data_fim_planejada: editingPlanData.due_date || null,
+        prioridade: editingPlanData.priority,
+        updated_at: new Date().toISOString(),
+      }).eq('id', planId);
+      if (error) throw error;
+      toast({ title: 'Plano atualizado', description: 'Alterações salvas.' });
+      setEditingPlanId(null);
+      // Refresh
+      setDispatchPlans(prev => prev.map(p => p.id === planId ? { ...p, titulo: editingPlanData.title, descricao: editingPlanData.description, data_fim_planejada: editingPlanData.due_date, prioridade: editingPlanData.priority } : p));
+    } catch (err: any) {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar o plano.', variant: 'destructive' });
+    }
+  };
+
+  const handleDispatchPlanToVendor = async (planId: string) => {
+    try {
+      const { error } = await supabase.from('action_plans').update({
+        status: 'disponivel_fornecedor',
+        updated_at: new Date().toISOString(),
+      }).eq('id', planId);
+      if (error) throw error;
+      toast({ title: '✅ Plano Enviado!', description: 'O plano de ação está agora disponível no portal do fornecedor.' });
+      setDispatchPlans(prev => prev.map(p => p.id === planId ? { ...p, status: 'disponivel_fornecedor' } : p));
+    } catch (err: any) {
+      toast({ title: 'Erro', description: 'Não foi possível despachar o plano.', variant: 'destructive' });
+    }
+  };
+
+  const handleDispatchAllToVendor = async () => {
+    const toDispatch = dispatchPlans.filter(p => p.status !== 'disponivel_fornecedor');
+    if (toDispatch.length === 0) {
+      toast({ title: 'Aviso', description: 'Todos os planos já foram enviados ao fornecedor.' });
+      return;
+    }
+    try {
+      const ids = toDispatch.map(p => p.id);
+      const { error } = await supabase.from('action_plans').update({
+        status: 'disponivel_fornecedor',
+        updated_at: new Date().toISOString(),
+      }).in('id', ids);
+      if (error) throw error;
+      toast({ title: `✅ ${ids.length} plano(s) enviado(s)!`, description: 'Os planos estão agora disponíveis no portal do fornecedor.' });
+      setDispatchPlans(prev => prev.map(p => ({ ...p, status: 'disponivel_fornecedor' })));
+    } catch (err: any) {
+      toast({ title: 'Erro', description: 'Não foi possível despachar os planos.', variant: 'destructive' });
+    }
+  };
+
+  // Handle validation submit
+  const handleValidateAssessment = async (assessmentId: string, action: 'approved' | 'rejected' | 'requires_clarification' | 'unlock', data: any) => {
+    try {
+      const userTenantId = user?.tenantId;
+
+      let newStatus = 'pending_validation';
+      if (action === 'approved') newStatus = 'approved';
+      if (action === 'rejected') newStatus = 'rejected';
+      if (action === 'unlock') newStatus = 'in_progress'; // Reverte para o fornecedor editar
+
+      const { error } = await supabase
+        .from('vendor_assessments')
+        .update({
+          status: newStatus,
+          internal_review_status: action === 'unlock' ? 'pending' : action,
+          metadata: {
+            ...validationAssessment?.metadata,
+            validation: data, // Stores validation notes or the reason for unlocking
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', assessmentId)
+        .eq('tenant_id', userTenantId);
+
+      if (error) throw error;
+
+      toast({
+        title: action === 'approved' ? '✅ Assessment Aprovado' :
+          action === 'rejected' ? '❌ Assessment Rejeitado' :
+            action === 'unlock' ? '🔓 Assessment Desbloqueado' : '⚠️ Esclarecimento Solicitado',
+        description: action === 'approved'
+          ? 'O assessment foi validado e aprovado com sucesso.'
+          : action === 'rejected'
+            ? 'O assessment foi rejeitado. O fornecedor será notificado.'
+            : action === 'unlock'
+              ? 'O assessment foi reabilitado para edição pelo fornecedor.'
+              : 'Foi solicitado esclarecimento ao fornecedor.',
+      });
+
+      await loadAssessments();
+    } catch (error: any) {
+      console.error('Validation error:', error);
+      toast({
+        title: 'Erro na Validação',
+        description: error.message || 'Não foi possível validar o assessment.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handle delete assessment
+  const handleDeleteAssessment = async (assessmentId: string, assessmentName: string) => {
+    const confirmed = window.confirm(`Tem certeza que deseja excluir o assessment "${assessmentName}" ? Esta ação não pode ser desfeita.`);
+    if (!confirmed) return;
+
+    try {
+      let query = supabase
+        .from('vendor_assessments')
+        .delete()
+        .eq('id', assessmentId);
+
+      if (effectiveTenantId && effectiveTenantId !== 'default') {
+        query = query.eq('tenant_id', effectiveTenantId);
+      }
+
+      const { error } = await query;
+
+      if (error) throw error;
+
+      toast({
+        title: '🗑️ Assessment Excluído',
+        description: `O assessment "${assessmentName}" foi excluído com sucesso.`,
+      });
+
+      await loadAssessments();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      toast({
+        title: 'Erro ao Excluir',
+        description: error.message || 'Não foi possível excluir o assessment.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   // Get status badge
   const getStatusBadge = (status: string, dueDate: string, assessment: VendorAssessment) => {
@@ -1515,9 +2066,10 @@ Equipe de Compliance`;
     switch (status) {
       case 'draft': return <Badge variant="secondary">Rascunho</Badge>;
       case 'sent': return <Badge variant="outline">Enviado</Badge>;
-      case 'in_progress': return <Badge variant="default">Em Andamento</Badge>;
-      case 'completed': return <Badge variant="default" className="bg-blue-500/10 text-blue-700 dark:text-blue-300">Concluído</Badge>;
-      case 'approved': return <Badge variant="default" className="bg-green-500/10 text-green-700 dark:text-green-300">Aprovado</Badge>;
+      case 'in_progress': return <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 shadow-sm">Em Andamento</Badge>;
+      case 'pending_validation': return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 animate-pulse shadow-sm">Aguard. Validação</Badge>;
+      case 'completed': return <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30 shadow-sm">Concluído</Badge>;
+      case 'approved': return <Badge variant="outline" className="bg-green-50 text-green-600 border-green-500/30 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/30 shadow-sm">Aprovado</Badge>;
       case 'rejected': return <Badge variant="destructive">Rejeitado</Badge>;
       case 'expired': return <Badge variant="secondary">Expirado</Badge>;
       default: return <Badge variant="outline">{status}</Badge>;
@@ -1657,6 +2209,7 @@ Equipe de Compliance`;
                     <SelectItem value="pending">Pendentes</SelectItem>
                     <SelectItem value="awaiting_response">Aguardando Resposta</SelectItem>
                     <SelectItem value="in_progress">Em Andamento</SelectItem>
+                    <SelectItem value="pending_validation">Aguardando Validação</SelectItem>
                     <SelectItem value="completed">Concluídos</SelectItem>
                     <SelectItem value="overdue">Atrasados</SelectItem>
                   </SelectContent>
@@ -1676,200 +2229,419 @@ Equipe de Compliance`;
             </div>
           </div>
 
-          <div className="w-full overflow-x-auto scrollbar-none sm:scrollbar-thin pb-4 sm:pb-0">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[30%] sm:w-[28%]">Assessment</TableHead>
-                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[25%] sm:w-[22%]">Fornecedor</TableHead>
-                  <TableHead className="hidden md:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[12%]">Status</TableHead>
-                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[20%] sm:w-[12%]">Progresso</TableHead>
-                  <TableHead className="hidden lg:table-cell text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[11%]">Prazo</TableHead>
-                  <TableHead className="text-[10px] sm:text-xs font-medium p-1 sm:p-3 w-[15%] text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
+          <div className="w-full pb-4 sm:pb-0 space-y-4">
+            {currentLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="ml-3 text-sm text-muted-foreground">Carregando assessments...</span>
+              </div>
+            ) : filteredAssessments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FileCheck className="h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium">Nenhum assessment encontrado</h3>
+                <p className="text-sm text-muted-foreground mt-1">Ajuste os filtros ou crie um novo assessment.</p>
+              </div>
+            ) : (
+              filteredAssessments.map((assessment) => {
+                const isExpanded = expandedCards.includes(assessment.id);
+                return (
+                  <Card
+                    key={assessment.id}
+                    className={`overflow-hidden transition-all duration-200 border ${assessment.status === 'pending_validation'
+                      ? 'border-amber-500/50 shadow-sm shadow-amber-500/10'
+                      : assessment.status === 'sent' && assessment.public_link && !assessment.responses
+                        ? 'border-orange-500/50 shadow-sm shadow-orange-500/10'
+                        : ''
+                      }`}
+                  >
+                    {/* Compact Header row (always visible) */}
+                    <div className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card hover:bg-muted/30 transition-colors">
 
-              <TableBody>
-                {currentLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                        <span className="ml-2 text-xs sm:text-sm">Carregando assessments...</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredAssessments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="flex flex-col items-center space-y-2">
-                        <FileCheck className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
-                        <span className="text-gray-500 text-[10px] sm:text-sm">Nenhum assessment encontrado</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAssessments.map((assessment) => (
-                    <TableRow
-                      key={assessment.id}
-                      className={`
-                        hover:bg-muted/50 transition-colors h-10 sm:h-12
-                        ${assessment.status === 'sent' && assessment.public_link && !assessment.responses
-                          ? 'bg-orange-50/50 dark:bg-orange-950/20 border-l-4 border-l-orange-500'
-                          : ''
-                        }
-                      `}
-                    >
-                      <TableCell className="p-1 sm:p-3 w-[30%] sm:w-[28%] font-medium">
-                        <div className="min-w-0">
-                          <div className="font-medium text-[10px] sm:text-sm mb-1 truncate max-w-[120px] sm:max-w-none">{assessment.assessment_name}</div>
-                          <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 mb-1">
-                            <Badge variant="outline" className="text-[8px] sm:text-xs px-1 py-0 sm:px-2 sm:py-0.5 capitalize truncate max-w-[60px] sm:max-w-none">
-                              {assessment.assessment_type.replace('_', ' ')}
-                            </Badge>
+                      {/* Left section: Name and Vendor */}
+                      <div className="flex-1 min-w-0 pr-4 w-full sm:w-auto">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <h3 className="font-semibold text-base truncate">{assessment.assessment_name}</h3>
                             {assessment.id.startsWith('vendor-') && (
-                              <Badge variant="outline" className="text-[8px] sm:text-xs px-1 py-0 sm:px-2 sm:py-0.5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+                              <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
                                 Fornc
                               </Badge>
                             )}
                             {assessment.metadata?.selected_in_onboarding && (
-                              <Badge variant="outline" className="hidden sm:inline-flex text-[8px] sm:text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
+                              <Badge variant="outline" className="hidden sm:inline-flex text-[10px] px-2 py-0 h-5 bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
                                 Onboarding
                               </Badge>
                             )}
-                            {assessment.metadata?.pending_creation && (
-                              <Badge variant="outline" className="hidden sm:inline-flex text-[8px] sm:text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800">
-                                Pendente
-                              </Badge>
-                            )}
                           </div>
-                          <div className="text-[9px] sm:text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none">
-                            {assessment.vendor_assessment_frameworks?.name || assessment.metadata?.template_name}
-                            {assessment.overall_score && (
-                              <span className="hidden sm:inline ml-2">• Score: {assessment.overall_score.toFixed(1)}</span>
-                            )}
+
+                          {/* Mobile Actions Dropdown */}
+                          <div className="sm:hidden block">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => {
+                                  setTimeout(() => {
+                                    console.log('Clicou em editar:', assessment.id);
+                                    openAssessmentEditor(assessment);
+                                  }, 0);
+                                }}><Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Editar Assessment</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => {
+                                  setTimeout(() => {
+                                    console.log('Clicou em preview:', assessment.id);
+                                    openPreviewDialog(assessment);
+                                  }, 0);
+                                }}><Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Assessment Preview</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => {
+                                  setTimeout(() => {
+                                    console.log('Clicou em detalhes:', assessment.id);
+                                    setSelectedAssessment(assessment);
+                                    setShowAssessmentDetails(true);
+                                  }, 0);
+                                }}><FileText className="h-4 w-4 mr-2" />Visualizar Detalhes</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => {
+                                  setTimeout(() => {
+                                    openPasswordResetModal(assessment);
+                                  }, 0);
+                                }}><KeyRound className="h-4 w-4 mr-2" />Redefinir Senha do Fornecedor</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {(assessment.status === 'pending_validation' || assessment.status === 'completed' || assessment.status === 'approved') && (
+                                  <>
+                                    <DropdownMenuItem className="text-amber-700 font-medium" onSelect={() => {
+                                      setTimeout(() => {
+                                        openValidationModal(assessment);
+                                      }, 0);
+                                    }}><Shield className="h-4 w-4 mr-2" />Validar Assessment</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                {(assessment.status === 'completed' || assessment.status === 'approved') && (
+                                  <>
+                                    <DropdownMenuItem className="text-emerald-700 font-medium" onSelect={() => {
+                                      setTimeout(() => {
+                                        openDispatchModal(assessment);
+                                      }, 0);
+                                    }}>
+                                      <Send className="h-4 w-4 mr-2" />Despachar Planos de Ação
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                )}
+                                {/* Removed Public Link shortcut as we now use Vendor Portal */}
+                                <DropdownMenuItem onSelect={() => {
+                                  setTimeout(() => {
+                                    console.log('Clicou em enviar email:', assessment.id);
+                                    openEmailDialog(assessment);
+                                  }, 0);
+                                }}><Send className="h-4 w-4 mr-2" />Enviar Assessment</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-red-600" onSelect={() => {
+                                  setTimeout(() => {
+                                    handleDeleteAssessment(assessment.id, assessment.assessment_name);
+                                  }, 0);
+                                }}>
+                                  <Trash2 className="h-4 w-4 mr-2" />Excluir Assessment
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
-                      </TableCell>
 
-                      <TableCell className="p-1 sm:p-3 w-[25%] sm:w-[22%]">
-                        <div className="min-w-0">
-                          <div className="font-medium text-[10px] sm:text-sm truncate max-w-[100px] sm:max-w-none">{assessment.vendor_registry?.name}</div>
-                          <div className="hidden sm:block text-[10px] sm:text-sm text-muted-foreground truncate max-w-[150px]">
-                            {assessment.vendor_registry?.primary_contact_email}
+                        <div className="flex items-center text-sm text-muted-foreground mb-2">
+                          <Users className="h-3.5 w-3.5 mr-1.5" />
+                          <span className="truncate">{assessment.vendor_registry?.name}</span>
+                          <span className="mx-2 text-muted-foreground/40">•</span>
+                          <span className="truncate hidden sm:inline-block">{assessment.vendor_registry?.primary_contact_email}</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="secondary" className="text-[10px] capitalize font-medium">{(assessment.assessment_type || 'padrão').replace('_', ' ')}</Badge>
+                          <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md truncate max-w-[200px]">
+                            {assessment.vendor_assessment_frameworks?.name || assessment.metadata?.template_name || assessment.metadata?.vendor_framework_name || 'Framework'}
                           </div>
                         </div>
-                      </TableCell>
+                      </div>
 
-                      <TableCell className="hidden md:table-cell p-1 sm:p-3 w-[12%]">
-                        <div className="scale-75 sm:scale-100 origin-left">
+                      {/* Middle section: Status & Progress */}
+                      <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between w-full sm:w-48 gap-3 sm:gap-2">
+                        <div className="flex flex-col sm:items-end w-1/2 sm:w-full">
+                          <span className="text-xs text-muted-foreground mb-1 block sm:hidden">Status</span>
                           {getStatusBadge(assessment.status, assessment.due_date, assessment)}
                         </div>
-                      </TableCell>
-
-                      <TableCell className="p-1 sm:p-3 w-[20%] sm:w-[12%]">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center space-x-0 sm:space-x-2 space-y-1 sm:space-y-0">
-                          <Progress value={assessment.progress_percentage || 0} className="w-10 sm:w-12 h-1.5 sm:h-2" />
-                          <span className="text-[9px] sm:text-xs text-muted-foreground">
-                            {assessment.progress_percentage || 0}%
-                          </span>
+                        <div className="w-1/2 sm:w-full flex flex-col sm:items-end">
+                          <div className="flex items-center gap-2 w-full justify-end mb-1">
+                            <span className="text-[10px] sm:text-xs font-medium">{assessment.progress_percentage || 0}%</span>
+                          </div>
+                          <Progress value={assessment.progress_percentage || 0} className="h-1.5 w-full sm:w-32 bg-muted-foreground/10" />
                         </div>
-                      </TableCell>
+                      </div>
 
-                      <TableCell className="hidden lg:table-cell p-1 sm:p-3 w-[11%]">
-                        <div className="text-[10px] sm:text-sm truncate">
-                          {new Date(assessment.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                        </div>
-                      </TableCell>
+                      {/* Right section: Expand Toggle & Desktop Actions */}
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-end mt-2 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-border/50">
 
-                      <TableCell className="text-right p-1 sm:p-3 w-[15%]">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 sm:h-8 sm:w-8 p-0">
-                              <MoreHorizontal className="h-3 w-3 sm:h-4 sm:w-4" />
-                              <span className="sr-only">Abrir menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel className="text-xs sm:text-sm">Ações</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-
-                            <DropdownMenuItem
-                              className="text-xs sm:text-sm"
-                              onSelect={() => {
+                        {/* Desktop Actions Dropdown */}
+                        <div className="hidden sm:block">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8">
+                                <span className="mr-2">Ações</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56">
+                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onSelect={() => {
                                 setTimeout(() => {
                                   console.log('Clicou em editar:', assessment.id);
                                   openAssessmentEditor(assessment);
                                 }, 0);
-                              }}
-                            >
-                              <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                              Editar Assessment
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              className="text-xs sm:text-sm"
-                              onSelect={() => {
+                              }}><Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Editar Assessment</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => {
                                 setTimeout(() => {
                                   console.log('Clicou em preview:', assessment.id);
                                   openPreviewDialog(assessment);
                                 }, 0);
-                              }}
-                            >
-                              <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                              Assessment Preview
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              className="text-xs sm:text-sm"
-                              onSelect={() => {
+                              }}><Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Assessment Preview</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => {
                                 setTimeout(() => {
                                   console.log('Clicou em detalhes:', assessment.id);
                                   setSelectedAssessment(assessment);
                                   setShowAssessmentDetails(true);
                                 }, 0);
-                              }}
-                            >
-                              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                              Visualizar Detalhes
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator />
-
-                            {/* Ações de link público e email - sempre disponíveis para assessments reais */}
-                            <DropdownMenuItem
-                              className="text-xs sm:text-sm"
-                              onSelect={() => {
+                              }}><FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Visualizar Detalhes</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onSelect={() => {
+                                setTimeout(() => {
+                                  openPasswordResetModal(assessment);
+                                }, 0);
+                              }}><KeyRound className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Redefinir Senha do Fornecedor</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              {(assessment.status === 'pending_validation' || assessment.status === 'completed' || assessment.status === 'approved') && (
+                                <>
+                                  <DropdownMenuItem className="text-amber-700 font-medium" onSelect={() => {
+                                    setTimeout(() => {
+                                      openValidationModal(assessment);
+                                    }, 0);
+                                  }}>
+                                    <Shield className="h-4 w-4 mr-2" />Validar Assessment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              {(assessment.status === 'completed' || assessment.status === 'approved') && (
+                                <>
+                                  <DropdownMenuItem className="text-emerald-700 font-medium" onSelect={() => {
+                                    setTimeout(() => {
+                                      openDispatchModal(assessment);
+                                    }, 0);
+                                  }}>
+                                    <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Despachar Planos de Ação
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              <DropdownMenuItem onSelect={() => {
                                 setTimeout(() => {
                                   console.log('Clicou em link público:', assessment.id);
                                   openPublicLinkDialog(assessment);
                                 }, 0);
-                              }}
-                            >
-                              <Link className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                              Gerar/Ver Link Público
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              className="text-xs sm:text-sm"
-                              onSelect={() => {
+                              }}><Link className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Gerar/Ver Link Público</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => {
                                 setTimeout(() => {
                                   console.log('Clicou em enviar email:', assessment.id);
                                   openEmailDialog(assessment);
                                 }, 0);
-                              }}
-                            >
-                              <Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                              Enviar Assessment
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                              }}><Send className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Enviar Assessment</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-red-600" onSelect={() => {
+                                setTimeout(() => {
+                                  handleDeleteAssessment(assessment.id, assessment.assessment_name);
+                                }, 0);
+                              }}>
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />Excluir Assessment
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {/* Expand Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleCard(assessment.id)}
+                          className="h-8 px-2 flex-grow sm:flex-grow-0"
+                        >
+                          <span className="sm:hidden mr-2">{isExpanded ? 'Ocultar Detalhes' : 'Ver Detalhes'}</span>
+                          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Expanded Content View */}
+                    {isExpanded && (
+                      <div className="border-t border-border/30 bg-muted/5 p-6 text-sm animate-in slide-in-from-top-2 rounded-b-xl shadow-inner transition-all">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+                          {/* Column 1: Core Details */}
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center">
+                                <FileText className="h-3.5 w-3.5 mr-2 opacity-70" />Detalhes do Assessment</h4>
+                              <div className="space-y-3">
+                                <div className="flex flex-col bg-background/50 rounded-lg p-3 border border-border/40">
+                                  <span className="text-muted-foreground text-[10px] uppercase font-semibold mb-1 tracking-widest">Prazo de Resposta</span>
+                                  <span className="font-medium flex items-center text-sm">
+                                    <Calendar className="h-4 w-4 mr-2 text-primary/70" />
+                                    {new Date(assessment.due_date).toLocaleDateString('pt-BR')}
+                                  </span>
+                                </div>
+                                <div className="flex flex-col bg-background/50 rounded-lg p-3 border border-border/40">
+                                  <span className="text-muted-foreground text-[10px] uppercase font-semibold mb-1 tracking-widest">Prioridade</span>
+                                  <Badge variant="outline" className={`w-fit capitalize shadow-sm ${assessment.priority === 'urgent' ? 'border-red-500/50 text-red-600 bg-red-500/5 dark:text-red-400' :
+                                    assessment.priority === 'high' ? 'border-orange-500/50 text-orange-600 bg-orange-500/5 dark:text-orange-400' :
+                                      assessment.priority === 'medium' ? 'border-yellow-500/50 text-yellow-600 bg-yellow-500/5 dark:text-yellow-400' : 'border-blue-500/50 text-blue-600 bg-blue-500/5 dark:text-blue-400'
+                                    }`}>
+                                    {assessment.priority === 'urgent' ? 'Urgente' :
+                                      assessment.priority === 'high' ? 'Alta' :
+                                        assessment.priority === 'medium' ? 'Média' : 'Baixa'}
+                                  </Badge>
+                                </div>
+                                {assessment.vendor_submitted_at && (
+                                  <div className="flex flex-col bg-background/50 rounded-lg p-3 border border-green-500/20 dark:border-green-500/10">
+                                    <span className="text-green-600/70 dark:text-green-400/70 text-[10px] uppercase font-semibold mb-1 tracking-widest">Submetido em</span>
+                                    <span className="font-medium flex items-center text-sm">
+                                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                                      {new Date(assessment.vendor_submitted_at).toLocaleDateString('pt-BR')} às {new Date(assessment.vendor_submitted_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Column 2: Maturity & Score Results */}
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center">
+                                <ActivitySquare className="h-3.5 w-3.5 mr-2 opacity-70" />Maturidade e Pontuação</h4>
+
+                              {assessment.overall_score !== undefined && assessment.overall_score !== null ? (
+                                <div className="space-y-3">
+                                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 transition-all hover:bg-primary/10 shadow-sm">
+                                    <div className="flex items-end justify-between mb-3">
+                                      <span className="text-sm font-medium text-foreground">Score Geral</span>
+                                      <span className="text-2xl font-bold tracking-tight text-primary">{assessment.overall_score.toFixed(1)}<span className="text-xs text-primary/60 font-medium ml-1">/ 100</span></span>
+                                    </div>
+                                    <Progress value={assessment.overall_score} className="h-2 rounded-full" />
+                                  </div>
+
+                                  {assessment.metadata?.validation?.maturityLevel && (
+                                    <div className="flex items-center justify-between bg-muted/30 border border-border/50 rounded-lg p-3 px-4 shadow-sm">
+                                      <span className="text-sm font-medium text-muted-foreground">Nível de Maturidade</span>
+                                      <Badge variant="outline" className="font-semibold bg-primary/10 text-primary border-primary/20 px-3 py-1">
+                                        {assessment.metadata.validation.maturityLevel}
+                                      </Badge>
+                                    </div>
+                                  )}
+
+                                  {assessment.risk_level && (
+                                    <div className="flex items-center justify-between bg-muted/30 border border-border/50 rounded-lg p-3 px-4 shadow-sm">
+                                      <span className="text-sm font-medium text-muted-foreground">Classificação de Risco</span>
+                                      <Badge variant="outline" className={`font-semibold px-3 py-1 shadow-sm ${assessment.risk_level === 'critical' ? 'bg-red-50 text-red-600 border-red-500/30' :
+                                        assessment.risk_level === 'high' ? 'bg-orange-50 text-orange-600 border-orange-500/30' :
+                                          assessment.risk_level === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-500/30 bg-opacity-50' : 'bg-green-50 text-green-600 border-green-500/30'
+                                        }`}>
+                                        {assessment.risk_level === 'critical' ? 'Risco Crítico' :
+                                          assessment.risk_level === 'high' ? 'Risco Alto' :
+                                            assessment.risk_level === 'medium' ? 'Risco Médio' : 'Risco Baixo'}
+                                      </Badge>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="h-[140px] flex flex-col items-center justify-center p-6 border rounded-xl bg-background/50 border-dashed border-border/60">
+                                  <Brain className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                                  <span className="text-xs text-muted-foreground text-center font-medium max-w-[200px] leading-relaxed">A análise de maturidade estará disponível após a validação.</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Column 3: Validation Info */}
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center">
+                                <ShieldCheck className="h-3.5 w-3.5 mr-2 opacity-70" />Validação</h4>
+
+                              <div className="space-y-3">
+                                <div className="flex flex-col gap-1.5 bg-background/50 rounded-lg p-3 border border-border/40">
+                                  <span className="text-muted-foreground text-[10px] uppercase font-semibold tracking-widest">Status da Revisão</span>
+                                  <div>
+                                    <Badge variant="outline" className={`w-fit shadow-sm px-2.5 py-0.5
+                                      ${assessment.internal_review_status === 'approved' ? 'bg-green-50 text-green-700 border-green-500/30' : ''}
+                                      ${assessment.internal_review_status === 'rejected' ? 'bg-red-50 text-red-700 border-red-500/30' : ''}
+                                      ${assessment.internal_review_status === 'requires_clarification' ? 'bg-yellow-50 text-yellow-700 border-yellow-500/40' : ''}
+                                      ${assessment.internal_review_status === 'pending' || !assessment.internal_review_status ? 'bg-slate-50 text-slate-600 border-slate-300 dark:bg-slate-800/50 dark:text-slate-300 dark:border-slate-700' : ''}
+    `}>
+                                      {assessment.internal_review_status === 'approved' ? 'Aprovado internamente' :
+                                        assessment.internal_review_status === 'rejected' ? 'Rejeitado internamente' :
+                                          assessment.internal_review_status === 'requires_clarification' ? 'Ajustes Solicitados' : 'Pendente de análise'}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                {(assessment.status === 'pending_validation' || assessment.status === 'completed' || assessment.status === 'approved') && (
+                                  <div className="mt-4 pt-4 border-t border-border/50">
+                                    {(!assessment.internal_review_status || assessment.internal_review_status === 'pending') ? (
+                                      <p className="text-[11px] text-muted-foreground mb-3 font-medium flex items-start leading-tight">
+                                        <Info className="h-3.5 w-3.5 mr-1.5 shrink-0 text-primary/70" />
+                                        Uma validação manual deste item está pendente. Avalie as respostas do fornecedor.
+                                      </p>
+                                    ) : (
+                                      <p className="text-[11px] text-muted-foreground mb-3 font-medium flex items-start leading-tight">
+                                        <Info className="h-3.5 w-3.5 mr-1.5 shrink-0 text-primary/70" />
+                                        Validação concluída. Você pode revisar o histórico e a pontuação.
+                                      </p>
+                                    )}
+                                    <Button
+                                      className={`w-full text-xs h-9 shadow-md hover:shadow-lg transition-all border font-semibold group ${(!assessment.internal_review_status || assessment.internal_review_status === 'pending') ? 'border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground' : 'border-muted bg-muted text-muted-foreground hover:bg-muted/80'}`}
+                                      size="sm"
+                                      onClick={() => openValidationModal(assessment)}
+                                    >
+                                      {(!assessment.internal_review_status || assessment.internal_review_status === 'pending') ? (
+                                        <><Shield className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" /> Validar Respostas e Maturidade</>
+                                      ) : (
+                                        <><ShieldCheck className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" /> Visualizar Validação / Histórico</>
+                                      )}
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {assessment.metadata?.validation?.observation && (
+                                  <div className="mt-3 text-[11px] border border-border/60 rounded-lg p-3 bg-muted/30 relative">
+                                    <div className="absolute top-0 left-0 w-1 h-full bg-primary/40 rounded-l-lg"></div>
+                                    <span className="font-bold text-foreground/80 block mb-1.5 uppercase tracking-wide">Observações do Validador:</span>
+                                    <span className="text-muted-foreground italic">&ldquo;{assessment.metadata.validation.observation}&rdquo;</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1927,6 +2699,111 @@ Equipe de Compliance`;
           )}
 
 
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={showPasswordResetModal} onOpenChange={setShowPasswordResetModal}>
+        <DialogContent className="sm:max-w-2xl max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              Gerenciar Acessos do Fornecedor
+            </DialogTitle>
+            <DialogDescription>
+              Gerencie quem pode acessar o portal para responder aos assessments em nome de {passwordResetVendor?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 min-w-0">
+            {isLoadingAccess ? (
+              <div className="flex justify-center p-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div></div>
+            ) : (
+              <div className="space-y-4 overflow-x-hidden">
+                <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-sm text-orange-800 dark:text-orange-300">
+                    Ao adicionar um novo usuário ou alterar uma senha, o fornecedor será obrigado a criar uma nova senha definitiva no seu primeiro acesso.
+                  </p>
+                </div>
+
+                <div className="space-y-3 px-1">
+                  {vendorAccesses.map((access, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-muted/40 p-3 rounded-lg border border-border/50 max-w-full">
+                      <div className="w-full sm:flex-1 space-y-1.5 min-w-0">
+                        <Label className="text-xs">E-mail</Label>
+                        <Input
+                          placeholder="e.g. fornecedor@empresa.com"
+                          value={access.email}
+                          disabled={access.isExisting}
+                          onChange={(e) => {
+                            const updated = [...vendorAccesses];
+                            updated[idx].email = e.target.value;
+                            setVendorAccesses(updated);
+                          }}
+                          className={`w-full ${access.isExisting ? 'bg-muted text-muted-foreground' : ''}`}
+                        />
+                        {access.isExisting && <span className="text-[10px] text-primary/70 font-medium px-1">Acesso Existente</span>}
+                        {!access.isExisting && <span className="text-[10px] text-green-600/70 font-medium px-1">Novo Acesso</span>}
+                      </div>
+
+                      <div className="w-full sm:flex-1 space-y-1.5 min-w-0">
+                        <Label className="text-xs">Senha Provisória <span className="text-muted-foreground font-normal">(min. 6 char)</span></Label>
+                        <Input
+                          placeholder={access.isExisting ? "Deixe em branco para manter" : "Senha provisória"}
+                          value={access.password}
+                          onChange={(e) => {
+                            const updated = [...vendorAccesses];
+                            updated[idx].password = e.target.value;
+                            setVendorAccesses(updated);
+                          }}
+                          className="w-full"
+                          type="text"
+                        />
+                      </div>
+
+                      <div className="flex sm:self-end self-end w-auto pt-2 sm:pt-0 sm:pb-0.5">
+                        {!access.isExisting && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            onClick={() => {
+                              const updated = vendorAccesses.filter((_, i) => i !== idx);
+                              setVendorAccesses(updated.length > 0 ? updated : [{ email: '', password: '', isExisting: false }]);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-start pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-dashed"
+                    onClick={() => setVendorAccesses(prev => [...prev, { email: '', password: '', isExisting: false }])}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Novo Acesso
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t mt-4">
+            <Button variant="outline" onClick={() => setShowPasswordResetModal(false)}>Cancelar</Button>
+            <Button
+              onClick={submitAccessManagement}
+              disabled={isManagingAccess || isLoadingAccess}
+            >
+              {isManagingAccess ? "Salvando..." : "Salvar Alterações"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -2101,8 +2978,9 @@ Equipe de Compliance`;
                           ${selectedAssessment.priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-200' :
                             selectedAssessment.priority === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                               selectedAssessment.priority === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                                'bg-green-50 text-green-700 border-green-200'}
-                        `}>
+                                'bg-green-50 text-green-700 border-green-200'
+                          }
+    `}>
                           {selectedAssessment.priority === 'low' ? 'Baixa' :
                             selectedAssessment.priority === 'medium' ? 'Média' :
                               selectedAssessment.priority === 'high' ? 'Alta' : 'Urgente'}
@@ -2207,22 +3085,24 @@ Equipe de Compliance`;
                     size="sm"
                     className="h-6 text-xs text-muted-foreground hover:text-primary"
                     onClick={() => {
-                      if (selectedAssessmentForEmail && selectedAssessmentForEmail.public_link) {
+                      if (selectedAssessmentForEmail) {
                         const defaultSubject = `Assessment de Segurança - ${selectedAssessmentForEmail.assessment_name}`;
-                        const publicUrl = `${window.location.origin}/vendor-assessment/${selectedAssessmentForEmail.public_link}`;
+                        const portalUrl = `${window.location.origin}/vendor-portal/login`;
                         const defaultMessage = `Olá,
 
-Você foi convidado(a) para responder um assessment de segurança.
+Você foi convidado(a) para responder um assessment de segurança através do nosso Portal de Fornecedores.
 
 **Detalhes do Assessment:**
 • Nome: ${selectedAssessmentForEmail.assessment_name}
 • Fornecedor: ${selectedAssessmentForEmail.vendor_registry?.name}
-• Prazo: ${new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+• Prazo: ${new Date(selectedAssessmentForEmail.due_date).toLocaleDateString('pt-BR')}
 
-**Link para responder:**
-${publicUrl}
+**Acesso ao Portal:**
+Link: ${portalUrl}
+Seu Email: (Este endereço de email)
+Sua Senha temporária: (Será gerada e enviada pelo sistema)
 
-Este link expira em 30 dias. Por favor, complete o assessment até a data limite.
+Por favor, faça login, verifique o assessment pendente e complete-o até a data limite.
 
 Caso tenha dúvidas, entre em contato conosco.
 
@@ -2319,9 +3199,9 @@ Equipe de Compliance`;
                   <SelectValue placeholder="Selecione um fornecedor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {propVendors.map((vendor) => (
+                  {(modalVendors.length > 0 ? modalVendors : propVendors).map((vendor) => (
                     <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
+                      {vendor.name}{vendor.status ? ` (${vendor.status})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -2373,6 +3253,68 @@ Equipe de Compliance`;
                 />
               </div>
             </div>
+
+            <Separator className="my-1" />
+            <div className="space-y-3 bg-muted/20 p-3 rounded-md border border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <h4 className="text-sm font-medium">Acesso ao Portal do Fornecedor</h4>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => setNewAssessmentForm(prev => ({ ...prev, vendor_emails: [...prev.vendor_emails, { email: '', password: '' }] }))}
+                >
+                  <Plus className="h-3 w-3 mr-1" />Add Email
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-tight">
+                Cadastre um ou mais e-mails que terão acesso ao Portal. Cada usuário deve alterar sua senha no <strong>primeiro acesso</strong>.
+              </p>
+              <div className="space-y-2 mt-2">
+                {newAssessmentForm.vendor_emails.map((entry, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">{idx + 1}</div>
+                    <Input
+                      type="email"
+                      value={entry.email}
+                      onChange={e => setNewAssessmentForm(prev => {
+                        const updated = [...prev.vendor_emails];
+                        updated[idx] = { ...updated[idx], email: e.target.value };
+                        return { ...prev, vendor_emails: updated };
+                      })}
+                      placeholder="email@fornecedor.com"
+                      className="h-8 text-sm flex-1"
+                    />
+                    <Input
+                      type="password"
+                      value={entry.password}
+                      onChange={e => setNewAssessmentForm(prev => {
+                        const updated = [...prev.vendor_emails];
+                        updated[idx] = { ...updated[idx], password: e.target.value };
+                        return { ...prev, vendor_emails: updated };
+                      })}
+                      placeholder="Senha inicial"
+                      className="h-8 text-sm w-32"
+                    />
+                    {newAssessmentForm.vendor_emails.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
+                        onClick={() => setNewAssessmentForm(prev => ({ ...prev, vendor_emails: prev.vendor_emails.filter((_, i) => i !== idx) }))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={() => setShowNewAssessmentDialog(false)}>
@@ -2384,6 +3326,168 @@ Equipe de Compliance`;
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Validation Modal */}
+      {validationAssessment && (
+        <AssessmentValidationModal
+          isOpen={showValidationModal}
+          onClose={() => { setShowValidationModal(false); setValidationAssessment(null); }}
+          assessment={validationAssessment}
+          onValidate={handleValidateAssessment}
+        />
+      )}
+      {/* Dispatch Action Plans Modal */}
+      <Dialog open={showDispatchModal} onOpenChange={(open) => { if (!open) { setShowDispatchModal(false); setDispatchAssessment(null); setDispatchPlans([]); setEditingPlanId(null); } }}>
+        <DialogContent className="max-w-[95vw] w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="border-b pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Send className="h-5 w-5 text-emerald-600" />
+              Despachar Planos de Ação ao Fornecedor
+            </DialogTitle>
+            <DialogDescription>
+              Revise, edite e envie os planos de ação gerados automaticamente para o fornecedor <strong>{dispatchAssessment?.vendor_registry?.name}</strong>. Apenas planos com status <span className="font-medium text-teal-600">Disponível ao Fornecedor</span> aparecerão no portal.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto pr-1 space-y-3 py-4">
+            {dispatchLoading ? (
+              <div className="flex items-center justify-center h-40">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : dispatchPlans.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 border-dashed border-2 rounded-xl text-muted-foreground">
+                <AlertCircleIcon className="h-10 w-10 mb-3 opacity-40" />
+                <p className="text-sm font-medium">Nenhum plano de ação encontrado para este fornecedor.</p>
+                <p className="text-xs mt-1">Os planos são gerados automaticamente quando o assessment é submetido com respostas abaixo do esperado.</p>
+              </div>
+            ) : (
+              dispatchPlans.map((plan) => {
+                const isDispatched = plan.status === 'disponivel_fornecedor';
+                const isEditing = editingPlanId === plan.id;
+                const priorityMap: Record<string, string> = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+                return (
+                  <div key={plan.id} className={`border rounded-xl p-4 transition-all ${isDispatched ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800 dark:bg-emerald-950/20' : 'border-border bg-card'}`}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="flex-1 min-w-0">
+                        {isEditing && editingPlanData ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editingPlanData.title}
+                              onChange={(e) => setEditingPlanData({ ...editingPlanData, title: e.target.value })}
+                              className="font-medium h-8 text-sm"
+                              placeholder="Título do plano"
+                            />
+                            <Textarea
+                              value={editingPlanData.description}
+                              onChange={(e) => setEditingPlanData({ ...editingPlanData, description: e.target.value })}
+                              className="text-sm"
+                              rows={2}
+                              placeholder="Descrição"
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground uppercase font-semibold">Prioridade</Label>
+                                <select
+                                  value={editingPlanData.priority}
+                                  onChange={(e) => setEditingPlanData({ ...editingPlanData, priority: e.target.value })}
+                                  className="flex h-8 w-full items-center justify-between rounded-md border border-input bg-background px-2 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 mt-1"
+                                >
+                                  <option value="critica">Crítica</option>
+                                  <option value="alta">Alta</option>
+                                  <option value="media">Média</option>
+                                  <option value="baixa">Baixa</option>
+                                </select>
+                              </div>
+                              <div>
+                                <Label className="text-[10px] text-muted-foreground uppercase font-semibold">Prazo</Label>
+                                <Input
+                                  type="date"
+                                  value={editingPlanData.due_date}
+                                  onChange={(e) => setEditingPlanData({ ...editingPlanData, due_date: e.target.value })}
+                                  className="h-8 text-sm mt-1"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <h4 className="font-semibold text-sm truncate">{plan.titulo}</h4>
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{plan.descricao}</p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                              {plan.data_fim_planejada && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(plan.data_fim_planejada).toLocaleDateString('pt-BR')}
+                                </span>
+                              )}
+                              {plan.prioridade && <span className="capitalize font-medium">{priorityMap[plan.prioridade] || plan.prioridade}</span>}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        {isDispatched ? (
+                          <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">✓ Enviado</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 text-[10px]">Aguardando Envio</Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                      {isEditing ? (
+                        <>
+                          <Button size="sm" className="h-7 text-xs flex-1" onClick={() => handleDispatchSavePlan(plan.id)}>
+                            <Save className="h-3 w-3 mr-1.5" />Salvar
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingPlanId(null)}>
+                            <X className="h-3 w-3 mr-1" />Cancelar
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          {!isDispatched && (
+                            <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground"
+                              onClick={() => { setEditingPlanId(plan.id); setEditingPlanData({ title: plan.titulo, description: plan.descricao || '', due_date: plan.data_fim_planejada || '', priority: plan.prioridade || 'media' }); }}>
+                              <Edit className="h-3 w-3 mr-1.5" />Editar
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            className={`h-7 text-xs ${isDispatched ? 'text-muted-foreground bg-muted cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
+                            disabled={isDispatched}
+                            onClick={() => handleDispatchPlanToVendor(plan.id)}
+                          >
+                            <Send className="h-3 w-3 mr-1.5" />{isDispatched ? 'Já enviado' : 'Enviar ao Fornecedor'}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="border-t pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              {dispatchPlans.filter(p => p.status === 'disponivel_fornecedor').length} de {dispatchPlans.length} plano(s) enviado(s)
+            </p>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setShowDispatchModal(false)}>Fechar</Button>
+              <Button
+                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+                disabled={dispatchPlans.every(p => p.status === 'disponivel_fornecedor') || dispatchPlans.length === 0}
+                onClick={handleDispatchAllToVendor}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Enviar Todos ao Fornecedor
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
+
   );
 };

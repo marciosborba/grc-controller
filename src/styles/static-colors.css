@@ -2,105 +2,105 @@
 /* SISTEMA DE CORES ESTÃTICO - GRC CONTROLLER */
 /* ============================================================================ */
 /* Arquivo gerado automaticamente pelo Static Color Controller */
-/* Ãšltima atualizaÃ§Ã£o: 02/03/2026, 17:46:54 */
+/* Ãšltima atualizaÃ§Ã£o: 02/03/2026, 20:22:07 */
 
 /* CORES ESTÃTICAS - SEM @layer utilities para evitar conflitos com Tailwind */
 /* ========================================================================== */
 /* LIGHT MODE - CORES PRINCIPAIS */
 /* ========================================================================== */
 :root {
-    --primary: 173 88% 58%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
-    --background: 0 0% 100%;
-    --foreground: 225 71% 12%;
-    --card: 0 0% 100%;
-    --card-foreground: 225 71% 12%;
-    --border: 214 32% 91%;
-    --muted: 210 20% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --secondary: 210 40% 98%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --primary-foreground: 0 0% 100%;
-    --primary-text: 225 71% 12%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 225 71% 12%;
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --danger: 0 84% 60%;
-    --danger-foreground: 0 0% 100%;
-    --risk-critical: 0 84% 60%;
-    --risk-high: 24 95% 53%;
-    --risk-medium: 38 92% 50%;
-    --risk-low: 142 76% 36%;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    /* Additional system variables */
-    --input: var(--border);
-    --ring: var(--primary);
-    --accent: var(--secondary);
-    --destructive: var(--danger);
-    --destructive-foreground: var(--danger-foreground);
-    --success-light: var(--success);
-    --warning-light: var(--warning);
-    --danger-light: var(--danger);
-    --sidebar-primary: var(--sidebar-foreground);
-    --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--primary);
+  --primary: 172 61% 41%;
+  --primary-hover: 172 61% 36%;
+  --primary-glow: 172 71% 61%;
+  --background: 0 0% 100%;
+  --foreground: 225 71% 12%;
+  --card: 0 0% 100%;
+  --card-foreground: 225 71% 12%;
+  --border: 214 32% 91%;
+  --muted: 210 20% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --secondary: 210 40% 98%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --primary-foreground: 0 0% 100%;
+  --primary-text: 225 71% 12%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 225 71% 12%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 100%;
+  --danger: 0 84% 60%;
+  --danger-foreground: 0 0% 100%;
+  --risk-critical: 0 84% 60%;
+  --risk-high: 24 95% 53%;
+  --risk-medium: 38 92% 50%;
+  --risk-low: 142 76% 36%;
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 240 5.3% 26.1%;
+  --sidebar-accent: 172 61% 88%;
+  --sidebar-accent-foreground: 172 61% 20%;
+  /* Additional system variables */
+  --input: var(--border);
+  --ring: var(--primary);
+  --accent: var(--secondary);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+  --success-light: var(--success);
+  --warning-light: var(--warning);
+  --danger-light: var(--danger);
+  --sidebar-primary: var(--sidebar-foreground);
+  --sidebar-primary-foreground: var(--sidebar-background);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--primary);
 }
 
 /* ========================================================================== */
 /* DARK MODE - CORES PRINCIPAIS */
 /* ========================================================================== */
 .dark {
-    --primary: 173 88% 58%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
-    --background: 222 18% 4%;
-    --foreground: 0 0% 100%;
-    --card: 215 8% 12%;
-    --card-foreground: 0 0% 100%;
-    --border: 215 10% 22%;
-    --muted: 215 12% 16%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-    --secondary: 215 8% 12%;
-    --secondary-foreground: 0 0% 100%;
-    --primary-foreground: 0 0% 0%;
-    --primary-text: 0 0% 100%;
-    --popover: 215 8% 12%;
-    --popover-foreground: 0 0% 100%;
-    --success: 142 76% 46%;
-    --success-foreground: 0 0% 0%;
-    --warning: 38 92% 60%;
-    --warning-foreground: 0 0% 0%;
-    --danger: 0 84% 70%;
-    --danger-foreground: 0 0% 0%;
-    --risk-critical: 0 84% 70%;
-    --risk-high: 24 95% 63%;
-    --risk-medium: 38 92% 60%;
-    --risk-low: 142 76% 46%;
-    --sidebar-background: 215 8% 12%;
-    --sidebar-foreground: 0 0% 100%;
-    /* Additional system variables */
-    --input: var(--border);
-    --ring: var(--primary);
-    --accent: var(--secondary);
-    --destructive: var(--danger);
-    --destructive-foreground: var(--danger-foreground);
-    --success-light: var(--success);
-    --warning-light: var(--warning);
-    --danger-light: var(--danger);
-    --sidebar-primary: var(--sidebar-foreground);
-    --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--primary);
+  --primary: 173 88% 58%;
+  --primary-hover: 173 88% 54%;
+  --primary-glow: 173 95% 78%;
+  --background: 222 18% 4%;
+  --foreground: 0 0% 100%;
+  --card: 215 8% 12%;
+  --card-foreground: 0 0% 100%;
+  --border: 215 10% 22%;
+  --muted: 215 12% 16%;
+  --muted-foreground: 215.4 16.3% 56.9%;
+  --secondary: 215 8% 12%;
+  --secondary-foreground: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --primary-text: 0 0% 100%;
+  --popover: 215 8% 12%;
+  --popover-foreground: 0 0% 100%;
+  --success: 142 76% 46%;
+  --success-foreground: 0 0% 0%;
+  --warning: 38 92% 60%;
+  --warning-foreground: 0 0% 0%;
+  --danger: 0 84% 70%;
+  --danger-foreground: 0 0% 0%;
+  --risk-critical: 0 84% 70%;
+  --risk-high: 24 95% 63%;
+  --risk-medium: 38 92% 60%;
+  --risk-low: 142 76% 46%;
+  --sidebar-background: 215 8% 12%;
+  --sidebar-foreground: 0 0% 100%;
+  --sidebar-accent: 173 50% 22%;
+  --sidebar-accent-foreground: 173 80% 90%;
+  /* Additional system variables */
+  --input: var(--border);
+  --ring: var(--primary);
+  --accent: var(--secondary);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+  --success-light: var(--success);
+  --warning-light: var(--warning);
+  --danger-light: var(--danger);
+  --sidebar-primary: var(--sidebar-foreground);
+  --sidebar-primary-foreground: var(--sidebar-background);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--primary);
 }
 
 /* ========================================================================== */
@@ -109,24 +109,24 @@
 
 /* Base styles - aplicados globalmente */
 * {
-    border-color: hsl(var(--border));
+  border-color: hsl(var(--border));
 }
 
 body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-feature-settings: "rlig" 1, "calt" 1;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "rlig" 1, "calt" 1;
 }
 
 /* ========================================================================== */
 /* HIGH CONTRAST MODE SUPPORT */
 /* ========================================================================== */
 @media (prefers-contrast: high) {
-    :root {
-        --border: 0 0% 20%;
-    }
+  :root {
+    --border: 0 0% 20%;
+  }
 
-    .dark {
-        --border: 0 0% 80%;
-    }
+  .dark {
+    --border: 0 0% 80%;
+  }
 }

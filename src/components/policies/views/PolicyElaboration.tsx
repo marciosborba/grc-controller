@@ -26,14 +26,12 @@ import {
   Download,
   Eye,
   AlertTriangle,
-  Paperclip,
-  Brain
+  Paperclip
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import PolicyProcessCard from '../shared/PolicyProcessCard';
-import AlexPolicyChat from '../shared/AlexPolicyChat';
 // import PolicyEditModalSimple from '../shared/PolicyEditModalSimple';
 // import PolicyCreateModalSimple from '../shared/PolicyCreateModalSimple';
 
@@ -1472,29 +1470,15 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
     <div className="space-y-6">
 
       {/* Header da seção */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h2 className="text-2xl font-bold">Elaboração de Políticas</h2>
-          <p className="text-muted-foreground">
-            Crie, edite e desenvolva políticas com assistência da IA Alex Policy
+          <h2 className="text-xl sm:text-2xl font-bold">Elaboração de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
+            Crie, edite e desenvolva políticas organizacionais
           </p>
         </div>
 
         <div className="flex gap-2">
-          <button
-            className="justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border bg-background hover:text-accent-foreground h-9 px-3 flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800"
-            type="button"
-            onClick={() => setShowAlexChat(!showAlexChat)}
-          >
-            <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
-              <Brain className="h-3 w-3 text-white" />
-            </div>
-            <span>{showAlexChat ? 'Ocultar' : 'Mostrar'} Alex Chat</span>
-            <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/30 dark:text-purple-200 dark:border-purple-700">
-              IA
-            </Badge>
-          </button>
-
           <Button onClick={handleCreateNewPolicy}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Política
@@ -1503,170 +1487,168 @@ const PolicyElaboration: React.FC<PolicyElaborationProps> = ({
       </div>
 
       {/* Layout principal */}
-      <div className={`grid gap-6 ${showAlexChat ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
-        {/* Coluna principal - Lista de políticas */}
-        <div className={`space-y-4 ${showAlexChat ? 'lg:col-span-2' : 'lg:col-span-1'}`}>
-          {/* Estatísticas rápidas */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            <Card className="shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
-                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Em Elaboração</p>
-                    <p className="text-lg sm:text-2xl font-bold">
-                      {filteredPolicies.filter(p => p.status === 'draft').length}
-                    </p>
-                  </div>
+      <div className="space-y-4">
+        {/* Estatísticas rápidas */}
+        <div className="grid grid-cols-2 gap-3">
+          <Card className="shadow-sm hover:shadow-md transition-all">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg shrink-0">
-                    <Edit className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Em Revisão</p>
-                    <p className="text-lg sm:text-2xl font-bold">
-                      {filteredPolicies.filter(p => p.status === 'under_review').length}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Em Elaboração</p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {filteredPolicies.filter(p => p.status === 'draft').length}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="col-span-2 md:col-span-1 shadow-sm hover:shadow-md transition-all">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center space-x-2 sm:space-x-3">
-                  <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
-                    <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Com Insights Alex</p>
-                    <p className="text-lg sm:text-2xl font-bold">
-                      {filteredPolicies.filter(p => generateAlexInsights(p).length > 0).length}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filtros e busca */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filtros
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar políticas em elaboração..."
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                <Button variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Atualizar
-                </Button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Lista de Políticas com Cards Expansíveis */}
-          <div className="space-y-4">
-            {currentPolicies.length > 0 ? (
-              currentPolicies.map((policy) => (
-                <PolicyProcessCard
-                  key={policy.id}
-                  policy={policy}
-                  mode="elaboration"
-                  onAction={handlePolicyAction}
-                  alexInsights={generateAlexInsights(policy)}
-                />
-              ))
-            ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Nenhuma política em elaboração</h3>
-                  <p className="text-muted-foreground text-center mb-4">
-                    Comece criando uma nova política ou verifique os filtros aplicados.
+          <Card className="shadow-sm hover:shadow-md transition-all">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="p-1.5 sm:p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg shrink-0">
+                  <Edit className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Em Revisão</p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {filteredPolicies.filter(p => p.status === 'under_review').length}
                   </p>
-                  <Button onClick={handleCreateNewPolicy}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Nova Política
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Paginação */}
-          {totalPages > 1 && (
-            <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
-              <span className="text-sm text-muted-foreground">
-                Mostrando {startIndex + 1}–{endIndex} de {filteredPolicies.length} políticas
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-9 w-9"
-                >
-                  &lt;
-                </Button>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="icon"
-                    onClick={() => setCurrentPage(page)}
-                    className="h-9 w-9"
-                  >
-                    {page}
-                  </Button>
-                ))}
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="h-9 w-9"
-                >
-                  &gt;
-                </Button>
+                </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm hover:shadow-md transition-all">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
+                  <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Pendentes Aprovação</p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {filteredPolicies.filter(p => p.status === 'pending_approval').length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm hover:shadow-md transition-all">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg shrink-0">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight">Total</p>
+                  <p className="text-lg sm:text-2xl font-bold">
+                    {filteredPolicies.length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filtros e busca */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar políticas em elaboração..."
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <Button variant="outline" size="sm" className="shrink-0">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Atualizar
+              </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Lista de Políticas com Cards Expansíveis */}
+        <div className="space-y-4">
+          {currentPolicies.length > 0 ? (
+            currentPolicies.map((policy) => (
+              <PolicyProcessCard
+                key={policy.id}
+                policy={policy}
+                mode="elaboration"
+                onAction={handlePolicyAction}
+                alexInsights={generateAlexInsights(policy)}
+              />
+            ))
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma política em elaboração</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  Comece criando uma nova política ou verifique os filtros aplicados.
+                </p>
+                <Button onClick={handleCreateNewPolicy}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Nova Política
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </div>
 
-        {/* Coluna lateral - Alex Policy Chat */}
-        {showAlexChat && (
-          <div className="lg:col-span-1">
-            <div className="sticky top-6">
-              <AlexPolicyChat
-                policyId={selectedPolicy?.id}
-                policyTitle={selectedPolicy?.title}
-                mode="elaboration"
-                onApplySuggestion={handleAlexSuggestion}
-                className="h-[600px]"
-              />
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
+            <span className="text-sm text-muted-foreground">
+              Mostrando {startIndex + 1}–{endIndex} de {filteredPolicies.length} políticas
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-9 w-9"
+              >
+                &lt;
+              </Button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setCurrentPage(page)}
+                  className="h-9 w-9"
+                >
+                  {page}
+                </Button>
+              ))}
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-9 w-9"
+              >
+                &gt;
+              </Button>
             </div>
           </div>
         )}

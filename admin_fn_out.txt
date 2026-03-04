@@ -1,0 +1,26 @@
+[
+  {
+    "tablename": "vendor_users",
+    "policyname": "Admins can manage vendor_users",
+    "qual": "(EXISTS ( SELECT 1\n   FROM vendor_registry vr\n  WHERE ((vr.id = vendor_users.vendor_id) AND (vr.tenant_id = (current_setting('app.current_tenant'::text, true))::uuid))))",
+    "with_check": null
+  },
+  {
+    "tablename": "assessments",
+    "policyname": "Assessments are viewable by tenant users",
+    "qual": "((tenant_id = ( SELECT assessments.tenant_id\n   FROM auth.users\n  WHERE (users.id = auth.uid()))) OR is_platform_admin(auth.uid()))",
+    "with_check": null
+  },
+  {
+    "tablename": "vendor_assessments",
+    "policyname": "Users can access vendor_assessments for their tenant",
+    "qual": "((tenant_id = ( SELECT vendor_assessments.tenant_id\n   FROM auth.users\n  WHERE (users.id = auth.uid()))) OR is_platform_admin(auth.uid()))",
+    "with_check": null
+  },
+  {
+    "tablename": "vendor_registry",
+    "policyname": "Users can access vendor_registry for their tenant",
+    "qual": "((tenant_id = ( SELECT vendor_registry.tenant_id\n   FROM auth.users\n  WHERE (users.id = auth.uid()))) OR is_platform_admin(auth.uid()))",
+    "with_check": null
+  }
+]

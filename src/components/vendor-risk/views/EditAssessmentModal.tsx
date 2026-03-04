@@ -28,7 +28,8 @@ import {
     ExternalLink,
     Calendar,
     Clock,
-    Shield
+    Shield,
+    KeyRound
 } from 'lucide-react';
 import {
     DEFAULT_ASSESSMENT_QUESTIONS,
@@ -56,6 +57,11 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
     const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
     const [responses, setResponses] = useState<Record<string, any>>({});
     const [metadata, setMetadata] = useState<any>({});
+
+    // Password reset state
+    const [resetPasswordEmail, setResetPasswordEmail] = useState('');
+    const [newVendorPassword, setNewVendorPassword] = useState('');
+    const [resettingPassword, setResettingPassword] = useState(false);
 
     // Fetch assessment data when modal opens
     useEffect(() => {
@@ -94,14 +100,30 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
                 vendor_assessment_frameworks: Array.isArray(data.vendor_assessment_frameworks) ? data.vendor_assessment_frameworks[0] : data.vendor_assessment_frameworks
             };
 
-            setAssessment(normalizedData);
-            setResponses(data.responses || {});
             setMetadata({
                 due_date: data.due_date,
                 priority: data.priority,
                 status: data.status,
                 reviewer_notes: data.reviewer_notes || ''
             });
+
+            // Fetch vendor emails
+            if (normalizedData.vendor_id) {
+                const { data: portalUsers } = await supabase
+                    .from('vendor_portal_users')
+                    .select('email')
+                    .eq('vendor_id', normalizedData.vendor_id);
+
+                if (portalUsers) {
+                    normalizedData.vendor_emails = portalUsers.map(u => u.email);
+                } else {
+                    normalizedData.vendor_emails = [];
+                }
+            } else {
+                normalizedData.vendor_emails = [];
+            }
+            setAssessment(normalizedData);
+            setResponses(data.responses || {});
 
             // 2. Load Questions
             let loadedQuestions: AssessmentQuestion[] = [];
@@ -181,6 +203,33 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
             });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        if (!resetPasswordEmail || newVendorPassword.length < 6) {
+            toast({ title: "Incompleto", description: "Selecione um e-mail e forneça uma senha com no mínimo 6 caracteres.", variant: "destructive" });
+            return;
+        }
+        setResettingPassword(true);
+        try {
+            const { error, data } = await supabase.rpc('update_vendor_portal_password', {
+                p_email: resetPasswordEmail.trim().toLowerCase(),
+                p_new_password: newVendorPassword
+            });
+            if (error) throw error;
+            if (!data) {
+                toast({ title: "Aviso", description: "Nenhum usuário ativo de portal encontrado com este e-mail.", variant: "destructive" });
+                return;
+            }
+            toast({ title: "Senha alterada", description: "A senha foi atualizada. O fornecedor deverá criar uma nova no primeiro acesso." });
+            setNewVendorPassword('');
+            setResetPasswordEmail('');
+        } catch (error: any) {
+            console.error('Error resetting password:', error);
+            toast({ title: "Erro", description: error.message, variant: "destructive" });
+        } finally {
+            setResettingPassword(false);
         }
     };
 
@@ -287,6 +336,52 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
                                     </CardContent>
                                 </Card>
 
+                                {/* Vendor Password Reset Section */}
+                                {assessment?.vendor_emails && assessment.vendor_emails.length > 0 && (
+                                    <Card className="border-border/50 bg-card/50 max-w-full">
+                                        <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+                                            <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+                                                <KeyRound className="h-4 w-4 text-primary" />
+                                                <h3 className="text-sm font-medium">Redefinir Senha do Fornecedor</h3>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-end">
+                                                <div className="space-y-1.5 sm:space-y-2">
+                                                    <Label className="text-xs sm:text-sm">E-mail do Fornecedor</Label>
+                                                    <Select value={resetPasswordEmail} onValueChange={setResetPasswordEmail}>
+                                                        <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full"><SelectValue placeholder="Selecione um e-mail" /></SelectTrigger>
+                                                        <SelectContent>
+                                                            {assessment.vendor_emails.map((email: string) => (
+                                                                <SelectItem key={email} value={email}>{email}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-1.5 sm:space-y-2">
+                                                    <Label className="text-xs sm:text-sm">Nova Senha Provisória</Label>
+                                                    <Input
+                                                        type="text"
+                                                        placeholder="Mínimo 6 caracteres"
+                                                        value={newVendorPassword}
+                                                        onChange={(e) => setNewVendorPassword(e.target.value)}
+                                                        className="h-8 sm:h-10 text-xs sm:text-sm w-full"
+                                                    />
+                                                </div>
+                                                <Button
+                                                    onClick={handleResetPassword}
+                                                    disabled={resettingPassword || !resetPasswordEmail || newVendorPassword.length < 6}
+                                                    className="h-8 sm:h-10 w-full text-xs sm:text-sm"
+                                                    variant="secondary"
+                                                >
+                                                    {resettingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar Nova Senha"}
+                                                </Button>
+                                            </div>
+                                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                                                Atenção: Ao redefinir, o acesso antigo é invalidado. O fornecedor continuará precisando trocar essa senha no primeiro acesso ao portal.
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
                                 {/* Questions Section */}
                                 <div className="space-y-6 w-full max-w-full min-w-0">
                                     {questions.map((q, index) => {
@@ -346,7 +441,7 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
                                                             >
                                                                 <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                                                 <SelectContent>
-                                                                    {q.options?.map(opt => (
+                                                                    {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? (q.options as string).split(',').map(s => s.trim()) : [])).map(opt => (
                                                                         <SelectItem key={opt} value={opt} className="text-xs sm:text-sm">{opt}</SelectItem>
                                                                     ))}
                                                                 </SelectContent>

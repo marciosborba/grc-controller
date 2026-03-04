@@ -133,6 +133,7 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       { status: 'Planejamento', count: statusCounts['draft'] || 0, fill: '#94a3b8' }, // slate-400
       { status: 'Aguard. Fornecedor', count: statusCounts['sent'] || 0, fill: '#3b82f6' }, // blue-500
       { status: 'Preenchimento', count: statusCounts['in_progress'] || 0, fill: '#f59e0b' }, // amber-500
+      { status: 'Aguard. Validação', count: statusCounts['pending_validation'] || 0, fill: '#d97706' }, // amber-600
       { status: 'Análise Interna', count: statusCounts['completed'] || 0, fill: '#6366f1' }, // indigo-500
       { status: 'Homologado', count: statusCounts['approved'] || 0, fill: '#22c55e' }, // green-500
       { status: 'Revisão', count: statusCounts['rejected'] || 0, fill: '#ef4444' } // red-500
@@ -206,6 +207,19 @@ export const VendorDashboardView: React.FC<VendorDashboardViewProps> = ({
       action: "Verificar Status"
     }
   ].filter(alert => alert.severity !== 'low' || true); // Mantendo todos para grid layout fixo, mas poderia filtrar
+
+  // Unvalidated assessment alert
+  const pendingValidationCount = assessments.filter(a => a.status === 'pending_validation').length;
+  if (pendingValidationCount > 0) {
+    criticalAlerts.unshift({
+      id: 0,
+      type: 'assessment_not_validated',
+      title: 'Assessments Não Validados',
+      description: `${pendingValidationCount} assessment${pendingValidationCount > 1 ? 's' : ''} aguardando validação do administrador`,
+      severity: 'critical',
+      action: 'Validar Agora'
+    });
+  }
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {

@@ -134,15 +134,15 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Aprovação de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Aprovação de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             {policiesForApproval.length} política(s) aguardando aprovação final
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <Badge variant="outline" className="flex items-center gap-1 border-orange-300 text-orange-800 bg-orange-50 dark:border-orange-600 dark:text-orange-200 dark:bg-orange-950/20">
             <Stamp className="h-3 w-3" />
             Pendentes: {policiesForApproval.length}
@@ -150,7 +150,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Lista de políticas para aprovação */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Políticas Pendentes</h3>
@@ -175,20 +175,18 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
               </CardHeader>
 
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">Categoria:</span>
-                      <span>{policy.category}</span>
-                    </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Categoria:</span>
+                    <span className="truncate max-w-[100px]">{policy.category}</span>
+                  </div>
 
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
+                    </span>
                   </div>
 
                   {policy.priority && (

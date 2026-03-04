@@ -142,15 +142,15 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Dashboard de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Dashboard de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             Visão geral do status e métricas das políticas organizacionais
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20">
             <TrendingUp className="h-3 w-3" />
             {stats.recentPolicies.length} criadas esta semana
@@ -190,7 +190,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
       )}
 
       {/* Gráficos e análises */}
-      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Distribuição por status */}
         <Card>
           <CardHeader>

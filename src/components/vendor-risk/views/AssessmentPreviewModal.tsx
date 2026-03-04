@@ -292,7 +292,7 @@ export const AssessmentPreviewModal: React.FC<AssessmentPreviewModalProps> = ({
 
                                                                 {q.type === 'multiple_choice' && (
                                                                     <div className="space-y-3">
-                                                                        {q.options?.map(opt => (
+                                                                        {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? (q.options as string).split(',').map(s => s.trim()) : [])).map(opt => (
                                                                             <div
                                                                                 key={opt}
                                                                                 className={`flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all ${answer === opt ? 'border-primary bg-primary/5' : 'hover:bg-muted'}`}

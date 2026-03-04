@@ -230,7 +230,6 @@ const defaultPalette: ColorPalette = {
       category: 'risk'
     },
 
-    // Sidebar Colors
     'sidebar-background': {
       hsl: '0 0% 98%',
       hex: '#fafafa',
@@ -243,6 +242,20 @@ const defaultPalette: ColorPalette = {
       hex: '#3f3f46',
       name: 'Sidebar Foreground',
       description: 'Texto da sidebar',
+      category: 'sidebar'
+    },
+    'sidebar-accent': {
+      hsl: '210 20% 96%',
+      hex: '#f4f6f8',
+      name: 'Sidebar Accent (Hover)',
+      description: 'Fundo ao passar o mouse na sidebar',
+      category: 'sidebar'
+    },
+    'sidebar-accent-foreground': {
+      hsl: '240 5.3% 26.1%',
+      hex: '#3f3f46',
+      name: 'Sidebar Accent Foreground',
+      description: 'Texto ao passar o mouse na sidebar',
       category: 'sidebar'
     }
   },
@@ -437,7 +450,6 @@ const defaultPalette: ColorPalette = {
       category: 'risk'
     },
 
-    // Sidebar Colors Dark
     'sidebar-background': {
       hsl: '215 8% 12%',
       hex: '#1a1d23',
@@ -450,6 +462,20 @@ const defaultPalette: ColorPalette = {
       hex: '#ffffff',
       name: 'Sidebar Foreground',
       description: 'Texto da sidebar dark',
+      category: 'sidebar'
+    },
+    'sidebar-accent': {
+      hsl: '215 12% 16%',
+      hex: '#232830',
+      name: 'Sidebar Accent (Hover)',
+      description: 'Fundo ao passar o mouse na sidebar dark',
+      category: 'sidebar'
+    },
+    'sidebar-accent-foreground': {
+      hsl: '0 0% 100%',
+      hex: '#ffffff',
+      name: 'Sidebar Accent Foreground',
+      description: 'Texto ao passar o mouse na sidebar dark',
       category: 'sidebar'
     }
   }
@@ -484,7 +510,7 @@ const colorCategories: ColorCategory[] = [
   {
     name: 'Sidebar',
     description: 'Cores da navegação lateral',
-    colors: ['sidebar-background', 'sidebar-foreground'],
+    colors: ['sidebar-background', 'sidebar-foreground', 'sidebar-accent', 'sidebar-accent-foreground'],
     icon: Menu
   }
 ];
@@ -935,9 +961,9 @@ export const StaticColorController: React.FC = () => {
                                 <div
                                   className="w-12 h-12 rounded-lg border-2 border-border flex-shrink-0 cursor-pointer hover:border-primary transition-colors"
                                   style={{
-                                    backgroundColor: getRealAppliedColor(colorKey)
+                                    backgroundColor: color.hex
                                   }}
-                                  title={`Clique para alterar cor | Atual: ${getRealAppliedColor(colorKey)} | CSS: var(--${colorKey})`}
+                                  title={`Clique para alterar cor | Atual: ${color.hex}`}
                                   onClick={() => {
                                     // Criar input temporário para seleção de cor
                                     const colorInput = document.createElement('input');
@@ -967,13 +993,13 @@ export const StaticColorController: React.FC = () => {
                                     value={color.hex}
                                     onChange={(e) => {
                                       console.log('🎨 INPUT HEX:', e.target.value);
-                                      if (e.target.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+                                      if (e.target.value.match(/^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$/)) {
                                         handleColorUpdate(colorKey, e.target.value);
                                       }
                                     }}
-                                    placeholder="#FF0000"
+                                    placeholder="#FF0000 ou #FF000080"
                                     className="font-mono text-xs"
-                                    maxLength={7}
+                                    maxLength={9}
                                   />
                                   <Input
                                     value={color.hsl}
@@ -988,16 +1014,43 @@ export const StaticColorController: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    console.log('💪 TESTE DIRETO DA COR:', color.hex);
-                                    // Forçar aplicação imediata
-                                    document.documentElement.style.setProperty(`--${colorKey}`, color.hsl, 'important');
-                                    if (colorKey === 'primary') {
-                                      const elements = document.querySelectorAll('.bg-primary, [class*="bg-primary"]');
-                                      elements.forEach(el => {
-                                        el.style.setProperty('background-color', color.hex, 'important');
-                                      });
-                                      console.log(`✅ Aplicado ${color.hex} em ${elements.length} elementos`);
+                                    // Acumulador persistente de overrides por modo (sobrevive entre cliques)
+                                    const w = window as any;
+                                    if (!w.__grcTestOverrides) {
+                                      w.__grcTestOverrides = { light: new Map<string, string>(), dark: new Map<string, string>() };
                                     }
+
+                                    // Detectar modo REAL do browser
+                                    const isCurrentlyDark = document.documentElement.classList.contains('dark');
+                                    const modeKey = isCurrentlyDark ? 'dark' : 'light';
+
+                                    // Adicionar/atualizar a variável no acumulador do modo atual
+                                    w.__grcTestOverrides[modeKey].set(colorKey, color.hsl);
+                                    console.log(`✅ Testar Agora [${modeKey}]: --${colorKey} = ${color.hsl}`);
+                                    console.log(`📋 Acumulador light: ${w.__grcTestOverrides.light.size} vars, dark: ${w.__grcTestOverrides.dark.size} vars`);
+
+                                    // Reconstruir style tag com TODAS as variáveis acumuladas para AMBOS os modos
+                                    const lightVarsCSS = Array.from(w.__grcTestOverrides.light.entries())
+                                      .map(([k, v]: [string, string]) => `  --${k}: ${v} !important;`)
+                                      .join('\n');
+                                    const darkVarsCSS = Array.from(w.__grcTestOverrides.dark.entries())
+                                      .map(([k, v]: [string, string]) => `  --${k}: ${v} !important;`)
+                                      .join('\n');
+
+                                    let testStyle = document.getElementById('grc-testar-agora') as HTMLStyleElement | null;
+                                    if (!testStyle) {
+                                      testStyle = document.createElement('style');
+                                      testStyle.id = 'grc-testar-agora';
+                                    }
+                                    document.head.appendChild(testStyle); // sempre no final do head
+
+                                    testStyle.textContent = [
+                                      lightVarsCSS ? `:root:not(.dark) {\n${lightVarsCSS}\n}` : '',
+                                      darkVarsCSS ? `.dark, :root.dark {\n${darkVarsCSS}\n}` : ''
+                                    ].filter(Boolean).join('\n\n');
+
+
+
                                   }}
                                   className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
                                 >
@@ -1139,11 +1192,26 @@ export const StaticColorController: React.FC = () => {
                   <li>Recarregue com Ctrl+Shift+R</li>
                   <li>✅ Cor primária deve mudar e persistir!</li>
                 </ol>
-                <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-950 rounded text-xs">
-                  ⚠️ <strong>Importante:</strong> Ambos os arquivos devem ter as mesmas cores primárias!
-                </div>
               </AlertDescription>
             </Alert>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+              <div className="flex-1">
+                <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100">Atualização Automática via Terminal (Nova Reunião Mágica 🪄)</h4>
+                <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
+                  1. Clique para baixar o arquivo abaixo.<br />
+                  2. Abra o terminal raiz do seu projeto e rode: <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">node color_change.cjs</code><br />
+                  Ele achará o download e atualizará seu <code>index.css</code> e <code>static-colors.css</code> sozinho!
+                </p>
+              </div>
+              <Button
+                onClick={() => (window as any).downloadCSS?.()}
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+              >
+                <Download className="h-4 w-4" />
+                Baixar CSS para o Script
+              </Button>
+            </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
@@ -1235,6 +1303,6 @@ export const StaticColorController: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };

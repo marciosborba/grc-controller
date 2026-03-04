@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { EditableChecklistManager } from '../shared/EditableChecklistManager';
-import { RiskAssessmentManager } from '../shared/RiskAssessmentManager';
+
 import { ContractReviewManager } from '../shared/ContractReviewManager';
 import { useVendorRiskManagement } from '@/hooks/useVendorRiskManagement';
 import {
@@ -741,7 +741,7 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
               <Progress value={calculateProgress()} className="mb-4" />
 
               {/* Steps Timeline - 5 Etapas Compactas */}
-              <div className="flex items-start justify-between mt-4 px-1 pb-4 gap-2 sm:gap-4 relative w-full overflow-hidden">
+              <div className="flex items-start justify-center mt-4 pb-4 gap-6 sm:gap-10 w-fit mx-auto">
                 {onboardingSteps.map((step, index) => {
                   // Cores para cada etapa
                   const stepColors = [
@@ -751,8 +751,8 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
                   const color = stepColors[index] || 'blue';
 
                   return (
-                    <div key={step.id} className="flex-1 min-w-0 shrink relative">
-                      <div className="flex flex-col items-center space-y-[10px] sm:space-y-2">
+                    <div key={step.id} className="flex flex-col items-center relative w-20 sm:w-24">
+                      <div className="flex flex-col items-center space-y-2">
                         {/* Ícone da etapa - Clicável */}
                         <button
                           onClick={() => handleStepNavigation(index)}
@@ -834,36 +834,7 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
             </CardHeader>
 
             <CardContent>
-              {/* Informações sobre funcionalidades - apenas na primeira etapa */}
-              {currentStep === 0 && (
-                <div className="mb-6 space-y-3">
-                  <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Save className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                        Botão Salvar Disponível
-                      </span>
-                    </div>
-                    <p className="text-xs text-green-700 dark:text-green-300">
-                      Você pode salvar as informações a qualquer momento usando o botão "Salvar" abaixo,
-                      sem precisar completar todas as etapas do processo.
-                    </p>
-                  </div>
 
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Target className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                        Navegação Direta
-                      </span>
-                    </div>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      Clique nos ícones numerados acima para navegar diretamente para qualquer etapa.
-                      Os dados da etapa atual serão salvos automaticamente se válidos.
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {renderStepContent()}
             </CardContent>
@@ -1532,38 +1503,30 @@ const RiskAssessmentStep: React.FC<{
   vendorData: VendorRegistry;
   onAssessmentComplete: (completed: boolean, score?: number) => void;
 }> = ({ vendorData, onAssessmentComplete }) => {
-  console.log('RiskAssessmentStep renderizado:', { vendorData: vendorData.name });
+  const { toast } = useToast();
+  const { frameworks, fetchFrameworks, createAssessment, loading } = useVendorRiskManagement();
+  const [selectedFrameworkId, setSelectedFrameworkId] = useState<string | null>(null);
+  const [createdAssessmentId, setCreatedAssessmentId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  const { createAssessment } = useVendorRiskManagement();
+  useEffect(() => {
+    fetchFrameworks();
+  }, [fetchFrameworks]);
 
-  const handleTemplateSelected = async (templateId: string, templateName: string) => {
+  const handleSelectFramework = async (frameworkId: string, frameworkName: string) => {
+    if (!vendorData.id) {
+      toast({
+        title: 'Salve o fornecedor primeiro',
+        description: 'Clique em "Salvar" antes de vincular um framework ao fornecedor.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (selectedFrameworkId === frameworkId) return; // already selected
+
+    setCreating(true);
     try {
-      console.log('Template selecionado:', { templateId, templateName, vendorId: vendorData.id });
-
-      // Buscar o framework real no banco de dados baseado no tipo
-      const frameworkId = templateId;
-
-      // Se o templateId não for um UUID válido, buscar o framework correspondente
-      if (templateId === 'nist_csf_default' || templateId === 'iso_27001_27701_default') {
-        console.log('Template hardcoded detectado, salvando informações localmente');
-
-        // Por enquanto, vamos salvar as informações do template selecionado no localStorage
-        // para que possam ser recuperadas quando necessário
-        const selectedTemplateInfo = {
-          templateId,
-          templateName,
-          vendorId: vendorData.id,
-          selectedAt: new Date().toISOString(),
-          selectedInOnboarding: true
-        };
-
-        localStorage.setItem(`vendor_${vendorData.id}_selected_template`, JSON.stringify(selectedTemplateInfo));
-        console.log('Template selecionado salvo no localStorage:', selectedTemplateInfo);
-
-        return; // Não criar assessment ainda, apenas salvar a seleção
-      }
-
-      // Se for um UUID válido, criar o assessment normalmente
       const assessmentData = {
         vendor_id: vendorData.id,
         framework_id: frameworkId,
@@ -1571,7 +1534,7 @@ const RiskAssessmentStep: React.FC<{
         assessment_type: 'initial' as const,
         status: 'draft' as const,
         priority: 'medium' as const,
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         progress_percentage: 0,
         start_date: new Date().toISOString(),
         internal_review_status: 'pending' as const,
@@ -1580,18 +1543,42 @@ const RiskAssessmentStep: React.FC<{
         alex_recommendations: {},
         evidence_attachments: [],
         metadata: {
-          template_name: templateName,
+          framework_name: frameworkName,
           selected_at: new Date().toISOString(),
           selected_in_onboarding: true
         }
       };
 
-      await createAssessment(assessmentData);
-      console.log('Assessment criado com sucesso no banco de dados');
-
-    } catch (error) {
-      console.error('Erro ao salvar template selecionado:', error);
+      const result = await createAssessment(assessmentData);
+      if (result) {
+        setSelectedFrameworkId(frameworkId);
+        setCreatedAssessmentId(result.id);
+        onAssessmentComplete(true, 0);
+        toast({
+          title: 'Framework vinculado',
+          description: `O framework "${frameworkName}" foi associado ao fornecedor e o assessment foi criado.`,
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao criar assessment:', err);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível criar o assessment. Tente novamente.',
+        variant: 'destructive'
+      });
+    } finally {
+      setCreating(false);
     }
+  };
+
+  const FRAMEWORK_TYPE_LABELS: Record<string, string> = {
+    iso27001: 'ISO 27001',
+    soc2: 'SOC 2',
+    nist: 'NIST CSF',
+    pci_dss: 'PCI DSS',
+    lgpd: 'LGPD',
+    gdpr: 'GDPR',
+    custom: 'Customizado',
   };
 
   return (
@@ -1599,22 +1586,116 @@ const RiskAssessmentStep: React.FC<{
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/50 dark:to-red-950/50 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
         <h4 className="flex items-center gap-2 text-sm font-medium text-orange-900 dark:text-orange-100 mb-2">
-          Assessment de Riscos Inteligente
+          <Shield className="h-4 w-4" />
+          Seleção de Framework de Assessment
         </h4>
-        <p className="text-sm text-orange-700 dark:text-orange-300 mb-3">
-          Selecione e customize o framework de assessment mais adequado para avaliar os riscos do fornecedor.
-          Disponível: NIST CSF, ISO 27001/27701 ou Assessment Proprietário.
+        <p className="text-sm text-orange-700 dark:text-orange-300">
+          Selecione o framework que será usado para avaliar os riscos deste fornecedor.
+          Os frameworks disponíveis são gerenciados em <strong>Gestão de Frameworks</strong>.
+          Se precisar de um framework específico, crie-o lá e volte aqui para vinculá-lo.
         </p>
       </div>
 
-      {/* Assessment Manager */}
-      <RiskAssessmentManager
-        vendorId={vendorData.id}
-        onAssessmentComplete={onAssessmentComplete}
-        onTemplateSelected={handleTemplateSelected}
-      />
+      {/* Vendor not saved warning */}
+      {!vendorData.id && (
+        <Card className="border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              Salve os dados básicos do fornecedor (clique em <strong>Salvar</strong>) antes de selecionar um framework.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Instruções */}
+      {/* Selected framework confirmation */}
+      {selectedFrameworkId && createdAssessmentId && (
+        <Card className="border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950/20">
+          <CardContent className="p-4 flex items-center gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                Framework vinculado com sucesso!
+              </p>
+              <p className="text-xs text-green-700 dark:text-green-300">
+                Assessment criado no banco de dados. Você pode continuar para as próximas etapas.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Framework list */}
+      {loading && frameworks.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground">
+          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+          <p className="text-sm">Carregando frameworks...</p>
+        </div>
+      ) : frameworks.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-10 text-center space-y-3">
+            <Shield className="h-10 w-10 mx-auto text-muted-foreground/40" />
+            <p className="text-sm font-medium text-muted-foreground">Nenhum framework disponível</p>
+            <p className="text-xs text-muted-foreground">
+              Acesse <strong>Gestão de Frameworks</strong> no módulo TPRM para criar os frameworks de assessment
+              que serão utilizados aqui.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {frameworks.map((fw) => {
+            const isSelected = selectedFrameworkId === fw.id;
+            const questionCount = Array.isArray(fw.questions) ? fw.questions.length : 0;
+            return (
+              <Card
+                key={fw.id}
+                className={`cursor-pointer transition-all border-2 ${isSelected
+                  ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
+                  : 'border-transparent hover:border-primary/40 hover:shadow-md'
+                  }`}
+                onClick={() => handleSelectFramework(fw.id, fw.name)}
+              >
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{fw.name}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                        {fw.description || 'Sem descrição'}
+                      </p>
+                    </div>
+                    {isSelected && <CheckCircle className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                      {FRAMEWORK_TYPE_LABELS[fw.framework_type] ?? fw.framework_type}
+                    </Badge>
+                    <span className="text-[11px] text-muted-foreground">
+                      {questionCount} {questionCount === 1 ? 'questão' : 'questões'}
+                    </span>
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                    >
+                      Ativo
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Creating spinner */}
+      {creating && (
+        <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
+          <RefreshCw className="h-4 w-4 animate-spin" />
+          Criando assessment no banco de dados...
+        </div>
+      )}
+
+      {/* Instructions */}
       <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
         <CardContent className="p-4">
           <div className="flex items-center gap-2">
@@ -1624,8 +1705,8 @@ const RiskAssessmentStep: React.FC<{
                 Instruções para o Assessment
               </h4>
               <p className="text-sm text-orange-800 dark:text-orange-200">
-                Responda todas as questões obrigatórias para calcular o score de risco do fornecedor.
-                Use o modo de edição para customizar questões conforme necessário.
+                Clique em um framework para vinculá-lo ao fornecedor. Um assessment será criado automaticamente.
+                Você pode completar as questões do assessment posteriormente em <strong>Gestão de Assessments</strong>.
               </p>
             </div>
           </div>
@@ -1634,6 +1715,7 @@ const RiskAssessmentStep: React.FC<{
     </div>
   );
 };
+
 
 const ContractReviewStep: React.FC<{
   vendorData: VendorRegistry;

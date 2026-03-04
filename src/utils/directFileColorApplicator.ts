@@ -6,7 +6,7 @@ export const generateStaticColorsCSS = (palette: ColorPalette): string => {
   const lightColors = Object.entries(palette.light)
     .map(([key, value]) => `    --${key}: ${value.hsl} !important;`)
     .join('\n');
-    
+
   const darkColors = Object.entries(palette.dark)
     .map(([key, value]) => `    --${key}: ${value.hsl} !important;`)
     .join('\n');
@@ -34,8 +34,6 @@ ${lightColors}
     --danger-light: var(--danger);
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -56,8 +54,6 @@ ${darkColors}
     --danger-light: var(--danger);
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -291,7 +287,7 @@ ${darkColors}
 export const applyColorsToFile = async (palette: ColorPalette): Promise<{ success: boolean; method: string; message: string }> => {
   try {
     const cssContent = generateStaticColorsCSS(palette);
-    
+
     // Try to write to file via File System Access API (modern browsers)
     if ('showSaveFilePicker' in window) {
       try {
@@ -302,11 +298,11 @@ export const applyColorsToFile = async (palette: ColorPalette): Promise<{ succes
             accept: { 'text/css': ['.css'] }
           }]
         });
-        
+
         const writable = await fileHandle.createWritable();
         await writable.write(cssContent);
         await writable.close();
-        
+
         return {
           success: true,
           method: 'file-system-api',
@@ -317,7 +313,7 @@ export const applyColorsToFile = async (palette: ColorPalette): Promise<{ succes
         console.log('File System API cancelled or failed:', error);
       }
     }
-    
+
     // Fallback: Download the file
     const blob = new Blob([cssContent], { type: 'text/css' });
     const url = URL.createObjectURL(blob);
@@ -328,13 +324,13 @@ export const applyColorsToFile = async (palette: ColorPalette): Promise<{ succes
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     return {
       success: true,
       method: 'download',
       message: 'Arquivo CSS baixado! Substitua o arquivo src/styles/static-colors.css pelo arquivo baixado.'
     };
-    
+
   } catch (error) {
     return {
       success: false,
@@ -352,7 +348,7 @@ export const quickChangeColor = (colorName: 'primary' | 'background' | 'card', n
     if (hex.length === 4) {
       hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
     }
-    
+
     const r = parseInt(hex.slice(1, 3), 16) / 255;
     const g = parseInt(hex.slice(3, 5), 16) / 255;
     const b = parseInt(hex.slice(5, 7), 16) / 255;
@@ -378,7 +374,7 @@ export const quickChangeColor = (colorName: 'primary' | 'background' | 'card', n
   };
 
   const hslValue = hexToHsl(newHex);
-  
+
   // Apply immediately to CSS variables
   const isDarkMode = document.documentElement.classList.contains('dark');
   if ((mode === 'light' && !isDarkMode) || (mode === 'dark' && isDarkMode)) {

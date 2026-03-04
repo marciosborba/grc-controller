@@ -14,6 +14,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { ModuleGuard } from "@/components/auth/ModuleGuard";
 import { MfaVerifyPage } from "@/components/auth/MfaVerifyPage";
 import DashboardPage from "@/components/dashboard/DashboardPage";
+import ProtectedVendorRoute from "@/components/auth/ProtectedVendorRoute";
 import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
 import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltraMinimal";
 import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
@@ -59,10 +60,10 @@ const PlanejamentoAuditoriaCorrigido = lazy(() => import("@/components/planejame
 const PlanejamentoAuditoriaCompleto = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaCompleto").then(module => ({ default: module.PlanejamentoAuditoriaCompleto })));
 const PlanejamentoMinimalTest = lazy(() => import("@/components/planejamento/PlanejamentoMinimalTest").then(module => ({ default: module.PlanejamentoMinimalTest })));
 const PlanejamentoAuditoriaSimplificado = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaSimplificado").then(module => ({ default: module.PlanejamentoAuditoriaSimplificado })));
-const PlanosAcaoPage = lazy(() => import("@/components/planejamento/PlanosAcaoPage"));
-const CronogramaAtividadesPage = lazy(() => import("@/components/planejamento/CronogramaAtividadesPage"));
-const TimelineVisualizacao = lazy(() => import("@/components/planejamento/TimelineVisualizacao"));
-const NotificacoesPlanejamento = lazy(() => import("@/components/planejamento/NotificacoesPlanejamento"));
+const PlanosAcaoPage = lazy(() => import("@/components/planejamento/PlanosAcaoPage").then(module => ({ default: module.PlanosAcaoPage })));
+const CronogramaAtividadesPage = lazy(() => import("@/components/planejamento/CronogramaAtividadesPage").then(module => ({ default: module.CronogramaAtividadesPage })));
+const TimelineVisualizacao = lazy(() => import("@/components/planejamento/TimelineVisualizacao").then(module => ({ default: module.TimelineVisualizacao })));
+const NotificacoesPlanejamento = lazy(() => import("@/components/planejamento/NotificacoesPlanejamento").then(module => ({ default: module.NotificacoesPlanejamento })));
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
@@ -159,6 +160,14 @@ const ApplicationFieldsCustomization = lazy(() => import("@/components/vulnerabi
 
 // Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
+
+// Portal do Fornecedor (Autenticado)
+const VendorLayout = lazy(() => import("@/pages/VendorPortal/VendorLayout"));
+const VendorLogin = lazy(() => import("@/pages/VendorPortal/VendorLogin"));
+const VendorDashboard = lazy(() => import("@/pages/VendorPortal/VendorDashboard"));
+const VendorAssessmentFill = lazy(() => import("@/pages/VendorPortal/VendorAssessmentFill").then(module => ({ default: module.VendorAssessmentFill })));
+const VendorActionPlans = lazy(() => import("@/pages/VendorPortal/VendorActionPlans").then(module => ({ default: module.VendorActionPlans })));
+const VendorMessages = lazy(() => import("@/pages/VendorPortal/VendorMessages").then(module => ({ default: module.VendorMessages })));
 
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
@@ -335,7 +344,25 @@ const App = () => (
                       </Suspense>
                     } />
 
+                    {/* Vendor Portal Routes */}
+                    <Route path="/vendor-portal/login" element={
+                      <Suspense fallback={<PageLoader />}>
+                        <VendorLogin />
+                      </Suspense>
+                    } />
 
+                    <Route path="/vendor-portal" element={
+                      <ProtectedVendorRoute>
+                        <Suspense fallback={<PageLoader />}>
+                          <VendorLayout />
+                        </Suspense>
+                      </ProtectedVendorRoute>
+                    }>
+                      <Route index element={<VendorDashboard />} />
+                      <Route path="assessment/:id" element={<VendorAssessmentFill />} />
+                      <Route path="action-plans" element={<VendorActionPlans />} />
+                      <Route path="messages" element={<VendorMessages />} />
+                    </Route>
 
                     {/* Protected Routes */}
                     <Route path="/" element={
@@ -354,7 +381,9 @@ const App = () => (
                               <EnhancedAssessmentHub />
                             </Suspense>
                           </ModuleGuard>
-                        } />
+                        }>
+                          <Route index element={<AssessmentsListWorking />} />
+                        </Route>
                         <Route path="assessments/manage" element={
                           <Suspense fallback={<PageLoader />}>
                             <AssessmentCRUD />

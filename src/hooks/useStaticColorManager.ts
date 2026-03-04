@@ -211,14 +211,22 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
     console.log('New Hex:', newHex);
     console.log('Mode:', mode);
 
-    const hexToHsl = (hex: string): string => {
+    const getHslValues = (hex: string) => {
       // Ensure hex starts with #
       if (!hex.startsWith('#')) {
         hex = '#' + hex;
       }
 
-      // Ensure hex is 6 characters (not 3)
-      if (hex.length === 4) {
+      // Suporte para Hex com Opacidade (8 caracteres tipo #RRGGBBAA)
+      let a = 1;
+      if (hex.length === 9) {
+        a = parseInt(hex.slice(7, 9), 16) / 255;
+        hex = hex.slice(0, 7); // manter apenas RGB para o cálculo HSL regular
+      } else if (hex.length === 5) {
+        // #RGBA
+        a = parseInt(hex.slice(4, 5) + hex.slice(4, 5), 16) / 255;
+        hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+      } else if (hex.length === 4) {
         hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
       }
 
@@ -243,15 +251,21 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
         h /= 6;
       }
 
-      return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+      return {
+        h: Math.round(h * 360),
+        s: Math.round(s * 100),
+        l: Math.round(l * 100),
+        a: Number(a.toFixed(2)) // Arrendondar para 2 casas
+      };
     };
 
-    const newHsl = hexToHsl(newHex);
+    const hslValues = getHslValues(newHex);
+    // Se tiver alpha menor que 1, inclua na string (Ex: 173 88% 54% / 0.5)
+    const newHsl = hslValues.a < 1
+      ? `${hslValues.h} ${hslValues.s}% ${hslValues.l}% / ${hslValues.a}`
+      : `${hslValues.h} ${hslValues.s}% ${hslValues.l}%`;
 
-    // TESTE IMEDIATO: Aplicar cor diretamente para verificar
-    console.log('💪 TESTE IMEDIATO: Aplicando cor diretamente...');
-    // Apenas definindo a variável root com o valor HSL correto
-    document.documentElement.style.setProperty(`--${colorKey}`, newHsl, 'important');
+    // TESTE IMEDIATO MUDADO: Não podemos aplicar no documentElement pois quebra a separação light/dark mode
     console.log('Converted HSL:', newHsl);
 
     setPalette(prev => {
@@ -261,35 +275,19 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
         hsl: newHsl
       };
 
-      // CORREÇÃO: Aplicar APENAS a cor selecionada em ambos os modos
-      // Manter as outras cores específicas de cada modo
+      // CORREÇÃO: Aplicar a nova cor APENAS no modo ativo (light ou dark)
+      // Mantendo o outro modo inalterado.
       const newPalette = {
         ...prev,
-        light: {
-          ...prev.light,
-          [colorKey]: {
-            ...prev.light[colorKey],
-            hex: newHex,
-            hsl: newHsl
-          }
-        },
-        dark: {
-          ...prev.dark,
-          [colorKey]: {
-            ...prev.dark[colorKey],
-            hex: newHex,
-            hsl: newHsl
-          }
+        [mode]: {
+          ...prev[mode],
+          [colorKey]: newColor
         }
       };
 
-      console.log('🔧 APLICANDO APENAS', colorKey, 'em ambos os modos');
-      console.log('🌅 Light mode mantém suas cores:', Object.keys(newPalette.light).length, 'cores');
-      console.log('🌙 Dark mode mantém suas cores:', Object.keys(newPalette.dark).length, 'cores');
+      console.log(`🔧 APLICANDO APENAS ${colorKey} no modo ${mode}`);
 
-      console.log('Updated palette for', colorKey, 'em AMBOS os modos:', newColor);
-      console.log('Light mode:', newPalette.light[colorKey]);
-      console.log('Dark mode:', newPalette.dark[colorKey]);
+      console.log(`Updated palette for ${colorKey} no modo ${mode}:`, newColor);
       return newPalette;
     });
 
@@ -312,11 +310,7 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
       // Apply CSS variables directly for immediate effect
       const isDarkMode = document.documentElement.classList.contains('dark');
 
-      // Apply the color variable for the current mode with !important
-      if ((mode === 'light' && !isDarkMode) || (mode === 'dark' && isDarkMode)) {
-        document.documentElement.style.setProperty(`--${colorKey}`, newHsl, 'important');
-        console.log(`🎨 Preview: Applied --${colorKey}: ${newHsl} for ${mode} mode (with !important)`);
-      }
+      // REMOVIDO: A injeção inline quebrava a separação de temas. O bloco <style> já cuida disso.
 
       // Also inject complete CSS for better coverage
       const cssContent = generateCompleteStaticCSS(newPalette);
@@ -421,38 +415,26 @@ export const useStaticColorManager = (defaultPalette: ColorPalette) => {
         /* APLICAÇÃO DINÂMICA - AMBOS OS MODOS */
         
         /* LIGHT MODE */
-        html:root,
-        :root {
+        :root,
+        :root:not(.dark) {
 ${lightVars}
         }
         
         /* DARK MODE */
-        html.dark:root,
-        html:root.dark,
-        .dark {
+        .dark,
+        :root.dark {
 ${darkVars}
         }
       `;
 
-      document.head.insertBefore(dynamicStyle, document.head.firstChild);
+      document.head.appendChild(dynamicStyle);
 
       console.log('CSS dinâmico criado:', dynamicStyle.textContent.substring(0, 200) + '...');
 
-      // Aplicar diretamente nas variáveis CSS - AMBOS OS MODOS
+      // Apply directly to CSS variables - BOTH MODES based on their respective palette maps
       console.log('🔧 Aplicando variáveis CSS diretamente...');
 
-      // Aplicar paleta do modo atual
-      Object.entries(currentPalette).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(`--${key}`, value.hsl, 'important');
-        console.log(`Aplicando --${key}: ${value.hsl}`);
-      });
-
-      // Forçar aplicação da cor primária especificamente
-      const selectedPrimary = currentPalette.primary;
-      if (selectedPrimary) {
-        document.documentElement.style.setProperty('--primary', selectedPrimary.hsl, 'important');
-        console.log(`🎨 FORÇANDO cor primária: ${selectedPrimary.hsl} (${selectedPrimary.hex})`);
-      }
+      // REMOVIDO: Não sobrepor inline, deixe o bloco <style> fazer o trabalho.
 
       // Forçar re-render mais agressivo
       document.documentElement.offsetHeight;
@@ -468,20 +450,7 @@ ${darkVars}
         if (appliedPrimary === currentPalette.primary?.hsl) {
           console.log('✅ Aplicação dinâmica SUCESSO!');
         } else {
-          console.log('❌ Aplicação dinâmica FALHOU!');
-          console.log('Esperado:', currentPalette.primary?.hsl);
-          console.log('Obtido:', appliedPrimary);
-
-          // Tentar força bruta como fallback
-          console.log('💪 Tentando força bruta como fallback...');
-          const forceStyle = document.createElement('style');
-          forceStyle.id = 'grc-force-fallback';
-          forceStyle.textContent = `
-            html, body, * {
-              --primary: ${currentPalette.primary?.hsl} !important;
-            }
-          `;
-          document.head.insertBefore(forceStyle, document.head.firstChild);
+          console.log('⚠️ Aplicação dinâmica pode não refletir globalmente de imediato devido à especificidade, atualize os modos.');
         }
       }, 500);
 
@@ -620,12 +589,7 @@ Após salvar **AMBOS** os arquivos:
       // Determine current mode
       const isDarkMode = document.documentElement.classList.contains('dark');
       const currentPalette = isDarkMode ? palette.dark : palette.light;
-
-      // Apply CSS variables for the current mode with !important
-      Object.entries(currentPalette).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(`--${key}`, value.hsl, 'important');
-      });
-
+      // REMOVIDO: Quebra o modo escuro. O bloco CSS injetado já realiza o override.
       console.log(`🎨 Preview enabled for ${isDarkMode ? 'dark' : 'light'} mode with ${Object.keys(currentPalette).length} variables`);
 
       toast.info('👁️ Preview ativado - Mudanças visíveis em tempo real');
@@ -667,10 +631,7 @@ Após salvar **AMBOS** os arquivos:
       // Apply default CSS variables with !important
       const isDarkMode = document.documentElement.classList.contains('dark');
       const currentPalette = isDarkMode ? defaultPalette.dark : defaultPalette.light;
-
-      Object.entries(currentPalette).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(`--${key}`, value.hsl, 'important');
-      });
+      // REMOVIDO: Deixa o bloco CSS injetado restaurar as cores padrões com suporte nativo a temas
     }
 
     toast.success('🔄 Cores resetadas para o padrão');
@@ -712,10 +673,7 @@ Após salvar **AMBOS** os arquivos:
       // Apply imported CSS variables with !important
       const isDarkMode = document.documentElement.classList.contains('dark');
       const currentPalette = isDarkMode ? importedPalette.dark : importedPalette.light;
-
-      Object.entries(currentPalette).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(`--${key}`, value.hsl, 'important');
-      });
+      // REMOVIDO: Deixa o bloco CSS injetado aplicar as cores sem quebrar a separação das classes
     }
 
     toast.success('📤 Paleta importada com sucesso!');

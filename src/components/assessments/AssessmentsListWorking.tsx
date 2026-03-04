@@ -70,7 +70,7 @@ export default function AssessmentsListWorking() {
       }
     }, 5000);
 
-    if (effectiveTenantId) {
+    if (effectiveTenantId || user?.isPlatformAdmin) {
       loadAssessments();
     } else {
       // Se não há tenant ID, para o loading após um tempo
@@ -87,15 +87,19 @@ export default function AssessmentsListWorking() {
       setLoading(true);
       console.log('Carregando assessments para tenant:', effectiveTenantId);
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('assessments')
         .select(`
           *,
           framework:assessment_frameworks(id, nome, tipo_framework),
           responsavel_profile:profiles!assessments_responsavel_assessment_fkey(id, full_name)
-        `)
-        .eq('tenant_id', effectiveTenantId)
-        .order('created_at', { ascending: false });
+        `);
+
+      if (effectiveTenantId && effectiveTenantId !== 'default') {
+        query = query.eq('tenant_id', effectiveTenantId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
         console.error('Erro na query:', error);
@@ -181,8 +185,8 @@ export default function AssessmentsListWorking() {
     );
   }
 
-  // Se não há tenant ID, mostra mensagem específica
-  if (!effectiveTenantId) {
+  // Se não há tenant ID e não é admin da plataforma, mostra mensagem específica
+  if (!effectiveTenantId && !user?.isPlatformAdmin) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">

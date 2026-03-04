@@ -6,9 +6,9 @@
 @layer base {
   :root {
     /* CORES PRINCIPAIS */
-    --primary: 173 88% 58%;
-    --primary-hover: 173 88% 54%;
-    --primary-glow: 173 95% 78%;
+    --primary: 172 61% 41%;
+    --primary-hover: 172 61% 36%;
+    --primary-glow: 172 71% 61%;
     --primary-foreground: 0 0% 100%;
     --primary-text: 225 71% 12%;
     --secondary: 210 40% 98%;
@@ -28,6 +28,8 @@
     --risk-low: 142 76% 36%;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 240 5.3% 26.1%;
 
     /* Fallback colors básicos - apenas se static-colors.css não carregar */
     --background: 0 0% 100%;
@@ -47,8 +49,6 @@
     /* Variáveis de sidebar que referenciam as cores principais */
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
 
@@ -93,6 +93,8 @@
     --risk-low: 142 76% 46%;
     --sidebar-background: 215 8% 12%;
     --sidebar-foreground: 0 0% 100%;
+    --sidebar-accent: 215 12% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
 
     /* Fallback colors básicos - apenas se static-colors.css não carregar */
     --background: 222 18% 4%;
@@ -112,8 +114,6 @@
     /* Variáveis de sidebar que referenciam as cores principais */
     --sidebar-primary: var(--primary);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -358,139 +358,6 @@
   /* Icons in active navigation items */
   .dark [data-sidebar="sidebar"] [class*="text-primary"] svg {
     color: hsl(var(--primary)) !important;
-  }
-
-  /* Remove background from active navigation items - force sidebar background */
-  [data-sidebar="sidebar"] [class*="text-primary"] {
-    background-color: hsl(var(--sidebar-background)) !important;
-  }
-
-  .dark [data-sidebar="sidebar"] [class*="text-primary"] {
-    background-color: hsl(var(--sidebar-background)) !important;
-  }
-
-  /* Force sidebar background for all navigation items */
-  [data-sidebar="sidebar"] a,
-  [data-sidebar="sidebar"] [data-sidebar-menu-button],
-  [data-sidebar="sidebar"] [data-sidebar-menu-item]>*,
-  [data-sidebar="sidebar"] .group {
-    background-color: hsl(var(--sidebar-background)) !important;
-  }
-
-  .dark [data-sidebar="sidebar"] a,
-  .dark [data-sidebar="sidebar"] [data-sidebar-menu-button],
-  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item]>*,
-  .dark [data-sidebar="sidebar"] .group {
-    background-color: hsl(var(--sidebar-background)) !important;
-  }
-
-  /* Override any specific NavLink backgrounds */
-  .dark [data-sidebar="sidebar"] .active,
-  .dark [data-sidebar="sidebar"] [aria-current="page"] {
-    background-color: hsl(var(--sidebar-background)) !important;
-  }
-
-  /* Force transparent background for sidebar menu buttons */
-  [data-sidebar="menu-button"],
-  [data-sidebar="sidebar"] [data-sidebar="menu-button"] {
-    background-color: transparent !important;
-  }
-
-  .dark [data-sidebar="menu-button"],
-  .dark [data-sidebar="sidebar"] [data-sidebar="menu-button"] {
-    background-color: transparent !important;
-  }
-
-  /* Override all possible sidebar accent backgrounds */
-  [data-sidebar="menu-button"]:not(:hover) {
-    background-color: transparent !important;
-  }
-
-  .dark [data-sidebar="menu-button"]:not(:hover) {
-    background-color: transparent !important;
-  }
-
-  /* Remove data-active and other state backgrounds */
-  [data-sidebar="menu-button"][data-active="true"],
-  [data-sidebar="menu-button"][data-active="false"] {
-    background-color: transparent !important;
-  }
-
-  .dark [data-sidebar="menu-button"][data-active="true"],
-  .dark [data-sidebar="menu-button"][data-active="false"] {
-    background-color: transparent !important;
-  }
-
-  /* Override shadcn/ui sidebar accent colors */
-  [data-sidebar="menu-button"].hover\:bg-sidebar-accent,
-  [data-sidebar="menu-button"]:not(:hover).active\:bg-sidebar-accent,
-  [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
-    background-color: transparent !important;
-  }
-
-  .dark [data-sidebar="menu-button"].hover\:bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"]:not(:hover).active\:bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
-    background-color: transparent !important;
-  }
-
-  /* Very specific override for any background on menu buttons */
-  [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\:bg-) {
-    background-color: transparent !important;
-  }
-
-  .dark [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\:bg-) {
-    background-color: transparent !important;
-  }
-
-  /* Ultra specific overrides - targeting exact element */
-  a[data-sidebar="menu-button"][data-size="default"][data-active="false"],
-  a[data-sidebar="menu-button"][data-size="default"][data-active="true"] {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  .dark a[data-sidebar="menu-button"][data-size="default"][data-active="false"],
-  .dark a[data-sidebar="menu-button"][data-size="default"][data-active="true"] {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  /* Force override all Tailwind bg classes */
-  [data-sidebar="menu-button"].bg-sidebar-accent,
-  [data-sidebar="menu-button"].hover\:bg-sidebar-accent:not(:hover),
-  [data-sidebar="menu-button"].active\:bg-sidebar-accent:not(:active),
-  [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
-  [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  .dark [data-sidebar="menu-button"].bg-sidebar-accent,
-  .dark [data-sidebar="menu-button"].hover\:bg-sidebar-accent:not(:hover),
-  .dark [data-sidebar="menu-button"].active\:bg-sidebar-accent:not(:active),
-  .dark [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
-  .dark [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  /* Nuclear option - force all menu buttons to be transparent */
-  html [data-sidebar="menu-button"] {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  html.dark [data-sidebar="menu-button"] {
-    background-color: transparent !important;
-    background: transparent !important;
-  }
-
-  /* Override any inline styles or computed styles */
-  [data-sidebar="menu-button"] {
-    background-color: transparent !important;
-    background-image: none !important;
-    background: transparent !important;
   }
 
   /* Dialog overlay - match main page background */
@@ -891,32 +758,6 @@
     border-color: hsl(0 60% 40%) !important;
     color: white !important;
     transform: scale(1.05) !important;
-  }
-
-  /* Remove - will be replaced by more specific selectors below */
-
-  /* Specific navigation item hover - only for module links */
-  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item]:hover,
-  .dark [data-sidebar="sidebar"] [data-sidebar-menu-button]:hover {
-    background-color: hsl(215 15% 25%) !important;
-  }
-
-  /* NavLink hover - the actual navigation items */
-  .dark [data-sidebar="sidebar"] a[class*="hover"]:hover,
-  .dark [data-sidebar="sidebar"] .group:hover {
-    background-color: hsl(215 15% 18%) !important;
-  }
-
-  /* Ensure hover works properly on light mode too */
-  [data-sidebar="sidebar"] a[class*="hover"]:hover,
-  [data-sidebar="sidebar"] .group:hover {
-    background-color: hsl(var(--muted) / 0.5) !important;
-  }
-
-  /* Ensure text and icons stay bright on hover */
-  .dark [data-sidebar="sidebar"] .group:hover *,
-  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item]:hover * {
-    color: hsl(0 0% 100%) !important;
   }
 
   /* Button improvements in dark mode */
@@ -1401,3 +1242,6 @@ html.dark .peer[role="switch"][data-state="unchecked"] {
   border: 1px solid rgba(0, 0, 0, 0.15) !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
 }
+/* cache buster 1772498989715 */
+
+/* cache bust */

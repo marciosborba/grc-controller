@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -26,10 +27,10 @@ import {
   restrictToVerticalAxis,
   restrictToParentElement,
 } from '@dnd-kit/modifiers';
-import { 
-  Building2, 
-  Plus, 
-  Search, 
+import {
+  Building2,
+  Plus,
+  Search,
   Filter,
   AlertTriangle,
   Shield,
@@ -61,10 +62,14 @@ import {
   Lock,
   Brain
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import SortableVendorRiskCard from './SortableVendorRiskCard';
+import VendorRiskForm from './VendorRiskForm';
+import VendorActionPlansAdmin from './VendorActionPlansAdmin';
+import VendorAssessmentPanel from './VendorAssessmentPanel';
+import VendorCommunicationPanel from './VendorCommunicationPanel';
 
 interface VendorRisk {
   id: string;
@@ -129,7 +134,7 @@ const VendorRiskManagement = () => {
   const [vendorCommunications, setVendorCommunications] = useState<VendorCommunication[]>([]);
   const [vendorAssessments, setVendorAssessments] = useState<VendorAssessment[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
-  
+
   const [filteredData, setFilteredData] = useState<VendorRisk[]>([]);
   const [sortedData, setSortedData] = useState<VendorRisk[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -193,7 +198,7 @@ const VendorRiskManagement = () => {
       .from('vendors')
       .select('*')
       .order('name');
-    
+
     if (error) throw error;
     setVendors(data || []);
   };
@@ -206,7 +211,7 @@ const VendorRiskManagement = () => {
         vendor:vendors(name, category, status, risk_level, contact_person, email, phone)
       `)
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.warn('Tabela vendor_risks não existe ainda, criando dados simulados');
       // Criar dados simulados baseados nos vendors existentes
@@ -248,7 +253,7 @@ const VendorRiskManagement = () => {
       .from('vendor_communications')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) {
       console.warn('Tabela vendor_communications não existe, usando dados simulados');
       setVendorCommunications([]);
@@ -262,7 +267,7 @@ const VendorRiskManagement = () => {
       .from('vendor_assessments')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (error) throw error;
     setVendorAssessments(data || []);
   };
@@ -272,26 +277,26 @@ const VendorRiskManagement = () => {
       .from('profiles')
       .select('user_id, full_name, job_title')
       .eq('is_active', true);
-    
+
     if (error) throw error;
     setProfiles(data || []);
   };
 
   const applyFilters = () => {
     let filtered = vendorRisks;
-    
+
     if (filters.search) {
-      filtered = filtered.filter(risk => 
+      filtered = filtered.filter(risk =>
         risk.title.toLowerCase().includes(filters.search.toLowerCase()) ||
         risk.vendor.name.toLowerCase().includes(filters.search.toLowerCase()) ||
         risk.description.toLowerCase().includes(filters.search.toLowerCase())
       );
     }
-    
+
     if (filters.vendor !== 'all') {
       filtered = filtered.filter(risk => risk.vendor_id === filters.vendor);
     }
-    
+
     if (filters.riskLevel !== 'all') {
       filtered = filtered.filter(risk => risk.risk_level === filters.riskLevel);
     }
@@ -303,7 +308,7 @@ const VendorRiskManagement = () => {
     if (filters.category !== 'all') {
       filtered = filtered.filter(risk => risk.risk_category === filters.category);
     }
-    
+
     setFilteredData(filtered);
     setSortedData(filtered);
   };
@@ -393,7 +398,7 @@ const VendorRiskManagement = () => {
             Gestão completa de riscos de terceiros, comunicação e avaliações
           </p>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
@@ -419,7 +424,7 @@ const VendorRiskManagement = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center">
@@ -507,7 +512,7 @@ const VendorRiskManagement = () => {
 
       {/* Tabs de Navegação */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Overview
@@ -523,6 +528,10 @@ const VendorRiskManagement = () => {
           <TabsTrigger value="assessments" className="flex items-center gap-2">
             <FileCheck className="h-4 w-4" />
             Assessments
+          </TabsTrigger>
+          <TabsTrigger value="action-plans" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Planos
           </TabsTrigger>
         </TabsList>
 
@@ -546,8 +555,8 @@ const VendorRiskManagement = () => {
                         <span className="text-sm">{category}</span>
                         <div className="flex items-center gap-2">
                           <div className="w-24 h-2 bg-muted rounded">
-                            <div 
-                              className="h-full bg-primary rounded" 
+                            <div
+                              className="h-full bg-primary rounded"
                               style={{ width: `${percentage}%` }}
                             />
                           </div>
@@ -610,7 +619,7 @@ const VendorRiskManagement = () => {
                     </Button>
                   )}
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -621,7 +630,7 @@ const VendorRiskManagement = () => {
                       className="pl-10"
                     />
                   </div>
-                  
+
                   <Select value={filters.vendor} onValueChange={(value) => updateFilter('vendor', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Todos os Fornecedores" />
@@ -635,7 +644,7 @@ const VendorRiskManagement = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <Select value={filters.riskLevel} onValueChange={(value) => updateFilter('riskLevel', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Todos os Níveis" />
@@ -676,7 +685,7 @@ const VendorRiskManagement = () => {
                             {editingRisk ? 'Editar Risco' : 'Novo Risco de Fornecedor'}
                           </DialogTitle>
                         </DialogHeader>
-                        
+
                         <VendorRiskForm
                           risk={editingRisk}
                           vendors={vendors}
@@ -712,8 +721,8 @@ const VendorRiskManagement = () => {
                       Nenhum risco encontrado
                     </p>
                     <p className="text-gray-500 dark:text-gray-400">
-                      {hasActiveFilters() 
-                        ? 'Tente ajustar os filtros para encontrar mais resultados.' 
+                      {hasActiveFilters()
+                        ? 'Tente ajustar os filtros para encontrar mais resultados.'
                         : 'Comece criando seu primeiro risco de fornecedor.'
                       }
                     </p>
@@ -778,6 +787,11 @@ const VendorRiskManagement = () => {
               await fetchVendorAssessments();
             }}
           />
+        </TabsContent>
+
+        {/* Tab Content - Action Plans */}
+        <TabsContent value="action-plans" className="space-y-6">
+          <VendorActionPlansAdmin />
         </TabsContent>
       </Tabs>
     </div>

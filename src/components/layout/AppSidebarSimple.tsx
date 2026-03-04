@@ -80,7 +80,7 @@ export function AppSidebarSimple() {
   };
 
   const getNavCls = (isActiveItem: boolean) =>
-    isActiveItem ? "text-primary font-medium bg-muted" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground";
+    isActiveItem ? "text-primary font-medium bg-sidebar-accent" : "hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-accent-foreground";
 
   return (
     <Sidebar className="border-r border-border" collapsible="icon">
@@ -97,7 +97,7 @@ export function AppSidebarSimple() {
             </div>
           </div>
         )}
-        <SidebarTrigger className="hover:bg-muted/50 p-1.5 sm:p-2 rounded-md" />
+        <SidebarTrigger className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground p-1.5 sm:p-2 rounded-md" />
       </div>
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>

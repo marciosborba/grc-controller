@@ -137,15 +137,15 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Publicação de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Publicação de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             Gerencie a publicação e distribuição de políticas aprovadas
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="flex items-center gap-1">
             <BookOpen className="h-3 w-3" />
             Para publicar: {policiesForPublication.length}
@@ -157,7 +157,7 @@ const PolicyPublication: React.FC<PolicyPublicationProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Lista de políticas */}
         <div className="space-y-4">
           {/* Políticas para publicar */}
