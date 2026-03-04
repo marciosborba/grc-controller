@@ -707,6 +707,22 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                         <Button
                           size="sm"
                           variant="ghost"
+                          onClick={() => {
+                            const portalLink = `${window.location.origin}/vendor-portal`;
+                            navigator.clipboard.writeText(portalLink);
+                            toast({
+                              title: "Link Copiado",
+                              description: "Link do Portal do Fornecedor copiado para a área de transferência."
+                            });
+                          }}
+                          title="Copiar Link do Portal"
+                          className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-green-50 hover:text-green-600"
+                        >
+                          <Globe className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => handleEditWithWorkflow(vendor)}
                           title="Editar fornecedor"
                           className="h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-blue-50"

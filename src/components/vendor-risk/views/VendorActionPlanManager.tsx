@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
     Plus, Calendar, CheckCircle, AlertTriangle, Clock, Trash2, Edit,
     ShieldAlert, ThumbsUp, ThumbsDown, Settings, ListChecks, Eye,
-    AlertCircle, Zap,
+    AlertCircle, Zap, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { useVendorActionPlans, ActionPlan, ActionPlanActivity } from '@/hooks/useVendorActionPlans';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
@@ -109,10 +109,38 @@ export const VendorActionPlanManager: React.FC = () => {
     const [rejectReason, setRejectReason] = useState('');
     const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
+    const [expandedVendors, setExpandedVendors] = useState<string[]>([]);
+    const [expandedAssessments, setExpandedAssessments] = useState<string[]>([]);
+
     const selectedPlan = plans.find(p => p.id === selectedPlanId) || null;
 
     const pendingPlans = plans.filter(p => p.status === 'pending_validation' || p.status === 'open');
     const activePlans = plans.filter(p => !['pending_validation', 'open'].includes(p.status));
+
+    const toggleVendor = (vendor: string) => {
+        setExpandedVendors(prev => prev.includes(vendor) ? prev.filter(v => v !== vendor) : [...prev, vendor]);
+    };
+
+    const toggleAssessment = (assessmentKey: string) => {
+        setExpandedAssessments(prev => prev.includes(assessmentKey) ? prev.filter(a => a !== assessmentKey) : [...prev, assessmentKey]);
+    };
+
+    const groupPlans = (plansToGroup: ActionPlan[]) => {
+        const grouped: Record<string, Record<string, ActionPlan[]>> = {};
+        plansToGroup.forEach(plan => {
+            const assessmentFromState = assessments.find(a => a.id === plan.assessment_id);
+            const vendorName = plan.vendor_name || assessmentFromState?.vendor_registry?.name || 'Fornecedor Desconhecido';
+            const assessmentName = plan.assessment_name || assessmentFromState?.assessment_name || 'Outros / Sem Assessment';
+
+            if (!grouped[vendorName]) grouped[vendorName] = {};
+            if (!grouped[vendorName][assessmentName]) grouped[vendorName][assessmentName] = [];
+            grouped[vendorName][assessmentName].push(plan);
+        });
+        return grouped;
+    };
+
+    const activeGrouped = groupPlans(activePlans);
+    const pendingGrouped = groupPlans(pendingPlans);
 
     // ── Forms ──────────────────────────────────────────────────────────────
     const [newPlanForm, setNewPlanForm] = useState({ assessmentId: '', title: '', description: '', priority: 'medium', dueDate: '' });
@@ -134,7 +162,15 @@ export const VendorActionPlanManager: React.FC = () => {
         if (!newPlanForm.assessmentId || !newPlanForm.title) return;
         const assessment = assessments.find(a => a.id === newPlanForm.assessmentId);
         if (!assessment) return;
-        const ok = await createPlan({ vendor_id: assessment.vendor_id, title: newPlanForm.title, description: newPlanForm.description, priority: newPlanForm.priority, due_date: newPlanForm.dueDate });
+        const ok = await createPlan({
+            vendor_id: assessment.vendor_id,
+            assessment_id: assessment.id,
+            assessment_name: assessment.assessment_name,
+            title: newPlanForm.title,
+            description: newPlanForm.description,
+            priority: newPlanForm.priority,
+            due_date: newPlanForm.dueDate
+        });
         if (ok) { setShowNewPlanDialog(false); setNewPlanForm({ assessmentId: '', title: '', description: '', priority: 'medium', dueDate: '' }); }
     };
 
@@ -188,11 +224,9 @@ export const VendorActionPlanManager: React.FC = () => {
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                             <CardTitle className="text-base sm:text-lg line-clamp-2">{plan.title}</CardTitle>
-                            {!showValidationActions && (
-                                <Button size="icon" variant="ghost" onClick={() => openEditPlanDialog(plan)} className="shrink-0 h-8 w-8">
-                                    <Edit className="h-4 w-4" />
-                                </Button>
-                            )}
+                            <Button size="icon" variant="ghost" onClick={() => openEditPlanDialog(plan)} className="shrink-0 h-8 w-8">
+                                <Edit className="h-4 w-4" />
+                            </Button>
                         </div>
                         <CardDescription className="mt-1 text-xs">{plan.description}</CardDescription>
                     </div>
@@ -308,6 +342,74 @@ export const VendorActionPlanManager: React.FC = () => {
         </div>
     );
 
+    const renderTreeView = (groupedData: Record<string, Record<string, ActionPlan[]>>) => {
+        if (Object.keys(groupedData).length === 0) return <div className="p-6 text-center text-muted-foreground text-sm">Nenhum plano encontrado.</div>;
+
+        return (
+            <div className="divide-y max-h-[600px] overflow-y-auto">
+                {Object.entries(groupedData).map(([vendorName, assessmentsMap]) => (
+                    <div key={vendorName} className="flex flex-col">
+                        <div
+                            className="flex items-center gap-2 p-3 bg-muted/30 hover:bg-muted/50 cursor-pointer border-b"
+                            onClick={() => toggleVendor(vendorName)}
+                        >
+                            {expandedVendors.includes(vendorName) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            <span className="font-semibold text-sm truncate flex-1">{vendorName}</span>
+                            <Badge variant="secondary" className="text-xs">{Object.values(assessmentsMap).flat().length}</Badge>
+                        </div>
+
+                        {expandedVendors.includes(vendorName) && Object.entries(assessmentsMap).map(([assessmentName, plansList]) => {
+                            const assessmentKey = `${vendorName}-${assessmentName}`;
+                            return (
+                                <div key={assessmentKey} className="flex flex-col border-b last:border-0 pl-4 bg-muted/10">
+                                    <div className="flex items-center justify-between p-3 hover:bg-muted/30 border-b border-dashed group">
+                                        <div
+                                            className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+                                            onClick={() => toggleAssessment(assessmentKey)}
+                                        >
+                                            {expandedAssessments.includes(assessmentKey) ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                                            <span className="font-medium text-sm text-muted-foreground truncate">{assessmentName}</span>
+                                            <Badge variant="outline" className="text-[10px] shrink-0">{plansList.length}</Badge>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 px-2 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity ml-2 shrink-0 border border-transparent hover:border-input"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const asm = assessments.find(a => a.assessment_name === assessmentName);
+                                                if (asm) setNewPlanForm(prev => ({ ...prev, assessmentId: asm.id }));
+                                                setShowNewPlanDialog(true);
+                                            }}
+                                        >
+                                            <Plus className="h-3 w-3 mr-1" />
+                                            Novo Plano
+                                        </Button>
+                                    </div>
+
+                                    {expandedAssessments.includes(assessmentKey) && (
+                                        <div className="pl-6 border-l-2 border-muted ml-2">
+                                            {plansList.map(plan => (
+                                                <div key={plan.id} className="border-b last:border-0">
+                                                    <PlanCard
+                                                        plan={plan}
+                                                        selected={selectedPlanId === plan.id}
+                                                        onClick={() => setSelectedPlanId(plan.id)}
+                                                        getPriorityColor={getPriorityColor}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     // ────────────────────────────────────────────────────────────────────────
     return (
         <div className="space-y-4 sm:space-y-6">
@@ -407,21 +509,7 @@ export const VendorActionPlanManager: React.FC = () => {
                                     <CardTitle className="text-base">Planos Ativos</CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <div className="divide-y max-h-[600px] overflow-y-auto">
-                                        {activePlans.length === 0 ? (
-                                            <div className="p-6 text-center text-muted-foreground text-sm">Nenhum plano ativo.</div>
-                                        ) : (
-                                            activePlans.map(plan => (
-                                                <PlanCard
-                                                    key={plan.id}
-                                                    plan={plan}
-                                                    selected={selectedPlanId === plan.id}
-                                                    onClick={() => setSelectedPlanId(plan.id)}
-                                                    getPriorityColor={getPriorityColor}
-                                                />
-                                            ))
-                                        )}
-                                    </div>
+                                    {renderTreeView(activeGrouped)}
                                 </CardContent>
                             </Card>
                         </div>
@@ -454,17 +542,7 @@ export const VendorActionPlanManager: React.FC = () => {
                                             </CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-0">
-                                            <div className="divide-y max-h-[600px] overflow-y-auto">
-                                                {pendingPlans.map(plan => (
-                                                    <PlanCard
-                                                        key={plan.id}
-                                                        plan={plan}
-                                                        selected={selectedPlanId === plan.id}
-                                                        onClick={() => setSelectedPlanId(plan.id)}
-                                                        getPriorityColor={getPriorityColor}
-                                                    />
-                                                ))}
-                                            </div>
+                                            {renderTreeView(pendingGrouped)}
                                         </CardContent>
                                     </Card>
                                 </div>

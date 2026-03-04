@@ -29,8 +29,12 @@ import {
     Calendar,
     Clock,
     Shield,
-    KeyRound
+    KeyRound,
+    Edit,
+    X,
+    Plus
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     DEFAULT_ASSESSMENT_QUESTIONS,
     calculateAssessmentStats,
@@ -62,6 +66,11 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
     const [resetPasswordEmail, setResetPasswordEmail] = useState('');
     const [newVendorPassword, setNewVendorPassword] = useState('');
     const [resettingPassword, setResettingPassword] = useState(false);
+
+    // Edit Question state
+    const [showEditQuestionModal, setShowEditQuestionModal] = useState(false);
+    const [editingQuestion, setEditingQuestion] = useState<AssessmentQuestion | null>(null);
+    const [editingQuestionIndex, setEditingQuestionIndex] = useState<number | null>(null);
 
     // Fetch assessment data when modal opens
     useEffect(() => {
@@ -128,15 +137,49 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
             // 2. Load Questions
             let loadedQuestions: AssessmentQuestion[] = [];
 
-            // Try framework questions first
             const frameworkData = normalizedData.vendor_assessment_frameworks;
 
             if (frameworkData?.questions && frameworkData.questions.length > 0) {
                 loadedQuestions = frameworkData.questions;
-            }
-            // Fallback to default questions
-            else {
-                loadedQuestions = DEFAULT_ASSESSMENT_QUESTIONS;
+            } else if (normalizedData.metadata?.questions && normalizedData.metadata.questions.length > 0) {
+                loadedQuestions = normalizedData.metadata.questions;
+            } else {
+                const vendorFrameworkId = normalizedData.metadata?.vendor_framework_id;
+                const coreFrameworkId = normalizedData.framework_id;
+                let foundQuestions = null;
+
+                if (vendorFrameworkId) {
+                    const { data: vfData } = await supabase
+                        .from('vendor_assessment_frameworks')
+                        .select('questions')
+                        .eq('id', vendorFrameworkId)
+                        .single();
+                    if (vfData?.questions) foundQuestions = vfData.questions;
+                }
+
+                if (!foundQuestions && coreFrameworkId) {
+                    const { data: cfData } = await supabase
+                        .from('vendor_assessment_frameworks')
+                        .select('questions')
+                        .eq('id', coreFrameworkId)
+                        .single();
+                    if (cfData?.questions) foundQuestions = cfData.questions;
+                }
+
+                if (!foundQuestions && coreFrameworkId) {
+                    const { data: afData } = await supabase
+                        .from('assessment_frameworks')
+                        .select('questions')
+                        .eq('id', coreFrameworkId)
+                        .single();
+                    if (afData?.questions) foundQuestions = afData.questions;
+                }
+
+                if (foundQuestions && foundQuestions.length > 0) {
+                    loadedQuestions = foundQuestions;
+                } else {
+                    loadedQuestions = DEFAULT_ASSESSMENT_QUESTIONS;
+                }
             }
 
             setQuestions(loadedQuestions);
@@ -180,6 +223,10 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
                     status: newStatus,
                     progress_percentage: stats.progress,
                     reviewer_notes: metadata.reviewer_notes,
+                    metadata: {
+                        ...(assessment?.metadata || {}),
+                        questions: questions
+                    },
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', assessmentId);
@@ -238,256 +285,554 @@ export const EditAssessmentModal: React.FC<EditAssessmentModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-[95vw] sm:w-auto max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0 bg-background/95 backdrop-blur-xl border-border/50">
+        <>
+            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+                <DialogContent className="w-[95vw] sm:w-auto max-w-4xl h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0 bg-background/95 backdrop-blur-xl border-border/50">
 
-                {/* Header */}
-                <DialogHeader className="p-4 sm:p-6 border-b border-border/40 bg-muted/20">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="w-full sm:w-auto min-w-0">
-                            <DialogTitle className="text-base sm:text-xl font-semibold flex items-center gap-2">
-                                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
-                                <span className="truncate">Editar Assessment - {assessment?.vendor_registry?.name || 'Fornecedor'}</span>
-                            </DialogTitle>
-                            <DialogDescription className="mt-1 text-xs sm:text-sm truncate">
-                                {assessment?.assessment_name || 'Assessment de Segurança'}
-                            </DialogDescription>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Badge variant={stats.progress === 100 ? "default" : "secondary"} className="text-[10px] sm:text-xs">
-                                {stats.progress}% Concluído
-                            </Badge>
-                        </div>
-                    </div>
-                </DialogHeader>
-
-                {loading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                ) : (
-                    <div className="flex-1 overflow-hidden flex flex-col">
-
-                        {/* Stats Bar */}
-                        <div className="p-3 sm:px-6 sm:py-4 bg-muted/10 border-b border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
-                            <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
-                                <div className="text-xl sm:text-2xl font-bold text-primary">{questions.length}</div>
-                                <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Questões</div>
+                    {/* Header */}
+                    <DialogHeader className="p-4 sm:p-6 border-b border-border/40 bg-muted/20">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="w-full sm:w-auto min-w-0">
+                                <DialogTitle className="text-base sm:text-xl font-semibold flex items-center gap-2">
+                                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary shrink-0" />
+                                    <span className="truncate">Editar Assessment - {assessment?.vendor_registry?.name || 'Fornecedor'}</span>
+                                </DialogTitle>
+                                <DialogDescription className="mt-1 text-xs sm:text-sm truncate">
+                                    {assessment?.assessment_name || 'Assessment de Segurança'}
+                                </DialogDescription>
                             </div>
-                            <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
-                                <div className="text-xl sm:text-2xl font-bold text-green-500">{stats.answered}</div>
-                                <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Respondidas</div>
-                            </div>
-                            <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
-                                <div className="text-xl sm:text-2xl font-bold text-orange-500">{stats.remaining}</div>
-                                <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Restantes</div>
-                            </div>
-                            <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
-                                <div className="text-xl sm:text-2xl font-bold text-blue-500">{stats.progress}%</div>
-                                <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Progresso</div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant={stats.progress === 100 ? "default" : "secondary"} className="text-[10px] sm:text-xs">
+                                    {stats.progress}% Concluído
+                                </Badge>
                             </div>
                         </div>
+                    </DialogHeader>
 
-                        <div className="flex-1 overflow-y-auto overflow-x-hidden w-full">
-                            <div className="p-3 sm:p-6 space-y-4 sm:space-y-8 max-w-full min-w-0">
+                    {loading ? (
+                        <div className="flex-1 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : (
+                        <div className="flex-1 overflow-hidden flex flex-col">
 
-                                {/* Metadata Section */}
-                                <Card className="border-border/50 bg-card/50 max-w-full">
-                                    <CardContent className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 max-w-full">
-                                        <div className="space-y-1.5 sm:space-y-2 min-w-0">
-                                            <Label className="text-xs sm:text-sm truncate block">Prazo</Label>
-                                            <Input
-                                                type="date"
-                                                value={metadata.due_date ? metadata.due_date.split('T')[0] : ''}
-                                                onChange={(e) => setMetadata({ ...metadata, due_date: e.target.value })}
-                                                className="h-8 sm:h-10 text-xs sm:text-sm w-full"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5 sm:space-y-2 min-w-0">
-                                            <Label className="text-xs sm:text-sm truncate block">Prioridade</Label>
-                                            <Select
-                                                value={metadata.priority}
-                                                onValueChange={(val) => setMetadata({ ...metadata, priority: val })}
-                                            >
-                                                <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full max-w-full"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="low">Baixa</SelectItem>
-                                                    <SelectItem value="medium">Média</SelectItem>
-                                                    <SelectItem value="high">Alta</SelectItem>
-                                                    <SelectItem value="critical">Crítica</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-1.5 sm:space-y-2 min-w-0">
-                                            <Label className="text-xs sm:text-sm truncate block">Status</Label>
-                                            <Select
-                                                value={metadata.status}
-                                                onValueChange={(val) => setMetadata({ ...metadata, status: val })}
-                                            >
-                                                <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full max-w-full"><SelectValue /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="draft">Rascunho</SelectItem>
-                                                    <SelectItem value="sent">Enviado</SelectItem>
-                                                    <SelectItem value="in_progress">Em Andamento</SelectItem>
-                                                    <SelectItem value="completed">Concluído</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                            {/* Stats Bar */}
+                            <div className="p-3 sm:px-6 sm:py-4 bg-muted/10 border-b border-border/40 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                                <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
+                                    <div className="text-xl sm:text-2xl font-bold text-primary">{questions.length}</div>
+                                    <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Questões</div>
+                                </div>
+                                <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
+                                    <div className="text-xl sm:text-2xl font-bold text-green-500">{stats.answered}</div>
+                                    <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Respondidas</div>
+                                </div>
+                                <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
+                                    <div className="text-xl sm:text-2xl font-bold text-orange-500">{stats.remaining}</div>
+                                    <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Restantes</div>
+                                </div>
+                                <div className="text-center p-2 bg-background/50 rounded-lg sm:bg-transparent sm:p-0 sm:rounded-none">
+                                    <div className="text-xl sm:text-2xl font-bold text-blue-500">{stats.progress}%</div>
+                                    <div className="text-[9px] sm:text-xs text-muted-foreground uppercase tracking-wider">Progresso</div>
+                                </div>
+                            </div>
 
-                                {/* Vendor Password Reset Section */}
-                                {assessment?.vendor_emails && assessment.vendor_emails.length > 0 && (
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden w-full">
+                                <div className="p-3 sm:p-6 space-y-4 sm:space-y-8 max-w-full min-w-0">
+
+                                    {/* Metadata Section */}
                                     <Card className="border-border/50 bg-card/50 max-w-full">
-                                        <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-                                            <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-                                                <KeyRound className="h-4 w-4 text-primary" />
-                                                <h3 className="text-sm font-medium">Redefinir Senha do Fornecedor</h3>
+                                        <CardContent className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 max-w-full">
+                                            <div className="space-y-1.5 sm:space-y-2 min-w-0">
+                                                <Label className="text-xs sm:text-sm truncate block">Prazo</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={metadata.due_date ? metadata.due_date.split('T')[0] : ''}
+                                                    onChange={(e) => setMetadata({ ...metadata, due_date: e.target.value })}
+                                                    className="h-8 sm:h-10 text-xs sm:text-sm w-full"
+                                                />
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-end">
-                                                <div className="space-y-1.5 sm:space-y-2">
-                                                    <Label className="text-xs sm:text-sm">E-mail do Fornecedor</Label>
-                                                    <Select value={resetPasswordEmail} onValueChange={setResetPasswordEmail}>
-                                                        <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full"><SelectValue placeholder="Selecione um e-mail" /></SelectTrigger>
-                                                        <SelectContent>
-                                                            {assessment.vendor_emails.map((email: string) => (
-                                                                <SelectItem key={email} value={email}>{email}</SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </div>
-                                                <div className="space-y-1.5 sm:space-y-2">
-                                                    <Label className="text-xs sm:text-sm">Nova Senha Provisória</Label>
-                                                    <Input
-                                                        type="text"
-                                                        placeholder="Mínimo 6 caracteres"
-                                                        value={newVendorPassword}
-                                                        onChange={(e) => setNewVendorPassword(e.target.value)}
-                                                        className="h-8 sm:h-10 text-xs sm:text-sm w-full"
-                                                    />
-                                                </div>
-                                                <Button
-                                                    onClick={handleResetPassword}
-                                                    disabled={resettingPassword || !resetPasswordEmail || newVendorPassword.length < 6}
-                                                    className="h-8 sm:h-10 w-full text-xs sm:text-sm"
-                                                    variant="secondary"
+                                            <div className="space-y-1.5 sm:space-y-2 min-w-0">
+                                                <Label className="text-xs sm:text-sm truncate block">Prioridade</Label>
+                                                <Select
+                                                    value={metadata.priority}
+                                                    onValueChange={(val) => setMetadata({ ...metadata, priority: val })}
                                                 >
-                                                    {resettingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar Nova Senha"}
-                                                </Button>
+                                                    <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full max-w-full"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="low">Baixa</SelectItem>
+                                                        <SelectItem value="medium">Média</SelectItem>
+                                                        <SelectItem value="high">Alta</SelectItem>
+                                                        <SelectItem value="critical">Crítica</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
-                                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
-                                                Atenção: Ao redefinir, o acesso antigo é invalidado. O fornecedor continuará precisando trocar essa senha no primeiro acesso ao portal.
-                                            </p>
+                                            <div className="space-y-1.5 sm:space-y-2 min-w-0">
+                                                <Label className="text-xs sm:text-sm truncate block">Status</Label>
+                                                <Select
+                                                    value={metadata.status}
+                                                    onValueChange={(val) => setMetadata({ ...metadata, status: val })}
+                                                >
+                                                    <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full max-w-full"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="draft">Rascunho</SelectItem>
+                                                        <SelectItem value="sent">Enviado</SelectItem>
+                                                        <SelectItem value="in_progress">Em Andamento</SelectItem>
+                                                        <SelectItem value="completed">Concluído</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
                                         </CardContent>
                                     </Card>
-                                )}
 
-                                {/* Questions Section */}
-                                <div className="space-y-6 w-full max-w-full min-w-0">
-                                    {questions.map((q, index) => {
-                                        const response = responses[q.id];
-                                        const answer = typeof response === 'object' && response !== null && 'answer' in response
-                                            ? response.answer
-                                            : response;
+                                    {/* Vendor Password Reset Section */}
+                                    {assessment?.vendor_emails && assessment.vendor_emails.length > 0 && (
+                                        <Card className="border-border/50 bg-card/50 max-w-full">
+                                            <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+                                                <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+                                                    <KeyRound className="h-4 w-4 text-primary" />
+                                                    <h3 className="text-sm font-medium">Redefinir Senha do Fornecedor</h3>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-end">
+                                                    <div className="space-y-1.5 sm:space-y-2">
+                                                        <Label className="text-xs sm:text-sm">E-mail do Fornecedor</Label>
+                                                        <Select value={resetPasswordEmail} onValueChange={setResetPasswordEmail}>
+                                                            <SelectTrigger className="h-8 sm:h-10 text-xs sm:text-sm w-full"><SelectValue placeholder="Selecione um e-mail" /></SelectTrigger>
+                                                            <SelectContent>
+                                                                {assessment.vendor_emails.map((email: string) => (
+                                                                    <SelectItem key={email} value={email}>{email}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </div>
+                                                    <div className="space-y-1.5 sm:space-y-2">
+                                                        <Label className="text-xs sm:text-sm">Nova Senha Provisória</Label>
+                                                        <Input
+                                                            type="text"
+                                                            placeholder="Mínimo 6 caracteres"
+                                                            value={newVendorPassword}
+                                                            onChange={(e) => setNewVendorPassword(e.target.value)}
+                                                            className="h-8 sm:h-10 text-xs sm:text-sm w-full"
+                                                        />
+                                                    </div>
+                                                    <Button
+                                                        onClick={handleResetPassword}
+                                                        disabled={resettingPassword || !resetPasswordEmail || newVendorPassword.length < 6}
+                                                        className="h-8 sm:h-10 w-full text-xs sm:text-sm"
+                                                        variant="secondary"
+                                                    >
+                                                        {resettingPassword ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar Nova Senha"}
+                                                    </Button>
+                                                </div>
+                                                <p className="text-[10px] sm:text-xs text-muted-foreground mt-2">
+                                                    Atenção: Ao redefinir, o acesso antigo é invalidado. O fornecedor continuará precisando trocar essa senha no primeiro acesso ao portal.
+                                                </p>
+                                            </CardContent>
+                                        </Card>
+                                    )}
 
-                                        return (
-                                            <Card key={q.id} className={`border-l-4 w-full max-w-full min-w-0 overflow-hidden ${answer ? 'border-l-green-500' : 'border-l-orange-500'}`}>
-                                                <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4 w-full max-w-full min-w-0">
-                                                    <div className="flex flex-col sm:flex-row justify-between items-start gap-2 max-w-full min-w-0">
-                                                        <div className="space-y-1 w-full min-w-0">
-                                                            <div className="flex flex-wrap items-center gap-2 mb-1 border-b border-border/10 pb-2 sm:border-0 sm:pb-0">
-                                                                <Badge variant="outline" className="text-[9px] sm:text-xs whitespace-normal break-words">{q.category}</Badge>
-                                                                {q.required && <Badge variant="destructive" className="text-[8px] sm:text-[10px] whitespace-normal">Obrigatória</Badge>}
+                                    {/* Questions Section */}
+                                    <div className="space-y-6 w-full max-w-full min-w-0">
+                                        {questions.map((q, index) => {
+                                            const response = responses[q.id];
+                                            const answer = typeof response === 'object' && response !== null && 'answer' in response
+                                                ? response.answer
+                                                : response;
+
+                                            return (
+                                                <Card key={q.id} className={`border-l-4 w-full max-w-full min-w-0 overflow-hidden ${answer ? 'border-l-green-500' : 'border-l-orange-500'}`}>
+                                                    <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4 w-full max-w-full min-w-0">
+                                                        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 max-w-full min-w-0">
+                                                            <div className="space-y-1 w-full min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-2 mb-1 border-b border-border/10 pb-2 sm:border-0 sm:pb-0">
+                                                                    <Badge variant="outline" className="text-[9px] sm:text-xs whitespace-normal break-words">{q.category}</Badge>
+                                                                    {q.required && <Badge variant="destructive" className="text-[8px] sm:text-[10px] whitespace-normal">Obrigatória</Badge>}
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            setEditingQuestion(JSON.parse(JSON.stringify(q)));
+                                                                            setEditingQuestionIndex(index);
+                                                                            setShowEditQuestionModal(true);
+                                                                        }}
+                                                                        className="h-6 w-6 p-0 ml-auto"
+                                                                    >
+                                                                        <Edit className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
+                                                                <p className="font-medium text-[13px] sm:text-base leading-snug break-words whitespace-normal break-words m-0">{index + 1}. {q.question}</p>
+                                                                {q.description && <p className="text-[11px] sm:text-sm text-muted-foreground mt-1 break-words whitespace-normal break-words">{q.description}</p>}
                                                             </div>
-                                                            <p className="font-medium text-[13px] sm:text-base leading-snug break-words whitespace-normal break-words m-0">{index + 1}. {q.question}</p>
-                                                            {q.description && <p className="text-[11px] sm:text-sm text-muted-foreground mt-1 break-words whitespace-normal break-words">{q.description}</p>}
                                                         </div>
-                                                    </div>
 
-                                                    <div className="pt-2 w-full max-w-full min-w-0">
-                                                        {/* Render Input based on type */}
-                                                        {q.type === 'yes_no' && (
-                                                            <div className="flex gap-2 sm:gap-4">
-                                                                <Button
-                                                                    variant={answer === 'yes' ? 'default' : 'outline'}
-                                                                    onClick={() => setResponses({ ...responses, [q.id]: 'yes' })}
-                                                                    className="flex-1 sm:flex-none sm:w-24 text-[10px] sm:text-sm h-8 sm:h-10"
+                                                        <div className="pt-2 w-full max-w-full min-w-0">
+                                                            {/* Render Input based on type */}
+                                                            {q.type === 'yes_no' && (
+                                                                <div className="flex gap-2 sm:gap-4">
+                                                                    <Button
+                                                                        variant={answer === 'yes' ? 'default' : 'outline'}
+                                                                        onClick={() => setResponses({ ...responses, [q.id]: typeof response === 'object' ? { ...response, answer: 'yes' } : 'yes' })}
+                                                                        className={`flex-1 sm:flex-none sm:w-24 text-[10px] sm:text-sm h-8 sm:h-10 ${answer === 'yes' ? 'bg-primary text-primary-foreground' : ''}`}
+                                                                    >
+                                                                        Sim
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant={answer === 'no' ? 'default' : 'outline'}
+                                                                        onClick={() => setResponses({ ...responses, [q.id]: typeof response === 'object' ? { ...response, answer: 'no' } : 'no' })}
+                                                                        className={`flex-1 sm:flex-none sm:w-24 text-[10px] sm:text-sm h-8 sm:h-10 ${answer === 'no' ? 'bg-primary text-primary-foreground' : ''}`}
+                                                                    >
+                                                                        Não
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+
+                                                            {q.type === 'text' && (
+                                                                <Textarea
+                                                                    value={answer || ''}
+                                                                    onChange={(e) => setResponses({ ...responses, [q.id]: typeof response === 'object' ? { ...response, answer: e.target.value } : e.target.value })}
+                                                                    placeholder="Digite sua resposta..."
+                                                                    className="text-xs sm:text-sm min-h-[80px]"
+                                                                />
+                                                            )}
+
+                                                            {q.type === 'multiple_choice' && (
+                                                                <Select
+                                                                    value={answer || ''}
+                                                                    onValueChange={(val) => setResponses({ ...responses, [q.id]: typeof response === 'object' ? { ...response, answer: val } : val })}
                                                                 >
-                                                                    Sim
-                                                                </Button>
-                                                                <Button
-                                                                    variant={answer === 'no' ? 'default' : 'outline'}
-                                                                    onClick={() => setResponses({ ...responses, [q.id]: 'no' })}
-                                                                    className="flex-1 sm:flex-none sm:w-24 text-[10px] sm:text-sm h-8 sm:h-10"
-                                                                >
-                                                                    Não
-                                                                </Button>
-                                                            </div>
-                                                        )}
+                                                                    <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10 w-full"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? (q.options as string).split(',').map(s => s.trim()) : [])).map(opt => (
+                                                                            <SelectItem key={opt} value={opt} className="text-xs sm:text-sm">{opt}</SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
 
-                                                        {q.type === 'text' && (
-                                                            <Textarea
-                                                                value={answer || ''}
-                                                                onChange={(e) => setResponses({ ...responses, [q.id]: e.target.value })}
-                                                                placeholder="Digite sua resposta..."
-                                                                className="text-xs sm:text-sm min-h-[80px]"
-                                                            />
-                                                        )}
-
-                                                        {q.type === 'multiple_choice' && (
-                                                            <Select
-                                                                value={answer || ''}
-                                                                onValueChange={(val) => setResponses({ ...responses, [q.id]: val })}
-                                                            >
-                                                                <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                                                <SelectContent>
-                                                                    {(Array.isArray(q.options) ? q.options : (typeof q.options === 'string' ? (q.options as string).split(',').map(s => s.trim()) : [])).map(opt => (
-                                                                        <SelectItem key={opt} value={opt} className="text-xs sm:text-sm">{opt}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        )}
-
-                                                        {/* File Upload Display (Read-only for now in edit mode, or simple text fallback) */}
-                                                        {q.type === 'file_upload' && (
-                                                            <div className="p-3 sm:p-4 border rounded-md bg-muted/20">
-                                                                {answer ? (
-                                                                    <div className="flex items-center gap-2 text-xs sm:text-sm text-green-600">
-                                                                        <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-                                                                        <span className="truncate">Arquivo anexado: {typeof answer === 'string' ? answer : 'Objeto'}</span>
+                                                            {q.type === 'scale' && (
+                                                                <div className="space-y-4">
+                                                                    <div className="flex justify-between text-xs text-muted-foreground px-1">
+                                                                        <span>{q.scale_min || 1}</span>
+                                                                        <span>{q.scale_max || 5}</span>
                                                                     </div>
-                                                                ) : (
-                                                                    <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                                                                        <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-                                                                        <span>Nenhum arquivo anexado</span>
+                                                                    <input
+                                                                        type="range"
+                                                                        min={q.scale_min || 1}
+                                                                        max={q.scale_max || 5}
+                                                                        value={answer ? parseInt(answer) : (q.scale_min || 1)}
+                                                                        onChange={(e) => setResponses({ ...responses, [q.id]: typeof response === 'object' ? { ...response, answer: e.target.value } : e.target.value })}
+                                                                        className="w-full form-range accent-primary"
+                                                                    />
+                                                                    <div className="text-center font-medium text-primary">
+                                                                        {answer || 'Não avaliado'}
                                                                     </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        );
-                                    })}
+                                                                </div>
+                                                            )}
+
+                                                            {/* File Upload Display (Read-only for now in edit mode, or simple text fallback) */}
+                                                            {q.type === 'file_upload' && (
+                                                                <div className="p-3 sm:p-4 border rounded-md bg-muted/20">
+                                                                    {answer ? (
+                                                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-green-600">
+                                                                            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                                                                            <span className="truncate">Arquivo anexado: {typeof answer === 'string' ? answer : 'Objeto'}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                                                                            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                                                                            <span>Nenhum arquivo anexado</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+
                                 </div>
-
                             </div>
                         </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="p-4 sm:p-6 border-t border-border/40 bg-muted/20 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+                        <Button variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm">
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleSave} disabled={saving || loading} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm">
+                            {saving && <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />}
+                            Salvar Alterações
+                        </Button>
                     </div>
-                )}
 
-                {/* Footer */}
-                <div className="p-4 sm:p-6 border-t border-border/40 bg-muted/20 flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
-                    <Button variant="outline" onClick={onClose} disabled={saving} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm">
-                        Cancelar
-                    </Button>
-                    <Button onClick={handleSave} disabled={saving || loading} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm">
-                        {saving && <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />}
-                        Salvar Alterações
-                    </Button>
-                </div>
+                </DialogContent>
+            </Dialog>
 
-            </DialogContent>
-        </Dialog>
+            {/* Modal para Editar Questão */}
+            <Dialog open={showEditQuestionModal} onOpenChange={setShowEditQuestionModal}>
+                <DialogContent className="max-w-[420px] sm:max-w-2xl bg-background">
+                    <DialogHeader>
+                        <DialogTitle>Editar Questão</DialogTitle>
+                        <DialogDescription>
+                            Edite os detalhes da questão para este assessment específico. As alterações não afetarão o framework original.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {editingQuestion && (
+                        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="category">Categoria</Label>
+                                    <Input
+                                        id="category"
+                                        value={editingQuestion.category || ''}
+                                        onChange={(e) => setEditingQuestion({ ...editingQuestion, category: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="question_text">Texto da Questão</Label>
+                                <Textarea
+                                    id="question_text"
+                                    value={editingQuestion.question || ''}
+                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, question: e.target.value })}
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Descrição/Ajuda (opcional)</Label>
+                                <Textarea
+                                    id="description"
+                                    value={editingQuestion.description || ''}
+                                    onChange={(e) => setEditingQuestion({ ...editingQuestion, description: e.target.value })}
+                                    rows={2}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">Tipo de Resposta</Label>
+                                    <Select
+                                        value={editingQuestion.type}
+                                        onValueChange={(value: any) => setEditingQuestion({ ...editingQuestion, type: value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="multiple_choice">Múltipla Escolha</SelectItem>
+                                            <SelectItem value="yes_no">Sim/Não</SelectItem>
+                                            <SelectItem value="scale">Escala</SelectItem>
+                                            <SelectItem value="text">Texto</SelectItem>
+                                            <SelectItem value="file_upload">Upload de Arquivo</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="weight">Peso</Label>
+                                    <Input
+                                        id="weight"
+                                        type="number"
+                                        min="1"
+                                        max="10"
+                                        value={editingQuestion.weight || 1}
+                                        onChange={(e) => setEditingQuestion({ ...editingQuestion, weight: parseInt(e.target.value) || 1 })}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="criticality">Criticidade do Controle</Label>
+                                    <Select
+                                        value={editingQuestion.risk_impact || 'medium'}
+                                        onValueChange={(value: any) => setEditingQuestion({ ...editingQuestion, risk_impact: value })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Criticidade" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="low">Baixo</SelectItem>
+                                            <SelectItem value="medium">Médio</SelectItem>
+                                            <SelectItem value="high">Alto</SelectItem>
+                                            <SelectItem value="critical">Crítico</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="flex border rounded-md p-3 gap-6 mt-4">
+                                <Label className="flex items-center gap-2 cursor-pointer text-sm">
+                                    <Checkbox
+                                        checked={editingQuestion.required ?? false}
+                                        onCheckedChange={(checked) => setEditingQuestion({ ...editingQuestion, required: !!checked })}
+                                    />
+                                    Questão Obrigatória
+                                </Label>
+                                <Label className="flex items-center gap-2 cursor-pointer text-sm">
+                                    <Checkbox
+                                        checked={!!(editingQuestion as any).requires_evidence}
+                                        onCheckedChange={(checked) => setEditingQuestion({ ...editingQuestion, requires_evidence: !!checked } as any)}
+                                    />
+                                    Exigir Evidência
+                                </Label>
+                            </div>
+
+                            {/* Opções para múltipla escolha com pesos */}
+                            {editingQuestion.type === 'multiple_choice' && (
+                                <div className="space-y-2 border p-4 rounded-md mt-4">
+                                    <Label className="text-sm font-medium">Opções de Resposta e Pesos</Label>
+                                    <div className="space-y-2 mt-2">
+                                        {(() => {
+                                            // Initialize option weights if they don't exist
+                                            let opts: Array<{ label: string; weight: number }> = (editingQuestion as any).optionWeights || [];
+                                            if (opts.length === 0 && editingQuestion.options) {
+                                                const rawOpts: any = editingQuestion.options;
+                                                const labels = typeof rawOpts === 'string'
+                                                    ? rawOpts.split(',').map((s: string) => s.trim())
+                                                    : Array.isArray(rawOpts) ? rawOpts : [];
+                                                if (labels.length > 0) {
+                                                    opts = labels.map((l: string, i: number) => ({
+                                                        label: l,
+                                                        weight: Math.round((i / Math.max(labels.length - 1, 1)) * 2 * 10) / 10,
+                                                    }));
+                                                }
+                                            }
+
+                                            return opts.map((opt, idx) => (
+                                                <div key={idx} className="flex gap-2 items-center">
+                                                    <span className="text-[10px] text-muted-foreground w-4 shrink-0">{idx + 1}.</span>
+                                                    <Input
+                                                        value={opt.label}
+                                                        onChange={(e) => {
+                                                            const updated = [...opts];
+                                                            updated[idx] = { ...updated[idx], label: e.target.value };
+                                                            setEditingQuestion({
+                                                                ...editingQuestion,
+                                                                optionWeights: updated,
+                                                                options: updated.map(o => o.label)
+                                                            } as any);
+                                                        }}
+                                                        placeholder={`Opção ${idx + 1}`}
+                                                        className="h-8 text-sm flex-1 min-w-0"
+                                                    />
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <span className="text-[10px] text-muted-foreground">Peso:</span>
+                                                        <Input
+                                                            type="number"
+                                                            step={0.1}
+                                                            min={0}
+                                                            max={10}
+                                                            value={opt.weight}
+                                                            onChange={(e) => {
+                                                                const updated = [...opts];
+                                                                updated[idx] = { ...updated[idx], weight: parseFloat(e.target.value) || 0 };
+                                                                setEditingQuestion({ ...editingQuestion, optionWeights: updated } as any);
+                                                            }}
+                                                            className="h-8 w-16 text-xs text-center"
+                                                        />
+                                                    </div>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            const updated = opts.filter((_, i) => i !== idx);
+                                                            setEditingQuestion({
+                                                                ...editingQuestion,
+                                                                optionWeights: updated,
+                                                                options: updated.map(o => o.label)
+                                                            } as any);
+                                                        }}
+                                                        className="h-8 w-8 p-0 shrink-0 text-destructive hover:bg-destructive/10"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            ));
+                                        })()}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                const opts: Array<{ label: string; weight: number }> = (editingQuestion as any).optionWeights || [];
+                                                const updated = [...opts, { label: '', weight: 0 }];
+                                                setEditingQuestion({
+                                                    ...editingQuestion,
+                                                    optionWeights: updated,
+                                                    options: updated.map(o => o.label)
+                                                } as any);
+                                            }}
+                                            className="h-8 mt-2 w-full text-xs sm:text-sm border-dashed"
+                                        >
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Adicionar Opção
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Configurações de escala */}
+                            {editingQuestion.type === 'scale' && (
+                                <div className="grid grid-cols-2 gap-4 border p-4 rounded-md mt-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="scale_min">Valor Mínimo</Label>
+                                        <Input
+                                            id="scale_min"
+                                            type="number"
+                                            value={editingQuestion.scale_min || 1}
+                                            onChange={(e) => setEditingQuestion({ ...editingQuestion, scale_min: parseInt(e.target.value) || 1 })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="scale_max">Valor Máximo</Label>
+                                        <Input
+                                            id="scale_max"
+                                            type="number"
+                                            value={editingQuestion.scale_max || 5}
+                                            onChange={(e) => setEditingQuestion({ ...editingQuestion, scale_max: parseInt(e.target.value) || 5 })}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                        <Button
+                            variant="ghost"
+                            onClick={() => {
+                                setShowEditQuestionModal(false);
+                                setEditingQuestion(null);
+                                setEditingQuestionIndex(null);
+                            }}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (editingQuestionIndex !== null && editingQuestion) {
+                                    const updatedQuestions = [...questions];
+                                    updatedQuestions[editingQuestionIndex] = editingQuestion;
+                                    setQuestions(updatedQuestions);
+                                }
+                                setShowEditQuestionModal(false);
+                                setEditingQuestion(null);
+                                setEditingQuestionIndex(null);
+                                toast({
+                                    title: 'Questão Atualizada Localmente',
+                                    description: 'Lembre-se de clicar em "Salvar Alterações" no modal principal para aplicar.',
+                                });
+                            }}
+                        >
+                            Aplicar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 };

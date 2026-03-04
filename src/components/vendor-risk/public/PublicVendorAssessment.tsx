@@ -634,15 +634,15 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
       toast({
         title: "🎉 Assessment Concluído com Sucesso!",
-        description: `Score de maturidade: ${scoreResult.score}/100 — ${scoreResult.maturityLevel.name}. ${generatedPlans.length} plano(s) de ação gerado(s).`,
+        description: "Suas respostas foram registradas e enviadas para análise da nossa equipe.",
         duration: 8000
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao enviar assessment:', error);
       toast({
         title: "❌ Erro ao Enviar",
-        description: "Não foi possível finalizar o assessment. Tente novamente.",
+        description: error.message || "Não foi possível finalizar o assessment. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -1277,7 +1277,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
             <CardContent className="space-y-6 p-4 sm:p-8">
               {/* Score grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div className="text-center p-4 sm:p-6 bg-muted/50 rounded-2xl border border-border">
                   <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
                     {assessment.vendor_assessment_frameworks?.questions?.length || DEFAULT_QUESTIONS.length}
@@ -1288,24 +1288,9 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
                   <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400 mb-1">100%</div>
                   <div className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Concluído</div>
                 </div>
-                {maturityScore !== null ? (
-                  <div className={`text-center p-4 sm:p-6 rounded-2xl border col-span-2 sm:col-span-1 ${maturityLevelColor === 'red' ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' : maturityLevelColor === 'orange' ? 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30' : maturityLevelColor === 'yellow' ? 'bg-yellow-50 dark:bg-yellow-900/10 border-yellow-100 dark:border-yellow-900/30' : maturityLevelColor === 'green' ? 'bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30' : 'bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30'}`}>
-                    <div className={`text-2xl sm:text-3xl font-bold mb-1 ${scoreColorClass}`}>{maturityScore}/100</div>
-                    <div className={`text-xs font-medium uppercase tracking-wide ${scoreColorClass}`}>{maturityLevelName ?? 'Maturidade'}</div>
-                  </div>
-                ) : null}
               </div>
 
-              {/* Generated plans notice */}
-              {generatedPlansCount > 0 && (
-                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-semibold text-amber-900 dark:text-amber-100">{generatedPlansCount} plano(s) de ação gerado(s)</p>
-                    <p className="text-amber-800 dark:text-amber-200 mt-0.5 text-xs">Com base em suas respostas, identificamos controles que requerem atenção. Nossa equipe irá revisar e disponibilizar um plano de melhoria personalizado para você.</p>
-                  </div>
-                </div>
-              )}
+              {/* Generated plans notice removed per user request */}
 
               {/* Timestamp */}
               <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 sm:p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-3 sm:gap-4">

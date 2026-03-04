@@ -11,10 +11,13 @@ export interface ActionPlan {
     status: 'open' | 'in_progress' | 'completed' | 'verified' | 'pending_validation' | 'available_to_vendor';
     priority: 'low' | 'medium' | 'high' | 'critical';
     vendor_id: string;
+    vendor_name?: string;
     created_at: string;
     updated_at: string;
     due_date: string | null;
     progress: number;
+    assessment_id?: string;
+    assessment_name?: string;
     activities?: ActionPlanActivity[];
 }
 
@@ -117,6 +120,17 @@ export const useVendorActionPlans = () => {
 
             if (error) throw error;
 
+            // Fetch vendor names
+            let vendorMap: Record<string, string> = {};
+            try {
+                const { data: vendors } = await supabase.from('vendor_registry').select('id, name');
+                if (vendors) {
+                    vendorMap = vendors.reduce((acc, v) => ({ ...acc, [v.id]: v.name }), {});
+                }
+            } catch (e) {
+                console.warn('Could not fetch vendors for names', e);
+            }
+
             if (data) {
                 // Map database fields to friendly interface
                 const mappedPlans: ActionPlan[] = data.map(plan => {
@@ -146,6 +160,9 @@ export const useVendorActionPlans = () => {
                         status: mapStatusFromDB(plan.status),
                         priority: mapPriorityFromDB(plan.prioridade),
                         vendor_id: plan.entidade_origem_id || '',
+                        vendor_name: vendorMap[plan.entidade_origem_id] || undefined,
+                        assessment_id: plan.metadados?.assessment_id || '',
+                        assessment_name: plan.metadados?.assessment_name || plan.metadados?.source_assessment_name || '',
                         created_at: plan.created_at || new Date().toISOString(),
                         updated_at: plan.updated_at || new Date().toISOString(),
                         due_date: plan.data_fim_planejada,
@@ -169,6 +186,8 @@ export const useVendorActionPlans = () => {
 
     const createPlan = async (data: {
         vendor_id: string;
+        assessment_id?: string;
+        assessment_name?: string;
         title: string;
         description: string;
         priority: string;
@@ -219,6 +238,11 @@ export const useVendorActionPlans = () => {
                     modulo_origem: 'vendor_risk',
                     entidade_origem_tipo: 'vendor',
                     entidade_origem_id: data.vendor_id,
+                    metadados: {
+                        assessment_id: data.assessment_id,
+                        assessment_name: data.assessment_name,
+                        manual_creation: true
+                    },
                     category_id: categoryId || '00000000-0000-0000-0000-000000000000', // Warning: Needs valid UUID if FK enforced
                     created_by: user.id,
                     status: 'planejado',
@@ -443,16 +467,25 @@ export const useVendorActionPlans = () => {
     /** Approve a pending_validation plan → makes it available to vendor */
     const approvePlan = async (planId: string) => {
         try {
-            const { error } = await supabase
+            console.log("Approving plan:", planId);
+            const query = supabase
                 .from('action_plans')
                 .update({ status: 'disponivel_fornecedor', updated_at: new Date().toISOString() })
                 .eq('id', planId);
+
+            const { data, error } = effectiveTenantId && effectiveTenantId !== 'default'
+                ? await query.eq('tenant_id', effectiveTenantId).select()
+                : await query.select();
+
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Plano não encontrado ou sem permissão");
+
             toast({ title: 'Plano Aprovado', description: 'O plano foi aprovado e está disponível para o fornecedor.' });
             fetchPlans();
             return true;
         } catch (error: any) {
-            toast({ title: 'Erro', description: 'Não foi possível aprovar o plano.', variant: 'destructive' });
+            console.error("Error approving plan:", error);
+            toast({ title: 'Erro', description: error.message || 'Não foi possível aprovar o plano.', variant: 'destructive' });
             return false;
         }
     };
@@ -460,7 +493,8 @@ export const useVendorActionPlans = () => {
     /** Reject a pending_validation plan → moves back to planejado for editing */
     const rejectPlan = async (planId: string, reason?: string) => {
         try {
-            const { error } = await supabase
+            console.log("Rejecting plan:", planId);
+            const query = supabase
                 .from('action_plans')
                 .update({
                     status: 'planejado',
@@ -468,12 +502,20 @@ export const useVendorActionPlans = () => {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', planId);
+
+            const { data, error } = effectiveTenantId && effectiveTenantId !== 'default'
+                ? await query.eq('tenant_id', effectiveTenantId).select()
+                : await query.select();
+
             if (error) throw error;
+            if (!data || data.length === 0) throw new Error("Plano não encontrado ou sem permissão");
+
             toast({ title: 'Plano Rejeitado', description: 'O plano foi devolvido para revisão.' });
             fetchPlans();
             return true;
         } catch (error: any) {
-            toast({ title: 'Erro', description: 'Não foi possível rejeitar o plano.', variant: 'destructive' });
+            console.error("Error rejecting plan:", error);
+            toast({ title: 'Erro', description: error.message || 'Não foi possível rejeitar o plano.', variant: 'destructive' });
             return false;
         }
     };

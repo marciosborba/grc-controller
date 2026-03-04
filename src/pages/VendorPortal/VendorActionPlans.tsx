@@ -9,25 +9,44 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Activity, Calendar, ExternalLink, FileText, CheckCircle, Clock } from 'lucide-react';
+import { Activity, Calendar, ExternalLink, FileText, CheckCircle, Clock, ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { VendorRiskActionPlan } from '@/hooks/useVendorRiskManagement';
+import { ActionPlan, ActionPlanActivity } from '@/hooks/useVendorActionPlans';
 
 export const VendorActionPlans = () => {
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const [actionPlans, setActionPlans] = useState<VendorRiskActionPlan[]>([]);
+    const [actionPlans, setActionPlans] = useState<ActionPlan[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const [selectedPlan, setSelectedPlan] = useState<VendorRiskActionPlan | null>(null);
-    const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
-    const [updateFormData, setUpdateFormData] = useState({
-        progress_percentage: 0,
-        status: 'planned' as VendorRiskActionPlan['status'],
-        verification_evidence: '',
-        notes: '',
+    const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+    const selectedPlan = actionPlans.find(p => p.id === selectedPlanId) || null;
+
+    const [expandedAssessments, setExpandedAssessments] = useState<string[]>([]);
+    const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+
+    // Activity Form
+    const [activityForm, setActivityForm] = useState({
+        title: '',
+        description: '',
+        due_date: '',
     });
+
+    const mapStatusFromDB = (status: string): any => {
+        const map: Record<string, string> = {
+            'planejado': 'open', 'em_andamento': 'in_progress', 'concluido': 'completed',
+            'aguardando_validacao': 'pending_validation', 'disponivel_fornecedor': 'available_to_vendor'
+        };
+        return map[status?.toLowerCase()] || 'open';
+    };
+
+    const mapPriorityFromDB = (priority: string): any => {
+        const map: Record<string, string> = {
+            'baixa': 'low', 'media': 'medium', 'alta': 'high', 'critica': 'critical'
+        };
+        return map[priority?.toLowerCase()] || 'medium';
+    };
 
     useEffect(() => {
         fetchActionPlans();
@@ -49,16 +68,65 @@ export const VendorActionPlans = () => {
             }
 
             const { data: plans, error: plansError } = await supabase
-                .from('vendor_risk_action_plans')
+                .from('action_plans')
                 .select(`
-          *
-        `)
-                .eq('vendor_id', vendorUser.vendor_id)
+                    *,
+                    action_plan_activities (
+                        id,
+                        titulo,
+                        descricao,
+                        status,
+                        prioridade,
+                        data_fim_planejada,
+                        responsavel_execucao,
+                        created_at,
+                        updated_at
+                    )
+                `)
+                .eq('modulo_origem', 'vendor_risk')
+                .in('entidade_origem_tipo', ['vendor', 'vendor_assessment'])
+                .eq('entidade_origem_id', vendorUser.vendor_id)
+                .in('status', ['disponivel_fornecedor', 'em_andamento', 'concluido'])
                 .order('created_at', { ascending: false });
 
             if (plansError) throw plansError;
 
-            setActionPlans(plans as VendorRiskActionPlan[]);
+            const mappedPlans: ActionPlan[] = plans.map(plan => {
+                const activities = plan.action_plan_activities?.map((act: any) => ({
+                    id: act.id,
+                    title: act.titulo,
+                    description: act.descricao || '',
+                    status: mapStatusFromDB(act.status),
+                    priority: mapPriorityFromDB(act.prioridade),
+                    due_date: act.data_fim_planejada,
+                    responsible_id: act.responsavel_execucao,
+                    created_at: act.created_at,
+                    updated_at: act.updated_at,
+                    action_plan_id: plan.id
+                })) || [];
+
+                const calculatedProgress = activities.length > 0
+                    ? Math.round((activities.filter(a => a.status === 'completed' || a.status === 'verified').length / activities.length) * 100)
+                    : (plan.percentual_conclusao || 0);
+
+                return {
+                    id: plan.id,
+                    title: plan.titulo,
+                    description: plan.descricao || '',
+                    status: mapStatusFromDB(plan.status),
+                    priority: mapPriorityFromDB(plan.prioridade),
+                    vendor_id: plan.entidade_origem_id,
+                    assessment_id: plan.metadados?.assessment_id || '',
+                    assessment_name: plan.metadados?.assessment_name || plan.metadados?.source_assessment_name || 'Diversos',
+                    created_at: plan.created_at,
+                    updated_at: plan.updated_at,
+                    due_date: plan.data_fim_planejada,
+                    progress: calculatedProgress,
+                    activities: activities
+                };
+            });
+
+            setActionPlans(mappedPlans);
         } catch (error) {
             console.error(error);
             toast({
@@ -71,51 +139,73 @@ export const VendorActionPlans = () => {
         }
     };
 
-    const handleUpdateClick = (plan: VendorRiskActionPlan) => {
-        setSelectedPlan(plan);
-        setUpdateFormData({
-            progress_percentage: plan.progress_percentage || 0,
-            status: plan.status,
-            verification_evidence: plan.verification_evidence || '',
-            notes: plan.notes || '',
-        });
-        setIsUpdateModalOpen(true);
-    };
+    const handleAddActivity = async () => {
+        if (!selectedPlan || !activityForm.title || !activityForm.due_date) {
+            toast({ title: 'Atenção', description: 'Preencha título e prazo.', variant: 'destructive' });
+            return;
+        }
 
-    const submitUpdate = async () => {
-        if (!selectedPlan) return;
+        // Validate date
+        if (selectedPlan.due_date && new Date(activityForm.due_date) > new Date(selectedPlan.due_date)) {
+            toast({
+                title: 'Data inválida',
+                description: `A data da atividade não pode ultrapassar o prazo final do plano (${new Date(selectedPlan.due_date).toLocaleDateString('pt-BR')}).`,
+                variant: 'destructive'
+            });
+            return;
+        }
+
         try {
             setIsLoading(true);
             const { error } = await supabase
-                .from('vendor_risk_action_plans')
-                .update({
-                    progress_percentage: updateFormData.progress_percentage,
-                    status: updateFormData.status,
-                    verification_evidence: updateFormData.verification_evidence,
-                    notes: updateFormData.notes,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', selectedPlan.id);
+                .from('action_plan_activities')
+                .insert({
+                    action_plan_id: selectedPlan.id,
+                    titulo: activityForm.title,
+                    descricao: activityForm.description,
+                    prioridade: 'media',
+                    data_inicio_planejada: new Date().toISOString(),
+                    data_fim_planejada: activityForm.due_date,
+                    status: 'planejado'
+                });
 
             if (error) throw error;
 
-            toast({
-                title: "Plano atualizado",
-                description: "Suas alterações foram salvas com sucesso."
-            });
-
-            setIsUpdateModalOpen(false);
+            toast({ title: "Atividade adicionada", description: "A nova atividade foi salva." });
+            setActivityForm({ title: '', description: '', due_date: '' });
+            setIsActivityModalOpen(false);
             fetchActionPlans();
         } catch (error) {
             console.error(error);
-            toast({
-                title: "Erro ao salvar",
-                description: error instanceof Error ? error.message : "Erro desconhecido",
-                variant: "destructive"
-            });
+            toast({ title: "Erro", description: "Falha ao adicionar atividade", variant: "destructive" });
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleDeleteActivity = async (activityId: string) => {
+        try {
+            const { error } = await supabase.from('action_plan_activities').delete().eq('id', activityId);
+            if (error) throw error;
+            toast({ title: "Atividade removida" });
+            fetchActionPlans();
+        } catch (error) {
+            toast({ title: "Erro ao remover", variant: "destructive" });
+        }
+    };
+
+    const toggleAssessment = (assessmentName: string) => {
+        setExpandedAssessments(prev => prev.includes(assessmentName) ? prev.filter(a => a !== assessmentName) : [...prev, assessmentName]);
+    };
+
+    const groupedPlans = () => {
+        const grouped: Record<string, ActionPlan[]> = {};
+        actionPlans.forEach(plan => {
+            const asmName = plan.assessment_name || 'Outros Planos';
+            if (!grouped[asmName]) grouped[asmName] = [];
+            grouped[asmName].push(plan);
+        });
+        return grouped;
     };
 
     const getStatusBadge = (status: string) => {
@@ -161,135 +251,182 @@ export const VendorActionPlans = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {actionPlans.length === 0 ? (
-                    <div className="col-span-full py-12 text-center text-muted-foreground bg-gray-50 border border-dashed rounded-xl">
-                        <Activity className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                        <h3 className="text-lg font-medium text-gray-900 mb-1">Nenhum plano de ação</h3>
-                        <p className="text-sm">Não há planos de ação designados à sua empresa no momento.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1 border rounded-xl bg-card overflow-hidden h-fit">
+                    <div className="bg-muted p-4 border-b">
+                        <h3 className="font-semibold text-foreground">Meus Planos Ativos</h3>
                     </div>
-                ) : (
-                    actionPlans.map(plan => (
-                        <Card key={plan.id} className="flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 transition-all duration-300 overflow-hidden group">
-                            <CardHeader className="pb-3 border-b border-gray-100 mb-3 bg-gradient-to-r from-gray-50/80 to-white">
-                                <div className="flex justify-between items-start mb-2">
-                                    {getPriorityBadge(plan.priority)}
-                                    {getStatusBadge(plan.status)}
-                                </div>
-                                <CardTitle className="text-lg leading-tight">{plan.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <p className="text-sm text-gray-600 line-clamp-3 mb-4">{plan.description}</p>
-                                <div className="space-y-3">
-                                    <div className="flex items-center text-sm text-gray-500">
-                                        <Calendar className="h-4 w-4 mr-2" />
-                                        Prazo: {plan.due_date ? new Date(plan.due_date).toLocaleDateString('pt-BR') : 'Não definido'}
+                    {actionPlans.length === 0 ? (
+                        <div className="p-6 text-center text-muted-foreground text-sm">
+                            Nenhum plano disponível no momento.
+                        </div>
+                    ) : (
+                        <div className="divide-y max-h-[600px] overflow-y-auto">
+                            {Object.entries(groupedPlans()).map(([assessmentName, plans]) => (
+                                <div key={assessmentName} className="flex flex-col border-b last:border-0">
+                                    <div
+                                        className="flex items-center gap-2 p-3 bg-muted/20 hover:bg-muted/40 cursor-pointer"
+                                        onClick={() => toggleAssessment(assessmentName)}
+                                    >
+                                        {expandedAssessments.includes(assessmentName) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                        <span className="font-semibold text-sm truncate flex-1">{assessmentName}</span>
+                                        <Badge variant="secondary" className="text-xs">{plans.length}</Badge>
                                     </div>
-                                    <div className="flex items-center text-sm text-gray-500">
-                                        <Activity className="h-4 w-4 mr-2" />
-                                        Tipo: <span className="capitalize ml-1">{plan.action_type || 'Geral'}</span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <div className="flex justify-between text-xs mb-1">
-                                            <span className="text-gray-500">Progresso</span>
-                                            <span className="font-medium">{plan.progress_percentage || 0}%</span>
+
+                                    {expandedAssessments.includes(assessmentName) && (
+                                        <div className="pl-4 pb-1">
+                                            {plans.map(plan => (
+                                                <div
+                                                    key={plan.id}
+                                                    className={`p-3 cursor-pointer border-b last:border-0 hover:bg-muted/10 transition-colors ${selectedPlanId === plan.id ? 'bg-primary/5 border-l-2 border-l-primary' : ''}`}
+                                                    onClick={() => setSelectedPlanId(plan.id)}
+                                                >
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <h4 className="font-medium text-sm text-foreground line-clamp-1">{plan.title}</h4>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {plan.due_date ? new Date(plan.due_date).toLocaleDateString() : 'S/ Data'}</span>
+                                                        <span>{plan.progress}%</span>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <Progress value={plan.progress_percentage || 0} className="h-2" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="md:col-span-2">
+                    {selectedPlan ? (
+                        <Card className="h-full border shadow-sm">
+                            <CardHeader className="bg-muted/30 border-b pb-4">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <Badge className="mb-2 uppercase text-[10px]" variant="outline">{selectedPlan.assessment_name}</Badge>
+                                        <CardTitle className="text-xl">{selectedPlan.title}</CardTitle>
                                     </div>
+                                    {getStatusBadge(selectedPlan.status)}
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-2">{selectedPlan.description}</p>
+
+                                <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-dashed">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Calendar className="h-4 w-4 text-primary" />
+                                        <span className="font-medium">Prazo Final (Inalterável):</span>
+                                        <span>{selectedPlan.due_date ? new Date(selectedPlan.due_date).toLocaleDateString('pt-BR') : 'Não definido'}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm ml-auto">
+                                        <span className="font-medium">Progresso Geral:</span>
+                                        <Progress value={selectedPlan.progress} className="w-24 border" />
+                                        <span className="text-xs">{selectedPlan.progress}%</span>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                                        <Activity className="h-5 w-5 text-primary" />
+                                        Atividades do Plano
+                                    </h3>
+                                    <Button size="sm" onClick={() => setIsActivityModalOpen(true)}>
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        Nova Atividade
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {!selectedPlan.activities || selectedPlan.activities.length === 0 ? (
+                                        <div className="text-center p-8 bg-muted/20 border border-dashed rounded-lg text-muted-foreground text-sm">
+                                            Nenhuma atividade cadastrada. Quebre este plano em atividades menores para acompanhar a execução.
+                                        </div>
+                                    ) : (
+                                        selectedPlan.activities.map(activity => (
+                                            <div key={activity.id} className="p-4 border rounded-lg bg-card shadow-sm hover:border-primary/30 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h4 className="font-medium">{activity.title}</h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <Badge variant="outline" className={activity.status === 'completed' ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50'}>
+                                                            {activity.status}
+                                                        </Badge>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteActivity(activity.id)}>
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                {activity.description && <p className="text-sm text-muted-foreground mb-3">{activity.description}</p>}
+                                                <div className="flex gap-4 text-xs text-muted-foreground">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="h-3 w-3" />
+                                                        Prazo: {activity.due_date ? new Date(activity.due_date).toLocaleDateString() : '-'}
+                                                    </span>
+                                                    {activity.responsible_name && (
+                                                        <span className="flex items-center gap-1">
+                                                            Pessoa: {activity.responsible_name}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </CardContent>
-                            <CardFooter className="pt-3 border-t border-gray-100 bg-gray-50/80 mt-auto items-center justify-between p-4">
-                                <Button
-                                    variant={plan.status === 'completed' ? 'outline' : 'default'}
-                                    className={`w-full font-medium transition-colors ${plan.status === 'completed' ? 'text-emerald-600 border-emerald-200 hover:bg-emerald-50' : 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md'}`}
-                                    onClick={() => handleUpdateClick(plan)}
-                                >
-                                    {plan.status === 'completed' ? (
-                                        <><CheckCircle className="h-4 w-4 mr-2" /> Visualizar / Editar Envio</>
-                                    ) : (
-                                        <><FileText className="h-4 w-4 mr-2" /> Responder / Enviar Plano</>
-                                    )}
-                                </Button>
-                            </CardFooter>
                         </Card>
-                    ))
-                )}
+                    ) : (
+                        <div className="h-full min-h-[400px] flex flex-col items-center justify-center border rounded-xl border-dashed bg-muted/10">
+                            <Activity className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                            <p className="text-muted-foreground text-center max-w-sm">
+                                Selecione um plano de ação na lista lateral para visualizar detalhes e gerenciar as atividades.
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
-                <DialogContent className="sm:max-w-[550px]">
+            <Dialog open={isActivityModalOpen} onOpenChange={setIsActivityModalOpen}>
+                <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>Enviar Plano de Ação</DialogTitle>
+                        <DialogTitle>Nova Atividade</DialogTitle>
                         <DialogDescription>
-                            Lance o progresso, atualize o status para "Concluído" quando terminar, e forneça evidências para o contratante validar.
+                            Adicione uma nova tarefa para ajudar a cumprir este plano.
                         </DialogDescription>
                     </DialogHeader>
 
-                    {selectedPlan && (
-                        <div className="space-y-4 py-4">
-                            <div className="bg-muted p-3 rounded-md mb-4 text-sm text-gray-700">
-                                <span className="font-semibold block mb-1">Ação:</span>
-                                {selectedPlan.title}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label>Status Atual</Label>
-                                    <select
-                                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={updateFormData.status}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, status: e.target.value as any })}
-                                    >
-                                        <option value="planned">Planejado</option>
-                                        <option value="in_progress">Em Andamento</option>
-                                        <option value="completed">Concluído</option>
-                                    </select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Progresso (%)</Label>
-                                    <Input
-                                        type="number"
-                                        min="0" max="100"
-                                        value={updateFormData.progress_percentage}
-                                        onChange={(e) => setUpdateFormData({ ...updateFormData, progress_percentage: parseInt(e.target.value) || 0 })}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-2 pt-2">
-                                <Label>Link de Evidência / Anexo URL</Label>
-                                <Input
-                                    placeholder="https://sua-empresa.com/evidencia.pdf"
-                                    value={updateFormData.verification_evidence}
-                                    onChange={(e) => setUpdateFormData({ ...updateFormData, verification_evidence: e.target.value })}
-                                />
-                                <p className="text-xs text-muted-foreground">Forneça um link para o documento ou imagem que comprove a ação.</p>
-                            </div>
-
-                            <div className="space-y-2 pt-2">
-                                <Label>Observações / Considerações</Label>
-                                <Textarea
-                                    placeholder="Destaque as medidas tomadas, sugestões de prazo ou justificativas..."
-                                    value={updateFormData.notes}
-                                    onChange={(e) => setUpdateFormData({ ...updateFormData, notes: e.target.value })}
-                                    rows={4}
-                                />
-                            </div>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label>Título da Atividade</Label>
+                            <Input
+                                value={activityForm.title}
+                                onChange={e => setActivityForm({ ...activityForm, title: e.target.value })}
+                                placeholder="E.g., Configurar firewall"
+                            />
                         </div>
-                    )}
+                        <div className="space-y-2">
+                            <Label>Prazo da Atividade</Label>
+                            <Input
+                                type="date"
+                                value={activityForm.due_date}
+                                onChange={e => setActivityForm({ ...activityForm, due_date: e.target.value })}
+                            />
+                            {selectedPlan?.due_date && (
+                                <p className="text-[10px] text-muted-foreground">O limite máximo é a data final do plano: {new Date(selectedPlan.due_date).toLocaleDateString()}</p>
+                            )}
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Descrição Mínima</Label>
+                            <Textarea
+                                value={activityForm.description}
+                                onChange={e => setActivityForm({ ...activityForm, description: e.target.value })}
+                                placeholder="Detalhes da execução..."
+                                rows={3}
+                            />
+                        </div>
+                    </div>
 
-                    <DialogFooter className="mt-6 flex gap-2">
-                        <Button variant="outline" onClick={() => setIsUpdateModalOpen(false)}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            onClick={submitUpdate}
-                            disabled={isLoading}
-                            className="bg-primary hover:bg-primary/90"
-                        >
-                            {isLoading ? 'Salvando...' : updateFormData.status === 'completed' ? 'Enviar para Validação' : 'Salvar Progresso'}
-                        </Button>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsActivityModalOpen(false)}>Cancelar</Button>
+                        <Button disabled={isLoading} onClick={handleAddActivity}>{isLoading ? 'Salvando...' : 'Adicionar Atividade'}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
