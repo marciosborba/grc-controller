@@ -126,7 +126,8 @@ export const VendorDashboard = () => {
 
     const pendingAssessments = assessments.filter(a => a.status === 'draft' || a.status === 'sent');
     const completedAssessments = assessments.filter(a => a.status === 'completed' || a.status === 'under_review' || a.status === 'approved');
-    const activePlans = actionPlans.filter(p => !['completed', 'verified'].includes(p.status));
+    const openPlans = actionPlans.filter(p => ['disponivel_fornecedor', 'em_andamento'].includes(p.status));
+    const completedPlansList = actionPlans.filter(p => p.status === 'concluido');
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -144,19 +145,19 @@ export const VendorDashboard = () => {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-12 w-full max-w-full overflow-hidden">
+        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500 pb-12 w-full max-w-full overflow-hidden px-2 sm:px-0">
             {/* Cabecalho de Boas Vindas com Design Premium */}
-            <div className="relative rounded-2xl overflow-hidden bg-card border border-border p-8 sm:p-10 shadow-sm">
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="relative rounded-2xl overflow-hidden bg-card border border-border p-6 sm:p-10 shadow-sm">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
                     <div>
-                        <div className="flex items-center gap-3 mb-2 opacity-90">
-                            <ShieldCheck className="h-6 w-6 text-primary" />
-                            <span className="text-sm font-semibold tracking-wider uppercase text-muted-foreground">Portal Confiável</span>
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 opacity-90">
+                            <ShieldCheck className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                            <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-muted-foreground">Portal Confiável</span>
                         </div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2 text-primary">
+                        <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2 text-primary leading-tight">
                             Olá, {vendorRegistryInfo?.name || (user as any)?.user_metadata?.name || (user as any)?.name || user?.email?.split('@')[0] || 'Fornecedor'}!
                         </h1>
-                        <p className="text-muted-foreground max-w-xl text-lg leading-relaxed">
+                        <p className="text-sm sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
                             Bem-vindo ao seu painel central de conformidade. Acompanhe seus questionários, planos de correção e status regulatório.
                         </p>
                     </div>
@@ -175,50 +176,66 @@ export const VendorDashboard = () => {
             </div>
 
             {/* Premium KPIs Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
                 <Card className="border-l-4 border-l-amber-500 shadow-sm hover:shadow-md transition-shadow duration-300">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-br from-amber-500/5 to-transparent">
-                        <CardTitle className="text-sm font-semibold text-foreground">Avaliações Pendentes</CardTitle>
-                        <div className="p-2 bg-amber-500/10 rounded-full text-amber-500 dark:text-amber-400">
+                    <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6 pb-2! bg-gradient-to-br from-amber-500/5 to-transparent space-y-0">
+                        <CardTitle className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2">Avaliações Pendentes</CardTitle>
+                        <div className="p-1.5 sm:p-2 bg-amber-500/10 rounded-full text-amber-500 dark:text-amber-400 shrink-0">
                             <Clock className="h-5 w-5" />
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                        <div className="text-4xl font-black text-foreground">{pendingAssessments.length}</div>
-                        <p className="text-sm md:text-xs text-muted-foreground mt-2 flex items-center gap-1.5 font-medium">
+                    <CardContent className="p-3 sm:p-6 pt-2 sm:pt-4">
+                        <div className="text-2xl sm:text-4xl font-black text-foreground">{pendingAssessments.length}</div>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2 flex items-center gap-1.5 font-medium">
                             {pendingAssessments.length > 0 ? "Ação requerida de sua parte" : "Tudo em dia!"}
                         </p>
                     </CardContent>
                 </Card>
 
                 <Card className="border-l-4 border-l-emerald-500 shadow-sm hover:shadow-md transition-shadow duration-300">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-br from-emerald-500/5 to-transparent">
-                        <CardTitle className="text-sm font-semibold text-foreground">Avaliações Concluídas</CardTitle>
-                        <div className="p-2 bg-emerald-500/10 rounded-full text-emerald-500 dark:text-emerald-400">
+                    <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6 pb-2! bg-gradient-to-br from-emerald-500/5 to-transparent space-y-0">
+                        <CardTitle className="text-xs sm:text-sm font-semibold text-foreground line-clamp-2">Avaliações Concluídas</CardTitle>
+                        <div className="p-1.5 sm:p-2 bg-emerald-500/10 rounded-full text-emerald-500 dark:text-emerald-400 shrink-0">
                             <CheckSquare className="h-5 w-5" />
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                        <div className="text-4xl font-black text-foreground">{completedAssessments.length}</div>
-                        <p className="text-sm md:text-xs text-muted-foreground mt-2 font-medium">Entregues com sucesso</p>
+                    <CardContent className="p-3 sm:p-6 pt-2 sm:pt-4">
+                        <div className="text-2xl sm:text-4xl font-black text-foreground">{completedAssessments.length}</div>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 sm:mt-2 font-medium">Entregues com sucesso</p>
                     </CardContent>
                 </Card>
 
                 <Card
-                    className="border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group"
+                    className="border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer group col-span-2 md:col-span-1"
                     onClick={() => navigate('/vendor-portal/action-plans')}
                 >
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 bg-gradient-to-br from-purple-500/5 to-transparent">
-                        <CardTitle className="text-sm font-semibold text-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Planos de Ação (Abertos)</CardTitle>
-                        <div className="p-2 bg-purple-500/10 rounded-full text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <CardHeader className="flex flex-row items-center justify-between p-3 sm:p-6 pb-2! bg-gradient-to-br from-purple-500/5 to-transparent space-y-0">
+                        <CardTitle className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">Planos de Ação</CardTitle>
+                        <div className="p-1.5 sm:p-2 bg-purple-500/10 rounded-full text-purple-600 dark:text-purple-400 group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0">
                             <Target className="h-5 w-5" />
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                        <div className="text-4xl font-black text-foreground">{activePlans.length}</div>
-                        <p className="text-sm md:text-xs text-purple-600/80 dark:text-purple-400/80 mt-2 flex items-center gap-1 font-medium group-hover:underline">
-                            Ver detalhes <ArrowRight className="h-3 w-3" />
-                        </p>
+                    <CardContent className="p-3 sm:p-6 pt-2 sm:pt-4">
+                        <div className="flex justify-between items-end border-b border-border/50 pb-2 mb-2">
+                            <div className="flex gap-4">
+                                <div>
+                                    <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400">{openPlans.length}</div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Em Aberto</p>
+                                </div>
+                                <div className="border-l pl-4 border-border/50">
+                                    <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">{completedPlansList.length}</div>
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Concluídos</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-1 sm:mt-2">
+                            <p className="text-[10px] sm:text-xs text-muted-foreground font-medium flex items-center">
+                                {openPlans.length === 0 ? 'Tudo em conformidade' : 'Requer atenção'}
+                            </p>
+                            <p className="text-[10px] sm:text-xs text-purple-600/80 dark:text-purple-400/80 mt-1 sm:mt-0 flex items-center gap-1 font-medium group-hover:underline justify-end">
+                                Ver painel <ArrowRight className="h-3 w-3" />
+                            </p>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -229,8 +246,8 @@ export const VendorDashboard = () => {
                     <Card className="shadow-sm border border-border overflow-hidden">
                         <CardHeader className="bg-muted/50 border-b border-border">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-xl font-bold flex items-center gap-2 text-foreground">
-                                    <AlertTriangle className={`h-5 w-5 ${pendingAssessments.length > 0 ? "text-amber-500" : "text-emerald-500"}`} />
+                                <h2 className="text-lg sm:text-xl font-bold flex items-center gap-2 text-foreground">
+                                    <AlertTriangle className={`h-4 w-4 sm:h-5 sm:w-5 ${pendingAssessments.length > 0 ? "text-amber-500" : "text-emerald-500"}`} />
                                     Prioridades
                                 </h2>
                                 {pendingAssessments.length > 0 && (
@@ -243,10 +260,10 @@ export const VendorDashboard = () => {
                             {pendingAssessments.length > 0 ? (
                                 <div className="divide-y divide-border">
                                     {pendingAssessments.slice(0, 5).map((assessment) => (
-                                        <div key={assessment.id} className="p-5 sm:p-6 hover:bg-muted/50 transition-colors group">
-                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+                                        <div key={assessment.id} className="p-4 sm:p-6 hover:bg-muted/50 transition-colors group">
+                                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className="font-bold text-foreground text-lg truncate mb-1 group-hover:text-primary transition-colors">
+                                                    <h3 className="font-bold text-foreground text-base sm:text-lg truncate mb-1 group-hover:text-primary transition-colors">
                                                         {assessment.assessment_name}
                                                     </h3>
                                                     <div className="flex items-center text-sm text-muted-foreground gap-4">

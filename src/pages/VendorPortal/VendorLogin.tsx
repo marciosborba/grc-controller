@@ -146,27 +146,27 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
     // ── Force Change Password Screen ─────────────────────────────────────────
     if (forceChangeMode) {
         return (
-            <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+            <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
                 <div className="sm:mx-auto sm:w-full sm:max-w-md">
                     <div className="flex justify-center">
-                        <div className="h-16 w-16 bg-amber-100 rounded-2xl flex items-center justify-center shadow-sm ring-1 ring-amber-200">
-                            <KeyRound className="h-8 w-8 text-amber-600" />
+                        <div className="h-16 w-16 bg-amber-500/10 rounded-2xl flex items-center justify-center shadow-sm ring-1 ring-amber-500/20">
+                            <KeyRound className="h-8 w-8 text-amber-600 dark:text-amber-500" />
                         </div>
                     </div>
-                    <h2 className="mt-6 text-center text-2xl font-extrabold text-gray-900 tracking-tight">
+                    <h2 className="mt-6 text-center text-2xl font-extrabold text-foreground tracking-tight">
                         Alteração de Senha Obrigatória
                     </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
+                    <p className="mt-2 text-center text-sm text-muted-foreground">
                         Por segurança, defina uma nova senha antes de continuar.
                     </p>
                 </div>
 
                 <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                    <Card className="border-amber-200 shadow-xl shadow-amber-100/50">
+                    <Card className="border-border shadow-xl shadow-amber-500/5">
                         <CardHeader>
-                            <div className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                                <p className="text-sm text-amber-800">
+                            <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                                <p className="text-sm text-amber-800 dark:text-amber-400">
                                     Este é o seu primeiro acesso. A senha fornecida pelo administrador deve ser substituída por uma senha pessoal e segura.
                                 </p>
                             </div>
@@ -177,7 +177,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                     <Label htmlFor="new-password">Nova Senha</Label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Lock className="h-5 w-5 text-gray-400" />
+                                            <Lock className="h-5 w-5 text-muted-foreground" />
                                         </div>
                                         <Input
                                             id="new-password"
@@ -185,13 +185,13 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                             placeholder="Mínimo 6 caracteres"
                                             value={newPassword}
                                             onChange={(e) => setNewPassword(e.target.value)}
-                                            className="pl-10 pr-10 h-12 text-base"
+                                            className="pl-10 pr-10 h-12 text-base bg-background"
                                             required
                                             minLength={6}
                                         />
                                         <button
                                             type="button"
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
                                             onClick={() => setShowNewPassword(v => !v)}
                                         >
                                             {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -203,7 +203,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                     <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
                                     <div className="relative">
                                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <Lock className="h-5 w-5 text-gray-400" />
+                                            <Lock className="h-5 w-5 text-muted-foreground" />
                                         </div>
                                         <Input
                                             id="confirm-password"
@@ -211,7 +211,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                             placeholder="Repita a nova senha"
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="pl-10 h-12 text-base"
+                                            className="pl-10 h-12 text-base bg-background"
                                             required
                                         />
                                     </div>
@@ -242,23 +242,23 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
 
     // ── Regular Login Screen ──────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center">
                     <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center transform rotate-3 hover:rotate-6 transition-transform shadow-sm ring-1 ring-primary/20">
                         <Shield className="h-8 w-8 text-primary transform -rotate-3" />
                     </div>
                 </div>
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 tracking-tight">
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground tracking-tight">
                     Portal do Fornecedor
                 </h2>
-                <p className="mt-2 text-center text-sm text-gray-600">
+                <p className="mt-2 text-center text-sm text-muted-foreground">
                     Acesse a plataforma de Governança, Riscos e Compliance
                 </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <Card className="border-border/50 shadow-xl shadow-gray-200/50">
+                <Card className="border-border shadow-xl shadow-primary/5">
                     <CardHeader>
                         <CardTitle className="text-xl">Fazer Login</CardTitle>
                         <CardDescription>
@@ -271,7 +271,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                 <Label htmlFor="email">E-mail Corporativo</Label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Mail className="h-5 w-5 text-gray-400" />
+                                        <Mail className="h-5 w-5 text-muted-foreground" />
                                     </div>
                                     <Input
                                         id="email"
@@ -279,7 +279,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                         placeholder="fornecedor@empresa.com.br"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="pl-10 h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
+                                        className="pl-10 h-12 text-base transition-all focus:ring-2 focus:ring-primary/20 bg-background"
                                         required
                                     />
                                 </div>
@@ -291,7 +291,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                 </div>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock className="h-5 w-5 text-gray-400" />
+                                        <Lock className="h-5 w-5 text-muted-foreground" />
                                     </div>
                                     <Input
                                         id="password"
@@ -299,12 +299,12 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                                         placeholder="••••••••"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="pl-10 pr-10 h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
+                                        className="pl-10 pr-10 h-12 text-base transition-all focus:ring-2 focus:ring-primary/20 bg-background"
                                         required
                                     />
                                     <button
                                         type="button"
-                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
                                         onClick={() => setShowPassword(v => !v)}
                                     >
                                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -329,7 +329,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                 </Card>
             </div>
 
-            <div className="mt-8 text-center text-xs text-gray-500 max-w-md mx-auto">
+            <div className="mt-8 text-center text-xs text-muted-foreground max-w-md mx-auto">
                 <p>
                     Este ambiente é de uso exclusivo para fornecedores e parceiros cadastrados.
                     Acesso não autorizado é expressamente proibido.

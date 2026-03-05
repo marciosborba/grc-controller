@@ -502,10 +502,10 @@ export function AppSidebarFixed() {
   return (
     <Sidebar className="border-r border-border" collapsible="icon">
       {/* Header - Responsivo */}
-      <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
-        {!collapsed && (
-          <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <img src="/logo.png?v=2" alt="GEPRIV Logo" className="h-6 w-6 sm:h-8 sm:w-8 object-contain flex-shrink-0" />
+      <div className={`${collapsed ? "h-14 px-2 justify-center" : "h-14 sm:h-16 px-3 sm:px-4 justify-between"} flex items-center border-b border-border transition-all duration-300`}>
+        <div className={`flex items-center space-x-2 min-w-0 flex-1 ${collapsed ? 'justify-center ml-2' : ''}`}>
+          <img src="/logo.png?v=2" alt="GEPRIV Logo" className="h-6 w-6 sm:h-8 sm:w-8 object-contain flex-shrink-0" />
+          {!collapsed && (
             <div className="min-w-0 flex-1">
               <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GEPRIV</h1>
               <div className="flex items-center gap-1">
@@ -517,9 +517,8 @@ export function AppSidebarFixed() {
                 )}
               </div>
             </div>
-          </div>
-        )}
-        <SidebarTrigger className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground p-1.5 sm:p-2 rounded-md" />
+          )}
+        </div>
       </div>
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>

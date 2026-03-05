@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessagesSquare, Send, Paperclip, Loader2, File, Download, CheckCircle2 } from 'lucide-react';
+import { MessagesSquare, Send, Paperclip, Loader2, File, Download, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export const VendorMessages = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const { toast } = useToast();
     const [messages, setMessages] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -179,6 +181,12 @@ export const VendorMessages = () => {
 
     return (
         <div className="max-w-5xl mx-auto h-[calc(100vh-12rem)] flex flex-col">
+            <div className="mb-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/vendor-portal')} className="text-muted-foreground hover:text-foreground px-0">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar ao Dashboard
+                </Button>
+            </div>
             <div className="mb-4">
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Central de Comunicação</h1>
                 <p className="text-muted-foreground mt-1">

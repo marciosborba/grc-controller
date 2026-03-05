@@ -36,6 +36,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { VendorDashboardView } from './views/VendorDashboardView';
 import { VendorTableView } from './views/VendorTableView';
 import { VendorFrameworkManager } from './views/VendorFrameworkManager';
+import { calculateVendorMaturity, calculateVendorDynamicRisk } from '@/lib/tprmCalculations';
 
 import { VendorAssessmentManager } from './views/VendorAssessmentManager';
 
@@ -279,6 +280,38 @@ export const VendorRiskManagementCenter: React.FC = () => {
     }
   };
 
+  // Calcula a média de risco TPRM
+  const vendorsRiskData = React.useMemo(() => {
+    return vendors.map(vendor => {
+      const vendorAssessments = assessments.filter(a => a.vendor_id === vendor.id);
+      const maturity = calculateVendorMaturity(vendorAssessments);
+      const risk = calculateVendorDynamicRisk(maturity.score, vendor.criticality_level, vendor.risk_override_level);
+      return risk;
+    });
+  }, [vendors, assessments]);
+
+  const avgRiskScore = vendorsRiskData.length > 0
+    ? vendorsRiskData.reduce((acc, curr) => acc + (curr.score || 0), 0) / vendorsRiskData.length
+    : 0;
+
+  let avgRiskLevel = 'Baixo';
+  let avgRiskColorClass = 'text-green-500';
+  let avgRiskBorderClass = 'border-l-green-500';
+
+  if (avgRiskScore >= 75) {
+    avgRiskLevel = 'Crítico';
+    avgRiskColorClass = 'text-red-500';
+    avgRiskBorderClass = 'border-l-red-500';
+  } else if (avgRiskScore >= 50) {
+    avgRiskLevel = 'Alto';
+    avgRiskColorClass = 'text-orange-500';
+    avgRiskBorderClass = 'border-l-orange-500';
+  } else if (avgRiskScore >= 25) {
+    avgRiskLevel = 'Médio';
+    avgRiskColorClass = 'text-yellow-500';
+    avgRiskBorderClass = 'border-l-yellow-500';
+  }
+
   // Loading state para dados principais
   if (loading && !vendors.length && !assessments.length) {
     return (
@@ -378,45 +411,45 @@ export const VendorRiskManagementCenter: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Card 3: Conformidade & Ações */}
-        <Card className="relative overflow-hidden border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between p-1 sm:p-0">
+        {/* Card 3: Risco TPRM */}
+        <Card className={`relative overflow-hidden border-l-4 border-l-red-600 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between p-1 sm:p-0`}>
           <div className="absolute top-0 right-0 p-3 opacity-10">
-            <CheckCircle className="h-24 w-24 sm:h-32 sm:w-32 text-green-500" />
+            <Shield className="h-24 w-24 sm:h-32 sm:w-32 text-red-600" />
           </div>
           <CardHeader className="pb-1 sm:pb-2 pt-3 sm:pt-6 px-3 sm:px-6 relative z-10">
-            <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-green-700 dark:text-green-400">
-              <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
-              <span className="truncate">Conformidade</span>
+            <CardTitle className="text-[13px] sm:text-lg font-bold flex items-center gap-1.5 sm:gap-2 text-red-600 dark:text-red-500">
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 shrink-0" />
+              <span className="truncate">Risco</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
             <div>
               <div className="flex items-baseline gap-1.5 sm:gap-2">
-                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">
-                  {vendors.length > 0 ? (vendors.filter(v => v.risk_score < 4.0).length / vendors.length * 100).toFixed(0) : 0}%
+                <span className={`text-xl sm:text-3xl font-bold leading-none ${avgRiskColorClass}`}>
+                  {avgRiskScore.toFixed(1)}
                 </span>
-                <span className="text-[10px] sm:text-sm text-muted-foreground truncate">em compliance</span>
+                <span className="text-[10px] sm:text-sm text-muted-foreground truncate">/ 100</span>
               </div>
               <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-tight">
-                Dentro do apetite de risco.
+                Média do risco residual TPRM.
               </p>
             </div>
 
             <div className="space-y-1.5 sm:space-y-3 pt-1 sm:pt-2">
               <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                  <Shield className="h-4 w-4 text-green-500" /> Baixo Risco
+                  <BarChart3 className={`h-4 w-4 ${avgRiskColorClass}`} /> Nível Qualitativo
                 </span>
-                <span className="font-medium">
-                  {vendors.filter(v => v.criticality_level === 'low').length}
-                </span>
+                <Badge variant="outline" className={`font-medium ${avgRiskColorClass} ${avgRiskBorderClass} border-current`}>
+                  {avgRiskLevel}
+                </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2 text-muted-foreground">
-                  <FileCheck className="h-4 w-4" /> Contratos OK
+                  <AlertTriangle className="h-4 w-4 text-red-500" /> Risco Crítico
                 </span>
-                <span className="font-medium">
-                  {vendors.length - (dashboardMetrics?.expiring_contracts || 0)}
+                <span className="font-medium text-red-600">
+                  {vendorsRiskData.filter(v => v.level === 'Crítico').length}
                 </span>
               </div>
             </div>
@@ -443,7 +476,9 @@ export const VendorRiskManagementCenter: React.FC = () => {
           <CardContent className="space-y-2 sm:space-y-4 px-3 pb-3 sm:px-6 sm:pb-6 relative z-10">
             <div>
               <div className="flex items-baseline gap-1.5 sm:gap-2">
-                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">{plans.length || 0}</span>
+                <span className="text-xl sm:text-3xl font-bold text-foreground leading-none">
+                  {plans.filter(p => !['completed', 'verified'].includes(p.status)).length}
+                </span>
                 <span className="text-[10px] sm:text-sm text-muted-foreground truncate">planos</span>
               </div>
               <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 line-clamp-2 leading-tight hover:underline">
@@ -457,15 +492,15 @@ export const VendorRiskManagementCenter: React.FC = () => {
                   <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" /> Em Aberto
                 </span>
                 <span className="font-medium text-purple-600">
-                  {plans.filter(p => p.status === 'open' || p.status === 'in_progress').length}
+                  {plans.filter(p => ['available_to_vendor', 'open', 'in_progress'].includes(p.status)).length}
                 </span>
               </div>
               <div className="flex items-center justify-between text-[10px] sm:text-sm">
                 <span className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
-                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" /> Concluídos
+                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500" /> Em Validação
                 </span>
-                <span className="font-medium text-green-600">
-                  {plans.filter(p => p.status === 'completed' || p.status === 'verified').length}
+                <span className="font-medium text-amber-600">
+                  {plans.filter(p => p.status === 'pending_validation').length}
                 </span>
               </div>
             </div>

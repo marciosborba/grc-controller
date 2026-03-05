@@ -32,22 +32,23 @@ const getPriorityLabel = (p: string) =>
 
 const getPriorityColor = (priority: string) => {
     switch (priority) {
-        case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800';
-        case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800';
-        case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800';
-        case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800';
-        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
+        case 'critical': return 'bg-red-500 text-white dark:bg-red-600 border-none font-medium';
+        case 'high': return 'bg-orange-500 text-white dark:bg-orange-600 border-none font-medium';
+        case 'medium': return 'bg-yellow-500 text-white dark:bg-yellow-600 border-none font-medium';
+        case 'low': return 'bg-green-500 text-white dark:bg-green-600 border-none font-medium';
+        default: return 'bg-gray-500 text-white dark:bg-gray-600 border-none font-medium';
     }
 };
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-        case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-        case 'verified': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300';
-        case 'pending_validation': return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
-        case 'available_to_vendor': return 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300';
-        default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+        case 'completed': return 'bg-emerald-500 text-white dark:bg-emerald-600 border-none font-medium';
+        case 'in_progress': return 'bg-blue-500 text-white dark:bg-blue-600 border-none font-medium';
+        case 'verified': return 'bg-purple-500 text-white dark:bg-purple-600 border-none font-medium';
+        case 'pending_validation': return 'bg-amber-500 text-white dark:bg-amber-600 border-none font-medium';
+        case 'available_to_vendor': return 'bg-teal-500 text-white dark:bg-teal-600 border-none font-medium';
+        case 'open': return 'bg-slate-500 text-white dark:bg-slate-600 border-none font-medium';
+        default: return 'bg-gray-500 text-white dark:bg-gray-600 border-none font-medium';
     }
 };
 
@@ -114,8 +115,9 @@ export const VendorActionPlanManager: React.FC = () => {
 
     const selectedPlan = plans.find(p => p.id === selectedPlanId) || null;
 
-    const pendingPlans = plans.filter(p => p.status === 'pending_validation' || p.status === 'open');
-    const activePlans = plans.filter(p => !['pending_validation', 'open'].includes(p.status));
+    const pendingPlans = plans.filter(p => p.status === 'pending_validation');
+    const completedPlans = plans.filter(p => ['completed', 'verified'].includes(p.status));
+    const activePlans = plans.filter(p => !['pending_validation', 'completed', 'verified'].includes(p.status));
 
     const toggleVendor = (vendor: string) => {
         setExpandedVendors(prev => prev.includes(vendor) ? prev.filter(v => v !== vendor) : [...prev, vendor]);
@@ -141,6 +143,7 @@ export const VendorActionPlanManager: React.FC = () => {
 
     const activeGrouped = groupPlans(activePlans);
     const pendingGrouped = groupPlans(pendingPlans);
+    const completedGrouped = groupPlans(completedPlans);
 
     // ── Forms ──────────────────────────────────────────────────────────────
     const [newPlanForm, setNewPlanForm] = useState({ assessmentId: '', title: '', description: '', priority: 'medium', dueDate: '' });
@@ -302,10 +305,7 @@ export const VendorActionPlanManager: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
-                                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${activity.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200' :
-                                                activity.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200' :
-                                                    'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200'
-                                            }`}>
+                                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusColor(activity.status)}`}>
                                             {getStatusLabel(activity.status)}
                                         </Badge>
                                         <Badge variant="outline" className={`text-[10px] px-1.5 py-0 hidden sm:inline-flex ${getPriorityColor(activity.priority)}`}>
@@ -496,10 +496,10 @@ export const VendorActionPlanManager: React.FC = () => {
 
             {/* ── 3-TAB LAYOUT ─────────────────────────────────────────────── */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full sm:w-auto flex">
+                <TabsList className="w-full sm:w-auto flex flex-wrap gap-1">
                     <TabsTrigger value="plans" className="flex-1 sm:flex-none flex items-center gap-1.5 text-xs sm:text-sm">
                         <ListChecks className="h-4 w-4" />
-                        <span>Planos</span>
+                        <span>Planos Ativos</span>
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{activePlans.length}</Badge>
                     </TabsTrigger>
                     <TabsTrigger value="validation" className="flex-1 sm:flex-none flex items-center gap-1.5 text-xs sm:text-sm">
@@ -507,6 +507,13 @@ export const VendorActionPlanManager: React.FC = () => {
                         <span>Validação</span>
                         {pendingPlans.length > 0 && (
                             <Badge className="text-[10px] px-1.5 py-0 bg-amber-500 text-white">{pendingPlans.length}</Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="completed" className="flex-1 sm:flex-none flex items-center gap-1.5 text-xs sm:text-sm">
+                        <CheckCircle className="h-4 w-4" />
+                        <span>Concluídos</span>
+                        {completedPlans.length > 0 && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{completedPlans.length}</Badge>
                         )}
                     </TabsTrigger>
                     <TabsTrigger value="config" className="flex-1 sm:flex-none flex items-center gap-1.5 text-xs sm:text-sm">
@@ -567,6 +574,35 @@ export const VendorActionPlanManager: React.FC = () => {
                                         : <EmptyState message="Selecione um plano para revisar e aprovar ou rejeitar." />
                                     }
                                 </div>
+                            </div>
+                        </div>
+                    )}
+                </TabsContent>
+
+                {/* ── TAB: Planos Concluídos ─────────────────────────────── */}
+                <TabsContent value="completed" className="mt-4">
+                    {completedPlans.length === 0 ? (
+                        <EmptyState message="Nenhum plano concluído encontrado." />
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+                            <div className="md:col-span-1">
+                                <Card className="h-full">
+                                    <CardHeader className="pb-3">
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <CheckCircle className="h-4 w-4 text-green-600" />
+                                            Histórico de Planos
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {renderTreeView(completedGrouped)}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <div className="md:col-span-2">
+                                {selectedPlan && completedPlans.find(p => p.id === selectedPlan.id)
+                                    ? renderPlanDetail(selectedPlan, false)
+                                    : <EmptyState message="Selecione um plano concluído para visualizar seu histórico e evidências." />
+                                }
                             </div>
                         </div>
                     )}

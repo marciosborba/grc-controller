@@ -498,7 +498,12 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
         });
       if (insertError) throw insertError;
 
-      toast({ title: 'Usuário criado', description: `Acesso criado para ${newPortalUserEmail}. Senha temporária: ${tempPassword}` });
+      // Automatically trigger the "reset password" email so the user can set their own password immediately
+      await supabase.auth.resetPasswordForEmail(newPortalUserEmail, {
+        redirectTo: `${window.location.origin}/vendor-portal/reset-password`
+      });
+
+      toast({ title: 'Usuário criado', description: `Acesso criado para ${newPortalUserEmail}. Um e-mail foi enviado para o fornecedor definir sua senha.` });
       setNewPortalUserEmail('');
       setNewPortalUserPassword('');
       setShowAddPortalUser(null);

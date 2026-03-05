@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, ArrowRight, Target, Search, Award, ShieldCheck } from 'lucide-react';
+import { Calendar, ArrowRight, Target, Search, Award, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 
@@ -151,6 +151,12 @@ export const VendorAssessmentsList = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12 w-full">
+            <div className="mb-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/vendor-portal')} className="text-muted-foreground hover:text-foreground px-0">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Voltar ao Dashboard
+                </Button>
+            </div>
             <div className="mb-4">
                 <h1 className="text-2xl font-bold tracking-tight text-foreground">Avaliações</h1>
                 <p className="text-muted-foreground mt-1">

@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -121,6 +121,7 @@ interface Message {
 
 export const VendorAssessmentFill = () => {
   const { id: assessmentId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [assessment, setAssessment] = useState<AssessmentData | null>(null);
   const [responses, setResponses] = useState<Record<string, any>>({});
@@ -1473,6 +1474,9 @@ export const VendorAssessmentFill = () => {
           <div className="py-4">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" onClick={() => navigate('/vendor-portal')} className="text-muted-foreground hover:text-foreground">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
                 <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center border border-primary/20 shadow-sm">
                   <Shield className="h-6 w-6 text-primary" />
                 </div>

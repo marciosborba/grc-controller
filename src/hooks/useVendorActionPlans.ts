@@ -284,6 +284,18 @@ export const useVendorActionPlans = () => {
         due_date: string;
         status: string;
     }) => {
+        // Optimistic Update
+        const previousPlans = [...plans];
+        const newStatus = mapStatusFromDB(mapStatusToDB(data.status));
+        setPlans(currentPlans => currentPlans.map(p => p.id === planId ? {
+            ...p,
+            status: newStatus,
+            title: data.title,
+            description: data.description,
+            priority: mapPriorityFromDB(mapPriorityToDB(data.priority)),
+            due_date: data.due_date || null
+        } as ActionPlan : p));
+
         try {
             const { error } = await supabase
                 .from('action_plans')
@@ -308,6 +320,8 @@ export const useVendorActionPlans = () => {
             return true;
         } catch (error: any) {
             console.error('Erro ao atualizar plano:', error);
+            // Revert optimistic update
+            setPlans(previousPlans);
             toast({
                 title: "Erro",
                 description: "Não foi possível atualizar o plano",
@@ -469,6 +483,10 @@ export const useVendorActionPlans = () => {
 
     /** Approve a pending_validation plan → makes it available to vendor */
     const approvePlan = async (planId: string) => {
+        // Optimistic Update
+        const previousPlans = [...plans];
+        setPlans(currentPlans => currentPlans.map(p => p.id === planId ? { ...p, status: 'available_to_vendor' } : p));
+
         try {
             console.log("Approving plan:", planId);
             const query = supabase
@@ -488,6 +506,8 @@ export const useVendorActionPlans = () => {
             return true;
         } catch (error: any) {
             console.error("Error approving plan:", error);
+            // Revert optimistic update
+            setPlans(previousPlans);
             toast({ title: 'Erro', description: error.message || 'Não foi possível aprovar o plano.', variant: 'destructive' });
             return false;
         }
@@ -495,6 +515,10 @@ export const useVendorActionPlans = () => {
 
     /** Reject a pending_validation plan → moves back to planejado for editing */
     const rejectPlan = async (planId: string, reason?: string) => {
+        // Optimistic Update
+        const previousPlans = [...plans];
+        setPlans(currentPlans => currentPlans.map(p => p.id === planId ? { ...p, status: 'open' } : p));
+
         try {
             console.log("Rejecting plan:", planId);
             const query = supabase
@@ -518,6 +542,8 @@ export const useVendorActionPlans = () => {
             return true;
         } catch (error: any) {
             console.error("Error rejecting plan:", error);
+            // Revert optimistic update
+            setPlans(previousPlans);
             toast({ title: 'Erro', description: error.message || 'Não foi possível rejeitar o plano.', variant: 'destructive' });
             return false;
         }
