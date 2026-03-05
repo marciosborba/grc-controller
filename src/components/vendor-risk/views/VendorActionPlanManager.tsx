@@ -285,7 +285,8 @@ export const VendorActionPlanManager: React.FC = () => {
                 <div className="divide-y">
                     {plan.activities && plan.activities.length > 0 ? (
                         plan.activities.map(activity => (
-                            <div key={activity.id} className="p-3 hover:bg-muted/30 group">
+                            <div key={activity.id} className={`p-3 hover:bg-muted/30 group transition-colors ${activity.status === 'completed' ? 'bg-green-50/50 dark:bg-green-950/10' : ''
+                                }`}>
                                 <div className="flex justify-between items-start gap-2">
                                     <div className="flex items-start gap-2 flex-1 min-w-0">
                                         <Button
@@ -297,16 +298,19 @@ export const VendorActionPlanManager: React.FC = () => {
                                         </Button>
                                         <div className={`flex-1 min-w-0 ${activity.status === 'completed' ? 'opacity-60 line-through' : ''}`}>
                                             <h4 className="text-sm font-medium truncate">{activity.title}</h4>
-                                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{activity.description}</p>
+                                            {activity.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{activity.description}</p>}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
+                                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${activity.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200' :
+                                                activity.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200' :
+                                                    'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border-gray-200'
+                                            }`}>
+                                            {getStatusLabel(activity.status)}
+                                        </Badge>
                                         <Badge variant="outline" className={`text-[10px] px-1.5 py-0 hidden sm:inline-flex ${getPriorityColor(activity.priority)}`}>
                                             {getPriorityLabel(activity.priority)}
                                         </Badge>
-                                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                            {activity.due_date ? format(new Date(activity.due_date), 'dd/MM') : '-'}
-                                        </span>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                                             onClick={e => { e.stopPropagation(); openEditActivityDialog(activity); }}>
                                             <Edit className="h-3 w-3" />
@@ -316,6 +320,17 @@ export const VendorActionPlanManager: React.FC = () => {
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </div>
+                                </div>
+                                <div className="flex items-center gap-3 mt-1.5 ml-7 text-[11px] text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        Prazo: {activity.due_date ? format(new Date(activity.due_date), 'dd/MM/yyyy') : 'Sem prazo'}
+                                    </span>
+                                    {(activity.responsible_name || (activity as any).metadados?.responsavel_nome) && (
+                                        <span className="flex items-center gap-1">
+                                            👤 {(activity as any).metadados?.responsavel_nome || activity.responsible_name}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         ))

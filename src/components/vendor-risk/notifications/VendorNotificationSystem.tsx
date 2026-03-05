@@ -63,49 +63,11 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
           sender_type,
           vendor_registry:vendor_id (name),
           vendor_id,
-          assessment_id,
-          attachments
+          assessment_id
         `)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        // If error is due to missing column (Postgres code 42703), retry without attachments
-        if (error.code === '42703') {
-          console.warn('Attachments column missing, fetching legacy format.');
-          const { data: legacyData, error: legacyError } = await supabase
-            .from('vendor_risk_messages')
-            .select(`
-              id,
-              content,
-              created_at,
-              sender_type,
-              vendor_registry:vendor_id (name),
-              vendor_id,
-              assessment_id
-            `)
-            .order('created_at', { ascending: false });
-
-          if (legacyError) throw legacyError;
-
-          if (legacyData) {
-            const formatted = legacyData.map((msg: any) => ({
-              id: msg.id,
-              vendor: msg.vendor_registry?.name || 'Fornecedor',
-              subject: 'Nova Mensagem',
-              date: msg.created_at,
-              status: msg.sender_type === 'vendor' ? 'received' : 'sent',
-              preview: msg.content.substring(0, 50) + '...',
-              content: msg.content,
-              vendorId: msg.vendor_id,
-              assessmentId: msg.assessment_id,
-              attachments: [] // Default to empty
-            }));
-            setMessages(formatted);
-          }
-          return;
-        }
-        throw error;
-      }
+      if (error) throw error;
 
       if (data) {
         const formatted = data.map((msg: any) => ({
@@ -118,7 +80,7 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
           content: msg.content,
           vendorId: msg.vendor_id,
           assessmentId: msg.assessment_id,
-          attachments: msg.attachments || []
+          attachments: []
         }));
         setMessages(formatted);
       }
@@ -235,8 +197,7 @@ export const VendorNotificationSystem: React.FC<VendorNotificationSystemProps> =
         vendor_id: selectedThread.vendorId,
         assessment_id: lastMsgWithAssessment?.assessmentId || null,
         sender_type: 'internal',
-        content: content,
-        attachments: attachments
+        content: content
       });
 
       if (error) throw error;

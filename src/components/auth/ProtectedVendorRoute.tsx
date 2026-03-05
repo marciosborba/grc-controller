@@ -22,17 +22,35 @@ export const ProtectedVendorRoute = ({ children }: { children: React.ReactNode }
             }
 
             try {
-                const { data, error } = await supabase
+                // Primeira tentativa: buscar em vendor_users
+                const { data: vendorUser, error: vendorError } = await supabase
                     .from('vendor_users')
                     .select('id')
                     .eq('auth_user_id', session.user.id)
-                    .single();
+                    .limit(1)
+                    .maybeSingle();
+
+                if (vendorUser) {
+                    if (mounted) {
+                        setIsVendor(true);
+                        setLoading(false);
+                    }
+                    return;
+                }
+
+                // Segunda tentativa: buscar em vendor_portal_users
+                const { data: portalUser, error: portalError } = await supabase
+                    .from('vendor_portal_users')
+                    .select('vendor_id')
+                    .eq('email', session.user.email?.trim().toLowerCase())
+                    .limit(1)
+                    .maybeSingle();
 
                 if (mounted) {
-                    if (error || !data) {
-                        setIsVendor(false);
-                    } else {
+                    if (portalUser) {
                         setIsVendor(true);
+                    } else {
+                        setIsVendor(false);
                     }
                     setLoading(false);
                 }

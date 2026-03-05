@@ -62,7 +62,7 @@ interface Question {
   question: string;
   text?: string;
   type: 'yes_no' | 'yes_no_na' | 'multiple_choice' | 'text' | 'number' | 'file_upload' | 'rating' | 'scale';
-  options?: string[];
+  options?: string[] | string;
   required: boolean;
   weight: number;
   help_text?: string;
@@ -93,6 +93,8 @@ interface AssessmentData {
   tenant_id?: string;
   framework_id?: string;
   metadata?: any;
+  submission_summary?: any;
+  overall_score?: number;
 }
 
 const DEFAULT_QUESTIONS: Question[] = DEFAULT_ASSESSMENT_QUESTIONS.map(q => ({
@@ -311,8 +313,7 @@ export const VendorAssessmentFill = () => {
           vendor_id: assessment?.vendor_id,
           assessment_id: assessmentId,
           content: chatMessage,
-          sender_type: 'vendor',
-          attachments: attachments
+          sender_type: 'vendor'
         })
         .select()
         .single();
@@ -357,35 +358,46 @@ export const VendorAssessmentFill = () => {
         .from('vendor_assessments')
         .select(`
           *,
-          vendor_registry (name, primary_contact_name),
-          framework:framework_id (name, framework_type, questions)
+          vendor_registry (name, primary_contact_name)
         `)
         .eq('id', assessmentId)
         .single();
 
-      if (error || !assessmentData) {
+      // If the main query fails, try without the vendor_registry join
+      let finalData = assessmentData;
+      if (error && error.code === '42703') {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('vendor_assessments')
+          .select('*')
+          .eq('id', assessmentId)
+          .single();
+        if (fallbackError || !fallbackData) {
+          throw new Error('Assessment não encontrado ou acesso restrito.');
+        }
+        finalData = { ...fallbackData, vendor_registry: null };
+      } else if (error || !assessmentData) {
         throw new Error('Assessment não encontrado ou acesso restrito.');
       }
 
       // We allow 'draft' so admins can test, and 'completed' to show success screen
-      if (!['draft', 'sent', 'in_progress', 'completed', 'pending_validation'].includes(assessmentData.status)) {
+      if (!['draft', 'sent', 'in_progress', 'completed', 'pending_validation', 'approved', 'under_review'].includes(finalData.status)) {
         toast({
           title: "Assessment Não Disponível",
-          description: `O status atual não permite preenchimento.`,
+          description: `O status atual não permite visualização.`,
           variant: "destructive"
         });
       }
 
       // Normalize nested data
       const normalizedData = {
-        ...assessmentData,
-        vendor_assessment_frameworks: assessmentData.framework
+        ...finalData,
+        vendor_assessment_frameworks: finalData.framework || null
       };
 
       setAssessment(normalizedData);
-      setResponses(assessmentData.responses || {});
+      setResponses(finalData.responses || {});
 
-      if (assessmentData.responses && Object.keys(assessmentData.responses).length > 0) {
+      if (finalData.responses && Object.keys(finalData.responses).length > 0) {
         setShowWelcome(false);
       }
 
@@ -887,7 +899,12 @@ export const VendorAssessmentFill = () => {
               <SelectValue placeholder="Selecione uma opção" />
             </SelectTrigger>
             <SelectContent>
-              {question.options?.map(option => (
+              {(Array.isArray(question.options)
+                ? question.options
+                : typeof question.options === 'string'
+                  ? question.options.split(',').map(s => s.trim())
+                  : []
+              ).map(option => (
                 <SelectItem key={option} value={option} className="py-3 cursor-pointer">{option}</SelectItem>
               ))}
             </SelectContent>
@@ -1267,6 +1284,118 @@ export const VendorAssessmentFill = () => {
 
   const progress = calculateProgress();
   const currentSectionData = sections[currentSection];
+
+  // If sections are empty (questions not loaded or approved assessment without framework), show a summary view
+  if (!currentSectionData) {
+    // For approved/under_review assessments, show a results summary
+    if (assessment?.status === 'approved' || assessment?.status === 'under_review' || assessment?.status === 'completed') {
+      // Try to get maturity info from submission_summary or metadata
+      let summaryData: any = null;
+      if (assessment.submission_summary) {
+        try {
+          summaryData = typeof assessment.submission_summary === 'string'
+            ? JSON.parse(assessment.submission_summary)
+            : assessment.submission_summary;
+        } catch { }
+      }
+      const validationData = (assessment as any).metadata?.validation;
+      const displayScore = validationData?.overallScore ?? summaryData?.maturity_score ?? null;
+      const displayLevel = validationData?.maturityLevel ?? summaryData?.maturity_level ?? null;
+
+      return (
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
+          <Card className="border-primary/20 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-b">
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Shield className="h-7 w-7 text-primary" />
+                {assessment.assessment_name}
+              </CardTitle>
+              <p className="text-muted-foreground mt-1">
+                Avaliação concluída e validada
+              </p>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {/* Status */}
+              <div className="flex items-center gap-3">
+                <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-sm px-3 py-1">
+                  <CheckCircle className="h-4 w-4 mr-1.5" />
+                  {assessment.status === 'approved' ? 'Aprovada' : assessment.status === 'under_review' ? 'Em Revisão' : 'Concluída'}
+                </Badge>
+                {assessment.vendor_submitted_at && (
+                  <span className="text-sm text-muted-foreground">
+                    Enviada em {new Date(assessment.vendor_submitted_at).toLocaleDateString('pt-BR')}
+                  </span>
+                )}
+              </div>
+
+              {/* Maturity Score */}
+              {(displayScore !== null || displayLevel) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {displayScore !== null && (
+                    <div className="p-5 rounded-xl border border-primary/20 bg-primary/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Award className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground">Nota da Avaliação</span>
+                      </div>
+                      <p className="text-3xl font-bold text-primary">{displayScore}<span className="text-lg font-normal text-muted-foreground">/100</span></p>
+                    </div>
+                  )}
+                  {displayLevel && (
+                    <div className="p-5 rounded-xl border border-primary/20 bg-primary/5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Target className="h-5 w-5 text-primary" />
+                        <span className="text-sm font-medium text-muted-foreground">Nível de Maturidade</span>
+                      </div>
+                      <p className="text-3xl font-bold text-primary">{displayLevel}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Progress */}
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="flex justify-between text-sm font-semibold mb-2">
+                  <span>Completude do Questionário</span>
+                  <span className="text-primary">{assessment.progress_percentage || 0}%</span>
+                </div>
+                <Progress value={assessment.progress_percentage || 0} className="h-2.5" />
+              </div>
+
+              {/* Submission details */}
+              {summaryData && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-muted-foreground text-xs mb-1">Total de Perguntas</p>
+                    <p className="font-bold text-lg">{summaryData.total_questions || '-'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-muted-foreground text-xs mb-1">Respondidas</p>
+                    <p className="font-bold text-lg">{summaryData.answered_questions || '-'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-muted-foreground text-xs mb-1">Planos Gerados</p>
+                    <p className="font-bold text-lg">{summaryData.generated_plans_count ?? '-'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 text-center">
+                    <p className="text-muted-foreground text-xs mb-1">Prazo</p>
+                    <p className="font-bold text-sm">{assessment.due_date ? new Date(assessment.due_date).toLocaleDateString('pt-BR') : '-'}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    // Otherwise show loading
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+        <p className="text-muted-foreground">Carregando questões...</p>
+      </div>
+    );
+  }
 
   // Success Screen
   if (assessment?.status === 'completed' && assessment?.vendor_submitted_at) {

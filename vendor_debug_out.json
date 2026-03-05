@@ -1,0 +1,1021 @@
+{
+  "users": [
+    {
+      "id": "24952c35-90b0-4405-bd85-b0d9421a9731",
+      "email": "teste5@mail.com",
+      "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "force_password_change": true,
+      "created_at": "2026-03-04T16:37:36.896392+00:00",
+      "updated_at": "2026-03-04T16:37:36.896392+00:00"
+    },
+    {
+      "id": "08c6fef3-8064-47f7-91e4-b16c58653002",
+      "email": "teste5@teste.com",
+      "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "force_password_change": false,
+      "created_at": "2026-03-04T16:32:26.012517+00:00",
+      "updated_at": "2026-03-04T16:32:26.012517+00:00"
+    }
+  ],
+  "registry": [
+    {
+      "id": "db58e17e-0084-4d9b-9aca-108f19041c35",
+      "name": "GePriv Tecnologia"
+    },
+    {
+      "id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "name": "GePriv"
+    }
+  ],
+  "assessments": [
+    {
+      "id": "4a1bfda5-3930-4c84-927c-7546c2574455",
+      "tenant_id": "550e8400-e29b-41d4-a716-446655440000",
+      "vendor_id": "db58e17e-0084-4d9b-9aca-108f19041c35",
+      "framework_id": null,
+      "assessment_name": "QA Test Assessment - CRUD Example",
+      "assessment_type": "initial",
+      "status": "in_progress",
+      "priority": "medium",
+      "due_date": null,
+      "start_date": "2025-12-11T00:15:30.961471+00:00",
+      "completion_date": null,
+      "progress_percentage": 50,
+      "responses": {
+        "debug": "true"
+      },
+      "overall_score": null,
+      "risk_level": null,
+      "public_link": "f925d9ec4fa9dc4e849e1b22986a6889",
+      "public_link_expires_at": "2026-01-10T00:15:30.885+00:00",
+      "vendor_submitted_at": null,
+      "internal_review_status": "pending",
+      "reviewer_notes": null,
+      "evidence_attachments": [],
+      "metadata": {},
+      "created_at": "2025-12-11T00:15:30.961471+00:00",
+      "updated_at": "2025-12-24T20:47:36.896738+00:00",
+      "created_by": null,
+      "updated_by": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "submission_summary": "Debug update via RPC"
+    },
+    {
+      "id": "497aadf4-015e-43e0-9eb0-0ba3fb4ac69e",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "framework_id": null,
+      "assessment_name": "Assessment - GePriv",
+      "assessment_type": "initial",
+      "status": "approved",
+      "priority": "medium",
+      "due_date": "2026-01-23T00:00:00+00:00",
+      "start_date": "2025-12-10T23:55:10.667433+00:00",
+      "completion_date": null,
+      "progress_percentage": 100,
+      "responses": {
+        "tp_1": "no",
+        "gov_1": "no",
+        "gov_2": "no",
+        "gov_3": "Sim, na admissão apenas",
+        "inc_1": "yes",
+        "inc_2": "Anualmente",
+        "obs_1": "Teste final",
+        "evid_1": "{\"name\":\"Relatorio_executivo_2025-10-30.pdf\",\"size\":4257,\"type\":\"application/pdf\",\"uploadedAt\":\"2025-12-12T00:28:47.501Z\",\"url\":\"blob:http://localhost:8080/2fc5d281-2b23-428c-a98b-cbe990c5a16d\"}",
+        "phys_1": "yes",
+        "phys_2": "yes",
+        "access_1": "yes",
+        "access_2": "Em até 24 horas",
+        "access_3": "yes",
+        "privacy_1": "yes",
+        "privacy_2": "3",
+        "privacy_3": "no"
+      },
+      "overall_score": null,
+      "risk_level": null,
+      "public_link": "NDk3YWFkZjQtMDE1_mm855wgq",
+      "public_link_expires_at": "2026-03-31T19:27:04.346+00:00",
+      "vendor_submitted_at": "2026-03-04T12:32:24.434506+00:00",
+      "internal_review_status": "approved",
+      "reviewer_notes": "",
+      "evidence_attachments": [],
+      "metadata": {
+        "validation": {
+          "validatedAt": "2026-03-04T13:44:40.073Z",
+          "overallScore": 53,
+          "maturityLevel": "Básico",
+          "controlValidations": {},
+          "overallObservation": "",
+          "finalScoreAdjustment": 0,
+          "finalScoreJustification": ""
+        }
+      },
+      "created_at": "2025-12-10T23:55:10.461+00:00",
+      "updated_at": "2026-03-04T13:44:40.24057+00:00",
+      "created_by": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "updated_by": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "submission_summary": "{\"submitted_at\":\"2026-03-04T12:32:24.329Z\",\"total_questions\":16,\"answered_questions\":16,\"completion_percentage\":100,\"vendor_contact\":\"Marcio Borba\",\"vendor_name\":\"GePriv\",\"maturity_score\":53,\"maturity_level\":\"Básico\",\"generated_plans_count\":6}"
+    },
+    {
+      "id": "60b14cf8-bf89-4749-8381-aee4fb31f8ce",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "framework_id": null,
+      "assessment_name": "Segurança da Informação",
+      "assessment_type": "initial",
+      "status": "approved",
+      "priority": "high",
+      "due_date": "2026-04-02T00:00:00+00:00",
+      "start_date": "2026-03-03T23:57:45.423906+00:00",
+      "completion_date": null,
+      "progress_percentage": 100,
+      "responses": {
+        "1": "yes",
+        "2": "yes",
+        "3": "yes",
+        "4": "yes",
+        "5": "yes",
+        "6": "yes"
+      },
+      "overall_score": null,
+      "risk_level": null,
+      "public_link": "NjBiMTRjZjgtYmY4_mmb9qhv7",
+      "public_link_expires_at": "2026-04-02T23:58:22.195+00:00",
+      "vendor_submitted_at": "2026-03-04T12:15:55.680493+00:00",
+      "internal_review_status": "approved",
+      "reviewer_notes": null,
+      "evidence_attachments": [],
+      "metadata": {
+        "questions": [
+          {
+            "id": "1",
+            "text": "A organização possui um Encarregado de Proteção de Dados (DPO) nomeado e acessível?",
+            "type": "yes_no_na",
+            "category": "Governança de Privacidade"
+          },
+          {
+            "id": "2",
+            "text": "Existe um registro de operações de tratamento de dados pessoais (RoPA) atualizado?",
+            "type": "yes_no_na",
+            "category": "Identificação e Registro do Tratamento"
+          },
+          {
+            "id": "3",
+            "text": "As bases legais para o tratamento de dados pessoais são avaliadas e documentadas?",
+            "type": "yes_no_na",
+            "category": "Bases Legais"
+          },
+          {
+            "id": "4",
+            "text": "Existem procedimentos para atender aos direitos dos titulares de dados (acesso, correção, exclusão)?",
+            "type": "yes_no_na",
+            "category": "Direitos dos Titulares"
+          },
+          {
+            "id": "5",
+            "text": "A organização realiza Relatórios de Impacto à Proteção de Dados (DPIA) quando necessário?",
+            "type": "yes_no_na",
+            "category": "Gestão de Riscos de Privacidade"
+          },
+          {
+            "id": "6",
+            "text": "Existem controles implementados para garantir a privacidade desde a concepção (Privacy by Design)?",
+            "type": "yes_no_na",
+            "category": "Privacy by Design"
+          }
+        ],
+        "validation": {
+          "validatedAt": "2026-03-04T12:18:58.909Z",
+          "overallScore": 100,
+          "maturityLevel": "Otimizado",
+          "controlValidations": {},
+          "overallObservation": "",
+          "finalScoreAdjustment": 0,
+          "finalScoreJustification": ""
+        },
+        "vendor_framework_id": "bbc7f9c6-6045-4f4a-9fd7-44e9bd221a1f",
+        "vendor_framework_name": "Framework ISO 27701"
+      },
+      "created_at": "2026-03-03T23:57:45.423906+00:00",
+      "updated_at": "2026-03-04T12:18:59.040021+00:00",
+      "created_by": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "updated_by": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "submission_summary": "{\"submitted_at\":\"2026-03-04T12:15:55.569Z\",\"total_questions\":6,\"answered_questions\":6,\"completion_percentage\":100,\"vendor_contact\":\"Marcio Borba\",\"vendor_name\":\"GePriv\",\"maturity_score\":100,\"maturity_level\":\"Otimizado\",\"generated_plans_count\":0}"
+    },
+    {
+      "id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "framework_id": null,
+      "assessment_name": "Teste 5",
+      "assessment_type": "initial",
+      "status": "approved",
+      "priority": "high",
+      "due_date": "2026-04-03T00:00:00+00:00",
+      "start_date": "2026-03-04T16:37:37.391617+00:00",
+      "completion_date": null,
+      "progress_percentage": 100,
+      "responses": {
+        "tp_1": "Básico",
+        "gov_1": "Inicial",
+        "gov_2": "Inicial",
+        "gov_3": "Não há treinamento formal",
+        "inc_1": "Inicial",
+        "inc_2": "Trimestralmente",
+        "obs_1": "alguma coisa",
+        "evid_1": "Inexistente",
+        "phys_1": "Inicial",
+        "phys_2": "Inexistente",
+        "access_1": "Inexistente",
+        "access_2": "Manual/Sob demanda",
+        "access_3": "Básico",
+        "privacy_1": "Inicial",
+        "privacy_2": "Inicial",
+        "privacy_3": "Gerenciado"
+      },
+      "overall_score": null,
+      "risk_level": null,
+      "public_link": "OWVjMjA5ZTMtY2Nj_mmc9focz",
+      "public_link_expires_at": "2026-04-03T16:37:43.571+00:00",
+      "vendor_submitted_at": "2026-03-04T18:39:14.849749+00:00",
+      "internal_review_status": "approved",
+      "reviewer_notes": "",
+      "evidence_attachments": [],
+      "metadata": {
+        "questions": [
+          {
+            "id": "gov_1",
+            "text": "A organização possui uma Política de Segurança da Informação (PSI) formalmente documentada e aprovada?",
+            "type": "multiple_choice",
+            "weight": 10,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Governança e Políticas",
+            "question": "A organização possui uma Política de Segurança da Informação (PSI) formalmente documentada e aprovada?",
+            "required": true,
+            "criticality": "alto",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "gov_2",
+            "text": "Existe um responsável designado pela Segurança da Informação (CISO ou equivalente)?",
+            "type": "multiple_choice",
+            "weight": 8,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Governança e Políticas",
+            "question": "Existe um responsável designado pela Segurança da Informação (CISO ou equivalente)?",
+            "required": true,
+            "criticality": "alto",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "gov_3",
+            "text": "Os colaboradores passam por treinamentos periódicos de conscientização em segurança?",
+            "type": "multiple_choice",
+            "weight": 8,
+            "options": "Sim, anualmente,Sim, na admissão apenas,Não há treinamento formal,Sim, trimestralmente",
+            "category": "Governança e Políticas",
+            "question": "Os colaboradores passam por treinamentos periódicos de conscientização em segurança?",
+            "required": true,
+            "criticality": "medio",
+            "requires_evidence": false
+          },
+          {
+            "id": "access_1",
+            "text": "A organização utiliza Múltiplo Fator de Autenticação (MFA) para acesso a sistemas críticos?",
+            "type": "multiple_choice",
+            "weight": 10,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Controle de Acesso",
+            "question": "A organização utiliza Múltiplo Fator de Autenticação (MFA) para acesso a sistemas críticos?",
+            "required": true,
+            "criticality": "alto",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "access_2",
+            "text": "Como é realizado o processo de revogação de acessos de colaboradores desligados?",
+            "type": "multiple_choice",
+            "weight": 9,
+            "options": "Imediato (automático),Em até 24 horas,Em até 1 semana,Manual/Sob demanda",
+            "category": "Controle de Acesso",
+            "question": "Como é realizado o processo de revogação de acessos de colaboradores desligados?",
+            "required": true,
+            "criticality": "alto",
+            "requires_evidence": false
+          },
+          {
+            "id": "access_3",
+            "text": "Existe revisão periódica de direitos de acesso?",
+            "type": "multiple_choice",
+            "weight": 7,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Controle de Acesso",
+            "question": "Existe revisão periódica de direitos de acesso?",
+            "required": true,
+            "criticality": "medio",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "privacy_1",
+            "text": "A organização mapeou os dados pessoais que processa (Data Mapping)?",
+            "type": "multiple_choice",
+            "weight": 9,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Privacidade e Dados",
+            "question": "A organização mapeou os dados pessoais que processa (Data Mapping)?",
+            "required": true,
+            "criticality": "alto",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "privacy_2",
+            "text": "Qual o nível de conformidade com a LGPD?",
+            "type": "multiple_choice",
+            "weight": 10,
+            "options": "Não Iniciado,Inicial,Em Andamento,Avançado,Totalmente Conforme",
+            "category": "Privacidade e Dados",
+            "question": "Qual o nível de conformidade com a LGPD?",
+            "required": true,
+            "criticality": "critico",
+            "requires_evidence": false
+          },
+          {
+            "id": "privacy_3",
+            "text": "Existe um processo definido para resposta a incidentes de violação de dados?",
+            "type": "multiple_choice",
+            "weight": 10,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Privacidade e Dados",
+            "question": "Existe um processo definido para resposta a incidentes de violação de dados?",
+            "required": true,
+            "criticality": "critico",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "phys_1",
+            "text": "O acesso físico aos servidores/datacenter é restrito e monitorado?",
+            "type": "multiple_choice",
+            "weight": 6,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Segurança Física",
+            "question": "O acesso físico aos servidores/datacenter é restrito e monitorado?",
+            "required": true,
+            "criticality": "medio",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "phys_2",
+            "text": "Existem controles ambientais (energia, refrigeração, combate a incêndio) adequados?",
+            "type": "multiple_choice",
+            "weight": 5,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Segurança Física",
+            "question": "Existem controles ambientais (energia, refrigeração, combate a incêndio) adequados?",
+            "required": false,
+            "criticality": "baixo",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "inc_1",
+            "text": "A organização possui um Plano de Continuidade de Negócios (PCN) testado?",
+            "type": "multiple_choice",
+            "weight": 8,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Continuidade de Negócios",
+            "question": "A organização possui um Plano de Continuidade de Negócios (PCN) testado?",
+            "required": true,
+            "criticality": "alto",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "inc_2",
+            "text": "Com que frequência são realizados testes de restore de backup?",
+            "type": "multiple_choice",
+            "weight": 9,
+            "options": "Mensalmente,Trimestralmente,Anualmente,Nunca testado,Somente quando necessário",
+            "category": "Continuidade de Negócios",
+            "question": "Com que frequência são realizados testes de restore de backup?",
+            "required": true,
+            "criticality": "alto",
+            "requires_evidence": false
+          },
+          {
+            "id": "tp_1",
+            "text": "Os fornecedores críticos são avaliados quanto a riscos de segurança?",
+            "type": "multiple_choice",
+            "weight": 7,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Gestão de Terceiros",
+            "question": "Os fornecedores críticos são avaliados quanto a riscos de segurança?",
+            "required": true,
+            "criticality": "medio",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          },
+          {
+            "id": "evid_1",
+            "text": "Anexe o certificado ISO 27001 ou SOC 2 (se houver):",
+            "type": "multiple_choice",
+            "weight": 0,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Certificações",
+            "question": "Anexe o certificado ISO 27001 ou SOC 2 (se houver):",
+            "required": false,
+            "criticality": "baixo",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": true
+          },
+          {
+            "id": "obs_1",
+            "text": "Descreva quaisquer outras medidas de segurança relevantes ou compensatórias:",
+            "type": "text",
+            "weight": 0,
+            "options": "Inexistente,Inicial,Básico,Gerenciado,Otimizado",
+            "category": "Observações Finais",
+            "question": "Descreva quaisquer outras medidas de segurança relevantes ou compensatórias:",
+            "required": false,
+            "criticality": "baixo",
+            "optionWeights": [
+              {
+                "label": "Inexistente",
+                "weight": 0
+              },
+              {
+                "label": "Inicial",
+                "weight": 0.5
+              },
+              {
+                "label": "Básico",
+                "weight": 1
+              },
+              {
+                "label": "Gerenciado",
+                "weight": 1.5
+              },
+              {
+                "label": "Otimizado",
+                "weight": 2
+              }
+            ],
+            "requires_evidence": false
+          }
+        ],
+        "validation": {
+          "validatedAt": "2026-03-04T20:26:15.223Z",
+          "overallScore": 37,
+          "maturityLevel": "Inicial",
+          "controlValidations": {},
+          "overallObservation": "",
+          "finalScoreAdjustment": 0,
+          "finalScoreJustification": ""
+        },
+        "vendor_framework_id": "44bf663c-6ba1-4e84-8043-68a9e22390ac",
+        "vendor_framework_name": "Framework ISO 27001"
+      },
+      "created_at": "2026-03-04T16:37:37.391617+00:00",
+      "updated_at": "2026-03-04T20:26:15.51215+00:00",
+      "created_by": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "updated_by": null,
+      "reviewed_by": null,
+      "reviewed_at": null,
+      "submission_summary": "{\"submitted_at\":\"2026-03-04T18:39:14.409Z\",\"total_questions\":16,\"answered_questions\":16,\"completion_percentage\":100,\"vendor_contact\":\"Marcio Borba\",\"vendor_name\":\"GePriv\",\"maturity_score\":36,\"maturity_level\":\"Inicial\",\"generated_plans_count\":4}"
+    }
+  ],
+  "plans": [
+    {
+      "id": "c26dc215-0442-4e83-b0f4-dc8f4db30683",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "category_id": "2f4d7132-7345-4513-8db9-48460c35d69e",
+      "codigo": "PA-NIST-002",
+      "titulo": "Correção Gap NIST CSF - Detecção de Incidentes",
+      "descricao": "Implementar ferramentas de detecção e monitoramento proativo para reduzir tempo de resposta a incidentes de segurança",
+      "objetivo": "Melhorar capacidade de detecção e resposta a incidentes conforme função DE do NIST CSF",
+      "modulo_origem": "assessments",
+      "entidade_origem_tipo": "assessment",
+      "entidade_origem_id": "b328b047-cdf2-4624-98d1-92df130d305e",
+      "contexto_adicional": {},
+      "prioridade": "critica",
+      "criticidade": "critica",
+      "complexidade": "alta",
+      "gut_gravidade": null,
+      "gut_urgencia": null,
+      "gut_tendencia": null,
+      "gut_score": null,
+      "responsavel_plano": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "responsavel_aprovacao": null,
+      "equipe_responsavel": null,
+      "stakeholders": null,
+      "data_inicio_planejada": "2025-02-01",
+      "data_fim_planejada": "2025-04-30",
+      "data_inicio_real": null,
+      "data_fim_real": null,
+      "data_proxima_revisao": null,
+      "orcamento_planejado": null,
+      "orcamento_realizado": null,
+      "recursos_necessarios": null,
+      "recursos_alocados": {},
+      "status": "planejado",
+      "percentual_conclusao": 0,
+      "fase_atual": "planejamento",
+      "requer_aprovacao": false,
+      "aprovado_por": null,
+      "data_aprovacao": null,
+      "observacoes_aprovacao": null,
+      "workflow_config": {},
+      "kpis_definidos": [],
+      "resultados_alcancados": {},
+      "efetividade_percentual": null,
+      "licoes_aprendidas": null,
+      "plano_comunicacao": {},
+      "frequencia_relatorios": "semanal",
+      "proxima_notificacao": null,
+      "configuracao_alertas": {},
+      "documentos_anexos": [],
+      "links_relacionados": [],
+      "tags": null,
+      "metadados": {},
+      "created_at": "2025-10-02T11:32:37.362644+00:00",
+      "updated_at": "2026-01-25T11:23:55.881461+00:00",
+      "created_by": null,
+      "updated_by": null
+    },
+    {
+      "id": "7e1c915b-ac78-453d-b805-0abdcdf5e34f",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "category_id": "35cbe22e-11e1-4293-bd07-6b3a027cd7d8",
+      "codigo": "PLAN-136872",
+      "titulo": "GePriv",
+      "descricao": "Plano de ação completo",
+      "objetivo": null,
+      "modulo_origem": "vendor_risk",
+      "entidade_origem_tipo": "vendor",
+      "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+      "contexto_adicional": {},
+      "prioridade": "alta",
+      "criticidade": "media",
+      "complexidade": "media",
+      "gut_gravidade": null,
+      "gut_urgencia": null,
+      "gut_tendencia": null,
+      "gut_score": null,
+      "responsavel_plano": null,
+      "responsavel_aprovacao": null,
+      "equipe_responsavel": null,
+      "stakeholders": null,
+      "data_inicio_planejada": null,
+      "data_fim_planejada": "2025-12-31",
+      "data_inicio_real": null,
+      "data_fim_real": null,
+      "data_proxima_revisao": null,
+      "orcamento_planejado": null,
+      "orcamento_realizado": null,
+      "recursos_necessarios": null,
+      "recursos_alocados": {},
+      "status": "planejado",
+      "percentual_conclusao": 0,
+      "fase_atual": null,
+      "requer_aprovacao": false,
+      "aprovado_por": null,
+      "data_aprovacao": null,
+      "observacoes_aprovacao": null,
+      "workflow_config": {},
+      "kpis_definidos": [],
+      "resultados_alcancados": {},
+      "efetividade_percentual": null,
+      "licoes_aprendidas": null,
+      "plano_comunicacao": {},
+      "frequencia_relatorios": "semanal",
+      "proxima_notificacao": null,
+      "configuracao_alertas": {},
+      "documentos_anexos": [],
+      "links_relacionados": [],
+      "tags": null,
+      "metadados": {
+        "assessment_id": "60b14cf8-bf89-4749-8381-aee4fb31f8ce",
+        "assessment_name": "Segurança da Informação"
+      },
+      "created_at": "2025-12-19T12:25:36.950681+00:00",
+      "updated_at": "2026-03-04T20:44:56.217583+00:00",
+      "created_by": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "updated_by": null
+    },
+    {
+      "id": "15f9bde7-a744-4086-88f7-e967f3e62408",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "category_id": "35cbe22e-11e1-4293-bd07-6b3a027cd7d8",
+      "codigo": "RISK-2025-000001",
+      "titulo": "Implementação de Controles de Segurança Cibernética",
+      "descricao": "Plano abrangente para fortalecer a postura de segurança cibernética da organização através da implementação de controles técnicos e administrativos",
+      "objetivo": null,
+      "modulo_origem": "risk_management",
+      "entidade_origem_tipo": null,
+      "entidade_origem_id": null,
+      "contexto_adicional": {},
+      "prioridade": "alta",
+      "criticidade": "media",
+      "complexidade": "media",
+      "gut_gravidade": 4,
+      "gut_urgencia": 4,
+      "gut_tendencia": 3,
+      "gut_score": 48,
+      "responsavel_plano": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "responsavel_aprovacao": null,
+      "equipe_responsavel": null,
+      "stakeholders": null,
+      "data_inicio_planejada": "2025-01-15",
+      "data_fim_planejada": "2025-06-30",
+      "data_inicio_real": null,
+      "data_fim_real": null,
+      "data_proxima_revisao": null,
+      "orcamento_planejado": 150000,
+      "orcamento_realizado": null,
+      "recursos_necessarios": null,
+      "recursos_alocados": {},
+      "status": "em_andamento",
+      "percentual_conclusao": 35,
+      "fase_atual": null,
+      "requer_aprovacao": false,
+      "aprovado_por": null,
+      "data_aprovacao": null,
+      "observacoes_aprovacao": null,
+      "workflow_config": {},
+      "kpis_definidos": [],
+      "resultados_alcancados": {},
+      "efetividade_percentual": null,
+      "licoes_aprendidas": null,
+      "plano_comunicacao": {},
+      "frequencia_relatorios": "semanal",
+      "proxima_notificacao": "2025-09-26",
+      "configuracao_alertas": {},
+      "documentos_anexos": [],
+      "links_relacionados": [],
+      "tags": null,
+      "metadados": {},
+      "created_at": "2025-09-19T20:09:28.650735+00:00",
+      "updated_at": "2026-03-04T20:51:23.027339+00:00",
+      "created_by": null,
+      "updated_by": null
+    },
+    {
+      "id": "e543932b-e02a-4e03-bf30-f38d9afcb2ac",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "category_id": "b55eace8-0c78-48b9-b340-b11bcba1d45c",
+      "codigo": "PRIV-2025-000001",
+      "titulo": "Fortalecimento do Programa de Privacidade",
+      "descricao": "Iniciativa para aprimorar o programa de privacidade e proteção de dados pessoais, incluindo mapeamento de dados e revisão de políticas",
+      "objetivo": null,
+      "modulo_origem": "privacy",
+      "entidade_origem_tipo": null,
+      "entidade_origem_id": null,
+      "contexto_adicional": {},
+      "prioridade": "alta",
+      "criticidade": "media",
+      "complexidade": "media",
+      "gut_gravidade": 3,
+      "gut_urgencia": 4,
+      "gut_tendencia": 3,
+      "gut_score": 36,
+      "responsavel_plano": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "responsavel_aprovacao": null,
+      "equipe_responsavel": null,
+      "stakeholders": null,
+      "data_inicio_planejada": "2025-01-10",
+      "data_fim_planejada": "2025-05-15",
+      "data_inicio_real": null,
+      "data_fim_real": null,
+      "data_proxima_revisao": null,
+      "orcamento_planejado": 75000,
+      "orcamento_realizado": null,
+      "recursos_necessarios": null,
+      "recursos_alocados": {},
+      "status": "em_andamento",
+      "percentual_conclusao": 60,
+      "fase_atual": null,
+      "requer_aprovacao": false,
+      "aprovado_por": null,
+      "data_aprovacao": null,
+      "observacoes_aprovacao": null,
+      "workflow_config": {},
+      "kpis_definidos": [],
+      "resultados_alcancados": {},
+      "efetividade_percentual": null,
+      "licoes_aprendidas": null,
+      "plano_comunicacao": {},
+      "frequencia_relatorios": "semanal",
+      "proxima_notificacao": "2025-09-26",
+      "configuracao_alertas": {},
+      "documentos_anexos": [],
+      "links_relacionados": [],
+      "tags": null,
+      "metadados": {},
+      "created_at": "2025-09-19T20:09:28.714401+00:00",
+      "updated_at": "2026-03-04T20:51:23.027339+00:00",
+      "created_by": null,
+      "updated_by": null
+    },
+    {
+      "id": "f3a85de8-9016-43f2-838e-507bba54ae7c",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "category_id": "2f4d7132-7345-4513-8db9-48460c35d69e",
+      "codigo": "PA-ISO-001",
+      "titulo": "Implementar Controles de Backup ISO 27001",
+      "descricao": "Desenvolver e implementar política de backup abrangente conforme controles A.12.3 da ISO 27001",
+      "objetivo": "Garantir continuidade dos negócios através de backups seguros e testados",
+      "modulo_origem": "assessments",
+      "entidade_origem_tipo": "assessment",
+      "entidade_origem_id": "9b695417-f8c1-47bb-8435-7d44f83a5e7f",
+      "contexto_adicional": {},
+      "prioridade": "alta",
+      "criticidade": "alta",
+      "complexidade": "media",
+      "gut_gravidade": null,
+      "gut_urgencia": null,
+      "gut_tendencia": null,
+      "gut_score": null,
+      "responsavel_plano": "0c5c1433-2682-460c-992a-f4cce57c0d6d",
+      "responsavel_aprovacao": null,
+      "equipe_responsavel": null,
+      "stakeholders": null,
+      "data_inicio_planejada": "2025-01-15",
+      "data_fim_planejada": "2025-03-15",
+      "data_inicio_real": null,
+      "data_fim_real": null,
+      "data_proxima_revisao": null,
+      "orcamento_planejado": null,
+      "orcamento_realizado": null,
+      "recursos_necessarios": null,
+      "recursos_alocados": {},
+      "status": "em_andamento",
+      "percentual_conclusao": 35,
+      "fase_atual": "execucao",
+      "requer_aprovacao": false,
+      "aprovado_por": null,
+      "data_aprovacao": null,
+      "observacoes_aprovacao": null,
+      "workflow_config": {},
+      "kpis_definidos": [],
+      "resultados_alcancados": {},
+      "efetividade_percentual": null,
+      "licoes_aprendidas": null,
+      "plano_comunicacao": {},
+      "frequencia_relatorios": "semanal",
+      "proxima_notificacao": null,
+      "configuracao_alertas": {},
+      "documentos_anexos": [],
+      "links_relacionados": [],
+      "tags": null,
+      "metadados": {},
+      "created_at": "2025-10-02T11:32:37.362644+00:00",
+      "updated_at": "2026-03-04T20:51:23.027339+00:00",
+      "created_by": null,
+      "updated_by": null
+    }
+  ]
+}

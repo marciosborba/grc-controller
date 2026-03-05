@@ -29,6 +29,7 @@ import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import useVendorRiskManagement from '@/hooks/useVendorRiskManagement';
 import { useVendorActionPlans } from '@/hooks/useVendorActionPlans';
+import { supabase } from '@/integrations/supabase/client';
 
 
 // Importar views
@@ -66,6 +67,7 @@ export const VendorRiskManagementCenter: React.FC = () => {
 
   const [showOnboardingWorkflow, setShowOnboardingWorkflow] = useState(false);
   const [showNotificationSystem, setShowNotificationSystem] = useState(false);
+  const [unreadVendorMessages, setUnreadVendorMessages] = useState(0);
 
   // Hooks
   const { user } = useAuth();
@@ -136,6 +138,23 @@ export const VendorRiskManagementCenter: React.FC = () => {
     }
   }, [user?.tenantId, fetchVendors, fetchAssessments, fetchDashboardMetrics, fetchRiskDistribution, fetchPlans]);
 
+  // Fetch unread vendor messages for admin
+  useEffect(() => {
+    const fetchUnreadVendorMsgs = async () => {
+      try {
+        const { count } = await supabase
+          .from('vendor_risk_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('sender_type', 'vendor')
+          .eq('read', false);
+        setUnreadVendorMessages(count || 0);
+      } catch { }
+    };
+    fetchUnreadVendorMsgs();
+    const interval = setInterval(fetchUnreadVendorMsgs, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getQuickActions = (): QuickAction[] => {
     const highRiskVendors = dashboardMetrics?.critical_vendors || 0;
     const pendingAssessments = dashboardMetrics?.pending_assessments || 0;
@@ -191,8 +210,17 @@ export const VendorRiskManagementCenter: React.FC = () => {
         description: 'Gerenciar notificações e lembretes',
         icon: MessageSquare,
         color: 'purple',
-        action: () => setShowNotificationSystem(true),
-        badge: overdueAssessments > 0 ? overdueAssessments : undefined
+        action: () => {
+          setShowNotificationSystem(true);
+          // Mark vendor messages as read when admin opens
+          supabase
+            .from('vendor_risk_messages')
+            .update({ read: true })
+            .eq('sender_type', 'vendor')
+            .eq('read', false)
+            .then(() => setUnreadVendorMessages(0));
+        },
+        badge: unreadVendorMessages > 0 ? unreadVendorMessages : undefined
       },
       {
         id: 'framework-management',

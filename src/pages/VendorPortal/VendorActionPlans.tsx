@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Activity, Calendar, ExternalLink, FileText, CheckCircle, Clock, ChevronRight, ChevronDown, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ActionPlan, ActionPlanActivity } from '@/hooks/useVendorActionPlans';
@@ -31,6 +32,7 @@ export const VendorActionPlans = () => {
         title: '',
         description: '',
         due_date: '',
+        responsible: '',
     });
 
     const mapStatusFromDB = (status: string): any => {
@@ -57,13 +59,31 @@ export const VendorActionPlans = () => {
         try {
             setIsLoading(true);
 
-            const { data: vendorUser, error: vendorError } = await supabase
+            let currentVendorId = null;
+
+            const { data: vendorUser } = await supabase
                 .from('vendor_users')
                 .select('vendor_id')
                 .eq('auth_user_id', user.id)
-                .single();
+                .limit(1)
+                .maybeSingle();
 
-            if (vendorError || !vendorUser) {
+            if (vendorUser?.vendor_id) {
+                currentVendorId = vendorUser.vendor_id;
+            } else {
+                const { data: portalUser } = await supabase
+                    .from('vendor_portal_users')
+                    .select('vendor_id')
+                    .eq('email', user.email?.trim().toLowerCase())
+                    .limit(1)
+                    .maybeSingle();
+
+                if (portalUser?.vendor_id) {
+                    currentVendorId = portalUser.vendor_id;
+                }
+            }
+
+            if (!currentVendorId) {
                 throw new Error("Perfil de fornecedor não encontrado.");
             }
 
@@ -85,7 +105,7 @@ export const VendorActionPlans = () => {
                 `)
                 .eq('modulo_origem', 'vendor_risk')
                 .in('entidade_origem_tipo', ['vendor', 'vendor_assessment'])
-                .eq('entidade_origem_id', vendorUser.vendor_id)
+                .eq('entidade_origem_id', currentVendorId)
                 .in('status', ['disponivel_fornecedor', 'em_andamento', 'concluido'])
                 .order('created_at', { ascending: false });
 
@@ -122,7 +142,8 @@ export const VendorActionPlans = () => {
                     updated_at: plan.updated_at,
                     due_date: plan.data_fim_planejada,
                     progress: calculatedProgress,
-                    activities: activities
+                    activities: activities,
+                    tenant_id: plan.tenant_id
                 };
             });
 
@@ -157,22 +178,34 @@ export const VendorActionPlans = () => {
 
         try {
             setIsLoading(true);
+
+            // Use the parent plan's tenant_id (required NOT NULL field)
+            const planTenantId = (selectedPlan as any).tenant_id;
+            if (!planTenantId) {
+                throw new Error('tenant_id não encontrado no plano. Não é possível criar atividade.');
+            }
+
             const { error } = await supabase
                 .from('action_plan_activities')
                 .insert({
+                    tenant_id: planTenantId,
                     action_plan_id: selectedPlan.id,
                     titulo: activityForm.title,
-                    descricao: activityForm.description,
+                    descricao: activityForm.description || null,
                     prioridade: 'media',
-                    data_inicio_planejada: new Date().toISOString(),
+                    data_inicio_planejada: new Date().toISOString().split('T')[0],
                     data_fim_planejada: activityForm.due_date,
-                    status: 'planejado'
+                    status: 'planejado',
+                    metadados: {
+                        responsavel_nome: activityForm.responsible || null,
+                        created_by_vendor: true
+                    }
                 });
 
             if (error) throw error;
 
             toast({ title: "Atividade adicionada", description: "A nova atividade foi salva." });
-            setActivityForm({ title: '', description: '', due_date: '' });
+            setActivityForm({ title: '', description: '', due_date: '', responsible: '' });
             setIsActivityModalOpen(false);
             fetchActionPlans();
         } catch (error) {
@@ -191,6 +224,52 @@ export const VendorActionPlans = () => {
             fetchActionPlans();
         } catch (error) {
             toast({ title: "Erro ao remover", variant: "destructive" });
+        }
+    };
+
+    const handleUpdateActivityStatus = async (activityId: string, newStatus: string) => {
+        try {
+            // Map display status back to DB status
+            const statusMap: Record<string, string> = {
+                'open': 'planejado',
+                'in_progress': 'em_andamento',
+                'completed': 'concluido'
+            };
+            const dbStatus = statusMap[newStatus] || newStatus;
+
+            const { error } = await supabase
+                .from('action_plan_activities')
+                .update({ status: dbStatus })
+                .eq('id', activityId);
+
+            if (error) throw error;
+
+            // Update local state immediately for better UX
+            if (selectedPlan) {
+                const updatedActivities = selectedPlan.activities.map(a =>
+                    a.id === activityId ? { ...a, status: newStatus as ActionPlanActivity['status'] } : a
+                );
+                const newProgress = updatedActivities.length > 0
+                    ? Math.round((updatedActivities.filter(a => a.status === 'completed').length / updatedActivities.length) * 100)
+                    : 0;
+
+                // Also update parent plan progress in DB
+                await supabase
+                    .from('action_plans')
+                    .update({ percentual_conclusao: newProgress })
+                    .eq('id', selectedPlan.id);
+
+                setActionPlans(prev => prev.map(p =>
+                    p.id === selectedPlan.id
+                        ? { ...p, activities: updatedActivities, progress: newProgress }
+                        : p
+                ));
+            }
+
+            toast({ title: "Status atualizado", description: `Atividade ${newStatus === 'completed' ? 'concluída' : 'atualizada'}.` });
+        } catch (error) {
+            console.error('Error updating activity status:', error);
+            toast({ title: "Erro ao atualizar status", variant: "destructive" });
         }
     };
 
@@ -345,11 +424,24 @@ export const VendorActionPlans = () => {
                                         selectedPlan.activities.map(activity => (
                                             <div key={activity.id} className="p-4 border rounded-lg bg-card shadow-sm hover:border-primary/30 transition-colors">
                                                 <div className="flex justify-between items-start mb-2">
-                                                    <h4 className="font-medium">{activity.title}</h4>
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge variant="outline" className={activity.status === 'completed' ? 'text-green-600 bg-green-50' : 'text-blue-600 bg-blue-50'}>
-                                                            {activity.status}
-                                                        </Badge>
+                                                    <h4 className="font-medium flex-1 mr-3">{activity.title}</h4>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <Select
+                                                            value={activity.status}
+                                                            onValueChange={(val) => handleUpdateActivityStatus(activity.id, val)}
+                                                        >
+                                                            <SelectTrigger className={`h-7 text-xs w-[130px] border ${activity.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                                activity.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                    'bg-muted text-muted-foreground'
+                                                                }`}>
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="open">Planejado</SelectItem>
+                                                                <SelectItem value="in_progress">Em Andamento</SelectItem>
+                                                                <SelectItem value="completed">Concluído</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteActivity(activity.id)}>
                                                             <Trash2 className="h-3.5 w-3.5" />
                                                         </Button>
@@ -420,6 +512,14 @@ export const VendorActionPlans = () => {
                                 onChange={e => setActivityForm({ ...activityForm, description: e.target.value })}
                                 placeholder="Detalhes da execução..."
                                 rows={3}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Responsável</Label>
+                            <Input
+                                value={activityForm.responsible}
+                                onChange={e => setActivityForm({ ...activityForm, responsible: e.target.value })}
+                                placeholder="Nome do responsável pela execução"
                             />
                         </div>
                     </div>

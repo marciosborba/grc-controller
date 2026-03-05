@@ -165,6 +165,7 @@ const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssess
 const VendorLayout = lazy(() => import("@/pages/VendorPortal/VendorLayout"));
 const VendorLogin = lazy(() => import("@/pages/VendorPortal/VendorLogin"));
 const VendorDashboard = lazy(() => import("@/pages/VendorPortal/VendorDashboard"));
+const VendorAssessmentsList = lazy(() => import("@/pages/VendorPortal/VendorAssessmentsList"));
 const VendorAssessmentFill = lazy(() => import("@/pages/VendorPortal/VendorAssessmentFill").then(module => ({ default: module.VendorAssessmentFill })));
 const VendorActionPlans = lazy(() => import("@/pages/VendorPortal/VendorActionPlans").then(module => ({ default: module.VendorActionPlans })));
 const VendorMessages = lazy(() => import("@/pages/VendorPortal/VendorMessages").then(module => ({ default: module.VendorMessages })));
@@ -359,6 +360,7 @@ const App = () => (
                       </ProtectedVendorRoute>
                     }>
                       <Route index element={<VendorDashboard />} />
+                      <Route path="assessments" element={<VendorAssessmentsList />} />
                       <Route path="assessment/:id" element={<VendorAssessmentFill />} />
                       <Route path="action-plans" element={<VendorActionPlans />} />
                       <Route path="messages" element={<VendorMessages />} />

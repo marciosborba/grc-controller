@@ -33,18 +33,36 @@ export const VendorMessages = () => {
     const initChat = async () => {
         try {
             setIsLoading(true);
-            const { data: vendorUser, error: vendorError } = await supabase
+            let currentVendorId = null;
+
+            const { data: vendorUser } = await supabase
                 .from('vendor_users')
                 .select('vendor_id')
                 .eq('auth_user_id', user!.id)
-                .single();
+                .limit(1)
+                .maybeSingle();
 
-            if (vendorError || !vendorUser) {
+            if (vendorUser?.vendor_id) {
+                currentVendorId = vendorUser.vendor_id;
+            } else {
+                const { data: portalUser } = await supabase
+                    .from('vendor_portal_users')
+                    .select('vendor_id')
+                    .eq('email', user!.email?.trim().toLowerCase())
+                    .limit(1)
+                    .maybeSingle();
+
+                if (portalUser?.vendor_id) {
+                    currentVendorId = portalUser.vendor_id;
+                }
+            }
+
+            if (!currentVendorId) {
                 throw new Error("Perfil de fornecedor não encontrado.");
             }
 
-            setVendorId(vendorUser.vendor_id);
-            await fetchMessages(vendorUser.vendor_id);
+            setVendorId(currentVendorId);
+            await fetchMessages(currentVendorId);
         } catch (error) {
             console.error(error);
             toast({
@@ -71,6 +89,18 @@ export const VendorMessages = () => {
 
         if (data) {
             setMessages(data);
+
+            // Mark unread admin messages as read
+            const unreadIds = data
+                .filter((msg: any) => msg.sender_type === 'internal' && msg.read === false)
+                .map((msg: any) => msg.id);
+
+            if (unreadIds.length > 0) {
+                await supabase
+                    .from('vendor_risk_messages')
+                    .update({ read: true })
+                    .in('id', unreadIds);
+            }
         }
     };
 
@@ -122,8 +152,7 @@ export const VendorMessages = () => {
             const { error } = await supabase.from('vendor_risk_messages').insert({
                 vendor_id: vendorId,
                 sender_type: 'vendor',
-                content: newMessage,
-                attachments: attachments
+                content: newMessage
             });
 
             if (error) throw error;
@@ -151,28 +180,28 @@ export const VendorMessages = () => {
     return (
         <div className="max-w-5xl mx-auto h-[calc(100vh-12rem)] flex flex-col">
             <div className="mb-4">
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900">Central de Comunicação</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">Central de Comunicação</h1>
                 <p className="text-muted-foreground mt-1">
                     Fale diretamente com nossa equipe de Compliance e Segurança da Informação.
                 </p>
             </div>
 
-            <Card className="flex-1 flex flex-col overflow-hidden bg-white shadow-sm border-gray-200">
+            <Card className="flex-1 flex flex-col overflow-hidden bg-card shadow-sm border-border">
                 {/* Chat Header */}
-                <div className="px-6 py-4 border-b flex items-center gap-3 bg-gray-50/80">
+                <div className="px-6 py-4 border-b border-border flex items-center gap-3 bg-muted/50">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <MessagesSquare className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Equipe de Compliance</h3>
-                        <p className="text-xs text-gray-500">Normalmente responde em algumas horas</p>
+                        <h3 className="font-semibold text-foreground">Equipe de Compliance</h3>
+                        <p className="text-xs text-muted-foreground">Normalmente responde em algumas horas</p>
                     </div>
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30">
+                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-muted/20">
                     {messages.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-3">
+                        <div className="h-full flex flex-col items-center justify-center text-muted-foreground space-y-3">
                             <MessagesSquare className="h-12 w-12 opacity-20" />
                             <p className="text-sm">Nenhuma mensagem ainda. Inicie uma conversa!</p>
                         </div>
@@ -185,7 +214,7 @@ export const VendorMessages = () => {
                                         max-w-[75%] p-4 rounded-2xl shadow-sm space-y-2
                                         ${isVendor
                                             ? 'bg-primary text-primary-foreground rounded-tr-sm'
-                                            : 'bg-white border text-gray-800 rounded-tl-sm'}
+                                            : 'bg-card border border-border text-foreground rounded-tl-sm'}
                                     `}>
                                         {msg.content && (
                                             <div className="whitespace-pre-wrap text-sm leading-relaxed">
@@ -197,15 +226,15 @@ export const VendorMessages = () => {
                                         {msg.attachments && msg.attachments.length > 0 && (
                                             <div className="space-y-2 mt-2">
                                                 {msg.attachments.map((att: any, idx: number) => (
-                                                    <div key={idx} className={`flex items-center gap-3 p-2 rounded-md ${isVendor ? 'bg-primary-foreground/10 border border-primary-foreground/20' : 'bg-gray-100 border border-gray-200'}`}>
-                                                        <div className={`p-2 rounded ${isVendor ? 'bg-primary-foreground/20' : 'bg-white'}`}>
+                                                    <div key={idx} className={`flex items-center gap-3 p-2 rounded-md ${isVendor ? 'bg-primary-foreground/10 border border-primary-foreground/20' : 'bg-muted border border-border'}`}>
+                                                        <div className={`p-2 rounded ${isVendor ? 'bg-primary-foreground/20' : 'bg-card'}`}>
                                                             <File className="h-4 w-4" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-xs font-medium truncate">{att.name}</p>
                                                             <p className="text-[10px] opacity-70">{(att.size / 1024).toFixed(1)} KB</p>
                                                         </div>
-                                                        <a href={att.url} target="_blank" rel="noopener noreferrer" className={`p-2 rounded transition-colors ${isVendor ? 'hover:bg-primary-foreground/20' : 'hover:bg-gray-200 text-gray-600'}`}>
+                                                        <a href={att.url} target="_blank" rel="noopener noreferrer" className={`p-2 rounded transition-colors ${isVendor ? 'hover:bg-primary-foreground/20' : 'hover:bg-accent text-muted-foreground hover:text-foreground'}`}>
                                                             <Download className="h-4 w-4" />
                                                         </a>
                                                     </div>
@@ -213,7 +242,7 @@ export const VendorMessages = () => {
                                             </div>
                                         )}
 
-                                        <div className={`text-[10px] mt-1 flex items-center gap-1 ${isVendor ? 'justify-end text-primary-foreground/70' : 'text-gray-400'}`}>
+                                        <div className={`text-[10px] mt-1 flex items-center gap-1 ${isVendor ? 'justify-end text-primary-foreground/70' : 'text-muted-foreground'}`}>
                                             {new Date(msg.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                             {isVendor && <CheckCircle2 className="h-3 w-3 inline ml-1 opacity-80" />}
                                         </div>
@@ -226,11 +255,11 @@ export const VendorMessages = () => {
                 </div>
 
                 {/* Input Area */}
-                <div className="p-4 bg-white border-t border-gray-100">
+                <div className="p-4 bg-card border-t border-border">
                     {attachments.length > 0 && (
                         <div className="flex gap-2 overflow-x-auto pb-3 mb-2">
                             {attachments.map((att, idx) => (
-                                <div key={idx} className="bg-gray-50 border p-2 rounded text-xs flex items-center gap-2">
+                                <div key={idx} className="bg-muted border border-border p-2 rounded text-xs flex items-center gap-2">
                                     <File className="h-3 w-3 text-muted-foreground" />
                                     <span className="truncate max-w-[100px]">{att.name}</span>
                                     <button type="button" onClick={() => setAttachments(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 font-bold ml-1">&times;</button>
@@ -250,7 +279,7 @@ export const VendorMessages = () => {
                             type="button"
                             variant="outline"
                             size="icon"
-                            className="h-12 w-12 shrink-0 border-gray-200 text-gray-500 hover:text-gray-700"
+                            className="h-12 w-12 shrink-0 border-border text-muted-foreground hover:text-foreground"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading || isSending}
                         >
@@ -260,7 +289,7 @@ export const VendorMessages = () => {
                             placeholder="Escreva sua mensagem..."
                             value={newMessage}
                             onChange={(e) => setNewMessage(e.target.value)}
-                            className="flex-1 h-12 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                            className="flex-1 h-12 bg-muted/50 border-border focus:bg-card transition-colors"
                             disabled={isSending}
                         />
                         <Button

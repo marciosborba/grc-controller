@@ -105,6 +105,7 @@ export const useVendorActionPlans = () => {
             prioridade,
             data_fim_planejada,
             responsavel_execucao,
+            metadados,
             created_at,
             updated_at
           )
@@ -142,6 +143,8 @@ export const useVendorActionPlans = () => {
                         priority: mapPriorityFromDB(activity.prioridade),
                         due_date: activity.data_fim_planejada,
                         responsible_id: activity.responsavel_execucao,
+                        responsible_name: activity.metadados?.responsavel_nome || undefined,
+                        metadados: activity.metadados,
                         created_at: activity.created_at,
                         updated_at: activity.updated_at,
                         action_plan_id: plan.id
