@@ -44,6 +44,8 @@ import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { incidentService } from '@/services/incidentService';
 import type { Incident } from '@/types/incident-management';
 import { cn } from '@/lib/utils';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
 
 interface IncidentManagementModalProps {
   incident: Incident | null;
@@ -94,6 +96,9 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
   };
 
   const effectiveTenantId = getEffectiveTenantId();
+
+  // Custom Fields hook
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('incident', effectiveTenantId);
 
   // Estados do formulário
   const [formData, setFormData] = useState<FormData>({
@@ -205,6 +210,15 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
     }
   }, [incident, user]);
 
+  // Load initial custom field values when incident changes
+  useEffect(() => {
+    if (incident?.metadata?.custom_fields) {
+      setCustomFieldValues(incident.metadata.custom_fields);
+    } else {
+      setCustomFieldValues({});
+    }
+  }, [incident, setCustomFieldValues]);
+
   // Validação simples e funcional
   const validateForm = (): boolean => {
     if (!formData.title.trim()) {
@@ -252,7 +266,11 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
       detection_date: new Date(formData.detection_date).toISOString(),
       business_impact: formData.business_impact.trim() || null,
       affected_systems: formData.affected_systems.length > 0 ? formData.affected_systems : null,
-      tenant_id: effectiveTenantId
+      tenant_id: effectiveTenantId,
+      metadata: {
+        ...(incident?.metadata || {}),
+        custom_fields: customFieldValues as Record<string, any>,
+      }
     };
 
     // Adicionar resolution_date apenas se preenchido
@@ -474,6 +492,20 @@ const IncidentManagementModalSeverityFixed: React.FC<IncidentManagementModalProp
                       className="resize-none min-h-[120px]"
                     />
                   </div>
+
+                  {/* Informações Adicionais */}
+                  {customFields.length > 0 && (
+                    <div className="pt-4 border-t mt-6">
+                      <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Informações Adicionais</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <CustomFieldInputs
+                          fields={customFields}
+                          values={customFieldValues}
+                          onChange={setCustomFieldValues}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 

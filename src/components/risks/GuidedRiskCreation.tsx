@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
+import {
   Search,
   AlertTriangle,
   Brain,
@@ -29,10 +29,13 @@ import {
   X
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { AIRiskRegistrationWizard } from '../ai/AIRiskRegistrationWizard';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
+import { useEffectiveTenant } from '@/hooks/useEffectiveTenant';
 
 interface RiskFormData {
   // Step 1: Identification
@@ -40,28 +43,29 @@ interface RiskFormData {
   description: string;
   source: string;
   category: string;
-  
+
   // Step 2: Context
   business_context: string;
   stakeholders: string[];
   affected_processes: string[];
-  
+
   // Step 3: Analysis
   probability: number;
   impact: number;
   vulnerability: number;
   existing_controls: string[];
-  
+
   // Step 4: Classification
   risk_level: string;
   priority: string;
   owner: string;
-  
+
   // Step 5: Treatment Strategy
   treatment_strategy: string;
   treatment_rationale: string;
   target_date: string;
   budget_required: number;
+  metadata?: Record<string, any>;
 }
 
 interface FormStep {
@@ -104,6 +108,9 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
 
   const { user } = useAuth();
   const { toast } = useToast();
+  const { effectiveTenantId } = useEffectiveTenant();
+
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('risk_assessment');
 
   const steps: FormStep[] = [
     {
@@ -197,7 +204,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
     const score = (formData.probability * formData.impact * formData.vulnerability) / 5;
     const isMatrix4x4 = tenantSettings?.risk_matrix?.type === '4x4';
     let level = '';
-    
+
     if (isMatrix4x4) {
       // Matriz 4x4: Baixo (1-2), Médio (3-6), Alto (7-12), Crítico (13-16)
       if (score >= 13) level = 'Crítico';
@@ -212,7 +219,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
       else if (score >= 3) level = 'Baixo';
       else level = 'Muito Baixo';
     }
-    
+
     setFormData(prev => ({ ...prev, risk_level: level }));
   };
 
@@ -264,7 +271,10 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
         target_date: formData.target_date || null,
         budget_required: formData.budget_required,
         created_by: user?.id,
-        tenant_id: user?.tenant_id
+        tenant_id: effectiveTenantId,
+        metadata: {
+          custom_fields: customFieldValues
+        }
       };
 
       const { data, error } = await supabase
@@ -346,7 +356,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
             Voltar ao Formulário Manual
           </Button>
         </div>
-        <AIRiskRegistrationWizard 
+        <AIRiskRegistrationWizard
           onComplete={(riskData, riskId) => {
             if (onComplete && riskId) {
               onComplete(riskId);
@@ -372,22 +382,22 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
             Processo guiado para identificação e registro de riscos corporativos
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => setShowAIWizard(true)}
             className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100"
           >
             <Brain className="h-4 w-4 mr-2 text-purple-600" />
             ALEX RISK
           </Button>
-          
+
           <Button variant="outline" onClick={() => setShowTemplates(!showTemplates)}>
             <FileText className="h-4 w-4 mr-2" />
             Templates
           </Button>
-          
+
           <Button variant="outline">
             <Eye className="h-4 w-4 mr-2" />
             Prévia
@@ -404,17 +414,16 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
               <span>{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-2" />
-            
+
             <div className="flex justify-between">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 return (
                   <div key={step.id} className="flex flex-col items-center space-y-1">
-                    <div className={`p-2 rounded-full ${
-                      index < currentStep ? 'bg-green-100 text-green-600' :
+                    <div className={`p-2 rounded-full ${index < currentStep ? 'bg-green-100 text-green-600' :
                       index === currentStep ? 'bg-primary/10 text-primary' :
-                      'bg-muted text-muted-foreground'
-                    }`}>
+                        'bg-muted text-muted-foreground'
+                      }`}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <span className="text-xs text-center max-w-16 truncate">
@@ -501,7 +510,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   placeholder="Ex: Falha no sistema de pagamentos"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="description">Descrição Detalhada *</Label>
                 <Textarea
@@ -512,7 +521,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   placeholder="Descreva o risco de forma clara e objetiva..."
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="category">Categoria *</Label>
@@ -530,7 +539,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="source">Fonte de Identificação</Label>
                   <Select value={formData.source} onValueChange={(value) => setFormData({ ...formData, source: value })}>
@@ -549,6 +558,23 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   </Select>
                 </div>
               </div>
+
+              {/* Informações Adicionais (Custom Fields) */}
+              {customFields.length > 0 && (
+                <div className="pt-6 border-t">
+                  <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                    <Target className="h-5 w-5 text-violet-500" />
+                    Informações Adicionais
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CustomFieldInputs
+                      fields={customFields}
+                      values={customFieldValues}
+                      onChange={setCustomFieldValues}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -565,7 +591,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   placeholder="Explique o contexto de negócio onde este risco se manifesta..."
                 />
               </div>
-              
+
               <div>
                 <Label>Stakeholders Afetados *</Label>
                 <div className="space-y-2">
@@ -595,8 +621,8 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     {formData.stakeholders.map((stakeholder, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                         <span>{stakeholder}</span>
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
+                        <X
+                          className="h-3 w-3 cursor-pointer"
                           onClick={() => removeArrayItem('stakeholders', index)}
                         />
                       </Badge>
@@ -604,7 +630,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <Label>Processos Afetados</Label>
                 <div className="space-y-2">
@@ -634,8 +660,8 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     {formData.affected_processes.map((process, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                         <span>{process}</span>
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
+                        <X
+                          className="h-3 w-3 cursor-pointer"
                           onClick={() => removeArrayItem('affected_processes', index)}
                         />
                       </Badge>
@@ -652,8 +678,8 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="probability">Probabilidade (1-5)</Label>
-                  <Select 
-                    value={formData.probability.toString()} 
+                  <Select
+                    value={formData.probability.toString()}
                     onValueChange={(value) => setFormData({ ...formData, probability: parseInt(value) })}
                   >
                     <SelectTrigger>
@@ -668,11 +694,11 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="impact">Impacto (1-5)</Label>
-                  <Select 
-                    value={formData.impact.toString()} 
+                  <Select
+                    value={formData.impact.toString()}
                     onValueChange={(value) => setFormData({ ...formData, impact: parseInt(value) })}
                   >
                     <SelectTrigger>
@@ -681,8 +707,8 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     <SelectContent>
                       {Array.from({ length: tenantSettings?.risk_matrix?.type === '4x4' ? 4 : 5 }, (_, i) => {
                         const value = i + 1;
-                        const label = tenantSettings?.risk_matrix?.impact_labels?.[i] || 
-                          (tenantSettings?.risk_matrix?.type === '4x4' ? 
+                        const label = tenantSettings?.risk_matrix?.impact_labels?.[i] ||
+                          (tenantSettings?.risk_matrix?.type === '4x4' ?
                             ['Insignificante', 'Menor', 'Moderado', 'Maior'][i] :
                             ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrófico'][i]
                           );
@@ -695,11 +721,11 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="vulnerability">Vulnerabilidade (1-5)</Label>
-                  <Select 
-                    value={formData.vulnerability.toString()} 
+                  <Select
+                    value={formData.vulnerability.toString()}
                     onValueChange={(value) => setFormData({ ...formData, vulnerability: parseInt(value) })}
                   >
                     <SelectTrigger>
@@ -715,16 +741,16 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   </Select>
                 </div>
               </div>
-              
+
               <div className="p-4 bg-muted/50 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">Nível de Risco Calculado:</span>
                   <Badge className={
                     formData.risk_level === 'Muito Alto' ? 'bg-red-100 text-red-800' :
-                    formData.risk_level === 'Alto' ? 'bg-orange-100 text-orange-800' :
-                    formData.risk_level === 'Médio' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
-                    formData.risk_level === 'Baixo' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
+                      formData.risk_level === 'Alto' ? 'bg-orange-100 text-orange-800' :
+                        formData.risk_level === 'Médio' ? 'bg-amber-100 text-amber-900 border border-amber-300' :
+                          formData.risk_level === 'Baixo' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
                   }>
                     {formData.risk_level}
                   </Badge>
@@ -733,7 +759,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   Score: {((formData.probability * formData.impact * formData.vulnerability) / 5).toFixed(1)}
                 </p>
               </div>
-              
+
               <div>
                 <Label>Controles Existentes</Label>
                 <div className="space-y-2">
@@ -763,8 +789,8 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     {formData.existing_controls.map((control, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center space-x-1">
                         <span>{control}</span>
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
+                        <X
+                          className="h-3 w-3 cursor-pointer"
                           onClick={() => removeArrayItem('existing_controls', index)}
                         />
                       </Badge>
@@ -786,7 +812,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     Calculado automaticamente baseado na análise
                   </p>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="priority">Prioridade</Label>
                   <Select value={formData.priority} onValueChange={(value) => setFormData({ ...formData, priority: value })}>
@@ -802,7 +828,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   </Select>
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="owner">Responsável pelo Risco *</Label>
                 <Input
@@ -820,8 +846,8 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
             <div className="space-y-4">
               <div>
                 <Label htmlFor="treatment_strategy">Estratégia de Tratamento *</Label>
-                <Select 
-                  value={formData.treatment_strategy} 
+                <Select
+                  value={formData.treatment_strategy}
                   onValueChange={(value) => setFormData({ ...formData, treatment_strategy: value })}
                 >
                   <SelectTrigger>
@@ -835,7 +861,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="treatment_rationale">Justificativa da Estratégia *</Label>
                 <Textarea
@@ -846,7 +872,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                   placeholder="Explique por que esta estratégia foi escolhida..."
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="target_date">Data Alvo</Label>
@@ -857,7 +883,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
                     onChange={(e) => setFormData({ ...formData, target_date: e.target.value })}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="budget_required">Orçamento Necessário (R$)</Label>
                   <Input
@@ -884,7 +910,7 @@ export const GuidedRiskCreation: React.FC<{ onComplete?: (riskId: string) => voi
           <ArrowLeft className="h-4 w-4 mr-2" />
           Anterior
         </Button>
-        
+
         <div className="flex space-x-2">
           {currentStep < steps.length - 1 ? (
             <Button onClick={nextStep}>

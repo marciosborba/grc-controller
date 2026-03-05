@@ -5,31 +5,21 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 async function main() {
-    // Check columns
+    // Check vendor_registry JSONB columns
     const { rows: cols } = await pool.query(`
-        SELECT column_name, data_type 
-        FROM information_schema.columns 
-        WHERE table_name='vendor_portal_users' AND table_schema='public'
+        SELECT column_name, data_type FROM information_schema.columns 
+        WHERE table_name='vendor_registry' AND data_type='jsonb'
+    `);
+    console.log('vendor_registry JSONB columns:', cols.map(c => c.column_name).join(', '));
+
+    // Check if there's already metadata col
+    const { rows: allCols } = await pool.query(`
+        SELECT column_name, data_type FROM information_schema.columns 
+        WHERE table_name='vendor_registry' 
         ORDER BY ordinal_position
     `);
-    console.log('COLUMNS:');
-    cols.forEach(r => console.log(`  ${r.column_name} :: ${r.data_type}`));
-
-    // Check RLS policies
-    const { rows: policies } = await pool.query(`
-        SELECT policyname, cmd FROM pg_policies WHERE tablename='vendor_portal_users'
-    `);
-    console.log('POLICIES:');
-    policies.forEach(r => console.log(`  ${r.policyname} (${r.cmd})`));
-
-    // Count data
-    const { rows: cnt } = await pool.query(`SELECT count(*) as c FROM vendor_portal_users`);
-    console.log('ROW COUNT:', cnt[0].c);
-
-    // Check if user_id column exists
-    const hasUserId = cols.some(c => c.column_name === 'user_id');
-    const hasIsActive = cols.some(c => c.column_name === 'is_active');
-    console.log('has user_id:', hasUserId, 'has is_active:', hasIsActive);
+    console.log('\nAll vendor_registry columns:');
+    allCols.forEach(c => console.log(`  ${c.column_name} (${c.data_type})`));
 
     pool.end();
 }

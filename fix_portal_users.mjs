@@ -5,53 +5,28 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 async function main() {
-    // Use profiles table for admin check (role-based)
-    const adminCheck = `EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'super_admin', 'platform_admin'))`;
+    // Rename table
+    await pool.query(`ALTER TABLE IF EXISTS vendor_custom_fields RENAME TO custom_field_definitions`);
+    console.log('✓ Table renamed to custom_field_definitions');
 
-    // SELECT policy for admin
-    console.log('Creating admin SELECT policy...');
-    try {
-        await pool.query(`CREATE POLICY "admin_select_portal_users" ON vendor_portal_users FOR SELECT USING (${adminCheck})`);
-        console.log('  ✓ created');
-    } catch (e) {
-        console.log('  ⓘ', e.message.substring(0, 80));
-    }
+    // Add target_module column
+    await pool.query(`ALTER TABLE custom_field_definitions ADD COLUMN IF NOT EXISTS target_module TEXT DEFAULT 'vendor_registration'`);
+    console.log('✓ target_module column added');
 
-    // UPDATE policy for admin
-    console.log('Creating admin UPDATE policy...');
-    try {
-        await pool.query(`CREATE POLICY "admin_update_portal_users" ON vendor_portal_users FOR UPDATE USING (${adminCheck}) WITH CHECK (${adminCheck})`);
-        console.log('  ✓ created');
-    } catch (e) {
-        console.log('  ⓘ', e.message.substring(0, 80));
-    }
+    // Add editable column
+    await pool.query(`ALTER TABLE custom_field_definitions ADD COLUMN IF NOT EXISTS editable BOOLEAN DEFAULT true`);
+    console.log('✓ editable column added');
 
-    // INSERT policy for admin
-    console.log('Creating admin INSERT policy...');
-    try {
-        await pool.query(`CREATE POLICY "admin_insert_portal_users" ON vendor_portal_users FOR INSERT WITH CHECK (${adminCheck})`);
-        console.log('  ✓ created');
-    } catch (e) {
-        console.log('  ⓘ', e.message.substring(0, 80));
-    }
+    // Update RLS policies - drop old ones and create new ones for the renamed table
+    // First check existing policies
+    const { rows: policies } = await pool.query(`SELECT policyname FROM pg_policies WHERE tablename='custom_field_definitions'`);
+    console.log('Existing policies:', policies.map(p => p.policyname).join(', '));
 
-    // DELETE policy for admin
-    console.log('Creating admin DELETE policy...');
-    try {
-        await pool.query(`CREATE POLICY "admin_delete_portal_users" ON vendor_portal_users FOR DELETE USING (${adminCheck})`);
-        console.log('  ✓ created');
-    } catch (e) {
-        console.log('  ⓘ', e.message.substring(0, 80));
-    }
-
-    // Verify
-    const { rows: pol } = await pool.query(`SELECT policyname, cmd FROM pg_policies WHERE tablename='vendor_portal_users'`);
-    console.log('\nAll policies now:');
-    pol.forEach(r => console.log(`  ${r.policyname} (${r.cmd})`));
-
-    const { rows: cols } = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='vendor_portal_users' ORDER BY ordinal_position`);
-    console.log('\nAll columns:', cols.map(c => c.column_name).join(', '));
+    // If the old policies exist (from vendor_custom_fields), they should have been renamed automatically
+    // Let's verify the table structure
+    const { rows } = await pool.query(`SELECT column_name FROM information_schema.columns WHERE table_name='custom_field_definitions' ORDER BY ordinal_position`);
+    console.log('Columns:', rows.map(r => r.column_name).join(', '));
 
     pool.end();
 }
-main().catch(e => { console.error('FATAL:', e.message); pool.end(); });
+main().catch(e => { console.error(e.message); pool.end(); });

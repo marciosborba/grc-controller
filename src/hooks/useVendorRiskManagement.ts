@@ -28,6 +28,10 @@ export interface VendorRegistry {
   primary_contact_name?: string;
   primary_contact_email?: string;
   primary_contact_phone?: string;
+  contract_owner_name?: string;
+  contract_owner_email?: string;
+  risk_override_level?: 'low' | 'medium' | 'high' | 'critical' | null;
+  risk_override_reason?: string | null;
   address?: any;
   status: 'active' | 'inactive' | 'suspended' | 'onboarding' | 'offboarding';
   onboarding_status: 'not_started' | 'in_progress' | 'completed' | 'on_hold';
@@ -256,6 +260,7 @@ export interface VendorFilters {
   risk_level?: string[];
   contract_status?: string[];
   search?: string;
+  custom_fields?: Record<string, any>;
 }
 
 export interface AssessmentFilters {
@@ -402,6 +407,14 @@ export const useVendorRiskManagement = () => {
       }
       if (filters?.search) {
         query = query.or(`name.ilike.%${filters.search}%,legal_name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+      }
+      if (filters?.custom_fields) {
+        Object.entries(filters.custom_fields).forEach(([key, value]) => {
+          if (value !== undefined && value !== '' && value !== 'all') {
+            // Use Supabase JSONB querying ->> operator to get text, then ilike for case-insensitive partial match
+            query = query.ilike(`metadata->custom_fields->>${key}`, `%${value}%`);
+          }
+        });
       }
 
       const { data, error } = await query;

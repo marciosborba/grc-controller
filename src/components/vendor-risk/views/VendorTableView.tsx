@@ -45,7 +45,10 @@ import {
   UserPlus,
   ShieldCheck,
   ShieldOff,
-  Copy
+  Copy,
+  Settings,
+  X,
+  PlusCircle
 } from 'lucide-react';
 import { useVendorRiskManagement, VendorRegistry, VendorFilters } from '@/hooks/useVendorRiskManagement';
 import { VendorOnboardingWorkflow } from '../workflows/VendorOnboardingWorkflow';
@@ -53,6 +56,10 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useEffectiveTenant } from '@/hooks/useEffectiveTenant';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
+import { calculateVendorMaturity, calculateVendorDynamicRisk, extractAssessmentScore } from '@/lib/tprmCalculations';
 
 interface VendorTableViewProps {
   searchTerm: string;
@@ -78,6 +85,8 @@ interface VendorFormData {
   primary_contact_name: string;
   primary_contact_email: string;
   primary_contact_phone: string;
+  contract_owner_name: string;
+  contract_owner_email: string;
 }
 
 export const VendorTableView: React.FC<VendorTableViewProps> = ({
@@ -119,6 +128,11 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const [newPortalUserPassword, setNewPortalUserPassword] = useState('');
   const [showAddPortalUser, setShowAddPortalUser] = useState<string | null>(null);
 
+  // Custom fields from centralized hook
+  const { effectiveTenantId } = useEffectiveTenant();
+  const { fields: customFields, fieldValues: customFieldFormValues, setFieldValues: setCustomFieldFormValues } = useCustomFields('vendor_registration');
+  const [editingFieldValues, setEditingFieldValues] = useState<Record<string, Record<string, any>>>({});
+
   // Form state
   const [formData, setFormData] = useState<Partial<VendorFormData>>({
     vendor_type: 'operational',
@@ -126,6 +140,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     annual_spend: 0,
     contract_value: 0
   });
+
+  // State for inline risk overrides
+  const [pendingOverrides, setPendingOverrides] = useState<Record<string, { level: string | null, reason: string }>>({});
 
   // Load vendors on mount and when filters change
   useEffect(() => {
@@ -210,11 +227,22 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Merge custom field values into metadata
+    const existingMeta = (formData as any).metadata || {};
+    const metadataWithCustomFields = {
+      ...existingMeta,
+      custom_fields: {
+        ...(existingMeta.custom_fields || {}),
+        ...customFieldFormValues
+      }
+    };
+    const submitData = { ...formData, metadata: metadataWithCustomFields } as any;
+
     if (editingVendor) {
-      await updateVendor(editingVendor.id, formData);
+      await updateVendor(editingVendor.id, submitData);
       setEditingVendor(null);
     } else {
-      await createVendor(formData as Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>);
+      await createVendor(submitData as Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>);
       setShowCreateDialog(false);
     }
 
@@ -224,11 +252,14 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
       annual_spend: 0,
       contract_value: 0
     });
+    setCustomFieldFormValues({});
   };
 
   const handleEdit = (vendor: VendorRegistry) => {
     setFormData(vendor);
     setEditingVendor(vendor);
+    // Load existing custom field values
+    setCustomFieldFormValues((vendor as any).metadata?.custom_fields || {});
     setShowCreateDialog(true);
   };
 
@@ -528,6 +559,42 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     }
   };
 
+  // ── Custom Fields Functions ──────────────────────────────────
+  // CRUD moved to Configurações > Customização. Only value helpers remain.
+
+  const handleSaveCustomFieldValue = async (vendorId: string, fieldKey: string, value: any) => {
+    try {
+      const vendor = vendors.find(v => v.id === vendorId);
+      const currentMeta = (vendor as any)?.metadata || {};
+      const updatedMeta = {
+        ...currentMeta,
+        custom_fields: {
+          ...(currentMeta.custom_fields || {}),
+          [fieldKey]: value
+        }
+      };
+      const { error } = await supabase
+        .from('vendor_registry')
+        .update({ metadata: updatedMeta })
+        .eq('id', vendorId);
+      if (error) throw error;
+      setEditingFieldValues(prev => ({
+        ...prev,
+        [vendorId]: { ...(prev[vendorId] || {}), [fieldKey]: value }
+      }));
+      fetchVendors();
+    } catch (e: any) {
+      toast({ title: 'Erro ao salvar', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const getCustomFieldValue = (vendor: any, fieldKey: string) => {
+    if (editingFieldValues[vendor.id] && editingFieldValues[vendor.id][fieldKey] !== undefined) {
+      return editingFieldValues[vendor.id][fieldKey];
+    }
+    return vendor.metadata?.custom_fields?.[fieldKey] ?? '';
+  };
+
   return (
     <div className="space-y-4 w-full">
       {/* Filters */}
@@ -546,7 +613,68 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 lg:flex lg:flex-row gap-2 sm:gap-4 w-full lg:w-auto">
+            <div className="grid grid-cols-2 lg:flex lg:flex-row gap-2 sm:gap-4 w-full lg:w-auto flex-wrap mt-2 lg:mt-0">
+
+              {/* Dynamic Custom Fields Filters */}
+              {customFields.filter(f => f.show_in_filters).map(field => {
+                const value = localFilters.custom_fields?.[field.field_key] || 'all';
+                const handleChange = (v: any) => {
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    custom_fields: {
+                      ...(prev.custom_fields || {}),
+                      [field.field_key]: v === 'all' || v === '' ? undefined : v
+                    }
+                  }));
+                };
+
+                if (field.field_type === 'select' || field.field_type === 'multiselect' || field.field_type === 'radio') {
+                  return (
+                    <Select key={field.id} value={value} onValueChange={handleChange}>
+                      <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                        <SelectValue placeholder={field.field_name} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Filtro: {field.field_name}</SelectItem>
+                        {(field.options || []).map((opt: string) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                }
+
+                if (field.field_type === 'boolean' || field.field_type === 'checkbox') {
+                  return (
+                    <Select key={field.id} value={value} onValueChange={handleChange}>
+                      <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                        <SelectValue placeholder={field.field_name} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Filtro: {field.field_name}</SelectItem>
+                        <SelectItem value="true">Sim / Verdadeiro</SelectItem>
+                        <SelectItem value="false">Não / Falso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  );
+                }
+
+                // Default to text input for text, number, date, etc.
+                return (
+                  <div key={field.id} className="relative w-full sm:w-36">
+                    <Input
+                      placeholder={field.field_name}
+                      value={value === 'all' ? '' : value}
+                      onChange={(e) => handleChange(e.target.value)}
+                      className="w-full h-9 sm:h-10 text-xs sm:text-sm"
+                    />
+                  </div>
+                );
+              })}
+
+            </div>
+
+            <div className="grid grid-cols-3 lg:flex lg:flex-row gap-2 sm:gap-4 w-full lg:w-auto mt-2 lg:mt-0">
 
               <Select
                 value={localFilters.status?.[0] || 'all'}
@@ -669,8 +797,18 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                   </div>
                 </div>
 
-                {/* Badges */}
-                <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                {/* Badges + Custom important fields */}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0 flex-wrap">
+                  {/* Custom fields marked as show_on_card */}
+                  {customFields.filter((f: any) => f.show_on_card).map((field: any) => {
+                    const val = getCustomFieldValue(vendor, field.field_key);
+                    if (!val && val !== 0 && val !== false) return null;
+                    return (
+                      <Badge key={field.id} variant="outline" className="text-[9px] px-1.5 py-0 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-200">
+                        {field.field_type === 'boolean' ? (val ? 'Sim' : 'Não') : String(val)}
+                      </Badge>
+                    );
+                  })}
                   <Badge className={`text-[9px] px-1.5 py-0 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
                     {getVendorTypeText(vendor.vendor_type)}
                   </Badge>
@@ -714,6 +852,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                       </TabsTrigger>
                       <TabsTrigger value="portal" className="text-xs data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
                         <Globe className="h-3.5 w-3.5 mr-1.5" /> Portal do Fornecedor
+                      </TabsTrigger>
+                      <TabsTrigger value="risco" className="text-xs data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                        <Shield className="h-3.5 w-3.5 mr-1.5" /> Avaliações e Risco
                       </TabsTrigger>
                     </TabsList>
 
@@ -775,14 +916,42 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                           </div>
                         </div>
 
+                        {/* Dono do Contrato */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dono do Contrato (Interno)</h4>
+                          <div className="space-y-2">
+                            {vendor.contract_owner_name && (
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-sm">{vendor.contract_owner_name}</span>
+                              </div>
+                            )}
+                            {vendor.contract_owner_email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                <a href={`mailto:${vendor.contract_owner_email}`} className="text-sm text-primary hover:underline">{vendor.contract_owner_email}</a>
+                              </div>
+                            )}
+                            {!vendor.contract_owner_name && !vendor.contract_owner_email && (
+                              <p className="text-sm text-muted-foreground italic">Sem responsável</p>
+                            )}
+                          </div>
+                        </div>
+
                         {/* Contrato & Classificação */}
                         <div className="space-y-3">
                           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contrato & Risco</h4>
-                          <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
                             <div>
                               <span className="text-[10px] text-muted-foreground">Valor do Contrato</span>
                               <p className="text-sm font-medium">
                                 {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendor.contract_value || 0)}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Gasto Anual</span>
+                              <p className="text-sm font-medium">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendor.annual_spend || 0)}
                               </p>
                             </div>
                             {vendor.contract_end_date && (
@@ -791,6 +960,14 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                                 <p className="text-sm">{format(new Date(vendor.contract_end_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
                               </div>
                             )}
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Tipo de Fornecedor</span>
+                              <p className="text-sm">{getVendorTypeText(vendor.vendor_type)}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Criticidade</span>
+                              <p className="text-sm">{getCriticalityText(vendor.criticality_level)}</p>
+                            </div>
                             {vendor.risk_score && (
                               <div>
                                 <span className="text-[10px] text-muted-foreground">Score de Risco</span>
@@ -815,6 +992,97 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                       )}
 
                       {/* Quick Actions */}
+                      {/* ── Custom Fields Section (Informações Adicionais) ────────────────────── */}
+                      {customFields.filter(f => f.show_in_interior !== false).length > 0 && (
+                        <div className="mt-4 pt-3 border-t">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <Settings className="h-3 w-3" /> Informações Adicionais
+                            </h4>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {customFields.filter(f => f.show_in_interior !== false).map((field: any) => (
+                              <div key={field.id}>
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  {field.field_name}
+                                  {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                                </span>
+                                {field.field_type === 'text' && (
+                                  <Input
+                                    className="h-7 text-xs mt-0.5"
+                                    value={getCustomFieldValue(vendor, field.field_key)}
+                                    onChange={(e) => setEditingFieldValues(prev => ({
+                                      ...prev,
+                                      [vendor.id]: { ...(prev[vendor.id] || {}), [field.field_key]: e.target.value }
+                                    }))}
+                                    onBlur={(e) => handleSaveCustomFieldValue(vendor.id, field.field_key, e.target.value)}
+                                    placeholder={field.field_name}
+                                  />
+                                )}
+                                {field.field_type === 'number' && (
+                                  <Input
+                                    type="number"
+                                    className="h-7 text-xs mt-0.5"
+                                    value={getCustomFieldValue(vendor, field.field_key)}
+                                    onChange={(e) => setEditingFieldValues(prev => ({
+                                      ...prev,
+                                      [vendor.id]: { ...(prev[vendor.id] || {}), [field.field_key]: e.target.value }
+                                    }))}
+                                    onBlur={(e) => handleSaveCustomFieldValue(vendor.id, field.field_key, Number(e.target.value))}
+                                    placeholder="0"
+                                  />
+                                )}
+                                {field.field_type === 'date' && (
+                                  <Input
+                                    type="date"
+                                    className="h-7 text-xs mt-0.5"
+                                    value={getCustomFieldValue(vendor, field.field_key)}
+                                    onChange={(e) => {
+                                      setEditingFieldValues(prev => ({
+                                        ...prev,
+                                        [vendor.id]: { ...(prev[vendor.id] || {}), [field.field_key]: e.target.value }
+                                      }));
+                                      handleSaveCustomFieldValue(vendor.id, field.field_key, e.target.value);
+                                    }}
+                                  />
+                                )}
+                                {field.field_type === 'boolean' && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Checkbox
+                                      checked={!!getCustomFieldValue(vendor, field.field_key)}
+                                      onCheckedChange={(checked) => handleSaveCustomFieldValue(vendor.id, field.field_key, !!checked)}
+                                    />
+                                    <span className="text-xs">{getCustomFieldValue(vendor, field.field_key) ? 'Sim' : 'Não'}</span>
+                                  </div>
+                                )}
+                                {field.field_type === 'select' && (
+                                  <Select
+                                    value={getCustomFieldValue(vendor, field.field_key) || ''}
+                                    onValueChange={(v) => handleSaveCustomFieldValue(vendor.id, field.field_key, v)}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs mt-0.5">
+                                      <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(field.options || []).map((opt: string) => (
+                                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Note about managing custom fields */}
+                      {customFields.filter(f => f.show_in_interior !== false).length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-3 italic">
+                          Para adicionar ou remover campos, use o formulário "Novo Fornecedor" ou "Editar Fornecedor".
+                        </p>
+                      )}
+
                       <div className="flex items-center gap-2 mt-4 pt-3 border-t">
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleEditWithWorkflow(vendor)}>
                           <Edit className="h-3 w-3 mr-1" /> Editar Cadastro
@@ -938,6 +1206,206 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                           </Button>
                         </div>
                       </div>
+                    </TabsContent>
+
+                    {/* ── TAB: Risco e Avaliações ──────────────────────────────── */}
+                    <TabsContent value="risco" className="p-4 mt-0">
+                      {(() => {
+                        const vendorAssessments = assessments.filter((a: any) => a.vendor_id === vendor.id);
+                        const maturity = calculateVendorMaturity(vendorAssessments);
+                        const risk = calculateVendorDynamicRisk(maturity.score, vendor.criticality_level, vendor.risk_override_level);
+
+                        // Handlers for override
+                        const handleOverrideSave = async (level: string | null) => {
+                          const reason = level ? prompt('Por favor, informe a justificativa para essa alteração qualitativa:') : null;
+                          if (level && !reason) {
+                            toast({ title: 'Atenção', description: 'A justificativa é obrigatória para alterar o risco.', variant: 'destructive' });
+                            return;
+                          }
+
+                          try {
+                            await updateVendor(vendor.id, {
+                              risk_override_level: level,
+                              risk_override_reason: level ? reason : null
+                            } as any);
+                            toast({ title: 'Sucesso', description: 'Nível de risco atualizado com sucesso.' });
+                            fetchVendors(); // Refresh vendors to show updated risk
+                          } catch (error) {
+                            toast({ title: 'Erro', description: 'Não foi possível atualizar o nível de risco.', variant: 'destructive' });
+                          }
+                        };
+
+                        return (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="border rounded-lg p-3 bg-muted/10 flex flex-col justify-between">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Criticidade do Fornecedor</h4>
+                                <Badge className={`text-sm py-1 w-fit mt-auto ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
+                                  {getCriticalityText(vendor.criticality_level)}
+                                </Badge>
+                              </div>
+                              <div className="border rounded-lg p-3 bg-muted/10 flex flex-col justify-between">
+                                <div>
+                                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Maturidade (Assessments)</h4>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xl font-bold">{maturity.score > 0 ? maturity.score.toFixed(1) : 'N/A'}</span>
+                                    <span className="text-xs text-muted-foreground">/ 100</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Progress value={maturity.score} className="h-2 flex-1" />
+                                  <Badge className={maturity.labelColor}>{maturity.level}</Badge>
+                                </div>
+                              </div>
+                              <div className="border rounded-lg p-3 bg-muted/10 flex flex-col justify-between relative">
+                                {risk.isOverridden && (
+                                  <div className="absolute top-2 right-2 text-primary" title={`Risco original era ${risk.originalLevel}`}>
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Risco TPRM Atual</h4>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xl font-bold">{risk.score.toFixed(1)}</span>
+                                    <span className="text-xs text-muted-foreground">Score Base</span>
+                                  </div>
+                                </div>
+                                <Badge className={`text-sm py-1 w-fit mt-auto ${risk.labelColor}`}>{risk.level}</Badge>
+                              </div>
+                            </div>
+
+                            {/* Override Section */}
+                            <div className="border rounded-lg p-4 bg-muted/5 mt-4">
+                              <div className="flex flex-col gap-4">
+                                <div>
+                                  <h4 className="text-sm font-semibold flex items-center gap-2">Avaliação Qualitativa <Badge variant="outline" className="text-[10px]">Opcional</Badge></h4>
+                                  <p className="text-xs text-muted-foreground mt-1">Ajuste manualmente o nível de risco TPRM mediante justificativa.</p>
+                                  {vendor.risk_override_reason && !pendingOverrides[vendor.id] && (
+                                    <p className="text-xs mt-2 p-2 bg-muted rounded border-l-2 border-primary italic">
+                                      <strong>Justificativa atual:</strong> {vendor.risk_override_reason}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium w-24">Nível de Risco:</span>
+                                    <Select
+                                      value={pendingOverrides[vendor.id]?.level !== undefined ? (pendingOverrides[vendor.id].level || "auto") : (vendor.risk_override_level || "auto")}
+                                      onValueChange={(val) => setPendingOverrides(prev => ({
+                                        ...prev,
+                                        [vendor.id]: {
+                                          level: val === "auto" ? null : val,
+                                          reason: prev[vendor.id]?.reason || vendor.risk_override_reason || ''
+                                        }
+                                      }))}
+                                    >
+                                      <SelectTrigger className="w-[160px] h-8 text-xs">
+                                        <SelectValue placeholder="Automático" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="auto">Automático ({risk.originalLevel})</SelectItem>
+                                        <SelectItem value="low">Baixo</SelectItem>
+                                        <SelectItem value="medium">Médio</SelectItem>
+                                        <SelectItem value="high">Alto</SelectItem>
+                                        <SelectItem value="critical">Crítico</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  {pendingOverrides[vendor.id] && pendingOverrides[vendor.id].level !== (vendor.risk_override_level || null) && (
+                                    <div className="space-y-2">
+                                      <span className="text-xs font-medium">Justificativa obrigatória:</span>
+                                      <div className="flex flex-col sm:flex-row gap-2">
+                                        <Input
+                                          placeholder="Explique o motivo do ajuste qualitativo..."
+                                          className="text-xs h-8 flex-1"
+                                          value={pendingOverrides[vendor.id].reason}
+                                          onChange={(e) => setPendingOverrides(prev => ({
+                                            ...prev, [vendor.id]: { ...prev[vendor.id], reason: e.target.value }
+                                          }))}
+                                        />
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <Button
+                                            size="sm"
+                                            className="h-8 text-xs bg-primary"
+                                            onClick={async () => {
+                                              const currentOverride = pendingOverrides[vendor.id];
+                                              if (currentOverride.level && !currentOverride.reason.trim()) {
+                                                toast({ title: 'Atenção', description: 'A justificativa é obrigatória.', variant: 'destructive' });
+                                                return;
+                                              }
+                                              try {
+                                                await updateVendor(vendor.id, {
+                                                  risk_override_level: currentOverride.level,
+                                                  risk_override_reason: currentOverride.level ? currentOverride.reason : null
+                                                } as any);
+                                                toast({ title: 'Sucesso', description: 'Nível de risco atualizado com sucesso.' });
+                                                setPendingOverrides(prev => { const copy = { ...prev }; delete copy[vendor.id]; return copy; });
+                                                fetchVendors();
+                                              } catch (error) {
+                                                toast({ title: 'Erro', description: 'Erro ao atualizar risco.', variant: 'destructive' });
+                                              }
+                                            }}
+                                          >
+                                            Salvar
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-8 text-xs"
+                                            onClick={() => setPendingOverrides(prev => { const copy = { ...prev }; delete copy[vendor.id]; return copy; })}
+                                          >
+                                            Cancelar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="pt-2">
+                              <h4 className="text-sm font-semibold mb-3">Histórico de Assessments</h4>
+                              {vendorAssessments.length > 0 ? (
+                                <div className="space-y-2">
+                                  {vendorAssessments.map((a: any) => {
+                                    const extractedScore = extractAssessmentScore(a);
+                                    return (
+                                      <div key={a.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card text-card-foreground">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium flex items-center gap-2">
+                                            {a.assessment_name}
+                                            <Badge variant="outline" className={`text-[10px] ${a.status.toLowerCase() === 'completed' || a.status.toLowerCase() === 'approved' ? 'border-green-200 text-green-700 bg-green-50' : 'border-blue-200 text-blue-700 bg-blue-50'}`}>
+                                              {a.status}
+                                            </Badge>
+                                          </p>
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            {a.completion_date ? `Concluído em: ${format(new Date(a.completion_date), 'dd/MM/yyyy')}` : (a.due_date ? `Vence em: ${format(new Date(a.due_date), 'dd/MM/yyyy')}` : 'Sem data')}
+                                          </p>
+                                        </div>
+                                        <div className="mt-2 sm:mt-0 flex items-center gap-4">
+                                          <div className="text-right">
+                                            <p className="text-[10px] text-muted-foreground">Maturidade</p>
+                                            <p className="text-sm font-bold">
+                                              {extractedScore !== null ? extractedScore.toFixed(1) : 'N/A'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="text-center py-6 border rounded-lg border-dashed bg-muted/5">
+                                  <FileCheck className="h-8 w-8 mx-auto text-muted-foreground mb-2 opacity-50" />
+                                  <p className="text-sm text-muted-foreground">Nenhum assessment registrado.</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </TabsContent>
                   </Tabs>
                 </div>
@@ -1126,6 +1594,40 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               </div>
             </div>
 
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Dono do Contrato (Interno)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-600">Nome do Responsável</label>
+                  <Input
+                    value={formData.contract_owner_name || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contract_owner_name: e.target.value }))}
+                    placeholder="João Silva"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-600">E-mail do Responsável</label>
+                  <Input
+                    type="email"
+                    value={formData.contract_owner_email || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contract_owner_email: e.target.value }))}
+                    placeholder="joao@empresa.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Custom fields as normal inputs (from Configurações > Customização) ── */}
+            {customFields.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <CustomFieldInputs
+                  fields={customFields}
+                  values={customFieldFormValues}
+                  onChange={setCustomFieldFormValues}
+                />
+              </div>
+            )}
+
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button
                 type="button"
@@ -1307,6 +1809,29 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 </div>
               )}
 
+              {/* Contract Owner Info */}
+              {(viewingVendor.contract_owner_name || viewingVendor.contract_owner_email) && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Dono do Contrato (Interno)</h4>
+                  <div className="space-y-2">
+                    {viewingVendor.contract_owner_name && (
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm">{viewingVendor.contract_owner_name}</span>
+                      </div>
+                    )}
+                    {viewingVendor.contract_owner_email && (
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4 text-slate-500" />
+                        <a href={`mailto:${viewingVendor.contract_owner_email}`} className="text-sm text-primary hover:underline">
+                          {viewingVendor.contract_owner_email}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Onboarding Progress */}
               {viewingVendor.onboarding_status !== 'completed' && (
                 <div className="space-y-3">
@@ -1354,6 +1879,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
           onClose={() => {
             setShowOnboardingWorkflow(false);
             setEditingVendorId(null);
+            fetchVendors(); // Agressovely fetch items on close to fix Reactivity.
           }}
           onComplete={(vendor) => {
             setShowOnboardingWorkflow(false);

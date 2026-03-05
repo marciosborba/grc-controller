@@ -16,14 +16,17 @@ import { CalendarIcon, Save, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { 
-  Policy, 
-  PolicyCategory, 
-  DocumentType, 
-  CreatePolicyRequest, 
-  UpdatePolicyRequest 
+import type {
+  Policy,
+  PolicyCategory,
+  DocumentType,
+  CreatePolicyRequest,
+  UpdatePolicyRequest
 } from '@/types/policy-management';
 import { POLICY_CATEGORIES, DOCUMENT_TYPES } from '@/types/policy-management';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
+import { Target } from 'lucide-react';
 
 interface PolicyFormProps {
   policy?: Policy;
@@ -64,6 +67,11 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields(
+    'policy_management',
+    policy?.metadata?.custom_fields || {}
+  );
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -93,7 +101,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -109,15 +117,19 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
         effective_date: effectiveDate,
         review_date: reviewDate,
         expiration_date: expirationDate,
-        tags: formData.tags ? 
-          formData.tags.split(',').map(t => t.trim()).filter(t => t) : 
+        tags: formData.tags ?
+          formData.tags.split(',').map(t => t.trim()).filter(t => t) :
           undefined,
-        compliance_frameworks: formData.compliance_frameworks ? 
-          formData.compliance_frameworks.split(',').map(f => f.trim()).filter(f => f) : 
+        compliance_frameworks: formData.compliance_frameworks ?
+          formData.compliance_frameworks.split(',').map(f => f.trim()).filter(f => f) :
           undefined,
-        impact_areas: formData.impact_areas ? 
-          formData.impact_areas.split(',').map(a => a.trim()).filter(a => a) : 
-          undefined
+        impact_areas: formData.impact_areas ?
+          formData.impact_areas.split(',').map(a => a.trim()).filter(a => a) :
+          undefined,
+        metadata: {
+          ...(policy?.metadata || {}),
+          custom_fields: customFieldValues
+        }
       };
 
       await onSubmit(submitData);
@@ -131,7 +143,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
       {/* Informações Básicas */}
       <div className="space-y-4">
         <h4 className="text-lg font-medium">Informações Básicas</h4>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-2">
             <Label htmlFor="title">
@@ -249,7 +261,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
       {/* Datas */}
       <div className="space-y-4">
         <h4 className="text-lg font-medium">Cronograma</h4>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label>Data de Vigência</Label>
@@ -342,7 +354,7 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
       {/* Metadados */}
       <div className="space-y-4">
         <h4 className="text-lg font-medium">Metadados</h4>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="tags">
@@ -391,19 +403,36 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
         </div>
       </div>
 
+      {/* Custom Fields */}
+      {customFields.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-lg font-medium flex items-center gap-2">
+            <Target className="h-5 w-5 text-violet-500" />
+            Informações Adicionais
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CustomFieldInputs
+              fields={customFields}
+              values={customFieldValues}
+              onChange={setCustomFieldValues}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end space-x-2 pt-4 border-t">
-        <Button 
-          type="button" 
-          variant="outline" 
+        <Button
+          type="button"
+          variant="outline"
           onClick={onCancel}
           disabled={isSubmitting}
         >
           <X className="h-4 w-4 mr-2" />
           Cancelar
         </Button>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           disabled={isSubmitting}
         >
           <Save className="h-4 w-4 mr-2" />

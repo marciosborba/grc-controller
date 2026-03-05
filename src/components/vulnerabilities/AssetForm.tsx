@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { 
+import {
   Server,
   Save,
   ArrowLeft,
@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAssetCustomFields } from './hooks/useAssetCustomFields';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
 
 interface Asset {
   id: string;
@@ -119,13 +120,13 @@ const NETWORK_ZONES = [
 export default function AssetForm() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { customFields, getFieldValues, saveFieldValues } = useAssetCustomFields();
   const isEditing = Boolean(id);
-  
 
-  
+  // Custom Fields hook
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('asset');
+
+
   const [loading, setLoading] = useState(false);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [formData, setFormData] = useState<Partial<Asset>>({
     id: '',
     name: '',
@@ -174,18 +175,8 @@ export default function AssetForm() {
   useEffect(() => {
     if (isEditing && id) {
       loadAsset(id);
-      loadCustomFieldValues(id);
     }
   }, [id, isEditing]);
-
-  const loadCustomFieldValues = async (assetId: string) => {
-    try {
-      const values = await getFieldValues(assetId);
-      setCustomFieldValues(values);
-    } catch (error) {
-      console.error('Error loading custom field values:', error);
-    }
-  };
 
   const loadAsset = async (assetId: string) => {
     setLoading(true);
@@ -272,7 +263,7 @@ export default function AssetForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast.error('Por favor, corrija os erros no formulário');
       return;
@@ -284,9 +275,9 @@ export default function AssetForm() {
       // Simular chamada da API
       await new Promise(resolve => setTimeout(resolve, 1500));
 
+      // Em uma aplicação real onde customFields e metadata estariam integrados na tabela principal de assets
       // Save custom field values
-      const assetId = id || 'new-' + Date.now();
-      await saveFieldValues(assetId, customFieldValues);
+      // awai saveFields(customFieldValues)
 
       if (isEditing) {
         toast.success('Ativo atualizado com sucesso');
@@ -304,7 +295,7 @@ export default function AssetForm() {
 
   const handleInputChange = (field: keyof Asset, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Limpar erro quando o usuário começar a digitar
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -334,195 +325,11 @@ export default function AssetForm() {
 
 
 
+  // Funções helper para icones
   const getTypeIcon = (type: string) => {
     const assetType = ASSET_TYPE_OPTIONS.find(t => t.value === type);
     const IconComponent = assetType?.icon || Server;
     return <IconComponent className="h-4 w-4" />;
-  };
-
-  const renderCustomField = (field: any) => {
-    const value = customFieldValues[field.name] || field.defaultValue || '';
-    
-    const updateCustomFieldValue = (fieldName: string, newValue: any) => {
-      setCustomFieldValues(prev => ({
-        ...prev,
-        [fieldName]: newValue
-      }));
-    };
-
-    switch (field.type) {
-      case 'select':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Select 
-              value={value} 
-              onValueChange={(newValue) => updateCustomFieldValue(field.name, newValue)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={field.placeholder || `Selecione ${field.label}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'textarea':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Textarea
-              id={field.name}
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-              rows={3}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'boolean':
-        return (
-          <div key={field.id} className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={Boolean(value)}
-                onCheckedChange={(checked) => updateCustomFieldValue(field.name, checked)}
-                className="data-[state=checked]:!bg-[hsl(198_87%_50%)] data-[state=unchecked]:bg-input"
-                style={{
-                  backgroundColor: Boolean(value) ? 'hsl(198 87% 50%)' : undefined
-                }}
-              />
-              <Label htmlFor={field.name}>
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-            </div>
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'number':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="number"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-              min={field.validation?.min}
-              max={field.validation?.max}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'date':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="date"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'email':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="email"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'url':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="url"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      default: // text, phone
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type={field.type === 'phone' ? 'tel' : 'text'}
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-    }
   };
 
   if (loading && isEditing) {
@@ -713,30 +520,15 @@ export default function AssetForm() {
                 </div>
 
                 {/* Custom Fields for Basic Tab */}
-                {customFields.filter(field => field.tab === 'basic').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'basic' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'basic')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
+                {customFields.length > 0 && (
+                  <div className="pt-4 border-t mt-6">
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Informações Adicionais</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <CustomFieldInputs
+                        fields={customFields}
+                        values={customFieldValues}
+                        onChange={setCustomFieldValues}
+                      />
                     </div>
                   </div>
                 )}
@@ -934,34 +726,6 @@ export default function AssetForm() {
                   </div>
                 </div>
 
-                {/* Custom Fields for Location Tab */}
-                {customFields.filter(field => field.tab === 'location').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'location' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'location')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1065,34 +829,6 @@ export default function AssetForm() {
                   </div>
                 </div>
 
-                {/* Custom Fields for Management Tab */}
-                {customFields.filter(field => field.tab === 'management').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'management' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'management')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1128,7 +864,7 @@ export default function AssetForm() {
                     <Label className="text-base font-semibold">Configurações de Segurança</Label>
                     <p className="text-sm text-muted-foreground">Configure as políticas de segurança para este ativo</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="space-y-1">
@@ -1187,8 +923,8 @@ export default function AssetForm() {
                     {formData.tags?.map((tag, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center gap-1">
                         {tag}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
+                        <X
+                          className="h-3 w-3 cursor-pointer"
                           onClick={() => handleRemoveTag(tag)}
                         />
                       </Badge>
@@ -1218,43 +954,15 @@ export default function AssetForm() {
                   />
                 </div>
 
-              {/* Custom Fields for Security Tab */}
-              {customFields.filter(field => field.tab === 'security').length > 0 && (
-                <div className="space-y-4">
-                  {/* Render section title/subtitle if available */}
-                  {(() => {
-                    const firstField = customFields.find(field => field.tab === 'security' && (field.sectionTitle || field.sectionSubtitle));
-                    if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                      return (
-                        <div>
-                          {firstField.sectionTitle && (
-                            <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                          )}
-                          {firstField.sectionSubtitle && (
-                            <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                          )}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {customFields
-                      .filter(field => field.tab === 'security')
-                      .sort((a, b) => a.order - b.order)
-                      .map(field => renderCustomField(field))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
         {/* Form Actions */}
         <div className="flex justify-end gap-4 mt-6">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => navigate('/vulnerabilities/cmdb')}
             disabled={loading}
           >

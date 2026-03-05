@@ -66,6 +66,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useEffectiveTenant } from '@/hooks/useEffectiveTenant';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
 import {
   Phone,
   MapPin,
@@ -105,6 +108,8 @@ interface VendorRegistry {
   primary_contact_name: string;
   primary_contact_email: string;
   primary_contact_phone?: string;
+  contract_owner_name?: string | null;
+  contract_owner_email?: string | null;
   address: {
     street: string;
     city: string;
@@ -153,6 +158,8 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
       zip_code: '',
       country: 'Brasil'
     },
+    contract_owner_name: '',
+    contract_owner_email: '',
     status: 'onboarding',
     onboarding_status: 'in_progress',
     onboarding_progress: 0
@@ -222,6 +229,9 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
     }
   ]);
 
+  // Custom fields handling
+  const { fields: customFields, fieldValues: customFieldFormValues, setFieldValues: setCustomFieldFormValues } = useCustomFields('vendor_registration');
+
   // Load existing vendor data if editing
   useEffect(() => {
     if (vendorId) {
@@ -242,6 +252,9 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
       if (data) {
         setVendorData(data);
         updateStepsBasedOnData(data);
+        if (data.metadata?.custom_fields) {
+          setCustomFieldFormValues(data.metadata.custom_fields);
+        }
       }
     } catch (error) {
       console.error('Erro ao carregar fornecedor:', error);
@@ -328,6 +341,8 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
         primary_contact_name: vendorData.primary_contact_name || '',
         primary_contact_email: vendorData.primary_contact_email || '',
         primary_contact_phone: vendorData.primary_contact_phone || null,
+        contract_owner_name: vendorData.contract_owner_name || null,
+        contract_owner_email: vendorData.contract_owner_email || null,
         address: {
           street: vendorData.address?.street || '',
           city: vendorData.address?.city || '',
@@ -339,6 +354,10 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
         onboarding_status: vendorData.onboarding_status || 'in_progress',
         onboarding_progress: progress,
         tenant_id: user.tenantId,
+        metadata: {
+          ...(vendorData as any).metadata,
+          custom_fields: customFieldFormValues
+        },
         alex_analysis: {
           created_by: 'GRC AI',
           last_updated: new Date().toISOString(),
@@ -557,7 +576,16 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
     if (vendorData.primary_contact_email && !emailRegex.test(vendorData.primary_contact_email)) {
       toast({
         title: "E-mail Inválido",
-        description: "Insira um endereço de e-mail válido",
+        description: "Insira um endereço de e-mail válido para o contato principal",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (vendorData.contract_owner_email && !emailRegex.test(vendorData.contract_owner_email)) {
+      toast({
+        title: "E-mail do Dono do Contrato Inválido",
+        description: "Insira um endereço de e-mail válido para o dono do contrato",
         variant: "destructive"
       });
       return false;
@@ -674,6 +702,9 @@ export const VendorOnboardingWorkflow: React.FC<VendorOnboardingWorkflowProps> =
           setVendorData={setVendorData}
           cnpjError={cnpjError}
           setCnpjError={setCnpjError}
+          customFields={customFields}
+          customFieldFormValues={customFieldFormValues}
+          setCustomFieldFormValues={setCustomFieldFormValues}
         />;
       case 'due_diligence':
         return <DueDiligenceStep
@@ -891,7 +922,11 @@ const BasicInfoStep: React.FC<{
   setVendorData: React.Dispatch<React.SetStateAction<VendorRegistry>>;
   cnpjError: string;
   setCnpjError: React.Dispatch<React.SetStateAction<string>>;
-}> = ({ vendorData, setVendorData, cnpjError, setCnpjError }) => {
+  customFields: any[];
+  customFieldFormValues: Record<string, any>;
+  setCustomFieldFormValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+}> = ({ vendorData, setVendorData, cnpjError, setCnpjError, customFields, customFieldFormValues, setCustomFieldFormValues }) => {
+
 
   // Funções de validação de CNPJ
   const formatCNPJ = (value: string): string => {
@@ -1127,6 +1162,35 @@ const BasicInfoStep: React.FC<{
         </div>
       </div>
 
+      {/* Contract Owner */}
+      <div className="border rounded-lg p-4 bg-muted/5 mt-4">
+        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+          <Shield className="h-4 w-4 text-primary" />
+          Dono do Contrato (Interno)
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="contract_owner_name">Nome do Responsável</Label>
+            <Input
+              id="contract_owner_name"
+              value={vendorData.contract_owner_name || ''}
+              onChange={(e) => updateVendorData('contract_owner_name', e.target.value)}
+              placeholder="Ex: João Silva"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="contract_owner_email">E-mail do Responsável</Label>
+            <Input
+              id="contract_owner_email"
+              type="email"
+              value={vendorData.contract_owner_email || ''}
+              onChange={(e) => updateVendorData('contract_owner_email', e.target.value)}
+              placeholder="joao.silva@empresa.com"
+            />
+          </div>
+        </div>
+      </div>
+
       <Separator />
 
       <div className="space-y-4">
@@ -1184,9 +1248,20 @@ const BasicInfoStep: React.FC<{
           </div>
         </div>
       </div>
+
+      <Separator />
+
+      {/* ── Custom Fields (from Configurações > Customização) ──────── */}
+      {customFields.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <CustomFieldInputs fields={customFields} values={customFieldFormValues} onChange={setCustomFieldFormValues} compact />
+        </div>
+      )}
     </div>
   );
 };
+
+
 
 // Due Diligence Checklist by Service Type
 const getDueDiligenceChecklist = (businessCategory: string, vendorType: string, criticalityLevel: string) => {

@@ -24,6 +24,7 @@ import {
   Zap,
   Crown,
   ArrowRight,
+  Sliders,
   AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -42,6 +43,7 @@ import { ActivityLogsSection } from './sections/ActivityLogsSection';
 import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
 import { CryptoKeysSection } from './sections/CryptoKeysSection';
 import { AISettingsTab } from './tabs/AISettingsTab';
+import { CustomFieldsConfigSection } from './sections/CustomFieldsConfigSection';
 
 interface TenantInfo {
   id: string;
@@ -452,6 +454,7 @@ const TenantSettingsPage: React.FC = () => {
               { value: 'logs', icon: FileText, label: 'Logs' },
               { value: 'api-tokens', icon: Key, label: 'API' },
               { value: 'ai-config', icon: Zap, label: 'IA' },
+              { value: 'customization', icon: Sliders, label: 'Customização' },
             ].map(({ value, icon: Icon, label }) => (
               <TabsTrigger
                 key={value}
@@ -641,6 +644,10 @@ const TenantSettingsPage: React.FC = () => {
 
         <TabsContent value="ai-config">
           <AISettingsTab tenantId={selectedTenantId} />
+        </TabsContent>
+
+        <TabsContent value="customization">
+          <CustomFieldsConfigSection tenantId={selectedTenantId} />
         </TabsContent>
       </Tabs>
     </div>

@@ -10,7 +10,7 @@ import { ComplianceFramework, CompliancePriority, ComplianceStatus } from './com
 // TIPOS BASE PARA CAMPOS CUSTOMIZADOS
 // ============================================================================
 
-export type CustomFieldType = 
+export type CustomFieldType =
   // Tipos básicos
   | 'text' | 'textarea' | 'number' | 'boolean' | 'date' | 'datetime' | 'email' | 'password' | 'url'
   // Tipos de seleção
@@ -23,8 +23,8 @@ export type CustomFieldType =
   // Tipos de interface
   | 'section_header' | 'divider' | 'info_display' | 'calculated_field';
 
-export type ValidationRuleType = 
-  | 'required' | 'min_length' | 'max_length' | 'min_value' | 'max_value' | 'pattern' | 'range' 
+export type ValidationRuleType =
+  | 'required' | 'min_length' | 'max_length' | 'min_value' | 'max_value' | 'pattern' | 'range'
   | 'email' | 'url' | 'custom' | 'unique' | 'conditional';
 
 export interface ValidationRule {
@@ -50,35 +50,38 @@ export interface CustomFieldDefinition {
   name: string; // Nome técnico (snake_case, sem espaços)
   label: string; // Label amigável para o usuário
   description?: string;
-  
+
   // Tipo e comportamento
   type: CustomFieldType;
   required: boolean;
   readonly?: boolean;
   sensitive?: boolean; // Para campos que devem ser criptografados
-  
-  // Validações
+
+  // Validação adicional
+  show_in_filters?: boolean;
+  target_module: string[];
+  editable?: boolean;
   validations?: ValidationRule[];
-  
+
   // Opções (para selects, radios, etc.)
   options?: FieldOption[];
-  
+
   // Configurações específicas por tipo
   config?: FieldTypeConfig;
-  
+
   // Layout e apresentação
   ui?: FieldUIConfig;
-  
+
   // Visibilidade condicional
   visibility_conditions?: FieldVisibilityCondition[];
-  
+
   // Automação
   auto_populate?: AutoPopulateConfig;
-  
+
   // Auditoria e compliance
   audit_trail: boolean;
   compliance_mapping?: ComplianceMapping[];
-  
+
   // Metadados
   help_text?: string;
   placeholder?: string;
@@ -109,41 +112,41 @@ export interface FieldTypeConfig {
   min_length?: number;
   max_length?: number;
   multiline?: boolean;
-  
+
   // Number
   min_value?: number;
   max_value?: number;
   decimal_places?: number;
   step?: number;
-  
+
   // File Upload
   accepted_types?: string[];
   max_file_size?: number;
   max_files?: number;
-  
+
   // Compliance Status
   status_options?: ComplianceStatus[];
-  
+
   // Maturity Rating
   scale_min?: number;
   scale_max?: number;
   scale_labels?: Record<number, string>;
-  
+
   // Risk Matrix
   impact_levels?: string[];
   probability_levels?: string[];
-  
+
   // Evidence Upload
   evidence_types?: string[];
   auto_validation?: boolean;
-  
+
   // Framework Mapping
   source_framework?: ComplianceFramework;
   target_frameworks?: ComplianceFramework[];
-  
+
   // Approval Workflow
   approval_steps?: ApprovalStep[];
-  
+
   // Calculated Field
   calculation_formula?: string;
   depends_on_fields?: string[];
@@ -153,17 +156,17 @@ export interface FieldUIConfig {
   // Layout
   width?: 'full' | 'half' | 'third' | 'quarter' | 'auto';
   column_span?: number;
-  
+
   // Styling
   variant?: 'default' | 'bordered' | 'filled' | 'outlined';
   size?: 'small' | 'medium' | 'large';
   color?: string;
-  
+
   // Comportamento
   collapsible?: boolean;
   expanded_by_default?: boolean;
   show_character_count?: boolean;
-  
+
   // Tooltip e ajuda
   tooltip?: string;
   help_position?: 'top' | 'bottom' | 'left' | 'right';
@@ -198,8 +201,8 @@ export interface ApprovalStep {
 // WORKFLOW CUSTOMIZÁVEL
 // ============================================================================
 
-export type WorkflowStateType = 
-  | 'start' | 'task' | 'decision' | 'approval' | 'review' | 'end' 
+export type WorkflowStateType =
+  | 'start' | 'task' | 'decision' | 'approval' | 'review' | 'end'
   | 'parallel' | 'merge' | 'timer' | 'condition' | 'subprocess';
 
 export interface WorkflowState {
@@ -207,23 +210,23 @@ export interface WorkflowState {
   name: string;
   type: WorkflowStateType;
   description?: string;
-  
+
   // Configurações do estado
   assignee_role?: string;
   assignee_users?: string[];
   estimated_duration?: number; // em horas
   due_date_offset?: number; // dias a partir da data de início
-  
+
   // Condições e validações
   entry_conditions?: WorkflowCondition[];
   exit_conditions?: WorkflowCondition[];
   required_fields?: string[];
-  
+
   // Automação
   auto_assign?: boolean;
   auto_transition?: boolean;
   notifications?: NotificationConfig[];
-  
+
   // UI
   color?: string;
   icon?: string;
@@ -235,20 +238,20 @@ export interface WorkflowTransition {
   name: string;
   from_state: string;
   to_state: string;
-  
+
   // Condições para transição
   conditions?: WorkflowCondition[];
   trigger: 'manual' | 'automatic' | 'timer' | 'event';
-  
+
   // Configurações
   require_approval?: boolean;
   approver_role?: string;
   require_comment?: boolean;
-  
+
   // Automação
   actions?: WorkflowAction[];
   notifications?: NotificationConfig[];
-  
+
   // UI
   label?: string;
   color?: string;
@@ -287,22 +290,22 @@ export interface UIConfiguration {
   // Layout geral
   layout: 'single_column' | 'two_columns' | 'three_columns' | 'tabs' | 'accordion' | 'wizard';
   theme: 'default' | 'compact' | 'modern' | 'classic' | 'custom';
-  
+
   // Seções da interface
   sections: UISection[];
-  
+
   // Configurações globais
   show_progress_bar: boolean;
   allow_draft_save: boolean;
   auto_save_interval?: number; // em segundos
-  
+
   // Navegação
   navigation: {
     show_section_navigation: boolean;
     enable_jump_to_section: boolean;
     show_completion_percentage: boolean;
   };
-  
+
   // Validação
   validation: {
     validate_on_change: boolean;
@@ -310,14 +313,14 @@ export interface UIConfiguration {
     show_inline_errors: boolean;
     highlight_required_fields: boolean;
   };
-  
+
   // Responsividade
   responsive: {
     mobile_layout: 'stacked' | 'collapsed' | 'tabbed';
     tablet_columns: number;
     desktop_columns: number;
   };
-  
+
   // Customização visual
   custom_css?: string;
   custom_colors?: Record<string, string>;
@@ -328,19 +331,19 @@ export interface UISection {
   title: string;
   description?: string;
   fields: string[]; // IDs dos campos
-  
+
   // Layout da seção
   layout: 'grid' | 'list' | 'columns';
   columns?: number;
   collapsible: boolean;
   expanded_by_default: boolean;
-  
+
   // Condições de visibilidade
   visibility_conditions?: FieldVisibilityCondition[];
-  
+
   // Ordem
   order: number;
-  
+
   // Estilo
   color?: string;
   icon?: string;
@@ -355,26 +358,26 @@ export interface ComplianceProcessTemplate {
   // Identificação
   id: string;
   tenant_id: string;
-  
+
   // Informações básicas
   name: string;
   description?: string;
   framework: ComplianceFramework;
   version: string;
-  
+
   // Definições customizáveis
   field_definitions: {
     fields: CustomFieldDefinition[];
   };
-  
+
   workflow_definition: {
     states: WorkflowState[];
     transitions: WorkflowTransition[];
     initial_state: string;
   };
-  
+
   ui_configuration: UIConfiguration;
-  
+
   // Configurações de segurança
   security_config: {
     encryption_required: boolean;
@@ -384,7 +387,7 @@ export interface ComplianceProcessTemplate {
     pii_handling: 'none' | 'anonymize' | 'encrypt' | 'delete';
     compliance_tags?: string[];
   };
-  
+
   // Configurações de automação
   automation_config: {
     notifications_enabled: boolean;
@@ -393,18 +396,20 @@ export interface ComplianceProcessTemplate {
     ai_assistance: boolean;
     integration_hooks?: IntegrationHook[];
   };
-  
+
   // Status e controle
   is_active: boolean;
   is_default_for_framework: boolean;
   usage_count: number;
-  
+
   // Auditoria
   created_by: string;
   created_at: Date;
   updated_by?: string;
   updated_at?: Date;
 }
+
+
 
 export interface IntegrationHook {
   id: string;
@@ -559,7 +564,7 @@ export const getFieldTypeIcon = (type: CustomFieldType): string => {
 export const validateTemplate = (template: Partial<ComplianceProcessTemplate>): TemplateValidationResult => {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
-  
+
   // Validações básicas
   if (!template.name) {
     errors.push({
@@ -569,16 +574,16 @@ export const validateTemplate = (template: Partial<ComplianceProcessTemplate>): 
       severity: 'error'
     });
   }
-  
+
   if (!template.framework) {
     errors.push({
       field: 'framework',
-      type: 'required', 
+      type: 'required',
       message: 'Framework é obrigatório',
       severity: 'error'
     });
   }
-  
+
   // Validar campos customizados
   if (template.field_definitions?.fields) {
     template.field_definitions.fields.forEach((field, index) => {
@@ -592,7 +597,7 @@ export const validateTemplate = (template: Partial<ComplianceProcessTemplate>): 
       }
     });
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
@@ -608,22 +613,22 @@ export interface ProcessInstance {
   id: string;
   template_id: string;
   tenant_id: string;
-  
+
   // Instance data
   instance_name?: string;
   current_state: string;
   field_values: Record<string, any>;
   completion_percentage: number;
-  
+
   // Workflow tracking
   workflow_history: WorkflowHistoryEntry[];
   current_assignees: string[];
-  
+
   // Status and metadata
   status: 'draft' | 'active' | 'completed' | 'cancelled' | 'on_hold';
   priority: 'low' | 'medium' | 'high' | 'critical';
   due_date?: Date;
-  
+
   // Audit information
   created_by: string;
   created_at: Date;
@@ -654,16 +659,16 @@ export interface WorkflowHistoryEntry {
   from_state: string;
   to_state: string;
   transition_id: string;
-  
+
   // Action details
   action_type: 'manual' | 'automatic' | 'approval' | 'rejection' | 'timeout';
   performed_by?: string;
   comment?: string;
-  
+
   // Timing
   performed_at: Date;
   duration_in_state?: number; // seconds
-  
+
   // Additional data
   field_changes?: Record<string, { from: any; to: any }>;
   metadata?: Record<string, any>;
