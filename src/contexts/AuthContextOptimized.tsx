@@ -232,6 +232,35 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         const userRoles = rolesList.length > 0 ? rolesList.map((r: any) => r.role) : ['user'];
         const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
 
+        let isVendorOnly = false;
+
+        // 🚀 VERIFICAÇÃO FORÇADA DE FORNECEDOR (mesmo se tiver profile)
+        try {
+          const { data: vendorUser } = await supabase
+            .from('vendor_users')
+            .select('id')
+            .eq('auth_user_id', supabaseUser.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (vendorUser) {
+            isVendorOnly = true;
+          } else {
+            const { data: portalUser } = await supabase
+              .from('vendor_portal_users')
+              .select('vendor_id')
+              .eq('email', supabaseUser.email?.trim().toLowerCase())
+              .limit(1)
+              .maybeSingle();
+
+            if (portalUser) {
+              isVendorOnly = true;
+            }
+          }
+        } catch (vendorCheckError) {
+          console.error('❌ [AUTH] Erro ao verificar fornecedor no fluxo principal:', vendorCheckError);
+        }
+
         const userData: AuthUser = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -239,7 +268,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           jobTitle: profile?.job_title,
           avatar_url: profile?.avatar_url,
           tenantId: profile?.tenant_id || 'default',
-          roles: userRoles,
+          roles: isVendorOnly ? ['vendor'] : userRoles,
           permissions: userPermissions,
           isPlatformAdmin,
           enabledModules,
@@ -256,7 +285,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             is_active: true
           } : undefined,
           mfaEnabled: false,
-          isVendorOnly: false
+          isVendorOnly: isVendorOnly
         };
 
         // Check MFA Status

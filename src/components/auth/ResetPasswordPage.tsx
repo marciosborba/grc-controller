@@ -18,6 +18,9 @@ export const ResetPasswordPage = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
 
+    const isVendorPortal = window.location.pathname.includes('/vendor-portal');
+    const loginRoute = isVendorPortal ? '/vendor-portal/login' : '/login';
+
     useEffect(() => {
         // Check for error in the URL hash (e.g. expired link)
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -89,7 +92,7 @@ export const ResetPasswordPage = () => {
 
             // Redirect after 3 seconds
             setTimeout(() => {
-                navigate('/login');
+                navigate(loginRoute);
             }, 3000);
 
         } catch (error: any) {
@@ -119,7 +122,7 @@ export const ResetPasswordPage = () => {
                     </CardHeader>
                     <CardContent className="text-center">
                         <p className="text-sm text-muted-foreground mb-6">{hashError}</p>
-                        <Button className="w-full" onClick={() => navigate('/login')}>
+                        <Button className="w-full" onClick={() => navigate(loginRoute)}>
                             Voltar para o Login
                         </Button>
                     </CardContent>
@@ -145,7 +148,7 @@ export const ResetPasswordPage = () => {
                         <p className="text-sm text-muted-foreground mb-6">
                             Você será redirecionado para a tela de login em alguns instantes.
                         </p>
-                        <Button className="w-full" onClick={() => navigate('/login')}>
+                        <Button className="w-full" onClick={() => navigate(loginRoute)}>
                             Ir para o Login Agora
                         </Button>
                     </CardContent>
@@ -209,7 +212,7 @@ export const ResetPasswordPage = () => {
                     </form>
                 </CardContent>
                 <CardFooter className="flex justify-center border-t p-4 mt-2">
-                    <Button variant="ghost" size="sm" onClick={() => navigate('/login')} className="text-muted-foreground hover:text-foreground">
+                    <Button variant="ghost" size="sm" onClick={() => navigate(loginRoute)} className="text-muted-foreground hover:text-foreground">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Voltar para o Login
                     </Button>
