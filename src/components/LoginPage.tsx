@@ -10,6 +10,7 @@ import { Shield, AlertCircle, UserPlus, LogIn, Eye, EyeOff, ArrowRight, ArrowLef
 import { useSecureInput, validationRules } from '@/hooks/useSecureInput';
 import { logSuspiciousActivity } from '@/utils/securityLogger';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 const LoginPage = () => {
   const [step, setStep] = useState<'email' | 'password' | 'sso'>('email');
@@ -21,7 +22,9 @@ const LoginPage = () => {
   const [error, setError] = useState<string>('');
   const [knownEmail, setKnownEmail] = useState('');
 
+  const [isResetting, setIsResetting] = useState(false);
   const { login, signup, isLoading } = useAuth();
+  const { toast } = useToast();
 
   // Secure input hooks
   const emailInput = useSecureInput({ validation: validationRules.email });
@@ -133,6 +136,31 @@ const LoginPage = () => {
     setSsoProvider(null);
   };
 
+  const handleForgotPassword = async () => {
+    const targetEmail = knownEmail || emailInput.value;
+    if (!targetEmail) {
+      setError("Por favor, digite seu email primeiro para recuperar a senha.");
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(targetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+
+      toast({
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+      resetFlow();
+    } catch (err: any) {
+      setError(err.message || "Erro ao enviar email de recuperação.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
@@ -175,6 +203,16 @@ const LoginPage = () => {
                   <Button type="submit" className="w-full" disabled={isSubmitting || !emailInput.value}>
                     {isSubmitting ? 'Verificando...' : 'Continuar'} <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
+                  <div className="text-center mt-4">
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={isResetting}
+                      className="text-sm text-primary hover:underline font-medium"
+                    >
+                      {isResetting ? 'Enviando email...' : 'Esqueceu a senha?'}
+                    </button>
+                  </div>
                 </form>
               )}
 
@@ -187,7 +225,17 @@ const LoginPage = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Senha</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Senha</Label>
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={isResetting}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        {isResetting ? 'Enviando...' : 'Esqueceu a senha?'}
+                      </button>
+                    </div>
                     <div className="relative flex items-center">
                       <Input
                         id="password"

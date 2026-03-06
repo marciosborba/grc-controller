@@ -17,6 +17,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
 
     // Force-change-password state
     const [forceChangeMode, setForceChangeMode] = useState(false);
@@ -100,6 +101,29 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
             });
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async () => {
+        if (!email) {
+            toast({ title: "E-mail necessário", description: "Preencha seu e-mail corporativo primeiro para recuperar a senha.", variant: "destructive" });
+            return;
+        }
+        setIsResetting(true);
+        try {
+            const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/vendor-portal/reset-password`,
+            });
+            if (error) throw error;
+
+            toast({
+                title: "E-mail enviado",
+                description: "Verifique sua caixa de entrada para redefinir sua senha.",
+            });
+        } catch (err: any) {
+            toast({ title: "Erro", description: err.message || "Erro ao enviar e-mail de recuperação.", variant: "destructive" });
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -288,6 +312,14 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <Label htmlFor="password">Senha</Label>
+                                    <button
+                                        type="button"
+                                        onClick={handleForgotPassword}
+                                        disabled={isResetting || isLoading}
+                                        className="text-xs text-primary hover:underline font-medium"
+                                    >
+                                        {isResetting ? 'Enviando...' : 'Esqueceu a senha?'}
+                                    </button>
                                 </div>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

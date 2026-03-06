@@ -65,6 +65,7 @@ type Application = {
   risk_level: string;
   is_lgpd?: boolean;
   is_sox?: boolean;
+  is_acn?: boolean;
   internet_facing?: boolean;
 };
 
@@ -109,89 +110,89 @@ export default function Applications() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchApplications = React.useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      if (!tenantId) return;
+
+      // Fetch systems
+      const { data: systemsData, error: systemsError } = await supabase
+        .from('sistemas')
+        .select('*')
+        .eq('tenant_id', tenantId);
+
+      if (systemsError) throw systemsError;
+
+      // Fetch profiles for owner names
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email');
+
+      if (profilesError) console.error('Error fetching profiles:', profilesError);
+
+      const profileMap = new Map((profilesData || []).map(p => [p.id, p.full_name || p.email]));
+
+      // Fetch vulnerabilities to count them per asset
+      const { data: vulnsData, error: vulnsError } = await supabase
+        .from('vulnerabilities')
+        .select('asset_name, created_at, severity')
+        .eq('tenant_id', tenantId);
+
+      if (vulnsError) console.error('Error fetching vulnerabilities:', vulnsError);
+
+      // Map vulnerabilities to assets
+      const vulnStats = new Map<string, { count: number, lastScan: string | null, maxSeverity: string }>();
+
+      (vulnsData || []).forEach(v => {
+        const stats = vulnStats.get(v.asset_name) || { count: 0, lastScan: null, maxSeverity: 'Info' };
+
+        stats.count++;
+
+        // Track latest date as proxy for last activity/scan
+        if (v.created_at) {
+          if (!stats.lastScan || new Date(v.created_at) > new Date(stats.lastScan)) {
+            stats.lastScan = v.created_at;
+          }
+        }
+
+        vulnStats.set(v.asset_name, stats);
+      });
+
+      // Transform systems to applications format
+      const transformedApps: Application[] = (systemsData || []).map(sys => {
+        const stats = vulnStats.get(sys.nome) || { count: 0, lastScan: null };
+
+        return {
+          id: sys.id,
+          name: sys.nome,
+          type: sys.tipo || 'Web Application', // Default or map standard types
+          status: sys.status || 'Ativo',
+          url: sys.documentacao_link || '', // Using doc link as URL proxy for now
+          technology: sys.fornecedor || 'Desconhecida',
+          owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
+          vulnerabilities: stats.count,
+          last_scan: stats.lastScan || null, // Allow null
+          risk_level: sys.criticidade || 'Baixo',
+          is_lgpd: sys.is_lgpd === true || sys.lgpd === true || sys.lgpd === 'Sim' || sys.is_lgpd === 'Sim',
+          is_sox: sys.is_sox === true || sys.sox === true || sys.sox === 'Sim' || sys.is_sox === 'Sim',
+          is_acn: sys.is_acn === true || sys.acn === true || sys.acn === 'Sim' || sys.is_acn === 'Sim',
+          internet_facing: sys.internet_facing === true || sys.internet_exposto === true || sys.internet_facing === 'Sim' || sys.internet_exposto === 'Sim' || sys.internet === true || sys.internet === 'Sim',
+        };
+      });
+
+      setApplications(transformedApps);
+    } catch (error) {
+      console.error('Error fetching applications:', error);
+      toast.error('Erro ao carregar aplicações do inventário.');
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [tenantId]);
+
   // Fetch data from Supabase
   React.useEffect(() => {
-    const fetchApplications = async () => {
-      try {
-        setLoading(true);
-        if (!tenantId) return;
-
-        // Fetch systems
-        const { data: systemsData, error: systemsError } = await supabase
-          .from('sistemas')
-          .select('*')
-          .eq('tenant_id', tenantId);
-
-        if (systemsError) throw systemsError;
-
-        // Fetch profiles for owner names
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email');
-
-        if (profilesError) console.error('Error fetching profiles:', profilesError);
-
-        const profileMap = new Map((profilesData || []).map(p => [p.id, p.full_name || p.email]));
-
-        // Fetch vulnerabilities to count them per asset
-        const { data: vulnsData, error: vulnsError } = await supabase
-          .from('vulnerabilities')
-          .select('asset_name, created_at, severity')
-          .eq('tenant_id', tenantId);
-
-        if (vulnsError) console.error('Error fetching vulnerabilities:', vulnsError);
-
-        // Map vulnerabilities to assets
-        const vulnStats = new Map<string, { count: number, lastScan: string | null, maxSeverity: string }>();
-
-        (vulnsData || []).forEach(v => {
-          const stats = vulnStats.get(v.asset_name) || { count: 0, lastScan: null, maxSeverity: 'Info' };
-
-          stats.count++;
-
-          // Track latest date as proxy for last activity/scan
-          if (v.created_at) {
-            if (!stats.lastScan || new Date(v.created_at) > new Date(stats.lastScan)) {
-              stats.lastScan = v.created_at;
-            }
-          }
-
-          vulnStats.set(v.asset_name, stats);
-        });
-
-        // Transform systems to applications format
-        const transformedApps: Application[] = (systemsData || []).map(sys => {
-          const stats = vulnStats.get(sys.nome) || { count: 0, lastScan: null };
-
-          return {
-            id: sys.id,
-            name: sys.nome,
-            type: sys.tipo || 'Web Application', // Default or map standard types
-            status: sys.status || 'Ativo',
-            url: sys.documentacao_link || '', // Using doc link as URL proxy for now
-            technology: sys.fornecedor || 'Desconhecida',
-            owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
-            vulnerabilities: stats.count,
-            last_scan: stats.lastScan || null, // Allow null
-            risk_level: sys.criticidade || 'Baixo',
-            is_lgpd: sys.is_lgpd === true || sys.lgpd === true || sys.lgpd === 'Sim' || sys.is_lgpd === 'Sim',
-            is_sox: sys.is_sox === true || sys.sox === true || sys.sox === 'Sim' || sys.is_sox === 'Sim',
-            is_acn: sys.is_acn === true || sys.acn === true || sys.acn === 'Sim' || sys.is_acn === 'Sim',
-            internet_facing: sys.internet_facing === true || sys.internet_exposto === true || sys.internet_facing === 'Sim' || sys.internet_exposto === 'Sim' || sys.internet === true || sys.internet === 'Sim',
-          };
-        });
-
-        setApplications(transformedApps);
-      } catch (error) {
-        console.error('Error fetching applications:', error);
-        toast.error('Erro ao carregar aplicações do inventário.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchApplications();
-  }, [tenantId]);
+  }, [fetchApplications]);
 
   const getTypeIcon = (type: string) => {
     const icons = {
@@ -557,7 +558,17 @@ export default function Applications() {
     const matchesType = typeFilter === 'all' || app.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
 
-    return matchesSearch && matchesType && matchesStatus;
+    // Advanced Filters Logic
+    const matchesAdvancedCompliance = advancedFilters.complianceFlags.length === 0 ||
+      advancedFilters.complianceFlags.some(flag => {
+        if (flag === 'LGPD') return app.is_lgpd;
+        if (flag === 'SOX') return app.is_sox;
+        if (flag === 'ACN') return app.is_acn;
+        if (flag === 'ON') return app.internet_facing;
+        return false;
+      });
+
+    return matchesSearch && matchesType && matchesStatus && matchesAdvancedCompliance;
   });
 
   // Get unique values for filters
@@ -597,7 +608,10 @@ export default function Applications() {
 
   const complianceOptions = [
     { value: 'GDPR', label: 'GDPR', icon: Shield, color: 'bg-blue-600 text-white' },
-    { value: 'SOX', label: 'SOX', icon: Shield, color: 'bg-green-600 text-white' },
+    { value: 'SOX', label: 'SOX', icon: Shield, color: 'bg-purple-600 text-white' },
+    { value: 'LGPD', label: 'LGPD', icon: Shield, color: 'bg-blue-500 text-white' },
+    { value: 'ACN', label: 'ACN', icon: Shield, color: 'bg-zinc-600 text-white' },
+    { value: 'ON', label: 'Internet Facing (ON)', icon: Globe, color: 'bg-cyan-600 text-white' },
     { value: 'PCI', label: 'PCI DSS', icon: Shield, color: 'bg-red-600 text-white' },
     { value: 'HIPAA', label: 'HIPAA', icon: Shield, color: 'bg-purple-600 text-white' },
     { value: 'ISO27001', label: 'ISO 27001', icon: Shield, color: 'bg-amber-600 text-white' }
@@ -1100,6 +1114,7 @@ export default function Applications() {
                 application={app}
                 onView={handleViewApplication}
                 onDelete={handleDeleteApplication}
+                onUpdate={() => fetchApplications(true)}
               />
             ))}
             {filteredApplications.length === 0 && (
@@ -1168,7 +1183,7 @@ export default function Applications() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {sourceTypeOptions.map((option) => {
                         const IconComponent = option.icon;
                         return (
@@ -1217,7 +1232,7 @@ export default function Applications() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {environmentOptions.map((option) => {
                         const IconComponent = option.icon;
                         return (
@@ -1266,7 +1281,7 @@ export default function Applications() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {cloudProviderOptions.map((option) => {
                         const IconComponent = option.icon;
                         return (
@@ -1367,7 +1382,7 @@ export default function Applications() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {complianceOptions.map((option) => {
                         const IconComponent = option.icon;
                         return (

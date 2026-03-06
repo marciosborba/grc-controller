@@ -242,7 +242,7 @@ export function RemediationBlock({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving || !isRemediationValid}>
+                    <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving} className={!isRemediationValid ? 'opacity-50 cursor-not-allowed' : ''}>
                         <Save className="h-4 w-4 mr-2" />
                         {isSaving ? 'Salvando...' : 'Salvar Etapa'}
                     </Button>

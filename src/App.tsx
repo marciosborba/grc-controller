@@ -13,6 +13,7 @@ import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import { ModuleGuard } from "@/components/auth/ModuleGuard";
 import { MfaVerifyPage } from "@/components/auth/MfaVerifyPage";
+import { ResetPasswordPage } from "@/components/auth/ResetPasswordPage";
 import DashboardPage from "@/components/dashboard/DashboardPage";
 import ProtectedVendorRoute from "@/components/auth/ProtectedVendorRoute";
 import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
@@ -233,6 +234,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/dashboard" replace />;
   }
 
+  if (user.isVendorOnly) {
+    console.warn('⚠️ [ROUTING] Usuário é restrito ao portal de fornecedores. Redirecionando...');
+    return <Navigate to="/vendor-portal" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -324,6 +330,9 @@ const App = () => (
                         <LoginPage />
                       </PublicRoute>
                     } />
+                    <Route path="/reset-password" element={
+                      <ResetPasswordPage />
+                    } />
                     <Route path="/mfa-verify" element={
                       <ProtectedRoute>
                         <MfaVerifyPage />
@@ -350,6 +359,9 @@ const App = () => (
                       <Suspense fallback={<PageLoader />}>
                         <VendorLogin />
                       </Suspense>
+                    } />
+                    <Route path="/vendor-portal/reset-password" element={
+                      <ResetPasswordPage />
                     } />
 
                     <Route path="/vendor-portal" element={

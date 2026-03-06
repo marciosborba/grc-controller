@@ -47,6 +47,7 @@ export interface AuthUser {
     [key: string]: any;
   };
   mfaEnabled?: boolean;
+  isVendorOnly?: boolean; // Added field to identify vendor users
 }
 
 // ... (existing code)
@@ -157,7 +158,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       permissions: getPermissionsForRoles(['user'], false),
       isPlatformAdmin: false,
       enabledModules: [],
-      mfaEnabled: false
+      mfaEnabled: false,
+      isVendorOnly: false
     };
 
     try {
@@ -253,7 +255,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             subscription_plan: 'free',
             is_active: true
           } : undefined,
-          mfaEnabled: false
+          mfaEnabled: false,
+          isVendorOnly: false
         };
 
         // Check MFA Status
@@ -274,7 +277,43 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         return userData;
 
       } catch (dbError) {
-        console.warn('⚠️ [AUTH] Erro ao carregar dados do banco, usando dados básicos:', dbError);
+        console.warn('⚠️ [AUTH] Erro ao carregar perfil, verificando se é fornecedor...', dbError);
+
+        try {
+          // Check vendor_users first
+          const { data: vendorUser } = await supabase
+            .from('vendor_users')
+            .select('id')
+            .eq('auth_user_id', supabaseUser.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (vendorUser) {
+            console.log('✅ [AUTH] Usuário identificado como fornecedor (vendor_users)');
+            const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
+            setCachedUser(supabaseUser.id, vendorData);
+            return vendorData;
+          }
+
+          // Check vendor_portal_users next
+          const { data: portalUser } = await supabase
+            .from('vendor_portal_users')
+            .select('vendor_id')
+            .eq('email', supabaseUser.email?.trim().toLowerCase())
+            .limit(1)
+            .maybeSingle();
+
+          if (portalUser) {
+            console.log('✅ [AUTH] Usuário identificado como fornecedor (vendor_portal_users)');
+            const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
+            setCachedUser(supabaseUser.id, vendorData);
+            return vendorData;
+          }
+        } catch (vendorCheckError) {
+          console.error('❌ [AUTH] Erro ao verificar fornecedor:', vendorCheckError);
+        }
+
+        console.warn('⚠️ [AUTH] Usuário não é fornecedor, usando dados básicos padrão');
         return basicUser;
       }
 
@@ -324,7 +363,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           permissions: getPermissionsForRoles(['user'], false),
           isPlatformAdmin: false,
           enabledModules: [],
-          mfaEnabled: false
+          mfaEnabled: false,
+          isVendorOnly: false
         };
         setUser(basicUser);
       } finally {

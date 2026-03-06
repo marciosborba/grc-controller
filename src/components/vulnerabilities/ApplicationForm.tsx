@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 
 interface Application {
   id: string;
@@ -99,8 +101,10 @@ export default function ApplicationForm({
   const { id: paramId } = useParams();
   const id = applicationId || paramId;
   const isEditing = Boolean(id);
+  const tenantId = useCurrentTenantId();
 
   const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<{ id: string; full_name: string; email: string }[]>([]);
   const [formData, setFormData] = useState<Partial<Application>>({
     name: '',
     type: '',
@@ -123,34 +127,57 @@ export default function ApplicationForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (isEditing && id) {
-      // Em uma aplicação real, isso buscaria os dados da aplicação
-      // Por enquanto, vamos simular o carregamento de dados existentes
-      setLoading(true);
-      setTimeout(() => {
-        // Dados simulados para edição
-        setFormData({
-          id: id,
-          name: 'Aplicação de Exemplo',
-          type: 'Web Application',
-          status: 'Active',
-          url: 'https://exemplo.com',
-          technology: 'React/Node.js',
-          owner: 'Equipe de Desenvolvimento',
-          description: 'Descrição da aplicação de exemplo',
-          environment: 'Production',
-          criticality: 'High',
-          dataClassification: 'Confidential',
-          businessOwner: 'João Silva',
-          technicalOwner: 'Maria Santos',
-          lgpd: true,
-          sox: false,
-          acn: true,
-          internet: true
-        });
-        setLoading(false);
-      }, 1000);
+    async function loadData() {
+      try {
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name, email');
+        if (profiles) {
+          setUsers(profiles);
+        }
+      } catch (err) {
+        console.error('Error fetching profiles', err);
+      }
+
+      if (isEditing && id) {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('sistemas')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            setFormData({
+              id: data.id,
+              name: data.nome || '',
+              type: data.tipo || 'Web Application',
+              status: data.status || 'Active',
+              url: data.documentacao_link || '',
+              technology: data.fornecedor || '',
+              owner: data.responsavel_tecnico || '',
+              description: data.descricao || '',
+              environment: 'Production',
+              criticality: data.criticidade || 'Medium',
+              dataClassification: 'Internal',
+              businessOwner: data.responsavel_negocio || '',
+              technicalOwner: data.responsavel_tecnico || '',
+              lgpd: data.is_lgpd === true || data.lgpd === true || data.lgpd === 'Sim',
+              sox: data.is_sox === true || data.sox === true || data.sox === 'Sim',
+              acn: data.acn === true || data.is_acn === true || data.acn === 'Sim',
+              internet: data.internet_facing === true || data.internet === true || data.internet === 'Sim' || data.internet_exposto === true || data.internet_exposto === 'Sim'
+            });
+          }
+        } catch (error) {
+          console.error("Error loading application:", error);
+          toast.error('Erro ao carregar aplicação');
+        } finally {
+          setLoading(false);
+        }
+      }
     }
+    loadData();
   }, [isEditing, id]);
 
   const validateForm = () => {
@@ -201,15 +228,45 @@ export default function ApplicationForm({
       return;
     }
 
+    if (!tenantId) {
+      toast.error('Selecione uma organização/empresa antes de salvar.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Simular chamada da API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const payload = {
+        nome: formData.name,
+        tipo: formData.type,
+        status: formData.status,
+        documentacao_link: formData.url,
+        fornecedor: formData.technology,
+        responsavel_tecnico: isValidUUID(formData.owner) ? formData.owner : null,
+        descricao: formData.description,
+        criticidade: formData.criticality,
+        responsavel_negocio: isValidUUID(formData.businessOwner) ? formData.businessOwner : null,
+        is_lgpd: formData.lgpd || false,
+        is_sox: formData.sox || false,
+        is_acn: formData.acn || false,
+        internet_facing: formData.internet || false,
+        tenant_id: tenantId,
+      };
 
-      if (isEditing) {
+      if (isEditing && id) {
+        const { error } = await supabase
+          .from('sistemas')
+          .update(payload)
+          .eq('id', id);
+
+        if (error) throw error;
         toast.success('Aplicação atualizada com sucesso');
       } else {
+        const { error } = await supabase
+          .from('sistemas')
+          .insert([payload]);
+
+        if (error) throw error;
         toast.success('Aplicação criada com sucesso');
       }
 
@@ -219,10 +276,17 @@ export default function ApplicationForm({
         navigate('/vulnerabilities/applications');
       }
     } catch (error) {
+      console.error("Error saving application:", error);
       toast.error('Erro ao salvar aplicação');
     } finally {
       setLoading(false);
     }
+  };
+
+  const isValidUUID = (uuid?: string) => {
+    if (!uuid) return false;
+    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return regex.test(uuid);
   };
 
   const handleInputChange = (field: keyof Application, value: string) => {
@@ -462,13 +526,18 @@ export default function ApplicationForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="owner">Responsável Técnico *</Label>
-                    <Input
-                      id="owner"
-                      value={formData.owner || ''}
-                      onChange={(e) => handleInputChange('owner', e.target.value)}
-                      placeholder="ex: Equipe de Desenvolvimento"
-                      className={errors.owner ? 'border-red-500' : ''}
-                    />
+                    <Select value={formData.owner || ''} onValueChange={(value) => handleInputChange('owner', value)}>
+                      <SelectTrigger className={errors.owner ? 'border-red-500' : ''}>
+                        <SelectValue placeholder="Selecione o responsável técnico" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {errors.owner && (
                       <p className="text-sm text-red-500">{errors.owner}</p>
                     )}
@@ -487,22 +556,36 @@ export default function ApplicationForm({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="businessOwner">Proprietário do Negócio</Label>
-                    <Input
-                      id="businessOwner"
-                      value={formData.businessOwner || ''}
-                      onChange={(e) => handleInputChange('businessOwner', e.target.value)}
-                      placeholder="ex: João Silva"
-                    />
+                    <Select value={formData.businessOwner || ''} onValueChange={(value) => handleInputChange('businessOwner', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o proprietário" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {users.map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="technicalOwner">Contato Técnico</Label>
-                    <Input
-                      id="technicalOwner"
-                      value={formData.technicalOwner || ''}
-                      onChange={(e) => handleInputChange('technicalOwner', e.target.value)}
-                      placeholder="ex: Maria Santos"
-                    />
+                    <Label htmlFor="technicalOwner">Contato Técnico (Opcional)</Label>
+                    <Select value={formData.technicalOwner || ''} onValueChange={(value) => handleInputChange('technicalOwner', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o contato técnico" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {users.map(u => (
+                          <SelectItem key={u.id} value={u.id}>
+                            {u.full_name || u.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

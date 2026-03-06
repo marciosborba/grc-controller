@@ -118,6 +118,7 @@ interface ExpandableApplicationCardProps {
     application: ApplicationType;
     onView: (app: ApplicationType) => void;
     onDelete: (id: string) => void;
+    onUpdate?: () => void;
 }
 
 const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo(({
@@ -142,7 +143,7 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
 
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
-        navigate(`/vulnerabilities/applications/edit/${application.id}`);
+        setIsExpanded(true);
     };
 
     return (
@@ -268,6 +269,11 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
                                 {application.is_sox && (
                                     <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 px-2">
                                         SOX
+                                    </Badge>
+                                )}
+                                {application.is_acn && (
+                                    <Badge variant="outline" className="text-[10px] bg-muted/50 border-muted-foreground/20 text-muted-foreground hover:bg-muted font-normal px-2">
+                                        ACN
                                     </Badge>
                                 )}
                                 {application.internet_facing && (
