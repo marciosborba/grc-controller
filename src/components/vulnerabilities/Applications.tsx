@@ -50,6 +50,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
+import ExpandableApplicationCard from './ExpandableApplicationCard';
 
 type Application = {
   id: string;
@@ -62,6 +63,9 @@ type Application = {
   vulnerabilities: number;
   last_scan: string | null;
   risk_level: string;
+  is_lgpd?: boolean;
+  is_sox?: boolean;
+  internet_facing?: boolean;
 };
 
 export default function Applications() {
@@ -169,7 +173,11 @@ export default function Applications() {
             owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
             vulnerabilities: stats.count,
             last_scan: stats.lastScan || null, // Allow null
-            risk_level: sys.criticidade || 'Baixo'
+            risk_level: sys.criticidade || 'Baixo',
+            is_lgpd: sys.is_lgpd === true || sys.lgpd === true || sys.lgpd === 'Sim' || sys.is_lgpd === 'Sim',
+            is_sox: sys.is_sox === true || sys.sox === true || sys.sox === 'Sim' || sys.is_sox === 'Sim',
+            is_acn: sys.is_acn === true || sys.acn === true || sys.acn === 'Sim' || sys.is_acn === 'Sim',
+            internet_facing: sys.internet_facing === true || sys.internet_exposto === true || sys.internet_facing === 'Sim' || sys.internet_exposto === 'Sim' || sys.internet === true || sys.internet === 'Sim',
           };
         });
 
@@ -1080,151 +1088,31 @@ export default function Applications() {
         </Card>
 
         {/* Applications List */}
-        <Card>
-          <CardHeader className="pb-2 pt-3 px-4">
-            <CardTitle className="text-sm font-semibold">Aplicações ({filteredApplications.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="px-2 pb-2 sm:px-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-2">
+            <h2 className="text-sm font-semibold">Aplicações ({filteredApplications.length})</h2>
+          </div>
 
-            {/* Mobile card list - hidden on sm+ */}
-            <div className="flex flex-col divide-y sm:hidden">
-              {filteredApplications.map((app) => (
-                <div key={app.id} className="py-2.5 px-2 flex items-center gap-2">
-                  {/* Icon */}
-                  <div className="flex-shrink-0 text-muted-foreground">
-                    {getTypeIcon(app.type)}
-                  </div>
-                  {/* Main info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold truncate">{app.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{app.technology} • {app.owner}</p>
-                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                      <Badge className={`${getStatusBadgeColor(app.status)} text-[9px] px-1.5 py-0`}>
-                        {getStatusDisplayText(app.status)}
-                      </Badge>
-                      <Badge className={`${getRiskBadgeColor(app.risk_level)} text-[9px] px-1.5 py-0`}>
-                        {app.risk_level}
-                      </Badge>
-                      <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                        {app.vulnerabilities}v
-                      </Badge>
-                    </div>
-                  </div>
-                  {/* Action */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0">
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuItem onClick={() => handleViewApplication(app)} className="text-xs cursor-pointer">
-                        <Eye className="h-3.5 w-3.5 mr-2" />
-                        Visualizar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)} className="text-xs cursor-pointer">
-                        <Edit className="h-3.5 w-3.5 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDeleteApplication(app.id)} className="text-xs cursor-pointer text-destructive focus:text-destructive">
-                        <Trash2 className="h-3.5 w-3.5 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-              {filteredApplications.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-6">Nenhuma aplicação encontrada</p>
-              )}
-            </div>
-
-            {/* Desktop table - hidden on mobile */}
-            <div className="hidden sm:block overflow-x-auto">
-              <Table className="text-sm">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="text-xs font-medium">ID</TableHead>
-                    <TableHead className="text-xs font-medium">Nome</TableHead>
-                    <TableHead className="text-xs font-medium">Tipo</TableHead>
-                    <TableHead className="text-xs font-medium">Status</TableHead>
-                    <TableHead className="text-xs font-medium">Tecnologia</TableHead>
-                    <TableHead className="text-xs font-medium">Responsável</TableHead>
-                    <TableHead className="text-xs font-medium">Vulnerabilidades</TableHead>
-                    <TableHead className="text-xs font-medium">Risco</TableHead>
-                    <TableHead className="text-xs font-medium">Último Scan</TableHead>
-                    <TableHead className="text-xs font-medium">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="text-xs">
-                  {filteredApplications.map((app) => (
-                    <TableRow key={app.id}>
-                      <TableCell className="font-medium text-xs max-w-[80px] truncate">{app.id.slice(0, 8)}...</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getTypeIcon(app.type)}
-                          <div>
-                            <p className="font-medium text-xs">{app.name}</p>
-                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">{app.url}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs">{app.type}</TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusBadgeColor(app.status)} text-xs px-2 py-1`}>
-                          {getStatusDisplayText(app.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">{app.technology}</TableCell>
-                      <TableCell className="text-xs">{app.owner}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs px-2 py-1">
-                          {app.vulnerabilities} vuln.
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${getRiskBadgeColor(app.risk_level)} text-xs px-2 py-1`}>
-                          {app.risk_level}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs">
-                          {app.last_scan ? new Date(app.last_scan).toLocaleDateString() : 'N/A'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Ações">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem onClick={() => { handleViewApplication(app); }} className="cursor-pointer">
-                              <Eye className="h-4 w-4 mr-2" />
-                              Visualizar Detalhes
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => navigate(`/vulnerabilities/applications/edit/${app.id}`)} className="cursor-pointer">
-                              <Edit className="h-4 w-4 mr-2" />
-                              Editar Aplicação
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleDeleteApplication(app.id)} className="cursor-pointer text-destructive focus:text-destructive">
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Excluir Aplicação
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-          </CardContent>
-        </Card>
+          <div className="flex flex-col">
+            {filteredApplications.map((app) => (
+              <ExpandableApplicationCard
+                key={app.id}
+                application={app}
+                onView={handleViewApplication}
+                onDelete={handleDeleteApplication}
+              />
+            ))}
+            {filteredApplications.length === 0 && (
+              <div className="text-center py-12 border rounded-lg bg-card/50">
+                <Layers className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-sm font-medium text-foreground">Nenhuma aplicação encontrada</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ajuste seus filtros ou adicione uma nova aplicação.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Advanced Filters Modal */}

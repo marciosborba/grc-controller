@@ -35,6 +35,7 @@ interface RemediationBlockProps {
     isAdmin: boolean;
     vulnerabilityStatus: string;
     onUpdateVulnerabilityStatus: (status: string) => void;
+    isRemediationValid?: boolean;
 }
 
 export function RemediationBlock({
@@ -47,7 +48,8 @@ export function RemediationBlock({
     onAddNext,
     isAdmin,
     vulnerabilityStatus,
-    onUpdateVulnerabilityStatus
+    onUpdateVulnerabilityStatus,
+    isRemediationValid = true
 }: RemediationBlockProps) {
     const [description, setDescription] = useState(task.description || '');
     const [assignedTo, setAssignedTo] = useState(task.assigned_to || '');
@@ -69,6 +71,11 @@ export function RemediationBlock({
     }, [task.id]);
 
     const handleSave = async () => {
+        if (!isRemediationValid) {
+            toast.warning('Atenção: Preencha a Data Prevista e o Esforço na vulnerabilidade antes de salvar as etapas.');
+            return;
+        }
+
         setIsSaving(true);
         const { error } = await supabase
             .from('remediation_tasks')
@@ -235,7 +242,7 @@ export function RemediationBlock({
                     )}
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving}>
+                    <Button variant="ghost" size="sm" onClick={handleSave} disabled={isSaving || !isRemediationValid}>
                         <Save className="h-4 w-4 mr-2" />
                         {isSaving ? 'Salvando...' : 'Salvar Etapa'}
                     </Button>

@@ -18,7 +18,8 @@ import {
   Code,
   Database,
   Cloud,
-  Monitor
+  Monitor,
+  Edit
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -81,9 +82,22 @@ const DATA_CLASSIFICATIONS = [
   { value: 'Restricted', label: 'Restrito' },
 ];
 
-export default function ApplicationForm() {
+export interface ApplicationFormProps {
+  applicationId?: string;
+  isEmbedded?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+export default function ApplicationForm({
+  applicationId,
+  isEmbedded = false,
+  onSuccess,
+  onCancel
+}: ApplicationFormProps = {}) {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: paramId } = useParams();
+  const id = applicationId || paramId;
   const isEditing = Boolean(id);
 
   const [loading, setLoading] = useState(false);
@@ -199,7 +213,11 @@ export default function ApplicationForm() {
         toast.success('Aplicação criada com sucesso');
       }
 
-      navigate('/vulnerabilities/applications');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/vulnerabilities/applications');
+      }
     } catch (error) {
       toast.error('Erro ao salvar aplicação');
     } finally {
@@ -235,43 +253,73 @@ export default function ApplicationForm() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={isEmbedded ? "space-y-4" : "space-y-4 p-4"}>
       {/* Header - Row 1: Back + Title */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 flex-shrink-0" onClick={() => navigate('/vulnerabilities/applications')}>
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline ml-1">Voltar</span>
-          </Button>
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-1.5 truncate">
-              <Layers className="h-5 w-5 text-primary flex-shrink-0" />
-              <span className="truncate">{isEditing ? 'Editar Aplicação' : 'Nova Aplicação'}</span>
-            </h1>
+      {!isEmbedded && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 flex-shrink-0" onClick={() => navigate('/vulnerabilities/applications')}>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Voltar</span>
+            </Button>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-1.5 truncate">
+                <Layers className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="truncate">{isEditing ? 'Editar Aplicação' : 'Nova Aplicação'}</span>
+              </h1>
+            </div>
+          </div>
+          {/* Row 2: Action Buttons */}
+          <div className="flex gap-1.5 w-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex-1 h-8 text-xs"
+              onClick={() => navigate('/vulnerabilities/applications')}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" form="app-form" size="sm" className="flex-1 h-8 text-xs" disabled={loading}>
+              {loading ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-border border-t-primary mr-1"></div>
+              ) : (
+                <Save className="h-3.5 w-3.5 mr-1" />
+              )}
+              {isEditing ? 'Atualizar' : 'Criar'}
+            </Button>
           </div>
         </div>
-        {/* Row 2: Action Buttons */}
-        <div className="flex gap-1.5 w-full">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="flex-1 h-8 text-xs"
-            onClick={() => navigate('/vulnerabilities/applications')}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button type="submit" form="app-form" size="sm" className="flex-1 h-8 text-xs" disabled={loading}>
-            {loading ? (
-              <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-border border-t-primary mr-1"></div>
-            ) : (
-              <Save className="h-3.5 w-3.5 mr-1" />
-            )}
-            {isEditing ? 'Atualizar' : 'Criar'}
-          </Button>
+      )}
+
+      {isEmbedded && (
+        <div className="flex justify-between items-center bg-muted/20 p-2 rounded-md border border-border/50">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Edit className="h-4 w-4" />
+            Editar Aplicação
+          </h3>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onCancel && onCancel()}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" form="app-form" size="sm" disabled={loading}>
+              {loading ? (
+                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-border border-t-primary mr-1"></div>
+              ) : (
+                <Save className="h-3.5 w-3.5 mr-1" />
+              )}
+              Atualizar
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <form id="app-form" onSubmit={handleSubmit}>
         <Tabs defaultValue="basic" className="w-full">
