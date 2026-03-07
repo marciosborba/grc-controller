@@ -1,11 +1,9 @@
 import React, { useState, memo } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { format, isPast, parseISO } from 'date-fns';
 import {
     Card,
     CardContent,
     CardHeader,
-    CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,28 +19,28 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import ApplicationForm from './ApplicationForm';
+import AssetForm from './AssetForm';
 import {
     ChevronDown,
     ChevronRight,
     Eye,
     Trash2,
     MoreVertical,
-    AlertTriangle,
     Edit,
     Globe,
     Smartphone,
-    Code,
+    Monitor,
     Database,
     Cloud,
-    Monitor,
+    Server,
+    Network,
+    HardDrive,
+    Building,
+    Cpu,
+    Target,
+    User,
     Shield,
     Calendar,
-    ExternalLink,
-    User,
-    Target,
-    Search,
-    Clock,
     MoreHorizontal,
     type LucideIcon
 } from 'lucide-react';
@@ -50,35 +48,25 @@ import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const assetIcons: Record<string, LucideIcon> = {
-    'Web Application': Globe,
-    'Mobile App': Smartphone,
-    'API': Code,
-    'Database': Database,
+    'Server': Server,
+    'Workstation': Monitor,
+    'Network Device': Network,
+    'Mobile Device': Smartphone,
+    'Storage': HardDrive,
+    'Infrastructure': Building,
     'Cloud Service': Cloud,
-    'Desktop App': Monitor
+    'Virtual Machine': Cpu
 };
 
 const getStatusBadgeColor = (status: string) => {
     const colors = {
         'Ativo': 'bg-green-600 text-white border border-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800',
-        'Em Implementação': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-        'Desenvolvimento': 'bg-yellow-600 text-white border border-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
-        'Teste': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
-        'Descontinuado': 'bg-gray-600 text-white border border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
+        'Inativo': 'bg-gray-600 text-white border border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700',
         'Manutenção': 'bg-orange-600 text-white border border-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800',
+        'Descomissionado': 'bg-red-600 text-white border border-red-700 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
+        'Em Teste': 'bg-blue-600 text-white border border-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
     };
     return colors[status as keyof typeof colors] || colors['Ativo'];
-};
-
-const getStatusDisplayText = (status: string) => {
-    const displayTexts = {
-        'Ativo': 'Ativo',
-        'Desenvolvimento': 'Desenv.',
-        'Teste': 'Teste',
-        'Descontinuado': 'Descont.',
-        'Manutenção': 'Manutenção',
-    };
-    return displayTexts[status as keyof typeof displayTexts] || status;
 };
 
 const getRiskBadgeColor = (risk: string) => {
@@ -95,58 +83,67 @@ const getRiskBadgeColor = (risk: string) => {
     return colors[risk as keyof typeof colors] || colors['Baixa'];
 };
 
-// Define Application type properly to avoid 'any'
-export type ApplicationType = {
+export type AssetType = {
     id: string;
     name: string;
     type: string;
     status: string;
-    url: string;
-    technology: string;
+    ip_address: string;
+    location: string;
+    os: string;
     owner: string;
     vulnerabilities: number;
     last_scan: string | null;
     risk_level: string;
-    is_lgpd?: boolean;
-    is_sox?: boolean;
-    is_acn?: boolean;
-    internet_facing?: boolean;
-    environment?: string;
-    data_classification?: string;
-    [key: string]: string | number | boolean | null | undefined; // Allow other properties if needed
+    eol_date?: string | null;
+    edr_enabled?: boolean;
+    [key: string]: string | number | boolean | null | undefined;
 };
 
-interface ExpandableApplicationCardProps {
-    application: ApplicationType;
-    onView: (app: ApplicationType) => void;
+interface ExpandableAssetCardProps {
+    asset: AssetType;
+    onView: (asset: AssetType) => void;
     onDelete: (id: string) => void;
     onUpdate?: () => void;
 }
 
-const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo(({
-    application,
+const ExpandableAssetCard: React.FC<ExpandableAssetCardProps> = memo(({
+    asset,
     onView,
-    onDelete
+    onDelete,
+    onUpdate
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const navigate = useNavigate();
 
-    const AssetIcon = assetIcons[application.type] || Globe;
+    const AssetIcon = assetIcons[asset.type] || Server;
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onDelete(application.id);
+        onDelete(asset.id);
     };
 
     const handleView = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onView(application);
+        onView(asset);
     };
 
     const handleEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsExpanded(true);
     };
+
+    // Check EOL status
+    const isEolPast = !asset.eol_date || isPast(parseISO(asset.eol_date));
+    const eolBadgeClasses = isEolPast
+        ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+        : "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
+
+    // Check EDR status
+    const hasEdr = asset.edr_enabled === true;
+    const edrBadgeClasses = !hasEdr
+        ? "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+        : "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800";
 
     return (
         <Card className={cn(
@@ -158,14 +155,12 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
             <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
                 <CollapsibleTrigger asChild>
                     <CardHeader className="pb-2 pt-3 px-3 sm:py-4 sm:px-4 cursor-pointer relative z-10 group/header">
-                        {/* Hover Effect */}
                         <div
                             className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-300 pointer-events-none"
                             style={{ background: 'linear-gradient(to right, hsl(var(--primary) / 0.05), transparent)' }}
                         />
 
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 relative z-10 w-full">
-                            {/* Left Section (Always Visible) */}
                             <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 sm:gap-2">
                                     {isExpanded ?
@@ -173,16 +168,17 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
                                         <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                     }
                                 </div>
+                                <div className="flex items-center justify-center p-2 rounded-md bg-primary/10 text-primary hidden sm:flex">
+                                    <AssetIcon className="h-5 w-5" />
+                                </div>
 
                                 <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                    {/* Title Row with Mobile Score & Actions */}
                                     <div className="flex justify-between items-start gap-2 w-full">
-                                        <h3 className="font-semibold text-sm truncate flex items-center gap-2" title={application.name}>
-                                            <span className="text-muted-foreground text-xs font-mono">{application.id.slice(0, 8)}</span>
-                                            {application.name}
+                                        <h3 className="font-semibold text-sm truncate flex items-center gap-2" title={asset.name}>
+                                            <span className="text-muted-foreground text-xs font-mono">{asset.id.slice(0, 8)}</span>
+                                            {asset.name}
                                         </h3>
 
-                                        {/* Mobile Actions (Visible when collapsed on mobile) */}
                                         <div className="flex sm:hidden items-center gap-1.5 flex-shrink-0">
                                             {!isExpanded && (
                                                 <DropdownMenu>
@@ -210,103 +206,66 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
                                         </div>
                                     </div>
 
-                                    {/* Subtitle Row - Technologies and Owner */}
                                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                                        <span className="truncate max-w-[100px] sm:max-w-none">{application.type}</span>
+                                        <span className="truncate max-w-[120px] sm:max-w-none">{asset.type}</span>
                                         <span className="inline">•</span>
-                                        <span className="truncate max-w-[100px] sm:max-w-none text-[10px] uppercase tracking-wider font-semibold">{application.technology}</span>
-                                        {application.environment && (
-                                            <>
-                                                <span className="inline">•</span>
-                                                <span className="truncate max-w-[100px] sm:max-w-none text-[10px]">{application.environment}</span>
-                                            </>
-                                        )}
-                                        {application.data_classification && (
-                                            <>
-                                                <span className="inline">•</span>
-                                                <span className="truncate max-w-[100px] sm:max-w-none text-[10px]">{application.data_classification}</span>
-                                            </>
-                                        )}
+                                        <span className="truncate max-w-[100px] sm:max-w-none text-[10px]">{asset.ip_address}</span>
+                                        <span className="inline">•</span>
+                                        <span className="truncate max-w-[100px] sm:max-w-none text-[10px]">{asset.os !== 'N/A' && asset.os ? asset.os : 'OS N/A'}</span>
+                                        <span className="inline">•</span>
+                                        <span className="truncate max-w-[100px] sm:max-w-none text-[10px]">{asset.location !== 'N/A' && asset.location ? asset.location : 'Local N/A'}</span>
                                         <span className="inline">•</span>
                                         <User className="h-3 w-3 shrink-0" />
                                         <span className="truncate flex-1 min-w-0 max-w-[100px] sm:max-w-none">
-                                            {application.owner || 'Não atribuído'}
+                                            {asset.owner || 'Não atribuído'}
                                         </span>
                                     </div>
 
-                                    {/* Badges Row - Always visible on mobile, responsive flex */}
                                     <div className="flex items-center gap-1.5 mt-2 flex-wrap sm:hidden">
-                                        <Badge className={`${getStatusBadgeColor(application.status)} text-[9px] px-1.5 py-0`}>
-                                            {getStatusDisplayText(application.status)}
+                                        <Badge className={`${getStatusBadgeColor(asset.status)} text-[9px] px-1.5 py-0`}>
+                                            {asset.status}
                                         </Badge>
-                                        <Badge className={`${getRiskBadgeColor(application.risk_level)} text-[9px] px-1.5 py-0`}>
-                                            {application.risk_level}
+                                        <Badge className={`${getRiskBadgeColor(asset.risk_level)} text-[9px] px-1.5 py-0`}>
+                                            {asset.risk_level}
                                         </Badge>
-                                        {application.vulnerabilities > 0 && (
+                                        <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", eolBadgeClasses)}>
+                                            <Calendar className="h-2.5 w-2.5 mr-1" />
+                                            EOL
+                                        </Badge>
+                                        <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", edrBadgeClasses)}>
+                                            <Shield className="h-2.5 w-2.5 mr-1" />
+                                            EDR
+                                        </Badge>
+                                        {asset.vulnerabilities > 0 && (
                                             <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-destructive text-destructive bg-destructive/5 flex items-center gap-1">
                                                 <Target className="h-2.5 w-2.5" />
-                                                {application.vulnerabilities}
-                                            </Badge>
-                                        )}
-                                        {application.is_lgpd && (
-                                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800">
-                                                LGPD
-                                            </Badge>
-                                        )}
-                                        {application.is_sox && (
-                                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800">
-                                                SOX
-                                            </Badge>
-                                        )}
-                                        {application.is_acn && (
-                                            <Badge variant="outline" className="hidden sm:inline-flex bg-muted/50 border-muted-foreground/20 text-muted-foreground hover:bg-muted font-normal text-xs px-2 py-0">
-                                                ACN
-                                            </Badge>
-                                        )}
-                                        {application.internet_facing && (
-                                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-400 dark:border-cyan-800 flex items-center gap-1">
-                                                <Globe className="h-2.5 w-2.5" />
-                                                On
+                                                {asset.vulnerabilities}
                                             </Badge>
                                         )}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Desktop Badges (hidden on mobile) */}
                             <div className="hidden sm:flex items-center justify-end gap-2 flex-wrap shrink-0">
-                                {application.is_lgpd && (
-                                    <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800 px-2">
-                                        LGPD
-                                    </Badge>
-                                )}
-                                {application.is_sox && (
-                                    <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 px-2">
-                                        SOX
-                                    </Badge>
-                                )}
-                                {application.is_acn && (
-                                    <Badge variant="outline" className="text-[10px] bg-muted/50 border-muted-foreground/20 text-muted-foreground hover:bg-muted font-normal px-2">
-                                        ACN
-                                    </Badge>
-                                )}
-                                {application.internet_facing && (
-                                    <Badge variant="outline" className="text-[10px] bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-900/20 dark:text-cyan-400 dark:border-cyan-800 flex items-center gap-1 px-2">
-                                        <Globe className="h-3 w-3" />
-                                        On
-                                    </Badge>
-                                )}
-                                {application.vulnerabilities > 0 && (
+                                <Badge variant="outline" className={cn("text-[10px] px-2", eolBadgeClasses)}>
+                                    <Calendar className="h-3 w-3 mr-1" />
+                                    EOL
+                                </Badge>
+                                <Badge variant="outline" className={cn("text-[10px] px-2", edrBadgeClasses)}>
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    EDR
+                                </Badge>
+                                {asset.vulnerabilities > 0 && (
                                     <Badge variant="outline" className="text-[10px] border-destructive text-destructive bg-destructive/5 flex items-center gap-1 px-2">
                                         <Target className="h-3 w-3" />
-                                        {application.vulnerabilities}
+                                        {asset.vulnerabilities}
                                     </Badge>
                                 )}
-                                <Badge className={`${getRiskBadgeColor(application.risk_level)} text-[10px] px-2`}>
-                                    {application.risk_level}
+                                <Badge className={`${getRiskBadgeColor(asset.risk_level)} text-[10px] px-2`}>
+                                    {asset.risk_level}
                                 </Badge>
-                                <Badge className={`${getStatusBadgeColor(application.status)} text-[10px] px-2 w-[70px] justify-center`}>
-                                    {getStatusDisplayText(application.status)}
+                                <Badge className={`${getStatusBadgeColor(asset.status)} text-[10px] px-2 w-[80px] justify-center`}>
+                                    {asset.status}
                                 </Badge>
 
                                 {!isExpanded && (
@@ -323,12 +282,12 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
                                             </DropdownMenuItem>
                                             <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
                                                 <Edit className="h-4 w-4 mr-2" />
-                                                Editar Aplicação
+                                                Editar Ativo
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onClick={handleDelete} className="cursor-pointer text-destructive focus:bg-red-50 dark:focus:bg-red-950/50">
                                                 <Trash2 className="h-4 w-4 mr-2" />
-                                                Excluir Aplicação
+                                                Excluir Ativo
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -341,8 +300,9 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
                 <CollapsibleContent>
                     <div className="border-t bg-card">
                         {isExpanded && (
-                            <ApplicationForm
-                                applicationId={application.id}
+                            <AssetForm
+                                assetId={asset.id}
+                                initialData={asset}
                                 isEmbedded={true}
                                 onSuccess={() => { setIsExpanded(false); if (onUpdate) onUpdate(); }}
                                 onCancel={() => setIsExpanded(false)}
@@ -355,6 +315,6 @@ const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo
     );
 });
 
-ExpandableApplicationCard.displayName = 'ExpandableApplicationCard';
+ExpandableAssetCard.displayName = 'ExpandableAssetCard';
 
-export default ExpandableApplicationCard;
+export default ExpandableAssetCard;

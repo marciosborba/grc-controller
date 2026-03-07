@@ -18,7 +18,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { 
+import {
   ChevronDown,
   ChevronUp,
   Edit,
@@ -42,10 +42,13 @@ import {
   Search,
   Calculator,
   Shield,
-  Clipboard,
-  MessageSquare,
   Activity,
-  CheckCircle
+  CheckCircle,
+  Info,
+  History,
+  CheckSquare,
+  ClipboardList,
+  MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
@@ -91,9 +94,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         if (!risk.name.toLowerCase().includes(term) &&
-            !risk.description?.toLowerCase().includes(term) &&
-            !risk.category.toLowerCase().includes(term) &&
-            !risk.assignedTo?.toLowerCase().includes(term)) {
+          !risk.description?.toLowerCase().includes(term) &&
+          !risk.category.toLowerCase().includes(term) &&
+          !risk.assignedTo?.toLowerCase().includes(term)) {
           return false;
         }
       }
@@ -171,14 +174,14 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         source: risk.source || '',
         responsibleArea: risk.responsibleArea || '',
         identificationDate: risk.identifiedDate ? new Date(risk.identifiedDate).toISOString().split('T')[0] : '',
-        
+
         // Análise
         analysisMethodology: risk.analysisMethodology || '',
         probability: risk.probability,
         impact: risk.impact,
         causes: risk.causes || '',
         consequences: risk.consequences || '',
-        
+
         // Classificação GUT
         gut_gravity: risk.gut_gravity || '',
         gut_urgency: risk.gut_urgency || '',
@@ -193,7 +196,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         department: risk.department || '',
         relatedProcess: risk.relatedProcess || '',
         regulations: risk.regulations || '',
-        
+
         // Tratamento
         treatmentType: risk.treatmentType || 'Mitigar',
         treatment_rationale: risk.treatment_rationale || '',
@@ -202,8 +205,10 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         status: risk.status,
         assignedTo: risk.assignedTo || '',
         dueDate: risk.dueDate ? new Date(risk.dueDate).toISOString().split('T')[0] : '',
-        
+
         // Plano de Ação
+        action_plan_responsible: risk.action_plan_responsible || '',
+        action_plan_due_date: risk.action_plan_due_date ? new Date(risk.action_plan_due_date).toISOString().split('T')[0] : '',
         activity_1_name: risk.activity_1_name || '',
         activity_1_description: risk.activity_1_description || '',
         activity_1_responsible: risk.activity_1_responsible || '',
@@ -211,7 +216,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         activity_1_priority: risk.activity_1_priority || '',
         activity_1_status: risk.activity_1_status || '',
         activity_1_due_date: risk.activity_1_due_date ? new Date(risk.activity_1_due_date).toISOString().split('T')[0] : '',
-        
+
         // Comunicação
         awareness_person_1_name: risk.awareness_person_1_name || '',
         awareness_person_1_position: risk.awareness_person_1_position || '',
@@ -220,7 +225,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         approval_person_1_position: risk.approval_person_1_position || '',
         approval_person_1_email: risk.approval_person_1_email || '',
         approval_person_1_status: risk.approval_person_1_status || '',
-        
+
         // Monitoramento
         monitoring_frequency: risk.monitoring_frequency || '',
         monitoring_responsible: risk.monitoring_responsible || '',
@@ -230,8 +235,12 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         closure_criteria: risk.closure_criteria || '',
         closure_notes: risk.closure_notes || '',
         closure_date: risk.closure_date ? new Date(risk.closure_date).toISOString().split('T')[0] : '',
-        
+
         // Campos legados
+        historical_events: risk.historical_events || '',
+        root_causes: risk.root_causes || '',
+        controls_effectiveness: risk.controls_effectiveness || '',
+        existing_controls: risk.existing_controls || '',
         indicators: risk.indicators || '',
         reviewFrequency: risk.reviewFrequency || '',
         nextReview: risk.nextReview ? new Date(risk.nextReview).toISOString().split('T')[0] : '',
@@ -280,7 +289,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         name: formData.name,
         description: formData.description,
         source: formData.source,
-        
+
         // Análise - Incluindo metodologia
         analysisMethodology: formData.analysisMethodology,
         probability: parseInt(formData.probability) || 1,
@@ -289,7 +298,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         consequences: formData.consequences,
         evaluationCriteria: formData.evaluationCriteria,
         tolerance: formData.tolerance,
-        
+
         // Classificação - Incluindo GUT
         gut_gravity: parseInt(formData.gut_gravity) || null,
         gut_urgency: parseInt(formData.gut_urgency) || null,
@@ -303,7 +312,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         department: formData.department,
         relatedProcess: formData.relatedProcess,
         regulations: formData.regulations,
-        
+
         // Tratamento
         treatmentType: formData.treatmentType,
         treatment_rationale: formData.treatment_rationale,
@@ -312,15 +321,16 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         status: formData.status,
         actionPlan: formData.actionPlan,
         assignedTo: formData.assignedTo,
-        
+
         // Plano de Ação - Atividades detalhadas
+        action_plan_responsible: formData.action_plan_responsible || null,
         activity_1_name: formData.activity_1_name,
         activity_1_description: formData.activity_1_description,
         activity_1_responsible: formData.activity_1_responsible,
         activity_1_email: formData.activity_1_email,
         activity_1_priority: formData.activity_1_priority,
         activity_1_status: formData.activity_1_status,
-        
+
         // Comunicação - Pessoas detalhadas
         awareness_person_1_name: formData.awareness_person_1_name,
         awareness_person_1_position: formData.awareness_person_1_position,
@@ -332,15 +342,19 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         stakeholders: formData.stakeholders,
         communicationPlan: formData.communicationPlan,
         communicationChannel: formData.communicationChannel,
-        
+
         // Monitoramento
+        historical_events: formData.historical_events || null,
+        root_causes: formData.root_causes || null,
+        controls_effectiveness: formData.controls_effectiveness || null,
+        existing_controls: formData.existing_controls || null,
         indicators: formData.indicators,
         reviewFrequency: formData.reviewFrequency,
         existingControls: formData.existingControls,
         lessonsLearned: formData.lessonsLearned,
         reviewStatus: formData.reviewStatus,
         controlEffectiveness: formData.controlEffectiveness,
-        
+
         // Datas
         updatedAt: new Date()
       };
@@ -357,6 +371,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
       }
       if (formData.activity_1_due_date) {
         updateData.activity_1_due_date = new Date(formData.activity_1_due_date);
+      }
+      if (formData.action_plan_due_date) {
+        updateData.action_plan_due_date = new Date(formData.action_plan_due_date);
       }
       if (formData.treatment_timeline) {
         updateData.treatment_timeline = new Date(formData.treatment_timeline);
@@ -505,22 +522,22 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
 
   const translateTreatmentStrategy = (strategy: string): string => {
     if (!strategy) return 'Não definido';
-    
+
     const translations: Record<string, string> = {
       'accept': 'Aceitar',
-      'mitigate': 'Mitigar', 
+      'mitigate': 'Mitigar',
       'transfer': 'Transferir',
       'avoid': 'Evitar'
     };
-    
+
     const cleanStrategy = strategy.trim().toLowerCase();
-    
+
     for (const [key, value] of Object.entries(translations)) {
       if (key.toLowerCase() === cleanStrategy) {
         return value;
       }
     }
-    
+
     return strategy;
   };
 
@@ -588,7 +605,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
               <span>Riscos Detalhados</span>
               <Badge variant="secondary">{processedRisks.length} riscos</Badge>
             </CardTitle>
-            
+
             <div className="flex items-center space-x-2">
               {/* Ordenação */}
               <div className="flex items-center space-x-1">
@@ -642,8 +659,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                   Nenhum risco encontrado
                 </h3>
                 <p className="text-gray-500">
-                  {searchTerm || Object.keys(filters).length > 0 
-                    ? 'Tente ajustar os filtros de busca.' 
+                  {searchTerm || Object.keys(filters).length > 0
+                    ? 'Tente ajustar os filtros de busca.'
                     : 'Não há riscos para exibir.'}
                 </p>
               </div>
@@ -657,11 +674,10 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
             const overdue = isOverdue(risk);
 
             return (
-              <Card 
-                key={risk.id} 
-                className={`border-l-4 transition-all ${
-                  overdue ? 'border-l-red-500 bg-red-50 dark:bg-red-950/20' : 'border-l-primary'
-                } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}
+              <Card
+                key={risk.id}
+                className={`border-l-4 transition-all ${overdue ? 'border-l-red-500 bg-red-50 dark:bg-red-950/20' : 'border-l-primary'
+                  } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}
               >
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
@@ -678,8 +694,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                         ) : (
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             {console.log('🔍 COMPONENTE - Risk completo:', {
-                              id: risk.id, 
-                              name: risk.name, 
+                              id: risk.id,
+                              name: risk.name,
                               riskCode: risk.riskCode,
                               // Dados do plano de ação
                               activity_1_name: risk.activity_1_name,
@@ -700,10 +716,17 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 {risk.riskCode}
                               </Badge>
                             )}
-                            <h3 className="font-semibold text-lg truncate">{risk.name}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg truncate">{risk.name}</h3>
+                              {risk.status === 'draft' && (
+                                <div title="Cadastro incompleto (Rascunho)" className="flex items-center text-amber-500">
+                                  <Info className="h-4 w-4" />
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
-                        
+
                         {overdue && (
                           <AlertTriangle className="h-5 w-5 text-red-500 animate-pulse" />
                         )}
@@ -714,7 +737,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                         <Badge className={`${getRiskLevelColor(risk.riskLevel)} border text-xs`}>
                           {risk.riskLevel}
                         </Badge>
-                        
+
                         {isEditing ? (
                           <Select value={editForm.category || ''} onValueChange={(value) => updateEditForm(risk.id, 'category', value)}>
                             <SelectTrigger className="w-32">
@@ -803,8 +826,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                     <div className="flex items-center gap-2">
                       {isEditing ? (
                         <>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             onClick={() => saveEditing(risk.id)}
                             disabled={savingCards.has(risk.id)}
                             className="relative"
@@ -821,9 +844,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               </>
                             )}
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => cancelEditing(risk.id)}
                             disabled={savingCards.has(risk.id)}
                           >
@@ -833,9 +856,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                         </>
                       ) : (
                         <>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => startEditing(risk)}
                             className="hover:bg-blue-50 hover:border-blue-300"
                             title="Editar risco"
@@ -843,9 +866,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             <Edit className="h-4 w-4" />
                             <span className="ml-2 hidden lg:inline">Editar</span>
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleDelete(risk)}
                             className="hover:bg-red-50 hover:border-red-300 hover:text-red-600"
                             title="Excluir risco"
@@ -855,7 +878,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                           </Button>
                         </>
                       )}
-                      
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -877,7 +900,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                   <CardContent className="pt-0">
                     <div className="border-t pt-4">
                       <Tabs defaultValue="identification" className="w-full">
-                        <TabsList className="grid w-full grid-cols-7">
+                        <TabsList className="grid w-full grid-cols-8">
                           <TabsTrigger value="identification" className="flex items-center gap-1 text-xs">
                             <FileText className="h-3 w-3" />
                             Identificação
@@ -886,17 +909,21 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             <BarChart3 className="h-3 w-3" />
                             Análise
                           </TabsTrigger>
-                          <TabsTrigger value="classification" className="flex items-center gap-1 text-xs">
-                            <Target className="h-3 w-3" />
-                            Classificação
+                          <TabsTrigger value="evaluation" className="flex items-center gap-1 text-xs">
+                            <CheckSquare className="h-3 w-3" />
+                            Avaliação
                           </TabsTrigger>
-                          <TabsTrigger value="treatment" className="flex items-center gap-1 text-xs">
+                          <TabsTrigger value="context" className="flex items-center gap-1 text-xs">
+                            <History className="h-3 w-3" />
+                            Contexto
+                          </TabsTrigger>
+                          <TabsTrigger value="controls" className="flex items-center gap-1 text-xs">
                             <Shield className="h-3 w-3" />
-                            Tratamento
+                            Controles
                           </TabsTrigger>
                           <TabsTrigger value="action-plan" className="flex items-center gap-1 text-xs">
-                            <Clipboard className="h-3 w-3" />
-                            Plano de Ação
+                            <ClipboardList className="h-3 w-3" />
+                            Planos de Ação
                           </TabsTrigger>
                           <TabsTrigger value="communication" className="flex items-center gap-1 text-xs">
                             <MessageSquare className="h-3 w-3" />
@@ -923,7 +950,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <p className="text-sm">{risk.name}</p>
                               )}
                             </div>
-                            
+
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Categoria</Label>
                               {isEditing ? (
@@ -987,7 +1014,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <p className="text-sm">{formatDate(risk.identifiedDate) || formatDate(risk.createdAt)}</p>
                               )}
                             </div>
-                            
+
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Área Responsável</Label>
                               {isEditing ? (
@@ -1001,17 +1028,182 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               )}
                             </div>
                           </div>
+
+                          {/* Campos Complementares */}
+                          <div className="mt-6 border-t pt-4">
+                            <h4 className="font-medium mb-4 text-muted-foreground">Classificação Complementar</h4>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Categoria Principal</Label>
+                                {isEditing ? (
+                                  <Select value={editForm.category || ''} onValueChange={(value) => updateEditForm(risk.id, 'category', value)}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {categoryOptions.map(category => (
+                                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge className={`${getCategoryColor(risk.category)} text-xs`}>
+                                    {risk.category}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Subcategoria</Label>
+                                {isEditing ? (
+                                  <Input
+                                    value={editForm.subcategory || ''}
+                                    onChange={(e) => updateEditForm(risk.id, 'subcategory', e.target.value)}
+                                    placeholder="Ex: Sistemas críticos, Dados pessoais"
+                                  />
+                                ) : (
+                                  <p className="text-sm">{risk.subcategory || 'Não informado'}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Tipo de Risco</Label>
+                                {isEditing ? (
+                                  <Select value={editForm.riskType || ''} onValueChange={(value) => updateEditForm(risk.id, 'riskType', value)}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Interno">Interno</SelectItem>
+                                      <SelectItem value="Externo">Externo</SelectItem>
+                                      <SelectItem value="Misto">Misto</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge variant="outline">
+                                    {risk.riskType || 'Não classificado'}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Natureza</Label>
+                                {isEditing ? (
+                                  <Select value={editForm.nature || ''} onValueChange={(value) => updateEditForm(risk.id, 'nature', value)}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Quantitativo">Quantitativo</SelectItem>
+                                      <SelectItem value="Qualitativo">Qualitativo</SelectItem>
+                                      <SelectItem value="Híbrido">Híbrido</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge variant="outline">
+                                    {risk.nature || 'Não definido'}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Temporalidade</Label>
+                                {isEditing ? (
+                                  <Select value={editForm.temporality || ''} onValueChange={(value) => updateEditForm(risk.id, 'temporality', value)}>
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Curto Prazo">Curto Prazo (0-1 ano)</SelectItem>
+                                      <SelectItem value="Médio Prazo">Médio Prazo (1-3 anos)</SelectItem>
+                                      <SelectItem value="Longo Prazo">Longo Prazo (3+ anos)</SelectItem>
+                                      <SelectItem value="Imediato">Imediato</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <Badge variant="outline">
+                                    {risk.temporality || 'Não definido'}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="mb-4">
+                              <Label className="text-sm font-medium mb-2 block">Tags/Palavras-chave</Label>
+                              {isEditing ? (
+                                <Input
+                                  value={editForm.tags || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'tags', e.target.value)}
+                                  placeholder="Ex: cibersegurança, LGPD, continuidade, fraude (separadas por vírgula)"
+                                />
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {(risk.tags || '').split(',').filter((tag: string) => tag.trim()).map((tag: string, index: number) => (
+                                    <Badge key={index} variant="secondary" className="text-xs">
+                                      {tag.trim()}
+                                    </Badge>
+                                  )) || <span className="text-sm text-muted-foreground">Nenhuma tag definida</span>}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Área/Departamento</Label>
+                                {isEditing ? (
+                                  <Input
+                                    value={editForm.department || ''}
+                                    onChange={(e) => updateEditForm(risk.id, 'department', e.target.value)}
+                                    placeholder="Ex: TI, RH, Financeiro, Operações"
+                                  />
+                                ) : (
+                                  <p className="text-sm">{risk.department || 'Não informado'}</p>
+                                )}
+                              </div>
+
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Processo Relacionado</Label>
+                                {isEditing ? (
+                                  <Input
+                                    value={editForm.relatedProcess || ''}
+                                    onChange={(e) => updateEditForm(risk.id, 'relatedProcess', e.target.value)}
+                                    placeholder="Ex: Gestão de TI, Atendimento ao Cliente"
+                                  />
+                                ) : (
+                                  <p className="text-sm">{risk.relatedProcess || 'Não informado'}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Regulamentações Aplicáveis</Label>
+                              {isEditing ? (
+                                <Textarea
+                                  value={editForm.regulations || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'regulations', e.target.value)}
+                                  placeholder="Ex: LGPD, SOX, ISO 27001, BACEN, CVM"
+                                  rows={2}
+                                />
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  {risk.regulations || 'Nenhuma regulamentação específica'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </TabsContent>
 
-                        {/* Etapa 2: Classificação */}
-                        <TabsContent value="classification" className="space-y-4 mt-4">
-                          {/* Metodologia GUT */}
+                        {/* Etapa 3: Avaliação */}
+                        <TabsContent value="evaluation" className="space-y-4 mt-4">
                           <div className="border rounded-lg p-4 bg-card">
                             <h4 className="font-medium mb-3 flex items-center gap-2">
-                              <Target className="h-4 w-4" />
-                              Metodologia GUT (Gravidade, Urgência, Tendência)
+                              <CheckSquare className="h-4 w-4" />
+                              Avaliação (Matriz GUT)
                             </h4>
-                            
+                            <p className="text-sm text-muted-foreground mb-4">Metodologia de Gravidade, Urgência e Tendência.</p>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                               <div>
                                 <Label className="text-sm font-medium mb-2 block">Gravidade (G)</Label>
@@ -1033,10 +1225,10 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                     <Badge variant="outline">{risk.gut_gravity || 'N/A'}/5</Badge>
                                     <div className="text-xs text-muted-foreground">
                                       {risk.gut_gravity === 5 ? 'Extremamente Grave' :
-                                       risk.gut_gravity === 4 ? 'Muito Grave' :
-                                       risk.gut_gravity === 3 ? 'Grave' :
-                                       risk.gut_gravity === 2 ? 'Pouco Grave' :
-                                       risk.gut_gravity === 1 ? 'Sem Gravidade' : 'Não definido'}
+                                        risk.gut_gravity === 4 ? 'Muito Grave' :
+                                          risk.gut_gravity === 3 ? 'Grave' :
+                                            risk.gut_gravity === 2 ? 'Pouco Grave' :
+                                              risk.gut_gravity === 1 ? 'Sem Gravidade' : 'Não definido'}
                                     </div>
                                   </div>
                                 )}
@@ -1062,10 +1254,10 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                     <Badge variant="outline">{risk.gut_urgency || 'N/A'}/5</Badge>
                                     <div className="text-xs text-muted-foreground">
                                       {risk.gut_urgency === 5 ? 'Ação Imediata' :
-                                       risk.gut_urgency === 4 ? 'Com Alguma Urgência' :
-                                       risk.gut_urgency === 3 ? 'Normal' :
-                                       risk.gut_urgency === 2 ? 'Pode Esperar' :
-                                       risk.gut_urgency === 1 ? 'Não Tem Pressa' : 'Não definido'}
+                                        risk.gut_urgency === 4 ? 'Com Alguma Urgência' :
+                                          risk.gut_urgency === 3 ? 'Normal' :
+                                            risk.gut_urgency === 2 ? 'Pode Esperar' :
+                                              risk.gut_urgency === 1 ? 'Não Tem Pressa' : 'Não definido'}
                                     </div>
                                   </div>
                                 )}
@@ -1091,17 +1283,15 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                     <Badge variant="outline">{risk.gut_tendency || 'N/A'}/5</Badge>
                                     <div className="text-xs text-muted-foreground">
                                       {risk.gut_tendency === 5 ? 'Piorar Rapidamente' :
-                                       risk.gut_tendency === 4 ? 'Piorar a Médio Prazo' :
-                                       risk.gut_tendency === 3 ? 'Piorar a Longo Prazo' :
-                                       risk.gut_tendency === 2 ? 'Permanecer Estável' :
-                                       risk.gut_tendency === 1 ? 'Melhorar' : 'Não definido'}
+                                        risk.gut_tendency === 4 ? 'Piorar a Médio Prazo' :
+                                          risk.gut_tendency === 3 ? 'Piorar a Longo Prazo' :
+                                            risk.gut_tendency === 2 ? 'Permanecer Estável' :
+                                              risk.gut_tendency === 1 ? 'Melhorar' : 'Não definido'}
                                     </div>
                                   </div>
                                 )}
                               </div>
                             </div>
-
-                            {/* Score GUT Calculado */}
                             <div className="border-t pt-3">
                               <div className="flex items-center justify-between">
                                 <Label className="text-sm font-medium">Score GUT:</Label>
@@ -1116,168 +1306,97 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               </div>
                             </div>
                           </div>
+                        </TabsContent>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Etapa 4: Contexto */}
+                        <TabsContent value="context" className="space-y-4 mt-4">
+                          <h4 className="font-medium mb-3 flex items-center gap-2">
+                            <History className="h-4 w-4" />
+                            Histórico e Contexto
+                          </h4>
+                          <div className="grid grid-cols-1 gap-4">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Categoria Principal</Label>
+                              <Label className="text-sm font-medium mb-2 block">Eventos Anteriores</Label>
                               {isEditing ? (
-                                <Select value={editForm.category || ''} onValueChange={(value) => updateEditForm(risk.id, 'category', value)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {categoryOptions.map(category => (
-                                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Badge className={`${getCategoryColor(risk.category)} text-xs`}>
-                                  {risk.category}
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Subcategoria</Label>
-                              {isEditing ? (
-                                <Input
-                                  value={editForm.subcategory || ''}
-                                  onChange={(e) => updateEditForm(risk.id, 'subcategory', e.target.value)}
-                                  placeholder="Ex: Sistemas críticos, Dados pessoais"
+                                <Textarea
+                                  value={editForm.historical_events || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'historical_events', e.target.value)}
+                                  placeholder="Houve incidentes anteriores relacionados a este risco?"
+                                  rows={3}
                                 />
                               ) : (
-                                <p className="text-sm">{risk.subcategory || 'Não informado'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {risk.historical_events || 'Nenhum evento anterior registrado.'}
+                                </p>
                               )}
                             </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Tipo de Risco</Label>
+                              <Label className="text-sm font-medium mb-2 block">Causas Raiz (Root Cause)</Label>
                               {isEditing ? (
-                                <Select value={editForm.riskType || ''} onValueChange={(value) => updateEditForm(risk.id, 'riskType', value)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Interno">Interno</SelectItem>
-                                    <SelectItem value="Externo">Externo</SelectItem>
-                                    <SelectItem value="Misto">Misto</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Badge variant="outline">
-                                  {risk.riskType || 'Não classificado'}
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Natureza</Label>
-                              {isEditing ? (
-                                <Select value={editForm.nature || ''} onValueChange={(value) => updateEditForm(risk.id, 'nature', value)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Quantitativo">Quantitativo</SelectItem>
-                                    <SelectItem value="Qualitativo">Qualitativo</SelectItem>
-                                    <SelectItem value="Híbrido">Híbrido</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Badge variant="outline">
-                                  {risk.nature || 'Não definido'}
-                                </Badge>
-                              )}
-                            </div>
-
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Temporalidade</Label>
-                              {isEditing ? (
-                                <Select value={editForm.temporality || ''} onValueChange={(value) => updateEditForm(risk.id, 'temporality', value)}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Curto Prazo">Curto Prazo (0-1 ano)</SelectItem>
-                                    <SelectItem value="Médio Prazo">Médio Prazo (1-3 anos)</SelectItem>
-                                    <SelectItem value="Longo Prazo">Longo Prazo (3+ anos)</SelectItem>
-                                    <SelectItem value="Imediato">Imediato</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              ) : (
-                                <Badge variant="outline">
-                                  {risk.temporality || 'Não definido'}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label className="text-sm font-medium mb-2 block">Tags/Palavras-chave</Label>
-                            {isEditing ? (
-                              <Input
-                                value={editForm.tags || ''}
-                                onChange={(e) => updateEditForm(risk.id, 'tags', e.target.value)}
-                                placeholder="Ex: cibersegurança, LGPD, continuidade, fraude (separadas por vírgula)"
-                              />
-                            ) : (
-                              <div className="flex flex-wrap gap-1">
-                                {(risk.tags || '').split(',').filter(tag => tag.trim()).map((tag, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">
-                                    {tag.trim()}
-                                  </Badge>
-                                )) || <span className="text-sm text-muted-foreground">Nenhuma tag definida</span>}
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Área/Departamento</Label>
-                              {isEditing ? (
-                                <Input
-                                  value={editForm.department || ''}
-                                  onChange={(e) => updateEditForm(risk.id, 'department', e.target.value)}
-                                  placeholder="Ex: TI, RH, Financeiro, Operações"
+                                <Textarea
+                                  value={editForm.root_causes || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'root_causes', e.target.value)}
+                                  placeholder="Quais as origens deste risco?"
+                                  rows={3}
                                 />
                               ) : (
-                                <p className="text-sm">{risk.department || 'Não informado'}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {risk.root_causes || 'Nenhuma causa raiz registrada.'}
+                                </p>
                               )}
                             </div>
-
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Processo Relacionado</Label>
-                              {isEditing ? (
-                                <Input
-                                  value={editForm.relatedProcess || ''}
-                                  onChange={(e) => updateEditForm(risk.id, 'relatedProcess', e.target.value)}
-                                  placeholder="Ex: Gestão de TI, Atendimento ao Cliente"
-                                />
-                              ) : (
-                                <p className="text-sm">{risk.relatedProcess || 'Não informado'}</p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            <Label className="text-sm font-medium mb-2 block">Regulamentações Aplicáveis</Label>
-                            {isEditing ? (
-                              <Textarea
-                                value={editForm.regulations || ''}
-                                onChange={(e) => updateEditForm(risk.id, 'regulations', e.target.value)}
-                                placeholder="Ex: LGPD, SOX, ISO 27001, BACEN, CVM"
-                                rows={2}
-                              />
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                {risk.regulations || 'Nenhuma regulamentação específica'}
-                              </p>
-                            )}
                           </div>
                         </TabsContent>
+
+                        {/* Etapa 5: Controles */}
+                        <TabsContent value="controls" className="space-y-4 mt-4">
+                          <h4 className="font-medium mb-3 flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            Avaliação de Controles Existentes
+                          </h4>
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Efetividade Geral dos Controles Mapeados</Label>
+                              {isEditing ? (
+                                <Select value={editForm.controls_effectiveness || ''} onValueChange={(value) => updateEditForm(risk.id, 'controls_effectiveness', value)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione a efetividade atual..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="ineffective">Inefetivo (Ausente ou falho)</SelectItem>
+                                    <SelectItem value="partially_effective">Parcialmente Efetivo</SelectItem>
+                                    <SelectItem value="effective">Efetivo</SelectItem>
+                                    <SelectItem value="highly_effective">Altamente Efetivo</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge variant="outline">
+                                  {risk.controls_effectiveness === 'ineffective' ? 'Inefetivo' :
+                                    risk.controls_effectiveness === 'partially_effective' ? 'Parcialmente Efetivo' :
+                                      risk.controls_effectiveness === 'effective' ? 'Efetivo' :
+                                        risk.controls_effectiveness === 'highly_effective' ? 'Altamente Efetivo' : 'Não avaliado'}
+                                </Badge>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Descrição dos Controles Atuais</Label>
+                              {isEditing ? (
+                                <Textarea
+                                  value={editForm.existing_controls || ''}
+                                  onChange={(e) => updateEditForm(risk.id, 'existing_controls', e.target.value)}
+                                  placeholder="Descreva as defesas atuais para este risco..."
+                                  rows={4}
+                                />
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  {risk.existing_controls || 'Nenhuma descrição fornecida.'}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </TabsContent>
+
+                        {/* Conteúdo movido para a aba Identificação */}
 
                         {/* Etapa 3: Análise */}
                         <TabsContent value="analysis" className="space-y-4 mt-4">
@@ -1287,7 +1406,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               <BarChart3 className="h-4 w-4" />
                               Metodologia de Análise
                             </h4>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <Label className="text-sm font-medium mb-2 block">Metodologia Selecionada</Label>
@@ -1313,19 +1432,19 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 ) : (
                                   <div className="flex items-center gap-2">
                                     <Badge variant="outline">
-                                      {risk.analysisMethodology ? 
+                                      {risk.analysisMethodology ?
                                         (risk.analysisMethodology === 'qualitative' ? '📊 Análise Qualitativa' :
-                                         risk.analysisMethodology === 'quantitative' ? '💰 Análise Quantitativa' :
-                                         risk.analysisMethodology === 'semi_quantitative' ? '⚖️ Análise Semi-Quantitativa' :
-                                         risk.analysisMethodology === 'nist' ? '🛡️ NIST Cybersecurity Framework' :
-                                         risk.analysisMethodology === 'iso31000' ? '🌐 ISO 31000' :
-                                         risk.analysisMethodology === 'monte_carlo' ? '🎲 Simulação Monte Carlo' :
-                                         risk.analysisMethodology === 'fair' ? '📈 FAIR (Factor Analysis)' :
-                                         risk.analysisMethodology === 'bow_tie' ? '🎯 Bow-Tie Analysis' :
-                                         risk.analysisMethodology === 'fmea' ? '🔧 FMEA' :
-                                         risk.analysisMethodology === 'risco_si_simplificado' ? '📋 Risco SI Simplificado' :
-                                         risk.analysisMethodology === 'metodologia_fornecedor' ? '🏢 Metodologia Fornecedor' :
-                                         risk.analysisMethodology) 
+                                          risk.analysisMethodology === 'quantitative' ? '💰 Análise Quantitativa' :
+                                            risk.analysisMethodology === 'semi_quantitative' ? '⚖️ Análise Semi-Quantitativa' :
+                                              risk.analysisMethodology === 'nist' ? '🛡️ NIST Cybersecurity Framework' :
+                                                risk.analysisMethodology === 'iso31000' ? '🌐 ISO 31000' :
+                                                  risk.analysisMethodology === 'monte_carlo' ? '🎲 Simulação Monte Carlo' :
+                                                    risk.analysisMethodology === 'fair' ? '📈 FAIR (Factor Analysis)' :
+                                                      risk.analysisMethodology === 'bow_tie' ? '🎯 Bow-Tie Analysis' :
+                                                        risk.analysisMethodology === 'fmea' ? '🔧 FMEA' :
+                                                          risk.analysisMethodology === 'risco_si_simplificado' ? '📋 Risco SI Simplificado' :
+                                                            risk.analysisMethodology === 'metodologia_fornecedor' ? '🏢 Metodologia Fornecedor' :
+                                                              risk.analysisMethodology)
                                         : 'Não definido'}
                                     </Badge>
                                   </div>
@@ -1336,17 +1455,17 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <Label className="text-sm font-medium mb-2 block">Complexidade</Label>
                                 <div className="text-sm text-muted-foreground">
                                   {risk.analysisMethodology === 'qualitative' ? 'Baixa (15-30 min)' :
-                                   risk.analysisMethodology === 'quantitative' ? 'Alta (45-90 min)' :
-                                   risk.analysisMethodology === 'semi_quantitative' ? 'Média (30-45 min)' :
-                                   risk.analysisMethodology === 'nist' ? 'Alta (60-120 min)' :
-                                   risk.analysisMethodology === 'iso31000' ? 'Média (45-90 min)' :
-                                   risk.analysisMethodology === 'monte_carlo' ? 'Muito Alta (120-240 min)' :
-                                   risk.analysisMethodology === 'fair' ? 'Muito Alta (90-180 min)' :
-                                   risk.analysisMethodology === 'bow_tie' ? 'Alta (60-120 min)' :
-                                   risk.analysisMethodology === 'fmea' ? 'Alta (90-180 min)' :
-                                   risk.analysisMethodology === 'risco_si_simplificado' ? 'Baixa (20-40 min)' :
-                                   risk.analysisMethodology === 'metodologia_fornecedor' ? 'Média (30-60 min)' :
-                                   'Não avaliado'}
+                                    risk.analysisMethodology === 'quantitative' ? 'Alta (45-90 min)' :
+                                      risk.analysisMethodology === 'semi_quantitative' ? 'Média (30-45 min)' :
+                                        risk.analysisMethodology === 'nist' ? 'Alta (60-120 min)' :
+                                          risk.analysisMethodology === 'iso31000' ? 'Média (45-90 min)' :
+                                            risk.analysisMethodology === 'monte_carlo' ? 'Muito Alta (120-240 min)' :
+                                              risk.analysisMethodology === 'fair' ? 'Muito Alta (90-180 min)' :
+                                                risk.analysisMethodology === 'bow_tie' ? 'Alta (60-120 min)' :
+                                                  risk.analysisMethodology === 'fmea' ? 'Alta (90-180 min)' :
+                                                    risk.analysisMethodology === 'risco_si_simplificado' ? 'Baixa (20-40 min)' :
+                                                      risk.analysisMethodology === 'metodologia_fornecedor' ? 'Média (30-60 min)' :
+                                                        'Não avaliado'}
                                 </div>
                               </div>
                             </div>
@@ -1356,17 +1475,17 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <p className="text-xs text-muted-foreground">
                                   <strong>Melhor uso:</strong> {
                                     risk.analysisMethodology === 'qualitative' ? 'Riscos operacionais, processos gerais' :
-                                    risk.analysisMethodology === 'quantitative' ? 'Riscos financeiros, investimentos' :
-                                    risk.analysisMethodology === 'semi_quantitative' ? 'Riscos estratégicos, projetos' :
-                                    risk.analysisMethodology === 'nist' ? 'Riscos de segurança cibernética, tecnologia' :
-                                    risk.analysisMethodology === 'iso31000' ? 'Todos os tipos de riscos, governança' :
-                                    risk.analysisMethodology === 'monte_carlo' ? 'Riscos financeiros complexos, projetos de investimento' :
-                                    risk.analysisMethodology === 'fair' ? 'Riscos de segurança da informação, análise econômica' :
-                                    risk.analysisMethodology === 'bow_tie' ? 'Riscos de segurança, operacionais críticos' :
-                                    risk.analysisMethodology === 'fmea' ? 'Processos técnicos, manufatura' :
-                                    risk.analysisMethodology === 'risco_si_simplificado' ? 'Avaliação rápida e estruturada, riscos de TI' :
-                                    risk.analysisMethodology === 'metodologia_fornecedor' ? 'Avaliação de riscos de fornecedores e terceiros' :
-                                    'Uso geral'
+                                      risk.analysisMethodology === 'quantitative' ? 'Riscos financeiros, investimentos' :
+                                        risk.analysisMethodology === 'semi_quantitative' ? 'Riscos estratégicos, projetos' :
+                                          risk.analysisMethodology === 'nist' ? 'Riscos de segurança cibernética, tecnologia' :
+                                            risk.analysisMethodology === 'iso31000' ? 'Todos os tipos de riscos, governança' :
+                                              risk.analysisMethodology === 'monte_carlo' ? 'Riscos financeiros complexos, projetos de investimento' :
+                                                risk.analysisMethodology === 'fair' ? 'Riscos de segurança da informação, análise econômica' :
+                                                  risk.analysisMethodology === 'bow_tie' ? 'Riscos de segurança, operacionais críticos' :
+                                                    risk.analysisMethodology === 'fmea' ? 'Processos técnicos, manufatura' :
+                                                      risk.analysisMethodology === 'risco_si_simplificado' ? 'Avaliação rápida e estruturada, riscos de TI' :
+                                                        risk.analysisMethodology === 'metodologia_fornecedor' ? 'Avaliação de riscos de fornecedores e terceiros' :
+                                                          'Uso geral'
                                   }
                                 </p>
                               </div>
@@ -1395,8 +1514,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">{risk.probability}/5</Badge>
                                   <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-blue-500 h-2 rounded-full" 
+                                    <div
+                                      className="bg-blue-500 h-2 rounded-full"
                                       style={{ width: `${(risk.probability / 5) * 100}%` }}
                                     />
                                   </div>
@@ -1423,8 +1542,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <div className="flex items-center gap-2">
                                   <Badge variant="outline">{risk.impact}/5</Badge>
                                   <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div 
-                                      className="bg-orange-500 h-2 rounded-full" 
+                                    <div
+                                      className="bg-orange-500 h-2 rounded-full"
                                       style={{ width: `${(risk.impact / 5) * 100}%` }}
                                     />
                                   </div>
@@ -1490,29 +1609,29 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                     // Função de tradução para estratégias de tratamento
                                     const translateTreatmentStrategy = (strategy: string): string => {
                                       if (!strategy) return 'Não definido';
-                                      
+
                                       const translations: Record<string, string> = {
                                         'mitigate': 'Mitigar',
-                                        'transfer': 'Transferir', 
+                                        'transfer': 'Transferir',
                                         'avoid': 'Evitar',
                                         'accept': 'Aceitar',
                                         'Mitigar': 'Mitigar',
                                         'Transferir': 'Transferir',
-                                        'Evitar': 'Evitar', 
+                                        'Evitar': 'Evitar',
                                         'Aceitar': 'Aceitar'
                                       };
-                                      
+
                                       const cleanStrategy = strategy.trim().toLowerCase();
-                                      
+
                                       for (const [key, value] of Object.entries(translations)) {
                                         if (key.toLowerCase() === cleanStrategy) {
                                           return value;
                                         }
                                       }
-                                      
+
                                       return strategy;
                                     };
-                                    
+
                                     const result = translateTreatmentStrategy(risk.treatmentType || '');
                                     return result;
                                   })()}
@@ -1556,7 +1675,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               </p>
                             )}
                           </div>
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Custo Estimado</Label>
@@ -1569,13 +1688,13 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 />
                               ) : (
                                 <p className="text-sm">
-                                  {risk.treatment_cost ? 
-                                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(risk.treatment_cost) 
+                                  {risk.treatment_cost ?
+                                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(risk.treatment_cost)
                                     : 'Não informado'}
                                 </p>
                               )}
                             </div>
-                            
+
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Cronograma</Label>
                               {isEditing ? (
@@ -1641,7 +1760,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 </Badge>
                               )}
                             </h4>
-                            
+
                             {/* Lista de Atividades das Tabelas Relacionadas */}
                             <div className="space-y-3">
                               {risk.risk_action_plans && risk.risk_action_plans.length > 0 ? (
@@ -1653,12 +1772,12 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                       </Badge>
                                       <Badge variant="outline">
                                         {actionPlan.priority === 'low' ? '🟢 Baixa' :
-                                         actionPlan.priority === 'medium' ? '🟡 Média' :
-                                         actionPlan.priority === 'high' ? '🟠 Alta' :
-                                         actionPlan.priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
+                                          actionPlan.priority === 'medium' ? '🟡 Média' :
+                                            actionPlan.priority === 'high' ? '🟠 Alta' :
+                                              actionPlan.priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
                                       </Badge>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                       <div>
                                         <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
@@ -1670,13 +1789,13 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                         <Label className="text-sm font-medium mb-1 block">Status</Label>
                                         <Badge variant="outline">
                                           {actionPlan.status === 'pending' ? '⏳ Pendente' :
-                                           actionPlan.status === 'in_progress' ? '🔄 Em Andamento' :
-                                           actionPlan.status === 'completed' ? '✅ Concluída' :
-                                           actionPlan.status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
+                                            actionPlan.status === 'in_progress' ? '🔄 Em Andamento' :
+                                              actionPlan.status === 'completed' ? '✅ Concluída' :
+                                                actionPlan.status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
                                         </Badge>
                                       </div>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                       <div>
                                         <Label className="text-sm font-medium mb-1 block">Responsável</Label>
@@ -1697,7 +1816,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                         </p>
                                       </div>
                                     </div>
-                                    
+
                                     {(actionPlan.activity_description || actionPlan.description) && (
                                       <div className="mb-3">
                                         <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
@@ -1718,12 +1837,12 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                       </Badge>
                                       <Badge variant="outline">
                                         {risk.activity_1_priority === 'low' ? '🟢 Baixa' :
-                                         risk.activity_1_priority === 'medium' ? '🟡 Média' :
-                                         risk.activity_1_priority === 'high' ? '🟠 Alta' :
-                                         risk.activity_1_priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
+                                          risk.activity_1_priority === 'medium' ? '🟡 Média' :
+                                            risk.activity_1_priority === 'high' ? '🟠 Alta' :
+                                              risk.activity_1_priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
                                       </Badge>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                                       <div>
                                         <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
@@ -1754,14 +1873,14 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                         ) : (
                                           <Badge variant="outline">
                                             {risk.activity_1_status === 'pending' ? '⏳ Pendente' :
-                                             risk.activity_1_status === 'in_progress' ? '🔄 Em Andamento' :
-                                             risk.activity_1_status === 'completed' ? '✅ Concluída' :
-                                             risk.activity_1_status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
+                                              risk.activity_1_status === 'in_progress' ? '🔄 Em Andamento' :
+                                                risk.activity_1_status === 'completed' ? '✅ Concluída' :
+                                                  risk.activity_1_status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
                                           </Badge>
                                         )}
                                       </div>
                                     </div>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                       <div>
                                         <Label className="text-sm font-medium mb-1 block">Responsável</Label>
@@ -1800,7 +1919,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                         )}
                                       </div>
                                     </div>
-                                    
+
                                     <div className="mb-3">
                                       <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
                                       {isEditing ? (
@@ -1837,7 +1956,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               <Activity className="h-4 w-4" />
                               Resumo do Plano
                             </h4>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
                                 <Label className="text-sm font-medium mb-2 block">Responsável Geral</Label>
@@ -1899,20 +2018,19 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               <div className="flex justify-between items-center mb-2">
                                 <Label className="text-sm font-medium">Progresso das Ações</Label>
                                 <span className="text-sm text-muted-foreground">
-                                  {risk.status === 'Fechado' ? '100%' : 
-                                   risk.status === 'Monitorado' ? '75%' :
-                                   risk.status === 'Em Tratamento' ? '50%' :
-                                   risk.status === 'Avaliado' ? '25%' : '0%'}
+                                  {risk.status === 'Fechado' ? '100%' :
+                                    risk.status === 'Monitorado' ? '75%' :
+                                      risk.status === 'Em Tratamento' ? '50%' :
+                                        risk.status === 'Avaliado' ? '25%' : '0%'}
                                 </span>
                               </div>
                               <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full transition-all ${
-                                    risk.status === 'Fechado' ? 'bg-green-500 w-full' :
+                                <div
+                                  className={`h-2 rounded-full transition-all ${risk.status === 'Fechado' ? 'bg-green-500 w-full' :
                                     risk.status === 'Monitorado' ? 'bg-blue-500 w-3/4' :
-                                    risk.status === 'Em Tratamento' ? 'bg-yellow-500 w-1/2' :
-                                    risk.status === 'Avaliado' ? 'bg-orange-500 w-1/4' : 'bg-gray-400 w-0'
-                                  }`}
+                                      risk.status === 'Em Tratamento' ? 'bg-yellow-500 w-1/2' :
+                                        risk.status === 'Avaliado' ? 'bg-orange-500 w-1/4' : 'bg-gray-400 w-0'
+                                    }`}
                                 />
                               </div>
                             </div>
@@ -1927,7 +2045,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               <Users className="h-4 w-4" />
                               Pessoas que devem ser comunicadas
                             </h4>
-                            
+
                             <div className="space-y-4">
                               {/* Para Ciência */}
                               <div>
@@ -2052,9 +2170,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                         ) : (
                                           <Badge variant="outline">
                                             {risk.approval_person_1_status === 'pending' ? '⏳ Pendente' :
-                                             risk.approval_person_1_status === 'acknowledged' ? '👁️ Tomou Ciência' :
-                                             risk.approval_person_1_status === 'approved' ? '✅ Aprovado' :
-                                             risk.approval_person_1_status === 'rejected' ? '❌ Rejeitado' : 'Não definido'}
+                                              risk.approval_person_1_status === 'acknowledged' ? '👁️ Tomou Ciência' :
+                                                risk.approval_person_1_status === 'approved' ? '✅ Aprovado' :
+                                                  risk.approval_person_1_status === 'rejected' ? '❌ Rejeitado' : 'Não definido'}
                                           </Badge>
                                         )}
                                       </div>
@@ -2165,11 +2283,11 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               ) : (
                                 <Badge variant="outline">
                                   {risk.monitoring_frequency === 'daily' ? 'Diário' :
-                                   risk.monitoring_frequency === 'weekly' ? 'Semanal' :
-                                   risk.monitoring_frequency === 'monthly' ? 'Mensal' :
-                                   risk.monitoring_frequency === 'quarterly' ? 'Trimestral' :
-                                   risk.monitoring_frequency === 'annually' ? 'Anual' :
-                                   risk.monitoring_frequency || 'Não definido'}
+                                    risk.monitoring_frequency === 'weekly' ? 'Semanal' :
+                                      risk.monitoring_frequency === 'monthly' ? 'Mensal' :
+                                        risk.monitoring_frequency === 'quarterly' ? 'Trimestral' :
+                                          risk.monitoring_frequency === 'annually' ? 'Anual' :
+                                            risk.monitoring_frequency || 'Não definido'}
                                 </Badge>
                               )}
                             </div>
@@ -2227,7 +2345,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               <Shield className="h-4 w-4" />
                               Risco Residual (Após Tratamento)
                             </h4>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                               <div>
                                 <Label className="text-sm font-medium mb-2 block">Impacto Residual</Label>
@@ -2404,13 +2522,14 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                       </Tabs>
                     </div>
                   </CardContent>
-                )}
+                )
+                }
               </Card>
             );
           })
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

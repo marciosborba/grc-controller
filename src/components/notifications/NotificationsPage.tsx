@@ -526,18 +526,17 @@ export const NotificationsPage: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="important" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
               <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>Imp.</span>
-              <span className="hidden sm:inline">ortantes ({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})</span>
+              <span className="hidden sm:inline">Importantes</span>
+              <span className="inline">({(stats.byPriority.high || 0) + (stats.byPriority.critical || 0)})</span>
             </TabsTrigger>
             <TabsTrigger value="archived" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
               <Archive className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>Arquiv.</span>
-              <span className="hidden sm:inline">adas ({stats.byStatus.archived || 0})</span>
+              <span className="hidden sm:inline">Arquivadas</span>
+              <span className="inline">({stats.byStatus.archived || 0})</span>
             </TabsTrigger>
             <TabsTrigger value="preferences" className="flex items-center gap-1 text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3">
               <Settings className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span>Config.</span>
-              <span className="hidden sm:inline">urações</span>
+              <span className="hidden sm:inline">Configurações</span>
             </TabsTrigger>
           </TabsList>
 

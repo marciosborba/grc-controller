@@ -1,0 +1,29 @@
+﻿--- Policies ---
+vendor_portal_users -> manage_portal_users_delete ( DELETE )
+   (EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))
+vendor_portal_users -> manage_portal_users_insert ( INSERT )
+   null
+vendor_portal_users -> manage_portal_users_select ( SELECT )
+   (EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))
+vendor_portal_users -> manage_portal_users_update ( UPDATE )
+   (EXISTS ( SELECT 1
+   FROM profiles p
+  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))
+vendor_portal_users -> vendor_portal_users_insert ( INSERT )
+   null
+vendor_portal_users -> vendor_portal_users_self_read ( SELECT )
+   (email = auth.email())
+vendor_portal_users -> vendor_portal_users_self_update ( UPDATE )
+   (email = (auth.jwt() ->> 'email'::text))
+vendor_users -> Admins can manage vendor_users ( ALL )
+   (EXISTS ( SELECT 1
+   FROM vendor_registry vr
+  WHERE ((vr.id = vendor_users.vendor_id) AND (vr.tenant_id = (current_setting('app.current_tenant'::text, true))::uuid))))
+vendor_users -> Vendors can view their own user ( SELECT )
+   (auth_user_id = auth.uid())
+vendor_users -> vendor_users_self_read ( SELECT )
+   (auth_user_id = auth.uid())

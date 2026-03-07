@@ -249,8 +249,8 @@ export const RiskManagementCenterImproved: React.FC = () => {
     console.log('handleAlexAnalysis chamado - abrindo processo guiado');
     setProcessDialogOpen(true);
     toast({
-      title: '🧠 Assistente de Registro de Risco',
-      description: 'Abrindo assistente de registro de risco...',
+      title: '🎯 Novo Registro de Risco',
+      description: 'Abrindo formulário de registro de risco...',
     });
   };
 
@@ -291,7 +291,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       case 'dashboard': return 'Dashboard Executivo';
       case 'table': return 'Lista Detalhada';
       case 'kanban': return 'Kanban Board';
-      case 'process': return 'Assistente de Registro de Risco';
+      case 'process': return 'Novo Registro de Risco';
       case 'matrix': return 'Matriz de Risco';
       case 'documentation': return 'Documentação Completa';
       case 'library': return 'Biblioteca de Riscos';
@@ -447,7 +447,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                           {view === 'dashboard' && 'Dashboard'}
                           {view === 'table' && 'Lista'}
                           {view === 'kanban' && 'Kanban'}
-                          {view === 'process' && 'Processo'}
+                          {view === 'process' && 'Registro'}
                           {view === 'matrix' && 'Matriz'}
                         </span>
                       </Button>
@@ -635,10 +635,9 @@ export const RiskManagementCenterImproved: React.FC = () => {
       {/* Dialog do Assistente de Registro de Risco */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
         <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 mx-auto" style={{ maxWidth: 'calc(100vw - 1rem)', width: 'calc(100vw - 1rem)' }}>
-          <DialogHeader className="pt-10 pb-4 px-4 sm:px-6 text-left relative flex-shrink-0 border-b border-border/40 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 dark:border-purple-900/50">
+          <DialogHeader className="pt-10 pb-4 px-4 sm:px-6 text-left relative flex-shrink-0 border-b border-border/40 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 dark:border-green-900/50">
             <DialogTitle className="flex items-center space-x-2 text-sm">
-              <Brain className="h-5 w-5 text-purple-600" />
-              <span>Assistente de Registro de Risco</span>
+              <span>Novo Registro de Risco</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
               Processo inteligente e guiado.
@@ -665,8 +664,8 @@ export const RiskManagementCenterImproved: React.FC = () => {
               onCancel={() => {
                 setProcessDialogOpen(false);
                 toast({
-                  title: 'Assistente Inicializado',
-                  description: 'O assistente foi fechado.',
+                  title: 'Cancelado',
+                  description: 'O formulário foi fechado.',
                 });
               }}
             />

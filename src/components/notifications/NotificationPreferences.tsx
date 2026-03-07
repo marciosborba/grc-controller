@@ -55,7 +55,6 @@ interface ModuleSettingConfig {
   enabled: boolean;
   emailEnabled: boolean;
   pushEnabled: boolean;
-  smsEnabled: boolean;
   digestMode: 'immediate' | 'hourly' | 'daily' | 'weekly' | 'disabled';
   quietHours?: {
     start: string;
@@ -123,6 +122,30 @@ const moduleLabels: Record<NotificationModule, { label: string; description: str
   }
 };
 
+// Mapeamento de eventos granulares
+const granularEventLabels: Record<keyof NotificationPreferencesType['granularEvents'], { label: string; description: string; icon: React.ComponentType<any> }> = {
+  actionPlanDue: {
+    label: 'Planos de ação a vencer',
+    description: 'Notifica quando um plano de ação estiver próximo do vencimento',
+    icon: Clock
+  },
+  criticalRisk: {
+    label: 'Riscos críticos (Identificados/Escalados)',
+    description: 'Notifica imediatamente sobre riscos críticos',
+    icon: AlertTriangle
+  },
+  policyApproval: {
+    label: 'Políticas para aprovação',
+    description: 'Avisa quando você tem políticas pendentes de aprovação',
+    icon: CheckCircle
+  },
+  riskLetterPending: {
+    label: 'Cartas de risco para aceite',
+    description: 'Avisa quando há uma carta de risco aguardando seu aceite',
+    icon: Mail
+  }
+};
+
 // Opções de digest
 const digestOptions = [
   { value: 'immediate', label: 'Imediato', description: 'Receber notificações instantaneamente' },
@@ -177,6 +200,25 @@ export const NotificationPreferences: React.FC = () => {
         ...prev!.moduleSettings,
         [module]: {
           ...prev!.moduleSettings[module],
+          [setting]: value
+        }
+      }
+    }));
+  };
+
+  const handleGranularEventChange = (
+    event: keyof NotificationPreferencesType['granularEvents'],
+    setting: 'enabled' | 'emailEnabled' | 'pushEnabled',
+    value: boolean
+  ) => {
+    if (!localPreferences) return;
+
+    setLocalPreferences(prev => ({
+      ...prev!,
+      granularEvents: {
+        ...prev!.granularEvents,
+        [event]: {
+          ...prev!.granularEvents[event],
           [setting]: value
         }
       }
@@ -273,6 +315,7 @@ export const NotificationPreferences: React.FC = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="w-full justify-start overflow-x-auto flex-nowrap h-auto p-1">
           <TabsTrigger value="modules" className="whitespace-nowrap px-3">Por Módulo</TabsTrigger>
+          <TabsTrigger value="events" className="whitespace-nowrap px-3">Por Eventos</TabsTrigger>
           <TabsTrigger value="channels" className="whitespace-nowrap px-3">Canais</TabsTrigger>
           <TabsTrigger value="realtime" className="whitespace-nowrap px-3">Tempo Real</TabsTrigger>
           <TabsTrigger value="general" className="whitespace-nowrap px-3">Geral</TabsTrigger>
@@ -322,8 +365,7 @@ export const NotificationPreferences: React.FC = () => {
 
                         {settings.enabled && (
                           <div className="space-y-6 pt-4 border-t mt-4">
-                            {/* Canais de notificação */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <Mail className="h-4 w-4 text-muted-foreground" />
@@ -346,19 +388,6 @@ export const NotificationPreferences: React.FC = () => {
                                   checked={settings.pushEnabled}
                                   onCheckedChange={(checked) =>
                                     handleModuleSettingChange(module, 'pushEnabled', checked)
-                                  }
-                                />
-                              </div>
-
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <Phone className="h-4 w-4 text-muted-foreground" />
-                                  <Label className="text-sm">SMS</Label>
-                                </div>
-                                <Switch
-                                  checked={settings.smsEnabled}
-                                  onCheckedChange={(checked) =>
-                                    handleModuleSettingChange(module, 'smsEnabled', checked)
                                   }
                                 />
                               </div>
@@ -391,6 +420,88 @@ export const NotificationPreferences: React.FC = () => {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Configurações por Eventos Granulares */}
+        <TabsContent value="events" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Eventos Específicos
+              </CardTitle>
+              <CardDescription>
+                Configure alertas para situações importantes que exigem sua atenção
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px] pr-4">
+                <div className="space-y-6">
+                  {(Object.keys(granularEventLabels) as Array<keyof NotificationPreferencesType['granularEvents']>).map((eventKey) => {
+                    const eventInfo = granularEventLabels[eventKey];
+                    const settings = localPreferences.granularEvents?.[eventKey] || { enabled: true, emailEnabled: true, pushEnabled: true };
+                    const EventIcon = eventInfo.icon;
+
+                    return (
+                      <div key={eventKey} className="border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <EventIcon className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-medium">{eventInfo.label}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {eventInfo.description}
+                              </p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={settings.enabled}
+                            onCheckedChange={(checked) =>
+                              handleGranularEventChange(eventKey, 'enabled', checked)
+                            }
+                          />
+                        </div>
+
+                        {settings.enabled && (
+                          <div className="space-y-6 pt-4 border-t mt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Mail className="h-4 w-4 text-muted-foreground" />
+                                  <Label className="text-sm">E-mail</Label>
+                                </div>
+                                <Switch
+                                  checked={settings.emailEnabled}
+                                  onCheckedChange={(checked) =>
+                                    handleGranularEventChange(eventKey, 'emailEnabled', checked)
+                                  }
+                                />
+                              </div>
+
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Monitor className="h-4 w-4 text-muted-foreground" />
+                                  <Label className="text-sm">Push</Label>
+                                </div>
+                                <Switch
+                                  checked={settings.pushEnabled}
+                                  onCheckedChange={(checked) =>
+                                    handleGranularEventChange(eventKey, 'pushEnabled', checked)
+                                  }
+                                />
+                              </div>
                             </div>
                           </div>
                         )}
@@ -473,40 +584,6 @@ export const NotificationPreferences: React.FC = () => {
                     }
                   />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* SMS */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Phone className="h-5 w-5" />
-                  SMS
-                </CardTitle>
-                <CardDescription>
-                  Notificações por SMS (apenas críticas)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Habilitar SMS</Label>
-                  <Switch />
-                </div>
-                <div>
-                  <Label className="text-sm">Número de telefone</Label>
-                  <Input
-                    type="tel"
-                    placeholder="+55 11 99999-9999"
-                    className="mt-1"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Usado apenas para notificações críticas
-                  </p>
-                </div>
-                <Badge variant="outline" className="text-xs">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  Apenas para notificações de alta prioridade
-                </Badge>
               </CardContent>
             </Card>
 
@@ -794,10 +871,6 @@ export const NotificationPreferences: React.FC = () => {
                   <div className="flex items-center gap-2 p-3 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                     <AlertTriangle className="h-4 w-4 text-yellow-600" />
                     <span className="text-sm">Push permission pending</span>
-                  </div>
-                  <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-950 rounded-lg">
-                    <XCircle className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm">SMS não configurado</span>
                   </div>
                 </div>
               </div>

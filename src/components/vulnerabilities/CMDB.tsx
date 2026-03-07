@@ -54,13 +54,15 @@ import {
   MapPin,
   Zap,
   Activity,
-  MoreHorizontal
+  MoreHorizontal,
+  ExternalLink
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import ExpandableAssetCard, { AssetType } from './ExpandableAssetCard';
 
 export default function CMDB() {
   const navigate = useNavigate();
@@ -98,6 +100,9 @@ export default function CMDB() {
     hasVulnerabilities: 'all' as 'all' | 'with' | 'without'
   });
 
+  const [assetVulnerabilities, setAssetVulnerabilities] = useState<any[]>([]);
+  const [assetVulnerabilitiesLoading, setAssetVulnerabilitiesLoading] = useState(false);
+
   // Available options for advanced filters
   const assetTypeOptions = [
     { value: 'Server', label: 'Servidor', icon: Server, color: 'bg-blue-500 text-white' },
@@ -115,104 +120,96 @@ export default function CMDB() {
     { value: 'Baixo', label: 'Baixo', icon: CheckCircle2, color: 'bg-green-600 text-white' }
   ];
 
-  type Asset = {
-    id: string;
-    name: string;
-    type: string;
-    status: string;
-    ip_address: string;
-    location: string;
-    os: string;
-    owner: string;
-    vulnerabilities: number;
-    last_scan: string | null;
-    risk_level: string;
-  };
+  type Asset = AssetType;
 
   // State for real data
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch data from Supabase
-  React.useEffect(() => {
-    const fetchAssets = async () => {
-      try {
-        setLoading(true);
-        if (!tenantId) return;
+  const fetchAssets = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      if (!tenantId) return;
 
-        // Fetch systems (acting as assets)
-        const { data: systemsData, error: systemsError } = await supabase
-          .from('sistemas')
-          .select('*')
-          .eq('tenant_id', tenantId);
+      // Fetch systems (acting as assets)
+      const { data: systemsData, error: systemsError } = await supabase
+        .from('sistemas')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
-        if (systemsError) throw systemsError;
+      if (systemsError) throw systemsError;
 
-        // Fetch profiles for owner names
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, full_name, email');
+      // Fetch profiles for owner names
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, email');
 
-        if (profilesError) console.error('Error fetching profiles:', profilesError);
+      if (profilesError) console.error('Error fetching profiles:', profilesError);
 
-        const profileMap = new Map((profilesData || []).map(p => [p.id, p.full_name || p.email]));
+      const profileMap = new Map((profilesData || []).map(p => [p.id, p.full_name || p.email]));
 
-        // Fetch vulnerabilities to count them per asset
-        const { data: vulnsData, error: vulnsError } = await supabase
-          .from('vulnerabilities')
-          .select('asset_name, created_at, severity')
-          .eq('tenant_id', tenantId);
+      // Fetch vulnerabilities to count them per asset
+      const { data: vulnsData, error: vulnsError } = await supabase
+        .from('vulnerabilities')
+        .select('asset_name, created_at, severity')
+        .eq('tenant_id', tenantId);
 
-        if (vulnsError) console.error('Error fetching vulnerabilities:', vulnsError);
+      if (vulnsError) console.error('Error fetching vulnerabilities:', vulnsError);
 
-        // Map vulnerabilities to assets
-        const vulnStats = new Map<string, { count: number, lastScan: string | null }>();
+      // Map vulnerabilities to assets
+      const vulnStats = new Map<string, { count: number, lastScan: string | null }>();
 
-        (vulnsData || []).forEach(v => {
-          const stats = vulnStats.get(v.asset_name) || { count: 0, lastScan: null };
+      (vulnsData || []).forEach(v => {
+        const stats = vulnStats.get(v.asset_name) || { count: 0, lastScan: null };
 
-          stats.count++;
+        stats.count++;
 
-          // Track latest date
-          if (v.created_at) {
-            if (!stats.lastScan || new Date(v.created_at) > new Date(stats.lastScan)) {
-              stats.lastScan = v.created_at;
-            }
+        // Track latest date
+        if (v.created_at) {
+          if (!stats.lastScan || new Date(v.created_at) > new Date(stats.lastScan)) {
+            stats.lastScan = v.created_at;
           }
+        }
 
-          vulnStats.set(v.asset_name, stats);
-        });
+        vulnStats.set(v.asset_name, stats);
+      });
 
-        // Transform systems to assets format
-        const transformedAssets: Asset[] = (systemsData || []).map(sys => {
-          const stats = vulnStats.get(sys.nome) || { count: 0, lastScan: null };
+      // Transform systems to assets format
+      const transformedAssets: Asset[] = (systemsData || []).map(sys => {
+        const stats = vulnStats.get(sys.nome) || { count: 0, lastScan: null };
 
-          return {
-            id: sys.id,
-            name: sys.nome,
-            type: sys.tipo || 'Server', // Default to Server if unknown
-            status: sys.status || 'Ativo',
-            ip_address: 'N/A', // Not available in sistemas table
-            location: 'N/A', // Not available
-            os: 'N/A', // Not available
-            owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
-            vulnerabilities: stats.count,
-            last_scan: stats.lastScan || null,
-            risk_level: sys.criticidade || 'Baixo'
-          };
-        });
+        return {
+          id: sys.id,
+          name: sys.nome,
+          type: sys.tipo || 'Server', // Default to Server if unknown
+          status: sys.status || 'Ativo',
+          ip_address: sys.ip_address || 'N/A', // IP not strictly typed in DB, fallback
+          location: sys.location || 'N/A',
+          os: sys.os || 'N/A',
+          owner: sys.responsavel_tecnico ? (profileMap.get(sys.responsavel_tecnico) || 'Não atribuído') : 'Não atribuído',
+          vulnerabilities: stats.count,
+          last_scan: stats.lastScan || null,
+          risk_level: sys.criticidade || 'Baixo',
+          eol_date: sys.eol_date || null,
+          edr_enabled: sys.edr_enabled === true
+        };
+      });
 
-        setAssets(transformedAssets);
-      } catch (error) {
-        console.error('Error fetching assets:', error);
-        toast.error('Erro ao carregar ativos do CMDB.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAssets();
+      setAssets(transformedAssets);
+    } catch (error) {
+      console.error('Error fetching assets:', error);
+      toast.error('Erro ao carregar ativos do CMDB.');
+    } finally {
+      setLoading(false);
+    }
   }, [tenantId]);
+
+  React.useEffect(() => {
+    fetchAssets();
+  }, [fetchAssets]);
 
   // Generate owner options from real data
   const generateOwnerOptions = () => {
@@ -304,10 +301,30 @@ export default function CMDB() {
   };
 
   // Asset action handlers
-  const handleViewAsset = (asset: any) => {
+  const handleViewAsset = async (asset: any) => {
     console.log('Visualizar ativo clicado:', asset);
     setSelectedAsset(asset);
     setViewModalOpen(true);
+
+    if (!tenantId) return;
+
+    setAssetVulnerabilitiesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('vulnerabilities')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('asset_name', asset.name);
+
+      if (error) throw error;
+      setAssetVulnerabilities(data || []);
+    } catch (error) {
+      console.error('Error fetching asset vulnerabilities:', error);
+      toast.error('Erro ao carregar vulnerabilidades do ativo.');
+      setAssetVulnerabilities([]);
+    } finally {
+      setAssetVulnerabilitiesLoading(false);
+    }
   };
 
   const handleDeleteAsset = (assetId: string) => {
@@ -789,13 +806,15 @@ export default function CMDB() {
   });
 
   const assetStats = {
-    total: assets.length,
-    active: assets.filter(asset => asset.status === 'Ativo').length,
-    servers: assets.filter(asset => asset.type === 'Server').length,
-    workstations: assets.filter(asset => asset.type === 'Workstation').length,
-    network: assets.filter(asset => asset.type === 'Network Device').length,
-    mobile: assets.filter(asset => asset.type === 'Mobile Device').length,
-    highRisk: assets.filter(asset => asset.risk_level === 'Alto' || asset.risk_level === 'Crítico').length,
+    total: filteredAssets.length,
+    active: filteredAssets.filter(asset => asset.status === 'Ativo').length,
+    servers: filteredAssets.filter(asset => asset.type === 'Server').length,
+    workstations: filteredAssets.filter(asset => asset.type === 'Workstation').length,
+    network: filteredAssets.filter(asset => asset.type === 'Network Device').length,
+    mobile: filteredAssets.filter(asset => asset.type === 'Mobile Device').length,
+    highRisk: filteredAssets.filter(asset =>
+      ['Alto', 'Alta', 'Crítico', 'Crítica', 'High', 'Critical'].includes(asset.risk_level)
+    ).length,
   };
 
 
@@ -1208,172 +1227,29 @@ export default function CMDB() {
         </Card>
       )}
 
-      {/* Assets Table */}
-      <Card>
-        <CardHeader className="pt-3 px-3 pb-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs font-semibold">Ativos ({filteredAssets.length})</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="px-2 pb-2 pt-2">
-          {/* Mobile card list - hidden on sm+ */}
-          <div className="flex flex-col divide-y sm:hidden">
-            {filteredAssets.map((asset) => (
-              <div key={asset.id} className="py-2.5 px-2 flex items-center gap-2">
-                {/* Icon */}
-                <div className="flex-shrink-0 text-muted-foreground">
-                  {getTypeIcon(asset.type)}
-                </div>
-                {/* Main info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate">{asset.name}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{asset.os || 'N/A'} • {asset.ip_address}</p>
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    <Badge className={`${getStatusBadgeColor(asset.status)} text-[9px] px-1.5 py-0`}>
-                      {asset.status}
-                    </Badge>
-                    <Badge className={`${getRiskBadgeColor(asset.risk_level)} text-[9px] px-1.5 py-0`}>
-                      {asset.risk_level}
-                    </Badge>
-                    <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                      {asset.vulnerabilities}v
-                    </Badge>
-                  </div>
-                </div>
-                {/* Action */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0">
-                      <MoreHorizontal className="h-3.5 w-3.5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      onClick={() => handleViewAsset(asset)}
-                      className="cursor-pointer text-xs"
-                    >
-                      <Eye className="h-3.5 w-3.5 mr-2" />
-                      Visualizar
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => navigate(`/vulnerabilities/cmdb/edit/${asset.id}`)}
-                      className="cursor-pointer text-xs"
-                    >
-                      <Edit className="h-3.5 w-3.5 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => handleDeleteAsset(asset.id)}
-                      className="cursor-pointer text-xs text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-2" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
-            {filteredAssets.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-6">Nenhum ativo encontrado</p>
-            )}
-          </div>
-
-          {/* Desktop table - hidden on mobile */}
-          <div className="hidden sm:block overflow-x-auto">
-            <Table className="text-xs">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-xs">ID</TableHead>
-                  <TableHead className="text-xs">Nome</TableHead>
-                  <TableHead className="text-xs">Tipo</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-xs">IP</TableHead>
-                  <TableHead className="text-xs">SO</TableHead>
-                  <TableHead className="text-xs">Vulnerabilidades</TableHead>
-                  <TableHead className="text-xs">Risco</TableHead>
-                  <TableHead className="text-xs">Último Scan</TableHead>
-                  <TableHead className="text-xs w-16">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAssets.map((asset) => (
-                  <TableRow key={asset.id}>
-                    <TableCell className="font-medium text-xs p-2">{asset.id}</TableCell>
-                    <TableCell className="p-2">
-                      <div className="flex items-center gap-2">
-                        {getTypeIcon(asset.type)}
-                        <span className="font-medium text-xs truncate max-w-[120px]">{asset.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs p-2">{asset.type}</TableCell>
-                    <TableCell className="p-2">
-                      <Badge className={`${getStatusBadgeColor(asset.status)} text-xs px-1.5 py-0.5`}>
-                        {asset.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs p-2">{asset.ip_address}</TableCell>
-                    <TableCell className="text-xs p-2 truncate max-w-[100px]">{asset.os}</TableCell>
-                    <TableCell className="p-2">
-                      <Badge variant="outline" className="text-xs px-1.5 py-0.5">
-                        {asset.vulnerabilities} vuln.
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="p-2">
-                      <Badge className={`${getRiskBadgeColor(asset.risk_level)} text-xs px-1.5 py-0.5`}>
-                        {asset.risk_level}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="p-2">
-                      <span className="text-xs">
-                        {asset.last_scan ? new Date(asset.last_scan).toLocaleDateString() : 'N/A'}
-                      </span>
-                    </TableCell>
-                    <TableCell className="p-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            title="Ações"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem
-                            onClick={() => handleViewAsset(asset)}
-                            className="cursor-pointer"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Visualizar Detalhes
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => navigate(`/vulnerabilities/cmdb/edit/${asset.id}`)}
-                            className="cursor-pointer"
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar Ativo
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteAsset(asset.id)}
-                            className="cursor-pointer text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir Ativo
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Assets Table replaced by Cards */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold">Ativos ({filteredAssets.length})</h2>
+        </div>
+        {filteredAssets.length > 0 ? (
+          filteredAssets.map(asset => (
+            <ExpandableAssetCard
+              key={asset.id}
+              asset={asset}
+              onView={handleViewAsset}
+              onDelete={handleDeleteAsset}
+              onUpdate={fetchAssets}
+            />
+          ))
+        ) : (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              Nenhum ativo encontrado com os filtros atuais.
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Import Modal */}
       <Dialog open={importModalOpen} onOpenChange={setImportModalOpen}>
@@ -2731,7 +2607,7 @@ export default function CMDB() {
                   </div>
                 ) : (
                   <div className="text-center p-8 border rounded-lg bg-muted/20">
-                    <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                    <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-2" />
                     <p className="font-medium">Nenhuma vulnerabilidade encontrada</p>
                     <p className="text-sm text-muted-foreground">Este ativo não possui vulnerabilidades registradas.</p>
                   </div>

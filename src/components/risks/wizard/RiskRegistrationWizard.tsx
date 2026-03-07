@@ -35,6 +35,7 @@ export interface RiskRegistrationData {
   risk_title?: string;
   risk_description?: string;
   risk_category?: string;
+  risk_subcategory?: string;
   risk_source?: string;
   identification_date?: string;
   responsible_area?: string;

@@ -162,11 +162,11 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-4 sm:space-y-6">
         <div className="text-center flex flex-col items-center">
           <div className="flex justify-center mb-0 text-center items-center flex-col">
-            <img src="/logo-login.png?v=4" alt="GEPRIV Logo" className="h-[150px] sm:h-[200px] w-auto object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/logo.png?v=4'; }} />
+            <img src="/logo-login.png?v=4" alt="GEPRIV Logo" className="h-[100px] sm:h-[200px] w-auto object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/logo.png?v=4'; }} />
           </div>
           <p className="mt-1 text-sm sm:text-base font-semibold text-muted-foreground">Governança, Risco e Conformidade</p>
         </div>

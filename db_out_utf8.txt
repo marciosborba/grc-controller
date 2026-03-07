@@ -1,0 +1,15 @@
+﻿--- Checking Info for marcio.borba@gepriv.com ---
+auth.users: bec93940-ad0c-48ca-960f-e70693d8ae58
+profiles: None
+user_roles: [
+  {
+    id: '8cb933f9-d7c4-43ce-b701-d943b7b1d86a',
+    user_id: 'bec93940-ad0c-48ca-960f-e70693d8ae58',
+    role: 'user',
+    created_at: 2026-03-06T17:52:12.392Z,
+    tenant_id: null
+  }
+]
+platform_admins: []
+vendor_users: None
+vendor_portal_users: 52ae6f77-5c6f-4401-82d8-96008b442503

@@ -67,6 +67,8 @@ type Application = {
   is_sox?: boolean;
   is_acn?: boolean;
   internet_facing?: boolean;
+  environment?: string;
+  data_classification?: string;
 };
 
 export default function Applications() {
@@ -119,7 +121,9 @@ export default function Applications() {
       const { data: systemsData, error: systemsError } = await supabase
         .from('sistemas')
         .select('*')
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false });
 
       if (systemsError) throw systemsError;
 
@@ -177,6 +181,8 @@ export default function Applications() {
           is_sox: sys.is_sox === true || sys.sox === true || sys.sox === 'Sim' || sys.is_sox === 'Sim',
           is_acn: sys.is_acn === true || sys.acn === true || sys.acn === 'Sim' || sys.is_acn === 'Sim',
           internet_facing: sys.internet_facing === true || sys.internet_exposto === true || sys.internet_facing === 'Sim' || sys.internet_exposto === 'Sim' || sys.internet === true || sys.internet === 'Sim',
+          environment: sys.ambiente || '',
+          data_classification: sys.classificacao_dados || '',
         };
       });
 

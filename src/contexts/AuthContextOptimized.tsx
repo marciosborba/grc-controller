@@ -234,31 +234,22 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
         let isVendorOnly = false;
 
-        // 🚀 VERIFICAÇÃO FORÇADA DE FORNECEDOR (mesmo se tiver profile)
+        // 🚀 VERIFICAÇÃO SEGURA DE FORNECEDOR (Ignora RLS clientside, usa RPC)
         try {
-          const { data: vendorUser } = await supabase
-            .from('vendor_users')
-            .select('id')
-            .eq('auth_user_id', supabaseUser.id)
-            .limit(1)
-            .maybeSingle();
+          const { data: isVendorRpc, error: rpcVendorError } = await supabase
+            .rpc('check_is_vendor', {
+              check_uid: supabaseUser.id,
+              check_email: supabaseUser.email || ''
+            });
 
-          if (vendorUser) {
+          if (rpcVendorError) {
+            console.warn('⚠️ [AUTH] Erro ao chamar check_is_vendor RPC, fazendo fallback manual:', rpcVendorError);
+          } else if (isVendorRpc === true) {
+            console.log('✅ [AUTH] Usuário identificado como fornecedor seguro via RPC');
             isVendorOnly = true;
-          } else {
-            const { data: portalUser } = await supabase
-              .from('vendor_portal_users')
-              .select('vendor_id')
-              .eq('email', supabaseUser.email?.trim().toLowerCase())
-              .limit(1)
-              .maybeSingle();
-
-            if (portalUser) {
-              isVendorOnly = true;
-            }
           }
         } catch (vendorCheckError) {
-          console.error('❌ [AUTH] Erro ao verificar fornecedor no fluxo principal:', vendorCheckError);
+          console.error('❌ [AUTH] Erro ao verificar fornecedor no fluxo principal via RPC:', vendorCheckError);
         }
 
         const userData: AuthUser = {
@@ -309,37 +300,21 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         console.warn('⚠️ [AUTH] Erro ao carregar perfil, verificando se é fornecedor...', dbError);
 
         try {
-          // Check vendor_users first
-          const { data: vendorUser } = await supabase
-            .from('vendor_users')
-            .select('id')
-            .eq('auth_user_id', supabaseUser.id)
-            .limit(1)
-            .maybeSingle();
+          // 🚀 FALLBACK SEGURA DE FORNECEDOR
+          const { data: isVendorRpc, error: rpcVendorError } = await supabase
+            .rpc('check_is_vendor', {
+              check_uid: supabaseUser.id,
+              check_email: supabaseUser.email || ''
+            });
 
-          if (vendorUser) {
-            console.log('✅ [AUTH] Usuário identificado como fornecedor (vendor_users)');
-            const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
-            setCachedUser(supabaseUser.id, vendorData);
-            return vendorData;
-          }
-
-          // Check vendor_portal_users next
-          const { data: portalUser } = await supabase
-            .from('vendor_portal_users')
-            .select('vendor_id')
-            .eq('email', supabaseUser.email?.trim().toLowerCase())
-            .limit(1)
-            .maybeSingle();
-
-          if (portalUser) {
-            console.log('✅ [AUTH] Usuário identificado como fornecedor (vendor_portal_users)');
+          if (isVendorRpc === true) {
+            console.log('✅ [AUTH] Usuário fallback identificado como fornecedor via RPC');
             const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
             setCachedUser(supabaseUser.id, vendorData);
             return vendorData;
           }
         } catch (vendorCheckError) {
-          console.error('❌ [AUTH] Erro ao verificar fornecedor:', vendorCheckError);
+          console.error('❌ [AUTH] Erro ao verificar fornecedor no block catch:', vendorCheckError);
         }
 
         console.warn('⚠️ [AUTH] Usuário não é fornecedor, usando dados básicos padrão');

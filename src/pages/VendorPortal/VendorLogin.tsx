@@ -170,8 +170,8 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
     // ── Force Change Password Screen ─────────────────────────────────────────
     if (forceChangeMode) {
         return (
-            <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-                <div className="sm:mx-auto sm:w-full sm:max-w-md">
+            <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+                <div className="w-full sm:mx-auto sm:max-w-md">
                     <div className="flex justify-center">
                         <div className="h-16 w-16 bg-amber-500/10 rounded-2xl flex items-center justify-center shadow-sm ring-1 ring-amber-500/20">
                             <KeyRound className="h-8 w-8 text-amber-600 dark:text-amber-500" />
@@ -185,7 +185,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                     </p>
                 </div>
 
-                <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                <div className="mt-6 sm:mt-8 w-full sm:mx-auto sm:max-w-md">
                     <Card className="border-border shadow-xl shadow-amber-500/5">
                         <CardHeader>
                             <div className="flex items-start gap-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
@@ -266,12 +266,10 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
 
     // ── Regular Login Screen ──────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-background flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-md">
-                <div className="flex justify-center">
-                    <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center transform rotate-3 hover:rotate-6 transition-transform shadow-sm ring-1 ring-primary/20">
-                        <Shield className="h-8 w-8 text-primary transform -rotate-3" />
-                    </div>
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div className="w-full sm:mx-auto sm:max-w-md">
+                <div className="flex justify-center mb-0 text-center items-center flex-col">
+                    <img src="/logo-login.png?v=4" alt="GEPRIV Logo" className="h-[100px] sm:h-[200px] w-auto object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/logo.png?v=4'; }} />
                 </div>
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground tracking-tight">
                     Portal do Fornecedor
@@ -281,7 +279,7 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                 </p>
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+            <div className="mt-6 sm:mt-8 w-full sm:mx-auto sm:max-w-md">
                 <Card className="border-border shadow-xl shadow-primary/5">
                     <CardHeader>
                         <CardTitle className="text-xl">Fazer Login</CardTitle>
