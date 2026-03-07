@@ -457,107 +457,109 @@ export const RiskManagementCenterImproved: React.FC = () => {
               </div>
 
               {/* Busca e Filtros Compactos */}
-              <div className="flex items-center gap-2 sm:gap-4 mt-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4">
                 {/* Campo de busca */}
-                <div className="flex-1 min-w-0">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3 w-3 sm:h-4 sm:w-4" />
-                    <Input
-                      placeholder="Pesquisar..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-8 sm:pl-10 h-8 sm:h-10 text-xs sm:text-sm"
-                    />
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Pesquisar riscos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-10 w-full"
+                  />
+                </div>
+
+                {/* Filtros ativos e ações */}
+                <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+                  {/* Mostrar filtros ativos apenas em desktop ou se houver espaço */}
+                  <div className="hidden md:flex items-center gap-2">
+                    {filters?.categories && filters.categories.length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        <span>{filters.categories.length} categoria(s)</span>
+                      </Badge>
+                    )}
+                    {filters?.levels && filters.levels.length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>{filters.levels.length} nível(is)</span>
+                      </Badge>
+                    )}
+                    {filters?.statuses && filters.statuses.length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        <span>{filters.statuses.length} status</span>
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Contador de resultados */}
+                    <Badge variant="outline" className="h-10 px-3 flex-1 sm:flex-none justify-center whitespace-nowrap text-sm bg-muted/20">
+                      {risks.length} riscos
+                    </Badge>
+
+                    {/* Botão de filtros */}
+                    <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1 sm:flex-none h-10 px-4 flex items-center gap-2 bg-muted/20 hover:bg-muted/50">
+                          <Filter className="h-4 w-4" />
+                          <span>Filtros</span>
+                          {((filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)) > 0 && (
+                            <Badge className="ml-1 px-1.5 h-5 flex items-center justify-center text-[10px] bg-primary text-primary-foreground border-none">
+                              {(filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)}
+                            </Badge>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center space-x-2">
+                            <Filter className="h-5 w-5" />
+                            <span>Filtros de Riscos</span>
+                          </DialogTitle>
+                          <DialogDescription>
+                            Refine sua busca por categoria, nível de risco, status e outros critérios.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-6 py-4">
+                          <RiskFilters
+                            filters={filters}
+                            onFiltersChange={setFilters}
+                            searchTerm={searchTerm}
+                            onSearchChange={setSearchTerm}
+                            onClose={() => setFilterDialogOpen(false)}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t">
+                          <div className="text-sm text-muted-foreground">
+                            {risks.length} risco(s) encontrado(s)
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setFilters({});
+                                setSearchTerm('');
+                              }}
+                            >
+                              Limpar tudo
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => setFilterDialogOpen(false)}
+                            >
+                              Aplicar filtros
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
-
-                {/* Filtros ativos */}
-                <div className="flex items-center space-x-2">
-                  {/* Mostrar filtros ativos */}
-                  {filters?.categories && filters.categories.length > 0 && (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <Target className="h-3 w-3" />
-                      <span>{filters.categories.length} categoria(s)</span>
-                    </Badge>
-                  )}
-                  {filters?.levels && filters.levels.length > 0 && (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      <span>{filters.levels.length} nível(is)</span>
-                    </Badge>
-                  )}
-                  {filters?.statuses && filters.statuses.length > 0 && (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <CheckCircle className="h-3 w-3" />
-                      <span>{filters.statuses.length} status</span>
-                    </Badge>
-                  )}
-
-                  {/* Contador de resultados */}
-                  <Badge variant="outline" className="text-[10px] sm:text-xs h-6 sm:h-auto whitespace-nowrap">
-                    {risks.length} riscos
-                  </Badge>
-                </div>
-
-                {/* Botão de filtros */}
-                <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="flex items-center gap-1 sm:gap-2 h-8 sm:h-10 px-2 sm:px-4 text-xs sm:text-sm">
-                      <Filter className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span>Filtros</span>
-                      {((filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)) > 0 && (
-                        <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs px-1 sm:px-2">
-                          {(filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)}
-                        </Badge>
-                      )}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center space-x-2">
-                        <Filter className="h-5 w-5" />
-                        <span>Filtros de Riscos</span>
-                      </DialogTitle>
-                      <DialogDescription>
-                        Refine sua busca por categoria, nível de risco, status e outros critérios.
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-6 py-4">
-                      <RiskFilters
-                        filters={filters}
-                        onFiltersChange={setFilters}
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        onClose={() => setFilterDialogOpen(false)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t">
-                      <div className="text-sm text-muted-foreground">
-                        {risks.length} risco(s) encontrado(s)
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFilters({});
-                            setSearchTerm('');
-                          }}
-                        >
-                          Limpar tudo
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => setFilterDialogOpen(false)}
-                        >
-                          Aplicar filtros
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
             </CardContent>
           </Card>
@@ -634,7 +636,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
       {/* Dialog do Assistente de Registro de Risco */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-4xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 mx-auto" style={{ maxWidth: 'calc(100vw - 1rem)', width: 'calc(100vw - 1rem)' }}>
+        <DialogContent className="w-full max-w-[100vw] sm:max-w-[95vw] md:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 m-0 sm:mx-auto border-none sm:border-solid rounded-none sm:rounded-lg flex flex-col">
           <DialogHeader className="pt-10 pb-4 px-4 sm:px-6 text-left relative flex-shrink-0 border-b border-border/40 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 dark:border-green-900/50">
             <DialogTitle className="flex items-center space-x-2 text-sm">
               <span>Novo Registro de Risco</span>
@@ -644,16 +646,27 @@ export const RiskManagementCenterImproved: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="px-3 pb-3">
+          <div className="flex-1 w-full p-2 sm:p-4 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden bg-background">
             <AlexRiskGuidedProcess
               onComplete={(riskData) => {
                 // Adaptando do formato do Wizard/IA para o formato do Controller
                 createRisk({
                   name: riskData.risk_title || 'Risco Sem Nome',
                   category: riskData.risk_category || 'Operacional',
-                  probability: (riskData as any).risk_probability || 'Medium',
-                  impact: (riskData as any).risk_impact || 'Medium',
-                  status: 'Identificado'
+                  probability: Number(Math.max(1, (riskData as any).probability || 1)),
+                  impact: Number(Math.max(1, (riskData as any).impact || 1)),
+                  status: 'Identificado',
+                  action_plans: (riskData as any).action_plans || [],
+                  stakeholders: (riskData as any).stakeholders || [],
+                  extraData: {
+                    ...riskData,
+                    risk_title: undefined,
+                    risk_category: undefined,
+                    probability: undefined,
+                    impact: undefined,
+                    action_plans: undefined,
+                    stakeholders: undefined
+                  }
                 } as any);
                 setProcessDialogOpen(false);
                 toast({

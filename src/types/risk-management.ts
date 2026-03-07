@@ -192,6 +192,26 @@ export interface Risk {
   closure_criteria?: string; // Critérios de encerramento
   closure_notes?: string; // Notas de encerramento
   closure_date?: Date; // Data de encerramento
+
+  // Mapeamentos legados e componentes antigos
+  subcategory?: string;
+  indicators?: string;
+  reviewFrequency?: string;
+  nextReview?: Date;
+  existingControls?: string;
+  stakeholders?: string;
+  communicationPlan?: string;
+  communicationChannel?: string;
+  lessonsLearned?: string;
+  reviewStatus?: string;
+  controlEffectiveness?: string;
+  reviewHistory?: any[];
+  updatedBy?: string;
+  lastCommunication?: Date;
+  monitoring_indicators?: string[];
+  review_date?: Date;
+  monitoring_notes?: string;
+  residual_risk_level?: string;
 }
 
 // ============================================================================
@@ -359,6 +379,8 @@ export interface RiskMetrics {
   overdueActivities: number;
   riskTrend: 'Aumentando' | 'Diminuindo' | 'Estável';
   averageResolutionTime: number; // em dias
+  pendingApprovals?: number;
+  acceptedRisks?: number;
 }
 
 export interface KRI {
@@ -417,6 +439,7 @@ export interface CreateRiskRequest {
   dueDate?: Date;
   technicalDetails?: string;
   analysisData?: RiskAnalysisData;
+  extraData?: any;
   action_plans?: any[];
   stakeholders?: any[];
 }

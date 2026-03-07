@@ -88,37 +88,6 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     loadMatrixConfiguration();
   }, [user?.tenantId]);
 
-  useEffect(() => {
-    if (!registrationId && user?.id && user?.tenantId) {
-      createNewRiskRegistration();
-    }
-  }, [user?.id, user?.tenantId, registrationId]);
-
-  const createNewRiskRegistration = async () => {
-    if (!user?.tenantId || !user?.id || registrationId) return;
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('risk_registrations')
-        .insert({
-          tenant_id: user.tenantId,
-          created_by: user.id,
-          status: 'draft',
-          current_step: 1,
-          completion_percentage: 0
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      setRegistrationId(data.id);
-    } catch (error) {
-      console.error('Erro ao criar registro:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSelectTemplate = async (template: DBRiskTemplate) => {
     const templateData: Partial<RiskRegistrationData> = {
       risk_title: template.name,
@@ -139,8 +108,6 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
   }, []);
 
   const handleNext = async () => {
-    if (!registrationId) return;
-
     // Basic validations
     if (currentStep === 1 && (!registrationData.risk_title || !registrationData.risk_category)) {
       toast({
@@ -151,20 +118,17 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
       return;
     }
 
-    try {
-      await supabase
-        .from('risk_registrations')
-        .update({
-          current_step: currentStep + 1,
-          ...registrationData
-        })
-        .eq('id', registrationId);
-
-      setCurrentStep(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) {
-      console.error('Erro ao salvar etapa:', error);
+    if (currentStep === 2 && !registrationData.methodology_id) {
+      toast({
+        title: 'Campos Obrigatórios',
+        description: 'Selecione uma metodologia de análise.',
+        variant: 'destructive'
+      });
+      return;
     }
+
+    setCurrentStep(prev => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePrevious = () => {
@@ -176,13 +140,6 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     setIsLoading(true);
     try {
       const finalData = { ...registrationData };
-
-      if (registrationId) {
-        await supabase
-          .from('risk_registrations')
-          .update(finalData)
-          .eq('id', registrationId);
-      }
 
       onComplete({
         ...finalData,
@@ -258,7 +215,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
         return (
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Metodologia e Análise</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               {[
                 { id: 'qualitative', title: 'Qualitativo', desc: 'Matriz PxI' },
                 { id: 'quantitative', title: 'Quantitativo', desc: 'Financeiro' },
@@ -762,6 +719,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                               <SelectItem value="low">Baixa</SelectItem>
                               <SelectItem value="medium">Média</SelectItem>
                               <SelectItem value="high">Alta</SelectItem>
+                              <SelectItem value="critical">Crítica</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -852,6 +810,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                                   <SelectItem value="low">Baixa</SelectItem>
                                   <SelectItem value="medium">Média</SelectItem>
                                   <SelectItem value="high">Alta</SelectItem>
+                                  <SelectItem value="critical">Crítica</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -1101,36 +1060,40 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
           {renderStepForm()}
         </div>
 
-        {/* Footer Navigation Fixed */}
-        <div className="fixed bottom-0 left-0 right-0 md:static md:mt-6 bg-background/80 backdrop-blur-sm border-t md:border-none p-4 md:p-0 z-50 flex items-center justify-between shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] md:shadow-none">
+        {/* Footer Navigation Sticky */}
+        <div className="sticky bottom-0 md:static md:mt-6 mt-4 bg-background/95 backdrop-blur-sm border-t md:border-none p-4 md:p-0 z-40 flex flex-wrap md:flex-nowrap items-center justify-between gap-3 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] md:shadow-none">
           <Button
             variant="outline"
+            className="flex-1 md:flex-none"
             onClick={onCancel}
           >
-            Cancelar
+            <span className="hidden sm:inline">Cancelar</span>
+            <span className="sm:hidden">Sair</span>
           </Button>
 
-          <div className="flex gap-2">
+          <div className="flex flex-1 md:flex-none gap-2">
             <Button
               variant="outline"
               onClick={handleComplete}
               disabled={isLoading}
             >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Salvar O que Tem
+              <CheckSquare className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Salvar e Continuar Depois</span>
+              <span className="sm:hidden">Rascunho</span>
             </Button>
 
             {currentStep === steps.length ? (
               <Button
                 onClick={handleComplete}
                 disabled={isLoading}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md"
+                className="flex-1 md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md"
               >
-                {isLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                Concluir Registro
+                {isLoading ? <RefreshCw className="h-4 w-4 sm:mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 sm:mr-2" />}
+                <span className="hidden sm:inline">Concluir Registro</span>
+                <span className="sm:hidden">Concluir</span>
               </Button>
             ) : (
-              <Button onClick={handleNext} className="shadow-sm">
+              <Button onClick={handleNext} className="shadow-sm flex-1 md:flex-none">
                 Próximo <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             )}

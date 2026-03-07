@@ -522,8 +522,7 @@ export const useRiskManagement = () => {
         likelihood_score: Math.max(1, Math.min(5, Math.floor(riskData.probability))),
         impact_score: Math.max(1, Math.min(5, Math.floor(riskData.impact))),
         risk_level: riskLevel,
-        ...mapRiskStatusToSupabaseStatus('Identificado'),
-        severity: 'medium'
+        ...mapRiskStatusToSupabaseStatus('Identificado')
       };
 
       // Adicionar created_by apenas se for um UUID válido
@@ -553,6 +552,11 @@ export const useRiskManagement = () => {
         baseRiskData.analysis_data = riskData.analysisData;
       }
 
+      // IMPORTANTE: Remover action_plans e stakeholders do baseRiskData se ele foi injetado acidentalmente (ex: pelo extraData)
+      // para evitar erro de coluna inexistente na tabela risk_registrations
+      if ('action_plans' in baseRiskData) delete baseRiskData.action_plans;
+      if ('stakeholders' in baseRiskData) delete baseRiskData.stakeholders;
+
       console.log('🚀 Inserindo no banco...');
 
       const { data, error } = await supabase
@@ -571,42 +575,72 @@ export const useRiskManagement = () => {
       // Criar planos de ação ou apenas a entrada vazia se configurado
       if (riskData.action_plans && riskData.action_plans.length > 0) {
         for (const plan of riskData.action_plans) {
-          const { data: insertedPlan, error: planError } = await supabase
-            .from('risk_action_plans')
-            .insert([{
-              risk_id: data.id,
-              treatment_type: riskData.treatmentType !== 'Aceitar' ? riskData.treatmentType : null,
-              description: plan.title + (plan.responsible ? ` | Responsável: ${plan.responsible}` : ''),
-              target_date: plan.deadline || null,
-              created_by: user?.id
-            }])
-            .select()
-            .single();
+          // Flatten as main plan activity
+          const plansToInsert = [];
+
+          plansToInsert.push({
+            risk_registration_id: data.id,
+            tenant_id: userTenantId,
+            activity_name: plan.title || 'Plano de Ação',
+            activity_description: plan.description || '',
+            responsible_name: plan.responsible || 'Responsável Não Definido',
+            responsible_email: plan.responsible?.includes('@') ? plan.responsible.trim() : 'nao_informado@email.com',
+            due_date: plan.deadline || new Date().toISOString(),
+            priority: plan.priority || 'medium',
+            status: plan.status || 'pending',
+            created_by: user?.id
+          });
+
+          // Add sub-activities as separate items in the same table, so they show up in ExpandableCardsView
+          if (plan.subActivities && plan.subActivities.length > 0) {
+            for (const sub of plan.subActivities) {
+              plansToInsert.push({
+                risk_registration_id: data.id,
+                tenant_id: userTenantId,
+                activity_name: sub.title || 'Subatividade',
+                activity_description: `Subatividade vinculada a: ${plan.title}`,
+                responsible_name: sub.responsible || plan.responsible || 'Responsável Não Definido',
+                responsible_email: sub.responsible?.includes('@') ? sub.responsible.trim() : (plan.responsible?.includes('@') ? plan.responsible.trim() : 'nao_informado@email.com'),
+                due_date: sub.deadline || plan.deadline || new Date().toISOString(),
+                priority: sub.priority || plan.priority || 'medium',
+                status: sub.status || 'pending',
+                created_by: user?.id
+              });
+            }
+          }
+
+          const { data: insertedPlans, error: planError } = await supabase
+            .from('risk_registration_action_plans')
+            .insert(plansToInsert)
+            .select();
 
           if (planError) {
             console.error('❌ Erro ao criar plano de ação:', planError);
-          } else if (insertedPlan && plan.subActivities && plan.subActivities.length > 0) {
-            for (const sub of plan.subActivities) {
-              await supabase.from('risk_action_activities').insert([{
-                action_plan_id: insertedPlan.id,
-                description: sub.title,
-                responsible_person: sub.responsible,
-                status: sub.status || 'TBD',
-                deadline: sub.deadline || null
-              }]);
+          } else if (insertedPlans && insertedPlans.length > 0) {
+            // Se o responsável for um email válido, disparar notificação
+            if (plan.responsible && plan.responsible.includes('@')) {
+              try {
+                await supabase.functions.invoke('risk-notification', {
+                  body: {
+                    recipientName: plan.responsible.split('@')[0],
+                    recipientEmail: plan.responsible.trim(),
+                    riskTitle: data.risk_title || 'Risco Sem Nome',
+                    senderName: user?.email || 'Sistema CyberGuard',
+                    notificationType: 'ACTION_PLAN',
+                    actionPlanTitle: plan.title,
+                    actionPlanDueDate: plan.deadline ? new Date(plan.deadline).toLocaleDateString() : 'Não definido'
+                  }
+                });
+                console.log(`✉️ Email plano de ação enviado para ${plan.responsible}`);
+              } catch (err) {
+                console.error("❌ Erro ao enviar email de plano de ação:", err);
+              }
             }
           }
         }
       } else if (riskData.treatmentType !== 'Aceitar') {
-        const { error: planError } = await supabase
-          .from('risk_action_plans')
-          .insert([{
-            risk_id: data.id,
-            treatment_type: riskData.treatmentType,
-            created_by: user?.id
-          }]);
-
-        if (planError) console.error('Erro ao criar plano base:', planError);
+        // Option to include empty base plans if needed? Not required by strictly risk_registration tables.
+        // We will skip inserting an empty one mapped to old tables.
       }
 
       // Criar stakeholders e acionar notificação
@@ -682,7 +716,16 @@ export const useRiskManagement = () => {
       if (data.assignedTo !== undefined) {
         updateData.assigned_to = data.assignedTo || null; // Campo TEXT para nome da pessoa
       }
-      if (data.dueDate !== undefined) updateData.due_date = data.dueDate?.toISOString();
+
+      // Helper para evitar erro 'invalid input syntax for type numeric: ""' ou datas vazias
+      const parseNum = (val: any) => (val === '' ? null : val);
+      const parseDate = (val: any) => {
+        if (val === '' || val === null || val === undefined) return null;
+        if (typeof val === 'string') return val; // Já vem como string do form
+        try { return val.toISOString(); } catch (e) { return null; } // Caso seja objeto Date
+      };
+
+      if (data.dueDate !== undefined) updateData.due_date = parseDate(data.dueDate);
 
       // Salvar analysisData se fornecido
       if (data.analysisData !== undefined) {
@@ -692,18 +735,30 @@ export const useRiskManagement = () => {
       // Campos adicionais do wizard - ADICIONADOS
       if (data.source !== undefined) updateData.risk_source = data.source;
       if (data.responsibleArea !== undefined) updateData.business_area = data.responsibleArea;
-      if (data.analysisMethodology !== undefined) updateData.analysis_methodology = data.analysisMethodology;
+      if (data.analysisMethodology !== undefined) {
+        // Garantir que apenas enums válidos passem pela constraint do banco: 
+        // ('qualitative', 'quantitative', 'semi_quantitative', 'bow_tie', 'fmea')
+        const validMethodologies = ['qualitative', 'quantitative', 'semi_quantitative', 'bow_tie', 'fmea'];
+        if (validMethodologies.includes(data.analysisMethodology)) {
+          updateData.analysis_methodology = data.analysisMethodology;
+        } else {
+          // Se for uma das novas metodologias do frontend que não estão na constraint, salva nulo ou mapeia
+          updateData.analysis_methodology = null;
+        }
+      }
+
+      // Dados adicionais (já com parser numérico aplicado abaixo)
 
       // Dados GUT
-      if (data.gut_gravity !== undefined) updateData.gut_gravity = data.gut_gravity;
-      if (data.gut_urgency !== undefined) updateData.gut_urgency = data.gut_urgency;
-      if (data.gut_tendency !== undefined) updateData.gut_tendency = data.gut_tendency;
-      if (data.gut_priority !== undefined) updateData.gut_priority = data.gut_priority;
+      if (data.gut_gravity !== undefined) updateData.gut_gravity = parseNum(data.gut_gravity);
+      if (data.gut_urgency !== undefined) updateData.gut_urgency = parseNum(data.gut_urgency);
+      if (data.gut_tendency !== undefined) updateData.gut_tendency = parseNum(data.gut_tendency);
+      if (data.gut_priority !== undefined) updateData.gut_priority = parseNum(data.gut_priority);
 
       // Dados de tratamento detalhados
       if (data.treatment_rationale !== undefined) updateData.treatment_rationale = data.treatment_rationale;
-      if (data.treatment_cost !== undefined) updateData.treatment_cost = data.treatment_cost;
-      if (data.treatment_timeline !== undefined) updateData.treatment_timeline = data.treatment_timeline;
+      if (data.treatment_cost !== undefined) updateData.treatment_cost = parseNum(data.treatment_cost);
+      if (data.treatment_timeline !== undefined) updateData.treatment_timeline = parseDate(data.treatment_timeline);
 
       // Dados de atividades do plano de ação
       if (data.activity_1_name !== undefined) updateData.activity_1_name = data.activity_1_name;
@@ -712,7 +767,7 @@ export const useRiskManagement = () => {
       if (data.activity_1_email !== undefined) updateData.activity_1_email = data.activity_1_email;
       if (data.activity_1_priority !== undefined) updateData.activity_1_priority = data.activity_1_priority;
       if (data.activity_1_status !== undefined) updateData.activity_1_status = data.activity_1_status;
-      if (data.activity_1_due_date !== undefined) updateData.activity_1_due_date = data.activity_1_due_date?.toISOString();
+      if (data.activity_1_due_date !== undefined) updateData.activity_1_due_date = parseDate(data.activity_1_due_date);
 
       // Dados de comunicação/stakeholders
       if (data.awareness_person_1_name !== undefined) updateData.awareness_person_1_name = data.awareness_person_1_name;
@@ -726,12 +781,12 @@ export const useRiskManagement = () => {
       // Dados de monitoramento
       if (data.monitoring_frequency !== undefined) updateData.monitoring_frequency = data.monitoring_frequency;
       if (data.monitoring_responsible !== undefined) updateData.monitoring_responsible = data.monitoring_responsible;
-      if (data.residual_impact !== undefined) updateData.residual_impact = data.residual_impact;
-      if (data.residual_likelihood !== undefined) updateData.residual_likelihood = data.residual_likelihood;
-      if (data.residual_score !== undefined) updateData.residual_score = data.residual_score;
+      if (data.residual_impact !== undefined) updateData.residual_impact = parseNum(data.residual_impact);
+      if (data.residual_likelihood !== undefined) updateData.residual_likelihood = parseNum(data.residual_likelihood);
+      if (data.residual_score !== undefined) updateData.residual_score = parseNum(data.residual_score);
       if (data.closure_criteria !== undefined) updateData.closure_criteria = data.closure_criteria;
       if (data.closure_notes !== undefined) updateData.closure_notes = data.closure_notes;
-      if (data.closure_date !== undefined) updateData.closure_date = data.closure_date?.toISOString();
+      if (data.closure_date !== undefined) updateData.closure_date = parseDate(data.closure_date);
 
       console.log('🔍 [UPDATE] Dados que serão atualizados:', updateData);
 
@@ -782,41 +837,42 @@ export const useRiskManagement = () => {
         const normalizedTreatment = normalizeTreatmentStrategy(data.treatmentType);
 
         // Atualizar também na tabela risk_registrations
-        await supabase
+        const { error: treatmentError } = await supabase
           .from('risk_registrations')
           .update({ treatment_strategy: normalizedTreatment })
           .eq('id', riskId);
 
-        // Verificar se já existe um plano de ação
-        const { data: existingPlan, error: planQueryError } = await supabase
-          .from('risk_action_plans')
-          .select('id')
-          .eq('risk_id', riskId)
-          .maybeSingle();
+        if (treatmentError) throw treatmentError;
+      }
 
-        if (planQueryError) {
-          throw planQueryError;
-        }
+      // Sincronizar stakeholders se fornecidos no payload
+      if (data.stakeholders !== undefined) {
+        // 1. Deletar os existentes
+        const { error: deleteError } = await supabase
+          .from('risk_stakeholders')
+          .delete()
+          .eq('risk_registration_id', riskId);
 
-        if (existingPlan) {
-          // Atualizar plano existente
-          const { error: planError } = await supabase
-            .from('risk_action_plans')
-            .update({ treatment_type: normalizedTreatment })
-            .eq('risk_id', riskId);
+        if (deleteError) {
+          console.error('❌ Erro ao limpar stakeholders antigos:', deleteError);
+        } else if (data.stakeholders.length > 0) {
+          // 2. Inserir os novos/atualizados
+          const stakeholdersToInsert = data.stakeholders.map(stk => ({
+            risk_registration_id: riskId,
+            name: stk.name,
+            position: stk.position || stk.role || '',
+            email: stk.email || '',
+            notification_type: stk.notification_type || 'awareness',
+            response_status: stk.response_status || 'pending'
+          }));
 
-          if (planError) throw planError;
-        } else {
-          // Criar novo plano de ação
-          const { error: planError } = await supabase
-            .from('risk_action_plans')
-            .insert([{
-              risk_id: riskId,
-              treatment_type: normalizedTreatment,
-              created_by: user?.id
-            }]);
+          const { error: insertError } = await supabase
+            .from('risk_stakeholders')
+            .insert(stakeholdersToInsert);
 
-          if (planError) throw planError;
+          if (insertError) {
+            console.error('❌ Erro ao inserir novos stakeholders:', insertError);
+          }
         }
       }
 
@@ -839,9 +895,11 @@ export const useRiskManagement = () => {
   const deleteRiskMutation = useMutation({
     mutationFn: async (riskId: string) => {
       // Primeiro excluir dependências
-      await supabase.from('risk_action_activities').delete().eq('action_plan_id', riskId);
-      await supabase.from('risk_action_plans').delete().eq('risk_id', riskId);
-      await supabase.from('risk_communications').delete().eq('risk_id', riskId);
+      await supabase.from('risk_registration_action_plans').delete().eq('risk_registration_id', riskId);
+      await supabase.from('risk_stakeholders').delete().eq('risk_registration_id', riskId);
+      // risk_communications might not be mapped to risk_registrations directly or just cascade
+      try { await supabase.from('risk_communications').delete().eq('risk_id', riskId); } catch (e) { }
+
 
       const { error } = await supabase
         .from('risk_registrations')
@@ -1054,7 +1112,32 @@ export const useRiskManagement = () => {
 
       // Arrays de dados relacionados (carregados via JOIN) - CORRIGIDO
       risk_action_plans: supabaseRisk.risk_registration_action_plans || [],
-      risk_stakeholders: supabaseRisk.risk_stakeholders || [],
+      risk_stakeholders: (() => {
+        const dbStakeholders = supabaseRisk.risk_stakeholders || [];
+        if (dbStakeholders.length > 0) return dbStakeholders;
+
+        // Migração em memória para riscos antigos que não possuem registros na tabela risk_stakeholders
+        const legacyStakeholders = [];
+        if (supabaseRisk.awareness_person_1_name || supabaseRisk.awareness_person_1_email) {
+          legacyStakeholders.push({
+            name: supabaseRisk.awareness_person_1_name || '',
+            position: supabaseRisk.awareness_person_1_position || '',
+            email: supabaseRisk.awareness_person_1_email || '',
+            notification_type: 'awareness',
+            response_status: 'acknowledged' // Ou o status que fizer sentido para ciência
+          });
+        }
+        if (supabaseRisk.approval_person_1_name || supabaseRisk.approval_person_1_email) {
+          legacyStakeholders.push({
+            name: supabaseRisk.approval_person_1_name || '',
+            position: supabaseRisk.approval_person_1_position || '',
+            email: supabaseRisk.approval_person_1_email || '',
+            notification_type: 'approval',
+            response_status: supabaseRisk.approval_person_1_status || 'pending'
+          });
+        }
+        return legacyStakeholders;
+      })(),
 
       analysisData: {
         gut_analysis: {

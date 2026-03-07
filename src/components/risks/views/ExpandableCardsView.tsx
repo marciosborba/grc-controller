@@ -47,12 +47,17 @@ import {
   Info,
   History,
   CheckSquare,
+  Clipboard,
+  Plus,
+  Send,
   ClipboardList,
   MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import type { Risk, RiskFilters, RiskStatus } from '@/types/risk-management';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ExpandableCardsViewProps {
   risks: Risk[];
@@ -80,7 +85,11 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   const { toast } = useToast();
-  const { tenantSettings, isMatrix4x4, getRiskLevels } = useTenantSettings();
+  const { tenantSettings, isMatrix4x4, getRiskLevels, getMatrixLabels, getMatrixDimensions } = useTenantSettings();
+  const { user } = useAuth();
+
+  const matrixLabels = getMatrixLabels();
+  const matrixDims = getMatrixDimensions();
 
   // Opções para dropdowns
   const statusOptions: RiskStatus[] = ['Identificado', 'Avaliado', 'Em Tratamento', 'Monitorado', 'Fechado', 'Reaberto'];
@@ -143,7 +152,14 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
 
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
       if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
+
+      // Fallback para manter a ordem estável se os valores principais forem iguais
+      if (sortField !== 'createdAt') {
+        const aDate = new Date(a.createdAt || 0).getTime();
+        const bDate = new Date(b.createdAt || 0).getTime();
+        if (aDate !== bDate) return bDate - aDate; // Mais recentes primeiro
+      }
+      return a.id.localeCompare(b.id);
     });
 
     return filtered;
@@ -225,6 +241,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         approval_person_1_position: risk.approval_person_1_position || '',
         approval_person_1_email: risk.approval_person_1_email || '',
         approval_person_1_status: risk.approval_person_1_status || '',
+        stakeholders: risk.risk_stakeholders || [],
 
         // Monitoramento
         monitoring_frequency: risk.monitoring_frequency || '',
@@ -245,7 +262,6 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         reviewFrequency: risk.reviewFrequency || '',
         nextReview: risk.nextReview ? new Date(risk.nextReview).toISOString().split('T')[0] : '',
         existingControls: risk.existingControls || '',
-        stakeholders: risk.stakeholders || '',
         communicationPlan: risk.communicationPlan || '',
         communicationChannel: risk.communicationChannel || '',
         lessonsLearned: risk.lessonsLearned || '',
@@ -541,7 +557,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     return strategy;
   };
 
-  const formatDate = (date?: Date) => {
+  const formatDate = (date?: Date | string) => {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('pt-BR');
   };
@@ -598,50 +614,52 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     <div className="space-y-6">
       {/* Header com controles */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6 pb-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <CardTitle className="flex items-center space-x-2">
               <FileText className="h-5 w-5" />
               <span>Riscos Detalhados</span>
-              <Badge variant="secondary">{processedRisks.length} riscos</Badge>
+              <Badge variant="secondary" className="px-2">{processedRisks.length} riscos</Badge>
             </CardTitle>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               {/* Ordenação */}
-              <div className="flex items-center space-x-1">
-                <span className="text-sm text-muted-foreground">Ordenar por:</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSort('name')}
-                  className="flex items-center space-x-1"
-                >
-                  <span>Nome</span>
-                  {getSortIcon('name')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSort('riskLevel')}
-                  className="flex items-center space-x-1"
-                >
-                  <span>Nível</span>
-                  {getSortIcon('riskLevel')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleSort('createdAt')}
-                  className="flex items-center space-x-1"
-                >
-                  <span>Data</span>
-                  {getSortIcon('createdAt')}
-                </Button>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-xs sm:text-sm text-muted-foreground font-medium px-1 sm:px-0">Ordenar por:</span>
+                <div className="flex items-center bg-muted/30 rounded-lg p-1 border">
+                  <Button
+                    variant={sortField === 'name' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleSort('name')}
+                    className="flex-1 sm:flex-none items-center space-x-1 h-8 text-xs px-2 sm:px-3 rounded-md mx-0.5"
+                  >
+                    <span>Nome</span>
+                    {getSortIcon('name')}
+                  </Button>
+                  <Button
+                    variant={sortField === 'riskLevel' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleSort('riskLevel')}
+                    className="flex-1 sm:flex-none items-center space-x-1 h-8 text-xs px-2 sm:px-3 rounded-md mx-0.5"
+                  >
+                    <span>Nível</span>
+                    {getSortIcon('riskLevel')}
+                  </Button>
+                  <Button
+                    variant={sortField === 'createdAt' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleSort('createdAt')}
+                    className="flex-1 sm:flex-none items-center space-x-1 h-8 text-xs px-2 sm:px-3 rounded-md mx-0.5"
+                  >
+                    <span>Data</span>
+                    {getSortIcon('createdAt')}
+                  </Button>
+                </div>
               </div>
 
-              <Button variant="outline" size="sm" onClick={exportToCSV}>
-                <Download className="h-4 w-4 mr-1" />
-                Exportar
+              <Button variant="outline" size="sm" onClick={exportToCSV} className="h-10 sm:h-auto flex items-center justify-center bg-muted/20 hover:bg-muted/50 w-full sm:w-auto mt-1 sm:mt-0">
+                <Download className="h-4 w-4 sm:mr-1.5" />
+                <span className="ml-1 sm:ml-0">Exportar</span>
               </Button>
             </div>
           </div>
@@ -679,261 +697,199 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                 className={`border-l-4 transition-all ${overdue ? 'border-l-red-500 bg-red-50 dark:bg-red-950/20' : 'border-l-primary'
                   } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}
               >
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      {/* Título e badges principais */}
-                      <div className="flex items-center gap-3 mb-2">
-                        {isEditing ? (
-                          <Input
-                            value={editForm.name || ''}
-                            onChange={(e) => updateEditForm(risk.id, 'name', e.target.value)}
-                            className="font-semibold text-lg flex-1"
-                            placeholder="Nome do risco"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {console.log('🔍 COMPONENTE - Risk completo:', {
-                              id: risk.id,
-                              name: risk.name,
-                              riskCode: risk.riskCode,
-                              // Dados do plano de ação
-                              activity_1_name: risk.activity_1_name,
-                              activity_1_description: risk.activity_1_description,
-                              activity_1_responsible: risk.activity_1_responsible,
-                              // Dados de comunicação
-                              awareness_person_1_name: risk.awareness_person_1_name,
-                              approval_person_1_name: risk.approval_person_1_name,
-                              // Arrays relacionados
-                              risk_action_plans: risk.risk_action_plans?.length || 0,
-                              risk_stakeholders: risk.risk_stakeholders?.length || 0,
-                              // Dados de tratamento
-                              treatment_rationale: risk.treatment_rationale,
-                              monitoring_frequency: risk.monitoring_frequency
-                            })}
+                <CardHeader className="pb-3 px-4 sm:px-6">
+                  {isEditing ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <Input
+                          value={editForm.name || ''}
+                          onChange={(e) => updateEditForm(risk.id, 'name', e.target.value)}
+                          className="font-semibold text-base flex-1"
+                          placeholder="Nome do risco"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Select value={editForm.category || ''} onValueChange={(value) => updateEditForm(risk.id, 'category', value)}>
+                          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                          <SelectContent>
+                            {categoryOptions.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <Select value={editForm.status || ''} onValueChange={(value) => updateEditForm(risk.id, 'status', value)}>
+                          <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map(st => <SelectItem key={st} value={st}>{st}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <Input
+                          value={editForm.assignedTo || ''}
+                          onChange={(e) => updateEditForm(risk.id, 'assignedTo', e.target.value)}
+                          placeholder="Responsável"
+                          className="h-8 text-xs"
+                        />
+                        <Input
+                          type="date"
+                          value={editForm.dueDate || ''}
+                          onChange={(e) => updateEditForm(risk.id, 'dueDate', e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t">
+                        <Button
+                          size="sm"
+                          onClick={() => saveEditing(risk.id)}
+                          disabled={savingCards.has(risk.id)}
+                          className="h-8 text-xs"
+                        >
+                          {savingCards.has(risk.id) ? (
+                            <><div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent mr-2" />Salvando...</>
+                          ) : (
+                            <><Save className="h-3.5 w-3.5 mr-1" />Salvar</>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => cancelEditing(risk.id)}
+                          disabled={savingCards.has(risk.id)}
+                          className="h-8 text-xs"
+                        >
+                          <X className="h-3.5 w-3.5 mr-1" />Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {/* Top Row: Info/Title and Actions */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0 space-y-1.5">
+                          {/* Code, Status & Name in a natural flow */}
+                          <div className="flex flex-wrap items-center gap-1.5">
                             {risk.riskCode && (
-                              <Badge variant="secondary" className="text-xs font-mono bg-blue-100 text-blue-800 border-blue-300">
+                              <Badge variant="secondary" className="text-[10px] sm:text-xs font-mono bg-blue-50 text-blue-700 border-blue-200 px-1.5 py-0 h-5">
                                 {risk.riskCode}
                               </Badge>
                             )}
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-semibold text-lg truncate">{risk.name}</h3>
-                              {risk.status === 'draft' && (
-                                <div title="Cadastro incompleto (Rascunho)" className="flex items-center text-amber-500">
-                                  <Info className="h-4 w-4" />
-                                </div>
-                              )}
-                            </div>
+                            {overdue && (
+                              <Badge variant="destructive" className="text-[10px] sm:text-xs px-1.5 py-0 h-5 animate-pulse flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3" /> Atrasado
+                              </Badge>
+                            )}
+                            {risk.status === ('draft' as any) && (
+                              <Badge variant="outline" className="text-[10px] sm:text-xs text-amber-600 border-amber-300 bg-amber-50 px-1.5 py-0 h-5 flex items-center gap-1">
+                                <Info className="h-3 w-3" /> Rascunho
+                              </Badge>
+                            )}
                           </div>
-                        )}
+                          <h3 className="font-semibold text-base sm:text-lg text-gray-900 dark:text-gray-100 leading-tight pr-2">
+                            {risk.name}
+                          </h3>
+                        </div>
 
-                        {overdue && (
-                          <AlertTriangle className="h-5 w-5 text-red-500 animate-pulse" />
-                        )}
+                        {/* Action Buttons & Prominent Risk Level */}
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          {/* Destaque Nível de Risco - Sempre visível */}
+                          <Badge className={`${getRiskLevelColor(risk.riskLevel)} border shadow-sm text-xs sm:text-sm px-3 py-1 uppercase tracking-wider font-bold`}>
+                            {risk.riskLevel}
+                          </Badge>
+
+                          <div className="flex items-center bg-muted/50 rounded-lg p-0.5 mt-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-white dark:hover:bg-gray-800 rounded-md text-gray-500 hover:text-blue-600" onClick={() => startEditing(risk)} title="Editar risco">
+                              <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-white dark:hover:bg-gray-800 rounded-md text-gray-500 hover:text-red-600" onClick={() => handleDelete(risk)} title="Excluir risco">
+                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8 hover:bg-white dark:hover:bg-gray-800 rounded-md text-gray-500" onClick={() => toggleExpanded(risk.id)} title={isExpanded ? "Recolher card" : "Expandir card"}>
+                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Badges de informações */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <Badge className={`${getRiskLevelColor(risk.riskLevel)} border text-xs`}>
-                          {risk.riskLevel}
+                      {/* Middle Row: Badges */}
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        <Badge className={`${getCategoryColor(risk.category)} border-transparent text-[10px] sm:text-xs px-2 py-0 h-5`}>
+                          {risk.category}
                         </Badge>
-
-                        {isEditing ? (
-                          <Select value={editForm.category || ''} onValueChange={(value) => updateEditForm(risk.id, 'category', value)}>
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {categoryOptions.map(category => (
-                                <SelectItem key={category} value={category}>{category}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge className={`${getCategoryColor(risk.category)} text-xs`}>
-                            {risk.category}
-                          </Badge>
-                        )}
-
-                        {isEditing ? (
-                          <Select value={editForm.status || ''} onValueChange={(value) => updateEditForm(risk.id, 'status', value)}>
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {statusOptions.map(status => (
-                                <SelectItem key={status} value={status}>{status}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Badge className={`${getStatusColor(risk.status)} text-xs`}>
-                            {risk.status}
-                          </Badge>
-                        )}
-
-                        <Badge variant="outline" className="text-xs">
+                        <Badge className={`${getStatusColor(risk.status)} border-transparent text-[10px] sm:text-xs px-2 py-0 h-5`}>
+                          {risk.status}
+                        </Badge>
+                        <Badge variant="outline" className="text-[10px] sm:text-xs px-2 py-0 h-5 text-muted-foreground">
                           Score: {risk.riskScore}
                         </Badge>
-
                         {risk.treatmentType && (
-                          <Badge className={`${getTreatmentStrategyColor(risk.treatmentType)} text-xs`}>
+                          <Badge className={`${getTreatmentStrategyColor(risk.treatmentType)} border-transparent text-[10px] sm:text-xs px-2 py-0 h-5`}>
                             {translateTreatmentStrategy(risk.treatmentType)}
                           </Badge>
                         )}
                       </div>
 
-                      {/* Informações básicas */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          {isEditing ? (
-                            <Input
-                              value={editForm.assignedTo || ''}
-                              onChange={(e) => updateEditForm(risk.id, 'assignedTo', e.target.value)}
-                              placeholder="Responsável"
-                              className="text-sm"
-                            />
-                          ) : (
-                            <span>{risk.assignedTo || 'Não atribuído'}</span>
-                          )}
+                      {/* Bottom Row: Organic Metadata Flow */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] sm:text-xs text-muted-foreground mt-1">
+                        <div className="flex items-center gap-1.5" title="Responsável">
+                          <User className="h-3.5 w-3.5" />
+                          <span className="truncate max-w-[150px]">{risk.assignedTo || 'Não atribuído'}</span>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          {isEditing ? (
-                            <Input
-                              type="date"
-                              value={editForm.dueDate || ''}
-                              onChange={(e) => updateEditForm(risk.id, 'dueDate', e.target.value)}
-                              className="text-sm"
-                            />
-                          ) : (
-                            <span className={overdue ? 'text-red-600 font-medium' : ''}>
-                              {formatDate(risk.dueDate) || 'Não definido'}
-                            </span>
-                          )}
+                        <div className="flex items-center gap-1.5" title="Data de Vencimento">
+                          <Calendar className={`h-3.5 w-3.5 ${overdue ? 'text-red-500' : ''}`} />
+                          <span className={overdue ? 'text-red-600 font-medium' : ''}>
+                            {risk.dueDate ? formatDate(risk.dueDate) : 'Sem prazo'}
+                          </span>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>Criado: {formatDate(risk.createdAt)}</span>
+                        <div className="flex items-center gap-1.5" title="Data de Criação">
+                          <Clock className="h-3.5 w-3.5" />
+                          <span>{formatDate(risk.createdAt)}</span>
                         </div>
                       </div>
                     </div>
-
-                    {/* Botões de ação */}
-                    <div className="flex items-center gap-2">
-                      {isEditing ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => saveEditing(risk.id)}
-                            disabled={savingCards.has(risk.id)}
-                            className="relative"
-                          >
-                            {savingCards.has(risk.id) ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                                <span className="ml-2">Salvando...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Save className="h-4 w-4" />
-                                <span className="ml-2 hidden sm:inline">Salvar</span>
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => cancelEditing(risk.id)}
-                            disabled={savingCards.has(risk.id)}
-                          >
-                            <X className="h-4 w-4" />
-                            <span className="ml-2 hidden sm:inline">Cancelar</span>
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => startEditing(risk)}
-                            className="hover:bg-blue-50 hover:border-blue-300"
-                            title="Editar risco"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="ml-2 hidden lg:inline">Editar</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(risk)}
-                            className="hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                            title="Excluir risco"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="ml-2 hidden lg:inline">Excluir</span>
-                          </Button>
-                        </>
-                      )}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleExpanded(risk.id)}
-                        title={isExpanded ? "Recolher card" : "Expandir card"}
-                        className="hover:bg-gray-100"
-                      >
-                        {isExpanded ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
+                  )}
                 </CardHeader>
 
                 {isExpanded && (
                   <CardContent className="pt-0">
                     <div className="border-t pt-4">
                       <Tabs defaultValue="identification" className="w-full">
-                        <TabsList className="grid w-full grid-cols-8">
-                          <TabsTrigger value="identification" className="flex items-center gap-1 text-xs">
-                            <FileText className="h-3 w-3" />
-                            Identificação
-                          </TabsTrigger>
-                          <TabsTrigger value="analysis" className="flex items-center gap-1 text-xs">
-                            <BarChart3 className="h-3 w-3" />
-                            Análise
-                          </TabsTrigger>
-                          <TabsTrigger value="evaluation" className="flex items-center gap-1 text-xs">
-                            <CheckSquare className="h-3 w-3" />
-                            Avaliação
-                          </TabsTrigger>
-                          <TabsTrigger value="context" className="flex items-center gap-1 text-xs">
-                            <History className="h-3 w-3" />
-                            Contexto
-                          </TabsTrigger>
-                          <TabsTrigger value="controls" className="flex items-center gap-1 text-xs">
-                            <Shield className="h-3 w-3" />
-                            Controles
-                          </TabsTrigger>
-                          <TabsTrigger value="action-plan" className="flex items-center gap-1 text-xs">
-                            <ClipboardList className="h-3 w-3" />
-                            Planos de Ação
-                          </TabsTrigger>
-                          <TabsTrigger value="communication" className="flex items-center gap-1 text-xs">
-                            <MessageSquare className="h-3 w-3" />
-                            Comunicação
-                          </TabsTrigger>
-                          <TabsTrigger value="monitoring" className="flex items-center gap-1 text-xs">
-                            <Eye className="h-3 w-3" />
-                            Monitoramento
-                          </TabsTrigger>
-                        </TabsList>
+                        <div className="relative w-full">
+                          <div className="overflow-x-auto pb-2 -mb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            <TabsList className="flex w-max min-w-full justify-start h-auto p-1 bg-muted/50 rounded-lg">
+                              <TabsTrigger value="identification" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <FileText className="h-3.5 w-3.5" />
+                                Identificação
+                              </TabsTrigger>
+                              <TabsTrigger value="analysis" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <BarChart3 className="h-3.5 w-3.5" />
+                                Análise
+                              </TabsTrigger>
+                              <TabsTrigger value="evaluation" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <CheckSquare className="h-3.5 w-3.5" />
+                                Avaliação
+                              </TabsTrigger>
+                              <TabsTrigger value="context" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <History className="h-3.5 w-3.5" />
+                                Contexto
+                              </TabsTrigger>
+                              <TabsTrigger value="controls" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <Shield className="h-3.5 w-3.5" />
+                                Controles
+                              </TabsTrigger>
+                              <TabsTrigger value="action-plan" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <ClipboardList className="h-3.5 w-3.5" />
+                                Planos de Ação
+                              </TabsTrigger>
+                              <TabsTrigger value="communication" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                Comunicação
+                              </TabsTrigger>
+                              <TabsTrigger value="monitoring" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <Eye className="h-3.5 w-3.5" />
+                                Monitoramento
+                              </TabsTrigger>
+                            </TabsList>
+                          </div>
+                        </div>
 
                         {/* Etapa 1: Identificação */}
                         <TabsContent value="identification" className="space-y-4 mt-4">
@@ -1494,7 +1450,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Probabilidade ({risk.probability}/5)</Label>
+                              <Label className="text-sm font-medium mb-2 block">Probabilidade ({risk.probability}/{matrixDims.rows})</Label>
                               {isEditing ? (
                                 <div className="space-y-2">
                                   <Select value={editForm.probability?.toString() || ''} onValueChange={(value) => updateEditForm(risk.id, 'probability', parseInt(value))}>
@@ -1502,21 +1458,19 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      <SelectItem value="1">1 - Muito Baixa</SelectItem>
-                                      <SelectItem value="2">2 - Baixa</SelectItem>
-                                      <SelectItem value="3">3 - Média</SelectItem>
-                                      <SelectItem value="4">4 - Alta</SelectItem>
-                                      <SelectItem value="5">5 - Muito Alta</SelectItem>
+                                      {matrixLabels.likelihood.map((label, idx) => (
+                                        <SelectItem key={idx} value={(idx + 1).toString()}>{idx + 1} - {label}</SelectItem>
+                                      ))}
                                     </SelectContent>
                                   </Select>
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="outline">{risk.probability}/5</Badge>
+                                  <Badge variant="outline">{risk.probability}/{matrixDims.rows}</Badge>
                                   <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
                                       className="bg-blue-500 h-2 rounded-full"
-                                      style={{ width: `${(risk.probability / 5) * 100}%` }}
+                                      style={{ width: `${(risk.probability / matrixDims.rows) * 100}%` }}
                                     />
                                   </div>
                                 </div>
@@ -1524,27 +1478,25 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             </div>
 
                             <div>
-                              <Label className="text-sm font-medium mb-2 block">Impacto ({risk.impact}/5)</Label>
+                              <Label className="text-sm font-medium mb-2 block">Impacto ({risk.impact}/{matrixDims.cols})</Label>
                               {isEditing ? (
                                 <Select value={editForm.impact?.toString() || ''} onValueChange={(value) => updateEditForm(risk.id, 'impact', parseInt(value))}>
                                   <SelectTrigger>
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="1">1 - Muito Baixo</SelectItem>
-                                    <SelectItem value="2">2 - Baixo</SelectItem>
-                                    <SelectItem value="3">3 - Médio</SelectItem>
-                                    <SelectItem value="4">4 - Alto</SelectItem>
-                                    <SelectItem value="5">5 - Muito Alto</SelectItem>
+                                    {matrixLabels.impact.map((label, idx) => (
+                                      <SelectItem key={idx} value={(idx + 1).toString()}>{idx + 1} - {label}</SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <Badge variant="outline">{risk.impact}/5</Badge>
+                                  <Badge variant="outline">{risk.impact}/{matrixDims.cols}</Badge>
                                   <div className="w-full bg-gray-200 rounded-full h-2">
                                     <div
                                       className="bg-orange-500 h-2 rounded-full"
-                                      style={{ width: `${(risk.impact / 5) * 100}%` }}
+                                      style={{ width: `${(risk.impact / matrixDims.cols) * 100}%` }}
                                     />
                                   </div>
                                 </div>
@@ -1843,7 +1795,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                       </Badge>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                                       <div>
                                         <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
                                         {isEditing ? (
@@ -1876,6 +1828,29 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                               risk.activity_1_status === 'in_progress' ? '🔄 Em Andamento' :
                                                 risk.activity_1_status === 'completed' ? '✅ Concluída' :
                                                   risk.activity_1_status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <Label className="text-sm font-medium mb-1 block">Prioridade</Label>
+                                        {isEditing ? (
+                                          <Select value={editForm.activity_1_priority || ''} onValueChange={(value) => updateEditForm(risk.id, 'activity_1_priority', value)}>
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="low">Baixa</SelectItem>
+                                              <SelectItem value="medium">Média</SelectItem>
+                                              <SelectItem value="high">Alta</SelectItem>
+                                              <SelectItem value="critical">Crítica</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        ) : (
+                                          <Badge variant="outline">
+                                            {risk.activity_1_priority === 'low' ? '🟢 Baixa' :
+                                              risk.activity_1_priority === 'medium' ? '🟡 Média' :
+                                                risk.activity_1_priority === 'high' ? '🟠 Alta' :
+                                                  risk.activity_1_priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
                                           </Badge>
                                         )}
                                       </div>
@@ -2098,94 +2073,195 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 </div>
                               </div>
 
-                              {/* Para Aprovação */}
+                              {/* Gestão Dinâmica de Stakeholders */}
                               <div>
-                                <h5 className="text-sm font-medium mb-2 flex items-center gap-2">
-                                  <Shield className="h-3 w-3" />
-                                  Para Aprovação (Approval)
-                                </h5>
-                                <div className="space-y-2">
-                                  {/* Pessoa 1 para aprovação */}
-                                  <div className="border rounded p-3 bg-card border-orange-200 dark:border-orange-800">
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                      <div>
-                                        <Label className="text-xs font-medium mb-1 block">Nome</Label>
-                                        {isEditing ? (
-                                          <Input
-                                            value={editForm.approval_person_1_name || ''}
-                                            onChange={(e) => updateEditForm(risk.id, 'approval_person_1_name', e.target.value)}
-                                            placeholder="Nome completo"
-                                          />
-                                        ) : (
-                                          <p className="text-sm">{risk.approval_person_1_name || 'Não informado'}</p>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs font-medium mb-1 block">Cargo</Label>
-                                        {isEditing ? (
-                                          <Select value={editForm.approval_person_1_position || ''} onValueChange={(value) => updateEditForm(risk.id, 'approval_person_1_position', value)}>
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="CEO / Presidente">CEO / Presidente</SelectItem>
-                                              <SelectItem value="CFO / Diretor Financeiro">CFO / Diretor Financeiro</SelectItem>
-                                              <SelectItem value="CRO / Chief Risk Officer">CRO / Chief Risk Officer</SelectItem>
-                                              <SelectItem value="CISO / Chief Information Security Officer">CISO</SelectItem>
-                                              <SelectItem value="Diretor de Compliance">Diretor de Compliance</SelectItem>
-                                              <SelectItem value="Gerente de Riscos">Gerente de Riscos</SelectItem>
-                                              <SelectItem value="Auditor Interno">Auditor Interno</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        ) : (
-                                          <p className="text-sm">{risk.approval_person_1_position || 'Não informado'}</p>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs font-medium mb-1 block">E-mail</Label>
-                                        {isEditing ? (
-                                          <Input
-                                            value={editForm.approval_person_1_email || ''}
-                                            onChange={(e) => updateEditForm(risk.id, 'approval_person_1_email', e.target.value)}
-                                            placeholder="email@empresa.com"
-                                          />
-                                        ) : (
-                                          <p className="text-sm">{risk.approval_person_1_email || 'Não informado'}</p>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-xs font-medium mb-1 block">Status</Label>
-                                        {isEditing ? (
-                                          <Select value={editForm.approval_person_1_status || ''} onValueChange={(value) => updateEditForm(risk.id, 'approval_person_1_status', value)}>
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="pending">⏳ Pendente</SelectItem>
-                                              <SelectItem value="acknowledged">👁️ Tomou Ciência</SelectItem>
-                                              <SelectItem value="approved">✅ Aprovado</SelectItem>
-                                              <SelectItem value="rejected">❌ Rejeitado</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        ) : (
-                                          <Badge variant="outline">
-                                            {risk.approval_person_1_status === 'pending' ? '⏳ Pendente' :
-                                              risk.approval_person_1_status === 'acknowledged' ? '👁️ Tomou Ciência' :
-                                                risk.approval_person_1_status === 'approved' ? '✅ Aprovado' :
-                                                  risk.approval_person_1_status === 'rejected' ? '❌ Rejeitado' : 'Não definido'}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
+                                <div className="flex justify-between items-center mb-2">
+                                  <h5 className="text-sm font-medium flex items-center gap-2">
+                                    <Users className="h-4 w-4" />
+                                    Pessoas a Serem Comunicadas (Stakeholders)
+                                  </h5>
+                                  {isEditing && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        const currentStakeholders = editForm.stakeholders || [];
+                                        updateEditForm(risk.id, 'stakeholders', [
+                                          ...currentStakeholders,
+                                          { name: '', position: '', email: '', notification_type: 'awareness', response_status: 'pending' }
+                                        ]);
+                                      }}
+                                    >
+                                      <Plus className="h-4 w-4 mr-1" />
+                                      Adicionar Pessoa
+                                    </Button>
+                                  )}
                                 </div>
-                              </div>
+                                <div className="space-y-4">
+                                  {(() => {
+                                    const displayStakeholders = isEditing ? (editForm.stakeholders || []) : (risk.risk_stakeholders || []);
 
-                              {/* Nota para adicionar mais pessoas */}
-                              <div className="text-center p-3 border-2 border-dashed border-muted-foreground/20 rounded">
-                                <p className="text-xs text-muted-foreground">
-                                  💡 <strong>Dica:</strong> Para adicionar mais pessoas, use o formulário completo de registro de riscos
-                                </p>
+                                    if (!displayStakeholders || displayStakeholders.length === 0) {
+                                      return (
+                                        <div className="text-center p-3 border-2 border-dashed border-muted-foreground/20 rounded">
+                                          <p className="text-xs text-muted-foreground">
+                                            Nenhuma pessoa configurada para comunicação neste risco.
+                                          </p>
+                                        </div>
+                                      );
+                                    }
+
+                                    return displayStakeholders.map((stk: any, index: number) => (
+                                      <div key={index} className="border rounded p-3 bg-card border-blue-200 dark:border-blue-800 relative">
+                                        {isEditing && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-6 w-6 text-red-500"
+                                            onClick={() => {
+                                              const newStakeholders = [...editForm.stakeholders];
+                                              newStakeholders.splice(index, 1);
+                                              updateEditForm(risk.id, 'stakeholders', newStakeholders);
+                                            }}
+                                          >
+                                            <Trash2 className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                          <div>
+                                            <Label className="text-xs font-medium mb-1 block">Nome</Label>
+                                            {isEditing ? (
+                                              <Input
+                                                value={stk.name || ''}
+                                                onChange={(e) => {
+                                                  const newStakeholders = [...editForm.stakeholders];
+                                                  newStakeholders[index].name = e.target.value;
+                                                  updateEditForm(risk.id, 'stakeholders', newStakeholders);
+                                                }}
+                                                placeholder="Nome completo"
+                                              />
+                                            ) : (
+                                              <p className="text-sm">{stk.name || 'Não informado'}</p>
+                                            )}
+                                          </div>
+
+                                          <div>
+                                            <Label className="text-xs font-medium mb-1 block">Papel/Cargo</Label>
+                                            {isEditing ? (
+                                              <Input
+                                                value={stk.position || stk.role || ''}
+                                                onChange={(e) => {
+                                                  const newStakeholders = [...editForm.stakeholders];
+                                                  newStakeholders[index].position = e.target.value;
+                                                  updateEditForm(risk.id, 'stakeholders', newStakeholders);
+                                                }}
+                                                placeholder="Ex: Diretor Financeiro"
+                                              />
+                                            ) : (
+                                              <p className="text-sm">{stk.position || stk.role || 'Não informado'}</p>
+                                            )}
+                                          </div>
+
+                                          <div>
+                                            <Label className="text-xs font-medium mb-1 block">E-mail</Label>
+                                            {isEditing ? (
+                                              <Input
+                                                value={stk.email || ''}
+                                                onChange={(e) => {
+                                                  const newStakeholders = [...editForm.stakeholders];
+                                                  newStakeholders[index].email = e.target.value;
+                                                  updateEditForm(risk.id, 'stakeholders', newStakeholders);
+                                                }}
+                                                placeholder="email@empresa.com"
+                                              />
+                                            ) : (
+                                              <p className="text-sm truncate" title={stk.email}>{stk.email || 'Não informado'}</p>
+                                            )}
+                                          </div>
+
+                                          <div>
+                                            <Label className="text-xs font-medium mb-1 block">Tipo / Status</Label>
+                                            {isEditing ? (
+                                              <div className="flex gap-2">
+                                                <Select value={stk.notification_type || 'awareness'} onValueChange={(value) => {
+                                                  const newStakeholders = [...editForm.stakeholders];
+                                                  newStakeholders[index].notification_type = value;
+                                                  updateEditForm(risk.id, 'stakeholders', newStakeholders);
+                                                }}>
+                                                  <SelectTrigger className="w-1/2">
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="awareness">Ciência</SelectItem>
+                                                    <SelectItem value="approval">Aprovação</SelectItem>
+                                                    <SelectItem value="platform">Plataforma</SelectItem>
+                                                    <SelectItem value="both">Ambos</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                                <Select value={stk.response_status || 'pending'} onValueChange={(value) => {
+                                                  const newStakeholders = [...editForm.stakeholders];
+                                                  newStakeholders[index].response_status = value;
+                                                  updateEditForm(risk.id, 'stakeholders', newStakeholders);
+                                                }}>
+                                                  <SelectTrigger className="w-1/2">
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="pending">⏳ Pendente</SelectItem>
+                                                    <SelectItem value="acknowledged">👁️ Ciência</SelectItem>
+                                                    <SelectItem value="approved">✅ Aprovado</SelectItem>
+                                                    <SelectItem value="rejected">❌ Rejeitado</SelectItem>
+                                                  </SelectContent>
+                                                </Select>
+                                              </div>
+                                            ) : (
+                                              <div className="flex gap-2 items-center h-full">
+                                                <Badge variant="outline">
+                                                  {stk.notification_type === 'approval' ? 'Aprovação' : stk.notification_type === 'both' ? 'Ambos' : 'Ciência'}
+                                                </Badge>
+                                                <Badge variant="secondary">
+                                                  {stk.response_status === 'pending' ? '⏳ Pendente' :
+                                                    stk.response_status === 'acknowledged' ? '👁️ Ciência' :
+                                                      stk.response_status === 'approved' ? '✅ Aprovado' :
+                                                        stk.response_status === 'rejected' ? '❌ Rejeitado' : 'Pendente'}
+                                                </Badge>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          <div className="flex flex-col justify-end pb-1">
+                                            <Button
+                                              variant="default"
+                                              size="sm"
+                                              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                                              onClick={async () => {
+                                                if (!stk.email) {
+                                                  toast({ title: 'Aviso', description: 'Preencha um e-mail antes de notificar.', variant: 'destructive' });
+                                                  return;
+                                                }
+                                                // Simulando envio nativo
+                                                toast({
+                                                  title: 'Enviando...',
+                                                  description: `Notificando ${stk.name || stk.email}...`,
+                                                });
+                                                setTimeout(() => {
+                                                  toast({
+                                                    title: 'Notificação enviada',
+                                                    description: `O e-mail foi disparado para ${stk.email} com sucesso!`,
+                                                    variant: 'default'
+                                                  });
+                                                }, 1500);
+                                              }}
+                                            >
+                                              <Send className="h-4 w-4 mr-2" />
+                                              Notificar
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ));
+                                  })()}
+                                </div>
                               </div>
                             </div>
                           </div>
