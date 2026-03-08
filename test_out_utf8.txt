@@ -1,0 +1,31 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ­ƒöÉ prevent committing .env to code: https://dotenvx.com/precommit
+ALL PROFILES:
+
+ALL ROLES:
+- 0c5c1433-2682-460c-992a-f4cce57c0d6d | role: super_admin | tenant: null
+- 0c5c1433-2682-460c-992a-f4cce57c0d6d | role: admin | tenant: null
+- ed99c0cc-53cf-4500-a216-8649bc509905 | role: risk_manager | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 8edb17c5-bb64-49b9-b5d0-4386e30fc428 | role: auditor | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 22222222-2222-2222-2222-222222222221 | role: ciso | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 22222222-2222-2222-2222-222222222222 | role: ciso | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 22222222-2222-2222-2222-222222222223 | role: ciso | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 33333333-3333-3333-3333-333333333331 | role: risk_manager | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 33333333-3333-3333-3333-333333333332 | role: risk_manager | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 33333333-3333-3333-3333-333333333333 | role: risk_manager | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 44444444-4444-4444-4444-444444444441 | role: compliance_officer | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 44444444-4444-4444-4444-444444444442 | role: compliance_officer | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 44444444-4444-4444-4444-444444444443 | role: compliance_officer | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 55555555-5555-5555-5555-555555555551 | role: auditor | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 55555555-5555-5555-5555-555555555552 | role: auditor | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 55555555-5555-5555-5555-555555555553 | role: auditor | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 66666666-6666-6666-6666-666666666661 | role: user | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 66666666-6666-6666-6666-666666666662 | role: user | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 66666666-6666-6666-6666-666666666663 | role: user | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 59a39a30-e322-4743-afe8-75f6f67ef183 | role: user | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 59a39a30-e322-4743-afe8-75f6f67ef183 | role: auditor | tenant: 37b809d4-1a23-40b9-8ef1-17f24ed4c08b
+- 64551788-a987-4297-9bf4-694c687c5c1c | role: user | tenant: null
+- eedda29f-d223-4d40-9952-e8f9a33e954b | role: user | tenant: null
+- 678c706b-1a23-43d0-a46f-1a0e26251967 | role: user | tenant: null
+- f6573600-ed99-47db-b49a-b54e3493857d | role: user | tenant: null
+- c624a633-7527-4003-a06b-f6f6ba911400 | role: user | tenant: null
+- 45ca1b02-958f-44bd-a07b-c1b88c2d64e7 | role: user | tenant: null

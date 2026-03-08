@@ -32,8 +32,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenantSelector } from '@/contexts/TenantSelectorContext';
 import { defaultSecuritySettings, calculateSecurityScore } from '@/utils/security-score';
 
-import { UserManagementSection } from './sections/UserManagementSection';
-import { GroupManagementSection } from './sections/GroupManagementSection';
 import { SecurityConfigSection } from './sections/SecurityConfigSection';
 import { RiskMatrixConfigSection } from './sections/RiskMatrixConfigSection';
 import { SsoConfigSection } from './sections/SSOConfigSection';
@@ -44,7 +42,7 @@ import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
 import { CryptoKeysSection } from './sections/CryptoKeysSection';
 import { AISettingsTab } from './tabs/AISettingsTab';
 import { CustomFieldsConfigSection } from './sections/CustomFieldsConfigSection';
-import { AccessPermissionsTab } from './tabs/AccessPermissionsTab';
+import { IdentityAccessManagementSection } from './sections/IdentityAccessManagementSection';
 
 interface TenantInfo {
   id: string;
@@ -445,8 +443,7 @@ const TenantSettingsPage: React.FC = () => {
           <TabsList className="flex w-max min-w-full h-auto bg-muted/50 p-1 gap-0.5">
             {[
               { value: 'overview', icon: Eye, label: 'Visão Geral' },
-              { value: 'users', icon: Users, label: 'Usuários' },
-              { value: 'groups', icon: Users, label: 'Grupos' },
+              { value: 'users', icon: Users, label: 'Acessos e Identidade' },
               { value: 'security', icon: Shield, label: 'Segurança' },
               { value: 'risk-matrix', icon: Activity, label: 'Matriz' },
               { value: 'sso', icon: Key, label: 'SSO' },
@@ -456,7 +453,6 @@ const TenantSettingsPage: React.FC = () => {
               { value: 'api-tokens', icon: Key, label: 'API' },
               { value: 'ai-config', icon: Zap, label: 'IA' },
               { value: 'customization', icon: Sliders, label: 'Customização' },
-              { value: 'permissions', icon: Shield, label: 'Permissões de Acesso' },
             ].map(({ value, icon: Icon, label }) => (
               <TabsTrigger
                 key={value}
@@ -573,7 +569,7 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="users">
-          <UserManagementSection
+          <IdentityAccessManagementSection
             tenantId={selectedTenantId}
             onMetricsUpdate={(userMetrics) => {
               if (metrics) {
@@ -584,10 +580,6 @@ const TenantSettingsPage: React.FC = () => {
               }
             }}
           />
-        </TabsContent>
-
-        <TabsContent value="groups">
-          <GroupManagementSection tenantId={selectedTenantId} />
         </TabsContent>
 
         <TabsContent value="security">
@@ -620,20 +612,8 @@ const TenantSettingsPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="encryption" className="space-y-6">
-          <EncryptionConfigSection
-            tenantId={selectedTenantId}
-            onSettingsChange={() => {
-              if (selectedTenantId) {
-                toast.success("Configurações de criptografia atualizadas");
-              }
-            }}
-          />
-          <CryptoKeysSection
-            tenantId={selectedTenantId}
-            onSettingsChange={() => {
-              // Refresh logic if needed
-            }}
-          />
+          <EncryptionConfigSection />
+          <CryptoKeysSection />
         </TabsContent>
 
         <TabsContent value="logs">
@@ -650,10 +630,6 @@ const TenantSettingsPage: React.FC = () => {
 
         <TabsContent value="customization">
           <CustomFieldsConfigSection tenantId={selectedTenantId} />
-        </TabsContent>
-
-        <TabsContent value="permissions">
-          <AccessPermissionsTab />
         </TabsContent>
       </Tabs>
     </div>

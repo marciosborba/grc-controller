@@ -1,244 +1,212 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
+const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
+const RESET_URL = `${FRONTEND_URL}/reset-password`;
+
 interface CreateUserRequest {
   email: string;
-  password?: string;
   full_name: string;
   job_title?: string;
   department?: string;
   phone?: string;
   tenant_id: string;
+  // System role: tenant_admin | admin | user | guest
+  system_role?: string;
   roles: string[];
+  // Custom tenant role ID from tenant_roles table
+  tenant_role_id?: string;
   permissions?: string[];
   send_invitation?: boolean;
   must_change_password?: boolean;
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    // Verificar se usuário está autenticado
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) {
-      throw new Error('Missing authorization header')
-    }
+    if (!authHeader) throw new Error('Missing authorization header')
 
-    // Criar cliente Supabase com service role
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
+      { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Extrair token do header
     const token = authHeader.replace('Bearer ', '')
-    
-    // Criar cliente Supabase para verificar usuário autenticado
     const supabaseUser = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Verificar usuário atual usando o token
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser(token)
-    if (userError || !user) {
-      throw new Error('Unauthorized')
-    }
+    if (userError || !user) throw new Error('Unauthorized')
 
-    // Verificar se usuário é platform admin
-    const { data: platformAdmin, error: platformError } = await supabaseAdmin
-      .from('platform_admins')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
+    // Check permissions: platform admin or admin role
+    const { data: platformAdmin } = await supabaseAdmin
+      .from('platform_admins').select('user_id').eq('user_id', user.id).single()
+    const isPlatformAdmin = !!platformAdmin
 
-    const isPlatformAdmin = !platformError && !!platformAdmin
-
-    // Verificar se usuário tem permissão (platform admin OU admin com permissão)
     if (!isPlatformAdmin) {
-      // Verificar se é admin com permissão users.create
       const { data: userRoles } = await supabaseAdmin
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-
-      const isAdmin = userRoles?.some(r => r.role === 'admin')
-      
-      if (!isAdmin) {
-        throw new Error('Sem permissão para criar usuários. Verifique se você é administrador da plataforma ou possui a role admin.')
-      }
+        .from('user_roles').select('role').eq('user_id', user.id)
+      const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'tenant_admin')
+      if (!isAdmin) throw new Error('Sem permissão para criar usuários.')
     }
 
-    // Processar requisição
     const userData: CreateUserRequest = await req.json()
+    const emailNorm = userData.email.trim().toLowerCase()
 
-    // Determinar tenant_id
+    // Determine effective tenant_id
     let targetTenantId = userData.tenant_id
-    
-    // Se não for admin da plataforma, usar o tenant do usuário atual
     if (!isPlatformAdmin) {
       const { data: currentProfile } = await supabaseAdmin
-        .from('profiles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single()
-      
+        .from('profiles').select('tenant_id').eq('user_id', user.id).single()
       targetTenantId = currentProfile?.tenant_id
     }
+    if (!targetTenantId) throw new Error('Tenant ID é obrigatório')
 
-    if (!targetTenantId) {
-      throw new Error('Tenant ID é obrigatório')
-    }
+    // Determine system_role (default to 'user')
+    const systemRole = userData.system_role || (userData.roles?.[0] as string) || 'user'
 
-    // Verificar limite de usuários do tenant (apenas para não-admins da plataforma)
+    // Check tenant user limit
     if (!isPlatformAdmin) {
       const { data: tenant, error: tenantError } = await supabaseAdmin
-        .from('tenants')
-        .select('max_users, current_users_count')
-        .eq('id', targetTenantId)
-        .single()
-
+        .from('tenants').select('max_users, current_users_count').eq('id', targetTenantId).single()
       if (tenantError) throw new Error('Erro ao verificar limites do tenant')
-
       if (tenant.current_users_count >= tenant.max_users) {
-        throw new Error(`Limite de usuários atingido (${tenant.max_users}). Contate o administrador da plataforma.`)
+        throw new Error(`Limite de usuários atingido (${tenant.max_users}).`)
       }
     }
 
-    // Criar usuário no Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: userData.email,
-      password: userData.send_invitation ? undefined : (userData.password || 'temp-password-123'),
-      email_confirm: !userData.send_invitation,
-      user_metadata: {
-        full_name: userData.full_name,
-        job_title: userData.job_title
+    let userId: string | null = null
+    let inviteLink: string | null = null
+
+    if (userData.send_invitation !== false) {
+      // ── Invite flow: generate a magic invite link (sends email via Supabase SMTP) ──
+      console.log(`📧 Generating invite link for ${emailNorm}`)
+
+      // Check if user already exists
+      let existingUser = null
+      let page = 1
+      while (!existingUser) {
+        const { data: { users: list }, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 })
+        if (error || !list?.length) break
+        existingUser = list.find(u => u.email?.toLowerCase() === emailNorm) || null
+        if (list.length < 1000) break
+        page++
       }
-    })
 
-    if (authError) throw authError
+      if (existingUser && existingUser.email_confirmed_at) {
+        throw new Error(`O usuário ${emailNorm} já possui conta ativa. Use "Editar" para alterar permissões.`)
+      }
 
-    // Verificar se profile já existe (pode ser criado por trigger)
-    const { data: existingProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('id')
-      .eq('user_id', authData.user.id)
-      .single()
-
-    if (existingProfile) {
-      // Profile já existe, apenas atualizar
-      const { error: updateError } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          full_name: userData.full_name,
-          job_title: userData.job_title,
-          department: userData.department,
-          phone: userData.phone,
-          tenant_id: targetTenantId,
-          email: userData.email,
-          permissions: userData.permissions || [],
-          must_change_password: userData.must_change_password || userData.send_invitation
-        })
-        .eq('user_id', authData.user.id)
-
-      if (updateError) throw updateError
-    } else {
-      // Profile não existe, criar novo
-      const { error: insertError } = await supabaseAdmin
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          full_name: userData.full_name,
-          job_title: userData.job_title,
-          department: userData.department,
-          phone: userData.phone,
-          tenant_id: targetTenantId,
-          email: userData.email,
-          permissions: userData.permissions || [],
-          must_change_password: userData.must_change_password || userData.send_invitation
-        })
-
-      if (insertError) throw insertError
-    }
-
-    // Atribuir roles (verificar se já existem)
-    if (userData.roles.length > 0) {
-      for (const role of userData.roles) {
-        // Verificar se role já existe
-        const { data: existingRole } = await supabaseAdmin
-          .from('user_roles')
-          .select('id')
-          .eq('user_id', authData.user.id)
-          .eq('role', role)
-          .single()
-
-        // Inserir apenas se não existir
-        if (!existingRole) {
-          const { error: roleError } = await supabaseAdmin
-            .from('user_roles')
-            .insert({
-              user_id: authData.user.id,
-              role
-            })
-
-          if (roleError) throw roleError
+      const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'invite',
+        email: emailNorm,
+        options: {
+          redirectTo: RESET_URL,
+          data: {
+            full_name: userData.full_name,
+            tenant_id: targetTenantId,
+            system_role: systemRole,
+          }
         }
+      })
+      if (linkErr) throw new Error(`Falha ao gerar convite: ${linkErr.message}`)
+      inviteLink = linkData?.properties?.action_link || null
+      userId = linkData?.user?.id || existingUser?.id || null
+      console.log(`✅ Invite link generated for ${emailNorm}`)
+
+    } else {
+      // ── No-invite flow: create user directly with a temp password ──
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: emailNorm,
+        email_confirm: true,
+        user_metadata: { full_name: userData.full_name },
+      })
+      if (authError) throw authError
+      userId = authData.user.id
+    }
+
+    // ── Save / update profile ──
+    if (userId) {
+      const profilePayload: Record<string, unknown> = {
+        user_id: userId,
+        email: emailNorm,
+        full_name: userData.full_name,
+        job_title: userData.job_title || null,
+        department: userData.department || null,
+        phone: userData.phone || null,
+        tenant_id: targetTenantId,
+        system_role: systemRole,
+        is_active: false,
+        must_change_password: true,
+      }
+      // Optional: attach custom tenant role
+      if (userData.tenant_role_id) {
+        profilePayload['tenant_role_id'] = userData.tenant_role_id
+      }
+      if (userData.permissions?.length) {
+        profilePayload['permissions'] = userData.permissions
+      }
+
+      const { data: existingProfile } = await supabaseAdmin
+        .from('profiles').select('id').eq('user_id', userId).maybeSingle()
+
+      if (existingProfile) {
+        const { error } = await supabaseAdmin.from('profiles').update(profilePayload).eq('user_id', userId)
+        if (error) console.error('Profile update error:', error.message)
+      } else {
+        const { error } = await supabaseAdmin.from('profiles').insert(profilePayload)
+        if (error) console.error('Profile insert error:', error.message)
+      }
+
+      // ── Assign roles ──
+      const rolesToAssign = userData.roles?.length ? userData.roles : [systemRole]
+      for (const role of rolesToAssign) {
+        await supabaseAdmin.from('user_roles').upsert(
+          { user_id: userId, role, tenant_id: targetTenantId },
+          { onConflict: 'user_id, role' }
+        )
+      }
+
+      // ── Assign custom tenant role ──
+      if (userData.tenant_role_id) {
+        await supabaseAdmin.from('user_tenant_roles').upsert(
+          { user_id: userId, tenant_role_id: userData.tenant_role_id, tenant_id: targetTenantId },
+          { onConflict: 'user_id, tenant_role_id' }
+        ).then(({ error }) => {
+          // table may not exist — ignore error gracefully
+          if (error) console.warn('user_tenant_roles upsert:', error.message)
+        })
       }
     }
 
-    // Log da atividade
+    // ── Activity log ──
     try {
       await supabaseAdmin.rpc('rpc_log_activity', {
         p_user_id: user.id,
-        p_action: 'user_created',
+        p_action: 'user_invited',
         p_resource_type: 'users',
-        p_resource_id: authData.user.id,
-        p_details: {
-          created_user_email: userData.email,
-          roles: userData.roles,
-          via_edge_function: true
-        }
+        p_resource_id: userId,
+        p_details: { email: emailNorm, system_role: systemRole, roles: userData.roles }
       })
-    } catch (logError) {
-      console.warn('Erro ao registrar log:', logError)
-    }
+    } catch { /* ignore log errors */ }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        user: {
-          id: authData.user.id,
-          email: authData.user.email
-        }
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      JSON.stringify({ success: true, user: { id: userId, email: emailNorm }, inviteLink }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
   } catch (error) {
-    console.error('Error in create-user-admin:', error)
-    
+    console.error('create-user-admin error:', error)
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
-      }
+      JSON.stringify({ success: false, error: error.message }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
 })

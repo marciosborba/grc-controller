@@ -73,7 +73,7 @@ const ROLE_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec
 // Sub-components
 // ────────────────────────────────────────────────────────────
 
-const RolesTab = ({ tenantId }: { tenantId: string }) => {
+export const RolesTab = ({ tenantId }: { tenantId: string }) => {
     const [roles, setRoles] = useState<TenantRole[]>([]);
     const [loading, setLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
@@ -535,7 +535,6 @@ export const AccessPermissionsTab = () => {
                     {[
                         { value: 'roles', icon: Shield, label: 'Funções' },
                         { value: 'rbac', icon: Key, label: 'RBAC' },
-                        { value: 'guests', icon: Users, label: 'Usuários Convidados' },
                     ].map(({ value, icon: Icon, label }) => (
                         <TabsTrigger key={value} value={value} className="flex items-center gap-1.5 text-xs sm:text-sm px-3 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md">
                             <Icon className="h-3.5 w-3.5" /> {label}
@@ -545,7 +544,6 @@ export const AccessPermissionsTab = () => {
 
                 <TabsContent value="roles"><RolesTab tenantId={selectedTenantId} /></TabsContent>
                 <TabsContent value="rbac"><RBACTab tenantId={selectedTenantId} /></TabsContent>
-                <TabsContent value="guests"><GuestUsersTab tenantId={selectedTenantId} /></TabsContent>
             </Tabs>
         </div>
     );
