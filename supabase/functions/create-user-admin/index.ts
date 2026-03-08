@@ -28,12 +28,14 @@ async function sendSendPulseInvite({
   const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
   const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
   const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE");
+  // Use env var if set, otherwise fall back to the confirmed template ID 77996
+  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || "77996";
 
-  if (!clientId || !clientSecret || !templateIdStr) {
-    console.warn("⚠️ SendPulse configuration missing (ID, Secret or Template). Skipping email sending.");
+  if (!clientId || !clientSecret) {
+    console.warn("⚠️ SendPulse SENDPULSE_CLIENT_ID or SENDPULSE_CLIENT_SECRET missing. Skipping email sending.");
     return false;
   }
+
 
   const templateId = parseInt(templateIdStr);
   const accessToken = await getSendPulseToken(clientId, clientSecret);
@@ -221,16 +223,13 @@ Deno.serve(async (req) => {
         profilePayload['permissions'] = userData.permissions
       }
 
-      const { data: existingProfile } = await supabaseAdmin
-        .from('profiles').select('id').eq('user_id', userId).maybeSingle()
-
-      if (existingProfile) {
-        const { error } = await supabaseAdmin.from('profiles').update(profilePayload).eq('user_id', userId)
-        if (error) console.error('Profile update error:', error.message)
-      } else {
-        const { error } = await supabaseAdmin.from('profiles').insert(profilePayload)
-        if (error) console.error('Profile insert error:', error.message)
-      }
+      // Unconditional upsert: handles both the case where Auth trigger already
+      // created the profile (with null tenant_id) and the case where it doesn't exist yet.
+      const { error: profileErr } = await supabaseAdmin
+        .from('profiles')
+        .upsert(profilePayload, { onConflict: 'user_id', ignoreDuplicates: false })
+      if (profileErr) console.error('Profile upsert error:', profileErr.message)
+      else console.log(`✅ Profile upserted for ${emailNorm} in tenant ${targetTenantId}`)
 
       // ── Assign roles ──
       const rolesToAssign = userData.roles?.length ? userData.roles : [systemRole]
