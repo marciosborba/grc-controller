@@ -44,6 +44,7 @@ import { EncryptionConfigSection } from './sections/EncryptionConfigSection';
 import { CryptoKeysSection } from './sections/CryptoKeysSection';
 import { AISettingsTab } from './tabs/AISettingsTab';
 import { CustomFieldsConfigSection } from './sections/CustomFieldsConfigSection';
+import { AccessPermissionsTab } from './tabs/AccessPermissionsTab';
 
 interface TenantInfo {
   id: string;
@@ -455,6 +456,7 @@ const TenantSettingsPage: React.FC = () => {
               { value: 'api-tokens', icon: Key, label: 'API' },
               { value: 'ai-config', icon: Zap, label: 'IA' },
               { value: 'customization', icon: Sliders, label: 'Customização' },
+              { value: 'permissions', icon: Shield, label: 'Permissões de Acesso' },
             ].map(({ value, icon: Icon, label }) => (
               <TabsTrigger
                 key={value}
@@ -648,6 +650,10 @@ const TenantSettingsPage: React.FC = () => {
 
         <TabsContent value="customization">
           <CustomFieldsConfigSection tenantId={selectedTenantId} />
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          <AccessPermissionsTab />
         </TabsContent>
       </Tabs>
     </div>

@@ -625,10 +625,10 @@ export const useRiskManagement = () => {
                     recipientName: plan.responsible.split('@')[0],
                     recipientEmail: plan.responsible.trim(),
                     riskTitle: data.risk_title || 'Risco Sem Nome',
-                    senderName: user?.email || 'Sistema CyberGuard',
+                    senderName: (user as any)?.full_name || user?.email || 'Sistema GRC',
                     notificationType: 'ACTION_PLAN',
                     actionPlanTitle: plan.title,
-                    actionPlanDueDate: plan.deadline ? new Date(plan.deadline).toLocaleDateString() : 'Não definido'
+                    actionPlanDueDate: plan.deadline ? new Date(plan.deadline).toLocaleDateString('pt-BR') : 'Não definido'
                   }
                 });
                 console.log(`✉️ Email plano de ação enviado para ${plan.responsible}`);
@@ -674,7 +674,7 @@ export const useRiskManagement = () => {
                   riskDescription: riskData.description || 'Nenhuma descrição fornecida',
                   riskLevel: riskLevel,
                   riskCategory: riskData.category,
-                  senderName: user?.email || 'Sistema CyberGuard'
+                  senderName: (user as any)?.full_name || user?.email || 'Sistema GRC'
                 }
               });
               console.log(`✉️ Email disparado para ${stakeholder.email}`);

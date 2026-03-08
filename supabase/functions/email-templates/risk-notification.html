@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>GRC Controller - Notificacao de Risco</title>
+    <style>
+        body,
+        table,
+        td,
+        a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+            border-collapse: collapse !important
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
+            display: block
+        }
+
+        a[x-apple-data-detectors] {
+            color: inherit !important;
+            text-decoration: none !important
+        }
+    </style>
+</head>
+
+<body
+    style="margin:0;padding:0;background-color:#F5F5F7;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#F5F5F7;padding:40px 15px">
+        <tr>
+            <td align="center">
+                <table width="600" border="0" cellpadding="0" cellspacing="0"
+                    style="background-color:#FFFFFF;border-radius:12px;border-top:4px solid #249485;max-width:600px;width:100%">
+
+                    <!-- LOGO -->
+                    <tr>
+                        <td align="center" style="padding:48px 40px 16px">
+                            <img src="https://myxvxponlmulnjstbjwd.supabase.co/storage/v1/object/public/avatars/logo-login.png"
+                                alt="GEPRIV" width="120" style="display:block;margin:0 auto;">
+                            <p
+                                style="margin:16px 0 0;color:#86868B;font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase">
+                                Portal de Riscos</p>
+                        </td>
+                    </tr>
+
+                    <!-- BODY -->
+                    <tr>
+                        <td style="padding:24px 48px 40px">
+                            <p style="margin:0 0 4px;font-size:14px;color:#86868B">Prezado(a),</p>
+                            <h2
+                                style="margin:0 0 24px;font-size:22px;font-weight:600;color:#1D1D1F;letter-spacing:-0.5px">
+                                {{firstName}}</h2>
+
+                            <p style="margin:0 0 12px;font-size:15px;color:#1D1D1F;line-height:1.6">
+                                O analista <strong>{{senderName}}</strong> registrou um novo risco no sistema de gestao
+                                que pode comprometer a seguranca e continuidade dos negocios da sua organizacao.
+                            </p>
+                            <p style="margin:0 0 28px;font-size:15px;color:#515154;line-height:1.6">
+                                Voce foi designado como <strong>parte interessada</strong> e precisa registrar sua
+                                ciencia ou aprovacao das medidas previstas. Acesse o Portal de Riscos para ver todos os
+                                detalhes e iniciar o tratamento.
+                            </p>
+
+                            <!-- RISK CARD -->
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0"
+                                style="margin-bottom:28px;border:1px solid #E5E5EA;border-left:4px solid #249485;border-radius:8px;background-color:#F5F5F7">
+                                <tr>
+                                    <td style="padding:20px 20px 8px">
+                                        <p
+                                            style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;color:#86868B;letter-spacing:1.5px">
+                                            Identificacao do Risco</p>
+                                        <p
+                                            style="margin:0 0 8px;font-size:18px;font-weight:700;color:#1D1D1F;line-height:1.3">
+                                            {{riskTitle}}</p>
+                                        <p style="margin:0 0 14px;font-size:13px;color:#515154;line-height:1.5">
+                                            {{riskDescription}}</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:0 20px 16px">
+                                        <table border="0" cellpadding="0" cellspacing="4">
+                                            <tr>
+                                                <td><span
+                                                        style="display:inline-block;background-color:#249485;color:#FFFFFF;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px">Nivel:
+                                                        {{riskLevel}}</span></td>
+                                                <td><span
+                                                        style="display:inline-block;background-color:#E5E5EA;color:#515154;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px">{{riskCategory}}</span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA -->
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td align="left" style="padding-bottom:32px">
+                                        <table border="0" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td align="center" style="border-radius:8px;background-color:#249485">
+                                                    <a href="{{portalUrl}}" target="_blank"
+                                                        style="display:inline-block;padding:14px 28px;font-size:15px;color:#FFFFFF;text-decoration:none;font-weight:500;border-radius:8px;background-color:#249485">Acessar
+                                                        o Portal de Riscos &#8594;</a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- SECURITY NOTICE -->
+                            <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:24px">
+                                <tr>
+                                    <td style="background-color:#F5F5F7;border-radius:8px;padding:16px">
+                                        <p style="margin:0;font-size:12px;color:#86868B;line-height:1.5">
+                                            <strong>Seguranca:</strong> Se voce nao esperava esta notificacao, entre em
+                                            contato com o analista <strong>{{senderName}}</strong> ou com o
+                                            administrador do sistema.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- FALLBACK LINK -->
+                            <p style="margin:0 0 4px;font-size:11px;color:#86868B">Ou copie o link no seu navegador:</p>
+                            <p style="margin:0;font-size:11px;word-break:break-all">
+                                <a href="{{portalUrl}}"
+                                    style="color:#249485;text-decoration:underline">{{portalUrl}}</a>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- FOOTER -->
+                    <tr>
+                        <td align="center" style="padding:24px 48px;border-top:1px solid #E5E5EA">
+                            <p style="margin:0 0 4px;font-size:11px;color:#86868B">GEPRIV &bull; Governanca, Risco e
+                                Conformidade</p>
+                            <p style="margin:0;font-size:11px;color:#A1A1A6">Mensagem automatica, nao responda.</p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

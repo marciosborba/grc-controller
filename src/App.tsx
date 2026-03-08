@@ -171,6 +171,13 @@ const VendorAssessmentFill = lazy(() => import("@/pages/VendorPortal/VendorAsses
 const VendorActionPlans = lazy(() => import("@/pages/VendorPortal/VendorActionPlans").then(module => ({ default: module.VendorActionPlans })));
 const VendorMessages = lazy(() => import("@/pages/VendorPortal/VendorMessages").then(module => ({ default: module.VendorMessages })));
 
+// Portal de Riscos (Autenticado via SSO principal)
+const RiskPortalLayout = lazy(() => import("@/pages/RiskPortal/RiskPortalLayout").then(module => ({ default: module.RiskPortalLayout })));
+const RiskPortalDashboard = lazy(() => import("@/pages/RiskPortal/RiskPortalDashboard").then(module => ({ default: module.RiskPortalDashboard })));
+const RiskPortalMyRisks = lazy(() => import("@/pages/RiskPortal/RiskPortalMyRisks").then(module => ({ default: module.RiskPortalMyRisks })));
+const RiskPortalRiskDetail = lazy(() => import("@/pages/RiskPortal/RiskPortalRiskDetail").then(module => ({ default: module.RiskPortalRiskDetail })));
+const RiskPortalActionPlans = lazy(() => import("@/pages/RiskPortal/RiskPortalActionPlans").then(module => ({ default: module.RiskPortalActionPlans })));
+
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
 const UserDebugInfo = lazy(() => import("@/components/admin/UserDebugInfo"));
@@ -376,6 +383,18 @@ const App = () => (
                       <Route path="assessment/:id" element={<VendorAssessmentFill />} />
                       <Route path="action-plans" element={<VendorActionPlans />} />
                       <Route path="messages" element={<VendorMessages />} />
+                    </Route>
+
+                    {/* Risk Portal Routes (SSO - same login as main app) */}
+                    <Route path="/risk-portal" element={
+                      <Suspense fallback={<PageLoader />}>
+                        <RiskPortalLayout />
+                      </Suspense>
+                    }>
+                      <Route index element={<RiskPortalDashboard />} />
+                      <Route path="my-risks" element={<RiskPortalMyRisks />} />
+                      <Route path="risk/:id" element={<RiskPortalRiskDetail />} />
+                      <Route path="action-plans" element={<RiskPortalActionPlans />} />
                     </Route>
 
                     {/* Protected Routes */}

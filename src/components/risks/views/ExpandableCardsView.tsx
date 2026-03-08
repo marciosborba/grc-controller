@@ -56,8 +56,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import type { Risk, RiskFilters, RiskStatus } from '@/types/risk-management';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 interface ExpandableCardsViewProps {
   risks: Risk[];
@@ -2239,18 +2239,40 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                                   toast({ title: 'Aviso', description: 'Preencha um e-mail antes de notificar.', variant: 'destructive' });
                                                   return;
                                                 }
-                                                // Simulando envio nativo
+
                                                 toast({
                                                   title: 'Enviando...',
                                                   description: `Notificando ${stk.name || stk.email}...`,
                                                 });
-                                                setTimeout(() => {
+
+                                                try {
+                                                  const { error } = await supabase.functions.invoke('risk-notification', {
+                                                    body: {
+                                                      recipientName: stk.name || 'Stakeholder',
+                                                      recipientEmail: stk.email,
+                                                      riskTitle: risk.title || risk.risk_title || risk.name || 'Risco não nomeado',
+                                                      riskDescription: risk.description || risk.risk_description || 'Nenhuma descrição fornecida',
+                                                      riskLevel: risk.riskLevel || risk.risk_level || 'Não definido',
+                                                      riskCategory: risk.category || risk.risk_category || 'Não definida',
+                                                      senderName: user?.email || 'Sistema CyberGuard'
+                                                    }
+                                                  });
+
+                                                  if (error) throw error;
+
                                                   toast({
                                                     title: 'Notificação enviada',
                                                     description: `O e-mail foi disparado para ${stk.email} com sucesso!`,
                                                     variant: 'default'
                                                   });
-                                                }, 1500);
+                                                } catch (err: any) {
+                                                  console.error("Erro ao enviar notificação:", err);
+                                                  toast({
+                                                    title: 'Erro ao enviar notificação',
+                                                    description: err.message || 'Houve um problema ao tentar enviar o e-mail.',
+                                                    variant: 'destructive'
+                                                  });
+                                                }
                                               }}
                                             >
                                               <Send className="h-4 w-4 mr-2" />
