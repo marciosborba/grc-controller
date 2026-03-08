@@ -18,13 +18,19 @@ export const ResetPasswordPage = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
 
+    const [isGuestInvite, setIsGuestInvite] = useState(() => {
+        // Initial synchronous check (might fail if hash is already processed)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        return hashParams.get('type') === 'invite' || hashParams.get('redirect_to')?.includes('risk-portal') || false;
+    });
+
     const isVendorPortal = window.location.pathname.includes('/vendor-portal');
     const loginRoute = isVendorPortal ? '/vendor-portal/login' : '/login';
 
     useEffect(() => {
         // Check for error in the URL hash (e.g. expired link)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const errorDescription = hashParams.get('error_description');
+        const urlHashParams = new URLSearchParams(window.location.hash.substring(1));
+        const errorDescription = urlHashParams.get('error_description');
 
         if (errorDescription) {
             setHashError(decodeURIComponent(errorDescription));
@@ -35,12 +41,24 @@ export const ResetPasswordPage = () => {
             });
         }
 
+        // Check user session to see if they are a guest (more reliable than hash)
+        const checkUserRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user?.user_metadata?.system_role === 'guest') {
+                setIsGuestInvite(true);
+            }
+        };
+        checkUserRole();
+
         // Set up a listener so if the user arrives cleanly, we ensure they are "logged in" enough to update their password
         const { data: authListener } = supabase.auth.onAuthStateChange(
             (event, session) => {
                 if (event === 'PASSWORD_RECOVERY') {
                     console.log('🔗 [AUTH] Redefinição de senha autorizada.');
                     setHashError(null);
+                    if (session?.user?.user_metadata?.system_role === 'guest') {
+                        setIsGuestInvite(true);
+                    }
                 }
             }
         );
@@ -83,17 +101,20 @@ export const ResetPasswordPage = () => {
 
             setSuccess(true);
             toast({
-                title: "Senha alterada com sucesso!",
-                description: "Você será redirecionado para o login.",
+                title: isGuestInvite ? "Bem-vindo(a) ao Portal de Riscos!" : "Senha alterada com sucesso!",
+                description: isGuestInvite
+                    ? "Sua senha foi criada. Redirecionando para o portal..."
+                    : "Você será redirecionado para o login.",
             });
 
-            // Clear the session so the user must log in with the new password
-            await supabase.auth.signOut();
-
-            // Redirect after 3 seconds
-            setTimeout(() => {
-                navigate(loginRoute);
-            }, 3000);
+            if (isGuestInvite) {
+                // Guest invite: keep session active and go straight to risk portal
+                setTimeout(() => navigate('/risk-portal'), 2000);
+            } else {
+                // Regular password reset: sign out and go to login
+                await supabase.auth.signOut();
+                setTimeout(() => navigate(loginRoute), 3000);
+            }
 
         } catch (error: any) {
             console.error('❌ Erro ao redefinir senha:', error);

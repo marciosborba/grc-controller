@@ -48,6 +48,7 @@ export interface AuthUser {
   };
   mfaEnabled?: boolean;
   isVendorOnly?: boolean; // Added field to identify vendor users
+  system_role?: string; // Identifies guest users natively
 }
 
 // ... (existing code)
@@ -265,10 +266,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           enabledModules,
           settings: tenantSettings,
           tenant: tenantData ? {
-            id: profile?.tenant_id, // Add ID to satisfy Tenant interface if mostly compatible, or expect errors? AuthUser tenant is Tenant interface.
+            id: profile?.tenant_id,
             name: tenantData.name,
             slug: tenantData.slug,
-            // MOCK missing required fields to avoid typescript errors since we only need name/settings mostly
             contact_email: '',
             max_users: 0,
             current_users_count: 0,
@@ -276,7 +276,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             is_active: true
           } : undefined,
           mfaEnabled: false,
-          isVendorOnly: isVendorOnly
+          isVendorOnly: isVendorOnly,
+          system_role: profile?.system_role
         };
 
         // Check MFA Status

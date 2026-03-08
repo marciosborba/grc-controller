@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
+import { useTenantSecurity } from '@/utils/tenantSecurity';
 import type { Risk, RiskFilters, RiskStatus } from '@/types/risk-management';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -86,6 +87,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
 
   const { toast } = useToast();
   const { tenantSettings, isMatrix4x4, getRiskLevels, getMatrixLabels, getMatrixDimensions } = useTenantSettings();
+  const { userTenantId } = useTenantSecurity();
   const { user } = useAuth();
 
   const matrixLabels = getMatrixLabels();
@@ -2246,6 +2248,24 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                                 });
 
                                                 try {
+                                                  // 1. Verificar/criar usuário convidado e obter invite link
+                                                  let customPortalUrl: string | undefined;
+                                                  const { data: inviteData } = await supabase.functions.invoke('invite-risk-stakeholder', {
+                                                    body: {
+                                                      email: stk.email,
+                                                      full_name: stk.name || stk.email,
+                                                      tenant_id: userTenantId || (user as any)?.user_metadata?.tenant_id || (risk as any).tenant_id,
+                                                    }
+                                                  });
+
+                                                  if (inviteData?.isNewUser && inviteData?.inviteLink) {
+                                                    customPortalUrl = inviteData.inviteLink;
+                                                    console.log(`🔗 Reenvio para novo convidado: ${stk.email} — link gerado`);
+                                                  } else {
+                                                    console.log(`👤 Reenvio para usuário existente: ${stk.email}`);
+                                                  }
+
+                                                  // 2. Enviar notificação de risco
                                                   const { error } = await supabase.functions.invoke('risk-notification', {
                                                     body: {
                                                       recipientName: stk.name || 'Stakeholder',
@@ -2254,7 +2274,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                                       riskDescription: risk.description || risk.risk_description || 'Nenhuma descrição fornecida',
                                                       riskLevel: risk.riskLevel || risk.risk_level || 'Não definido',
                                                       riskCategory: risk.category || risk.risk_category || 'Não definida',
-                                                      senderName: user?.email || 'Sistema CyberGuard'
+                                                      senderName: user?.email || 'Sistema CyberGuard',
+                                                      customPortalUrl,
                                                     }
                                                   });
 

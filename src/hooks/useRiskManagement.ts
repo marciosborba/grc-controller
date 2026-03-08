@@ -666,6 +666,26 @@ export const useRiskManagement = () => {
           // Disparar notificação por email usando edge function
           if (stakeholder.notifyEmail && stakeholder.email) {
             try {
+              // 1. Verificar/criar usuário convidado e obter invite link
+              let customPortalUrl: string | undefined;
+              if (stakeholder.email) {
+                const { data: inviteData } = await supabase.functions.invoke('invite-risk-stakeholder', {
+                  body: {
+                    email: stakeholder.email,
+                    full_name: stakeholder.name,
+                    tenant_id: userTenantId,
+                  }
+                });
+                // Se for novo usuário, usar o link de definição de senha como CTA
+                if (inviteData?.isNewUser && inviteData?.inviteLink) {
+                  customPortalUrl = inviteData.inviteLink;
+                  console.log(`🔗 Novo usuário convidado: ${stakeholder.email} — link de set-password gerado`);
+                } else {
+                  console.log(`👤 Usuário existente: ${stakeholder.email} — usando link padrão do portal`);
+                }
+              }
+
+              // 2. Enviar notificação de risco com link correto no botão
               await supabase.functions.invoke('risk-notification', {
                 body: {
                   recipientName: stakeholder.name,
@@ -674,7 +694,8 @@ export const useRiskManagement = () => {
                   riskDescription: riskData.description || 'Nenhuma descrição fornecida',
                   riskLevel: riskLevel,
                   riskCategory: riskData.category,
-                  senderName: (user as any)?.full_name || user?.email || 'Sistema GRC'
+                  senderName: (user as any)?.full_name || user?.email || 'Sistema GRC',
+                  customPortalUrl,
                 }
               });
               console.log(`✉️ Email disparado para ${stakeholder.email}`);

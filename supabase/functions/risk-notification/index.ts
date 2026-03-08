@@ -16,6 +16,7 @@ interface RiskNotificationRequest {
   notificationType?: 'RISK' | 'ACTION_PLAN';
   actionPlanTitle?: string;
   actionPlanDueDate?: string;
+  customPortalUrl?: string; // invite link for new guest users
 }
 
 async function getSendPulseToken(clientId: string, clientSecret: string): Promise<string> {
@@ -44,12 +45,14 @@ const handler = async (req: Request): Promise<Response> => {
       notificationType = 'RISK',
       actionPlanTitle,
       actionPlanDueDate,
+      customPortalUrl,
     }: RiskNotificationRequest = await req.json();
 
     const clientId = Deno.env.get("SENDPULSE_CLIENT_ID")!;
     const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET")!;
     const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-    const portalUrl = `${Deno.env.get("FRONTEND_URL") || "https://app.gepriv.com"}/risk-portal`;
+    const defaultPortalUrl = `${Deno.env.get("FRONTEND_URL") || "https://gepriv.com"}/risk-portal`;
+    const portalUrl = customPortalUrl || defaultPortalUrl;
     const templateId = parseInt(Deno.env.get("SENDPULSE_TEMPLATE_RISK") || "77966");
 
     if (!clientId || !clientSecret) throw new Error("SENDPULSE credentials not configured.");
