@@ -98,35 +98,19 @@ serve(async (req: Request) => {
 
         console.log(`🔗 Invite link generated for ${emailNorm}: ${inviteLink?.substring(0, 80)}...`);
 
-        // 4. Upsert profile as guest — runs for BOTH new and existing-but-unconfirmed users
+        // 4. Always upsert profile as guest — ensures tenant_id and system_role are always set
+        // (Auth trigger may create a profile with null tenant_id before we can set it)
         if (userId) {
-            // Verify profile doesn't already exist with a different tenant before upserting
-            const { data: existingProfile } = await supabaseAdmin
-                .from('profiles')
-                .select('id, tenant_id')
-                .eq('user_id', userId)
-                .maybeSingle();
-
-            if (!existingProfile) {
-                // No profile yet — create one
-                const { error: profileErr } = await supabaseAdmin.from('profiles').insert({
-                    user_id: userId,
-                    email: emailNorm,
-                    full_name: full_name || emailNorm,
-                    tenant_id,
-                    system_role: 'guest',
-                    is_active: false,
-                });
-                if (profileErr) console.error('⚠️ Profile insert error:', profileErr.message);
-                else console.log(`✅ Profile created for guest ${emailNorm} in tenant ${tenant_id}`);
-            } else if (!existingProfile.tenant_id || existingProfile.tenant_id !== tenant_id) {
-                // Profile exists but with no/different tenant — update tenant_id and system_role
-                const { error: profileErr } = await supabaseAdmin.from('profiles')
-                    .update({ tenant_id, system_role: 'guest', is_active: false })
-                    .eq('user_id', userId);
-                if (profileErr) console.error('⚠️ Profile update error:', profileErr.message);
-                else console.log(`✅ Profile updated with tenant_id for guest ${emailNorm}`);
-            }
+            const { error: profileErr } = await supabaseAdmin.from('profiles').upsert({
+                user_id: userId,
+                email: emailNorm,
+                full_name: full_name || emailNorm,
+                tenant_id,
+                system_role: 'guest',
+                is_active: false,
+            }, { onConflict: 'user_id' });
+            if (profileErr) console.error('⚠️ Profile upsert error:', profileErr.message);
+            else console.log(`✅ Profile upserted for guest ${emailNorm} in tenant ${tenant_id}`);
 
             // Insert role so they appear in User Management
             await supabaseAdmin.from('user_roles').upsert({
@@ -137,6 +121,7 @@ serve(async (req: Request) => {
                 if (error) console.warn('⚠️ Role upsert warn:', error.message);
             });
         }
+
 
 
         return new Response(JSON.stringify({

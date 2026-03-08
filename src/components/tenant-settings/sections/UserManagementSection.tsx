@@ -282,18 +282,23 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         let status: User['status'] = 'active';
         try {
           if (!profile.user_id) {
-            // Se não tem user_id, é um convite pendente
+            // Se não tem user_id, é um convite pendente sem conta criada
             status = 'pending';
           } else if (profile.is_active === false) {
-            // Se tem user_id mas is_active é false, usuário foi inativado
-            status = 'inactive';
+            // Guests/convidados com convite enviado mas não confirmado ainda
+            // aparecem como 'pending' para diferenciar de usuários inativados
+            if (profile.system_role === 'guest' || profile.must_change_password === true) {
+              status = 'pending';
+            } else {
+              status = 'inactive';
+            }
           } else {
-            // Se tem user_id e is_active é true, usuário está ativo
             status = 'active';
           }
         } catch (error) {
           status = 'active';
         }
+
 
         const processedUser = {
           id: profile.id || `unknown_${index}`,

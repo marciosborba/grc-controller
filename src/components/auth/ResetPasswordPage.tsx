@@ -60,6 +60,16 @@ export const ResetPasswordPage = () => {
                         setIsGuestInvite(true);
                     }
                 }
+                // Invite links fire SIGNED_IN instead of PASSWORD_RECOVERY
+                if (event === 'SIGNED_IN') {
+                    const role = session?.user?.user_metadata?.system_role;
+                    const type = new URLSearchParams(window.location.hash.substring(1)).get('type');
+                    if (role === 'guest' || type === 'invite') {
+                        console.log('🔗 [AUTH] Convite detectado via SIGNED_IN — ativando modo convidado.');
+                        setIsGuestInvite(true);
+                        setHashError(null);
+                    }
+                }
             }
         );
 
@@ -162,15 +172,17 @@ export const ResetPasswordPage = () => {
                         </div>
                         <CardTitle className="text-2xl font-bold">Tudo Pronto!</CardTitle>
                         <CardDescription className="text-green-600 dark:text-green-400 font-medium">
-                            Sua senha foi redefinida com sucesso.
+                            {isGuestInvite ? 'Bem-vindo(a)! Sua senha foi criada com sucesso.' : 'Sua senha foi redefinida com sucesso.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
                         <p className="text-sm text-muted-foreground mb-6">
-                            Você será redirecionado para a tela de login em alguns instantes.
+                            {isGuestInvite
+                                ? 'Você será redirecionado para o Portal de Riscos em alguns instantes.'
+                                : 'Você será redirecionado para a tela de login em alguns instantes.'}
                         </p>
-                        <Button className="w-full" onClick={() => navigate(loginRoute)}>
-                            Ir para o Login Agora
+                        <Button className="w-full" onClick={() => navigate(isGuestInvite ? '/risk-portal' : loginRoute)}>
+                            {isGuestInvite ? 'Ir para o Portal de Riscos' : 'Ir para o Login Agora'}
                         </Button>
                     </CardContent>
                 </Card>
