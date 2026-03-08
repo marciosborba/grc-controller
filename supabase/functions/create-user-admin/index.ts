@@ -4,6 +4,73 @@ import { corsHeaders } from '../_shared/cors.ts'
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
 const RESET_URL = `${FRONTEND_URL}/reset-password`;
 
+async function getSendPulseToken(clientId: string, clientSecret: string) {
+  const res = await fetch("https://api.sendpulse.com/oauth/access_token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
+  });
+  if (!res.ok) throw new Error(`SendPulse Auth failed: ${await res.text()}`);
+  return (await res.json()).access_token;
+}
+
+async function sendSendPulseInvite({
+  recipientEmail,
+  recipientName,
+  inviteLink,
+  senderName
+}: {
+  recipientEmail: string;
+  recipientName: string;
+  inviteLink: string;
+  senderName: string;
+}) {
+  const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
+  const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
+  const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
+  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE");
+
+  if (!clientId || !clientSecret || !templateIdStr) {
+    console.warn("⚠️ SendPulse configuration missing (ID, Secret or Template). Skipping email sending.");
+    return false;
+  }
+
+  const templateId = parseInt(templateIdStr);
+  const accessToken = await getSendPulseToken(clientId, clientSecret);
+
+  const res = await fetch("https://api.sendpulse.com/smtp/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      email: {
+        subject: "Bem-vindo ao GRC Controller - Defina sua senha",
+        template: {
+          id: templateId,
+          variables: {
+            firstName: recipientName.split(" ")[0],
+            inviteLink: inviteLink,
+            senderName: senderName || "Administrador",
+          },
+        },
+        from: { name: "GEPRIV", email: fromEmail },
+        to: [{ name: recipientName, email: recipientEmail }],
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("❌ SendPulse send error:", errorText);
+    throw new Error(`SendPulse send failed: ${errorText}`);
+  }
+
+  console.log(`✅ Invitation email sent via SendPulse to ${recipientEmail}`);
+  return true;
+}
+
 interface CreateUserRequest {
   email: string;
   full_name: string;
@@ -196,6 +263,21 @@ Deno.serve(async (req) => {
         p_details: { email: emailNorm, system_role: systemRole, roles: userData.roles }
       })
     } catch { /* ignore log errors */ }
+
+    // ── Send Email via SendPulse ──
+    if (userData.send_invitation !== false && inviteLink) {
+      try {
+        await sendSendPulseInvite({
+          recipientEmail: emailNorm,
+          recipientName: userData.full_name,
+          inviteLink: inviteLink,
+          senderName: user.email?.split('@')[0] || "Administrador"
+        });
+      } catch (emailErr: any) {
+        console.error("⚠️ Invite email failed to send, but user was created:", emailErr.message);
+        // We don't fail the whole request if only the email fails, but we inform the user
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, user: { id: userId, email: emailNorm }, inviteLink }),
