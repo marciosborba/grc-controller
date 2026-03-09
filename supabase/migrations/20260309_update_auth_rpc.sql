@@ -17,19 +17,19 @@ BEGIN
     
     -- 1. Profile
     SELECT row_to_json(p) INTO res_profile 
-    FROM (SELECT * FROM public.profiles WHERE id = uid) p;
+    FROM (SELECT * FROM public.profiles WHERE user_id = uid) p;
     
     -- 2. Tenant
     SELECT row_to_json(t) INTO res_tenant 
     FROM public.tenants t
     JOIN public.profiles p ON p.tenant_id = t.id
-    WHERE p.id = uid;
+    WHERE p.user_id = uid;
     
     -- 3. Modules
     SELECT json_agg(tm) INTO res_modules
     FROM public.tenant_modules tm
     JOIN public.profiles p ON p.tenant_id = tm.tenant_id
-    WHERE p.id = uid;
+    WHERE p.user_id = uid;
     
     -- 4. Roles
     SELECT json_agg(ur) INTO res_roles
