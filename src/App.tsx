@@ -415,7 +415,11 @@ const App = () => (
                       </ProtectedRoute>
                     }>
                       <Route index element={<Navigate to="/dashboard" replace />} />
-                      <Route path="dashboard" element={<DashboardPage />} />
+                      <Route path="dashboard" element={
+                        <ModuleGuard moduleKey="dashboard">
+                          <DashboardPage />
+                        </ModuleGuard>
+                      } />
                       {/* Assessment Module Routes */}
                       <Route element={<ModuleGuard moduleKey="assessments"><Outlet /></ModuleGuard>}>
                         <Route path="assessments" element={
@@ -912,68 +916,76 @@ const App = () => (
                           </Suspense>
                         </PlatformAdminRoute>
                       } />
-                      <Route path="debug-user" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <DebugUserInfo />
-                        </Suspense>
-                      } />
-                      <Route path="user-debug" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <UserDebugInfo />
-                        </Suspense>
-                      } />
-                      <Route path="auth-debug" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <AuthDebugComponent />
-                        </Suspense>
-                      } />
-                      <Route path="permissions-debug" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <UserPermissionsDebug />
-                        </Suspense>
-                      } />
-                      <Route path="ai-manager-test" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <AIManagerDirectTest />
-                        </Suspense>
-                      } />
+                      <Route element={<PlatformAdminRoute><Outlet /></PlatformAdminRoute>}>
+                        <Route path="debug-user" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <DebugUserInfo />
+                          </Suspense>
+                        } />
+                        <Route path="user-debug" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <UserDebugInfo />
+                          </Suspense>
+                        } />
+                        <Route path="auth-debug" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <AuthDebugComponent />
+                          </Suspense>
+                        } />
+                        <Route path="permissions-debug" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <UserPermissionsDebug />
+                          </Suspense>
+                        } />
+                        <Route path="ai-manager-test" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <AIManagerDirectTest />
+                          </Suspense>
+                        } />
+                      </Route>
                       <Route path="profile" element={
                         <Suspense fallback={<PageLoader />}>
                           <UserProfilePage />
                         </Suspense>
                       } />
-                      <Route path="settings" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <UserManagementPage />
-                        </Suspense>
-                      } />
-                      <Route path="settings/activity-logs" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <ActivityLogsPage />
-                        </Suspense>
-                      } />
-                      <Route path="settings/general" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <GeneralSettingsPage />
-                        </Suspense>
-                      } />
-                      <Route path="tenant-settings" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <TenantSettingsPage />
-                        </Suspense>
-                      } />
+                      <Route element={<ModuleGuard moduleKey="settings"><Outlet /></ModuleGuard>}>
+                        <Route path="settings" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <UserManagementPage />
+                          </Suspense>
+                        } />
+                        <Route path="settings/activity-logs" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <ActivityLogsPage />
+                          </Suspense>
+                        } />
+                        <Route path="settings/general" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <GeneralSettingsPage />
+                          </Suspense>
+                        } />
+                        <Route path="tenant-settings" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <TenantSettingsPage />
+                          </Suspense>
+                        } />
+                      </Route>
 
 
 
                       <Route path="notifications" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <NotificationsPage />
-                        </Suspense>
+                        <ModuleGuard moduleKey="notifications">
+                          <Suspense fallback={<PageLoader />}>
+                            <NotificationsPage />
+                          </Suspense>
+                        </ModuleGuard>
                       } />
                       <Route path="help" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <HelpPage />
-                        </Suspense>
+                        <ModuleGuard moduleKey="help">
+                          <Suspense fallback={<PageLoader />}>
+                            <HelpPage />
+                          </Suspense>
+                        </ModuleGuard>
                       } />
 
                       {/* Rotas de teste movidas para DENTRO da estrutura aninhada */}

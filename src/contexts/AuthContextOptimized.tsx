@@ -142,7 +142,10 @@ const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
   ethics: ['ethics.read'],
   assessments: ['assessment.read'],
   action_plans: ['action_plan.read'],
-  strategic_planning: ['strategic.read']
+  strategic_planning: ['strategic.read'],
+  tprm: ['vendor.read', 'vendor.write'],
+  policy_management: ['compliance.read'],
+  ai_manager: ['admin']
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -699,23 +702,43 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   // Check module access
   const checkModuleAccess = useCallback((moduleKey: string) => {
     if (!user) return false;
-    // Platform Admin has all permissions, but should still respect ENABLED MODULES for the tenant
-    // if (user.isPlatformAdmin) return true; 
 
-    // AI Modules Check - Enforce Global AI Setting
-    // Exceção: Platform Admin sempre pode acessar o AI Manager (configuração do sistema)
-    if (['ai_manager'].includes(moduleKey) && user.isPlatformAdmin) {
-      return true;
+    // Platform Admin has all permissions, but should still respect ENABLED MODULES for the tenant
+    // unless they are accessing an admin-only area.
+    if (user.isPlatformAdmin) {
+      if (['ai_manager', 'settings', 'admin', 'dashboard', 'help', 'notifications'].includes(moduleKey)) return true;
+      return user.enabledModules?.includes(moduleKey) || false;
     }
 
+    // AI Modules Check - Enforce Global AI Setting
     if (['ai_manager', 'policy_auditor'].includes(moduleKey)) {
       if (!user.settings?.enable_global_ai) return false;
     }
 
-    // Public modules or basic ones
-    if (['dashboard', 'help', 'notifications', 'settings', 'admin'].includes(moduleKey)) return true; // Ensure 'admin' module is always accessible for admins
+    // Public modules or basic ones - Ensure common.read is checked for these
+    if (['dashboard', 'help', 'notifications'].includes(moduleKey)) {
+      return user.permissions?.includes('common.read') || user.permissions?.includes('all') || user.permissions?.includes('*');
+    }
 
-    return user.enabledModules?.includes(moduleKey) || false;
+    // 1. Is it enabled for the tenant?
+    if (!user.enabledModules?.includes(moduleKey)) return false;
+
+    // 2. Map moduleKey to required permissions
+    const requiredPermissions = CUSTOM_MODULE_MAPPING[moduleKey] || [];
+
+    // 3. If no specific mapping, we default to strict (false) unless it's a known non-RBAC module
+    if (requiredPermissions.length === 0) {
+      // Fallback for modules not in mapping but enabled for tenant
+      // If it's a valid system module key, it might not need RBAC (unlikely given request)
+      return false;
+    }
+
+    // 4. Does the user HAVE any of these permissions?
+    return requiredPermissions.some(p =>
+      user.permissions?.includes(p) ||
+      user.permissions?.includes('all') ||
+      user.permissions?.includes('*')
+    );
   }, [user]);
 
   // Listen for security events (Kick User) - REALTIME KILL SWITCH
