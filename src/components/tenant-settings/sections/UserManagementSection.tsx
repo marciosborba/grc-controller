@@ -378,12 +378,29 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         must_change_password: true,
       };
 
-      const { data, error } = await supabase.functions.invoke('create-user-admin', {
+      const response = await supabase.functions.invoke('create-user-admin', {
         body: payload,
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (error) throw new Error(error.message);
+      const { data, error } = response;
+
+      // Supabase edge functions often pack the real error message inside the `error` object or its context
+      if (error) {
+        let errorMsg = error.message;
+        try {
+          // Attempt to parse if it's a context object containing JSON
+          if (error.context?.json) {
+            const body = await error.context.json();
+            if (body.error) errorMsg = body.error;
+          } else if (typeof error.context === 'string') {
+            const body = JSON.parse(error.context);
+            if (body.error) errorMsg = body.error;
+          }
+        } catch (e) { /* ignore parse errors */ }
+        throw new Error(errorMsg);
+      }
+
       if (!data?.success) throw new Error(data?.error || 'Erro ao criar usuário');
 
       setIsCreateDialogOpen(false);
