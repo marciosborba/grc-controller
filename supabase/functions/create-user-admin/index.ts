@@ -250,10 +250,19 @@ Deno.serve(async (req) => {
       }
 
       // ── Assign roles ──
+      // Map system roles to valid app_role enum values
+      const mapToAppRole = (role: string): string => {
+        const mapping: Record<string, string> = {
+          'tenant_admin': 'admin',
+          'guest': 'user',
+        }
+        return mapping[role] || role
+      }
       const rolesToAssign = userData.roles?.length ? userData.roles : [systemRole]
       for (const role of rolesToAssign) {
+        const appRole = mapToAppRole(role)
         await supabaseAdmin.from('user_roles').upsert(
-          { user_id: userId, role, tenant_id: targetTenantId },
+          { user_id: userId, role: appRole, tenant_id: targetTenantId },
           { onConflict: 'user_id, role' }
         )
       }

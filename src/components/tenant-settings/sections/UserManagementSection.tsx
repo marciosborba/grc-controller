@@ -520,20 +520,22 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       if (!confirm(`Tem certeza que deseja excluir o convite para ${user.full_name}?\n\nEsta ação não pode ser desfeita.`)) return;
 
       try {
-        // Excluir permanentemente da tabela profiles (é apenas um convite)
-        const { error: deleteError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userId);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) { toast.error('Sessão inválida'); return; }
 
-        if (deleteError) {
-          toast.error('Erro ao excluir convite: ' + deleteError.message);
-          return;
-        }
+        // Chamar edge function para deletar completamente (profiles + user_roles + auth.users)
+        const { data, error } = await supabase.functions.invoke('delete-user-admin', {
+          body: { profile_id: userId, user_id: user.user_id || null },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error(data?.error || 'Erro ao excluir convite');
 
         toast.success('Convite excluído com sucesso!');
-      } catch (error) {
-        toast.error('Erro inesperado ao excluir convite');
+      } catch (error: any) {
+        toast.error('Erro ao excluir convite: ' + error.message);
       }
     } else {
       // Para usuários ativos/inativos, apenas inativar
