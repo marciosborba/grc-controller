@@ -105,30 +105,30 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
       auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
       user: ['read', 'all']
     };
-    
+
     const allPermissions = new Set<string>();
-    
+
     // Adicionar permissões das roles básicas
     roles.forEach(role => {
       const rolePermissions = permissionMap[role] || ['read'];
       rolePermissions.forEach(permission => allPermissions.add(permission));
     });
-    
+
     // Buscar permissões de roles customizadas do banco de dados (com timeout)
     if (userId) {
       try {
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 3000)
         );
-        
+
         const queryPromise = supabase
           .from('custom_roles')
           .select('permissions')
           .in('name', roles)
           .eq('is_active', true);
-          
+
         const { data: customRoles, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
-          
+
         if (!error && customRoles) {
           customRoles.forEach((customRole: any) => {
             if (customRole.permissions) {
@@ -142,27 +142,27 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
         // Continuar com permissões básicas
       }
     }
-    
+
     const finalPermissions = Array.from(allPermissions);
-    
+
     // Cachear resultado
     if (userId) {
       setCachedRoles(userId, roles, finalPermissions);
     }
-    
+
     return finalPermissions;
   }, [getCachedRoles, setCachedRoles]);
 
   // Helper function otimizada para construir objeto do usuário
   const buildUserObject = useCallback(async (supabaseUser: User): Promise<AuthUser> => {
     console.log('[AUTH] Construindo objeto do usuário:', supabaseUser.id);
-    
+
     try {
       // Query otimizada com timeout
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout na consulta do usuário')), 5000)
       );
-      
+
       const queryPromise = Promise.all([
         supabase
           .from('profiles')
@@ -193,7 +193,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
       if (profileError && profileError.code !== 'PGRST116') {
         console.error('[AUTH] Erro no perfil:', profileError);
       }
-      
+
       console.log(`[AUTH] Perfil carregado:`, !!profile, profile?.full_name || 'Sem nome');
 
       const isPlatformAdmin = !!platformAdmin;
@@ -215,16 +215,16 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
             .select('id, name, slug, contact_email, max_users, current_users_count, subscription_plan, is_active, settings')
             .eq('id', profile.tenant_id)
             .maybeSingle();
-            
-          const tenantTimeout = new Promise((_, reject) => 
+
+          const tenantTimeout = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout tenant')), 2000)
           );
-          
+
           const { data: tenantData, error: tenantError } = await Promise.race([
             tenantQuery,
             tenantTimeout
           ]) as any;
-          
+
           if (tenantData) {
             tenant = tenantData;
             console.log('[AUTH] Tenant carregado:', tenantData.name);
@@ -234,9 +234,9 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
               '37b809d4-1a23-40b9-8ef1-17f24ed4c08b': 'empresa 2',
               '46b1c048-85a1-423b-96fc-776007c8de1f': 'GRC-Controller',
             };
-            
+
             const tenantName = TENANT_NAMES[profile.tenant_id] || 'Organização';
-            
+
             tenant = {
               id: profile.tenant_id,
               name: tenantName,
@@ -286,14 +286,14 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
         roles: authUser.roles,
         permissionsCount: authUser.permissions.length
       });
-      
+
       await logAuthEvent('login_success', { user_id: supabaseUser.id });
       return authUser;
-      
+
     } catch (error: any) {
       console.error('[AUTH] Erro ao construir usuário:', error);
       await logSuspiciousActivity('user_build_error', { user_id: supabaseUser.id, error: error.message });
-      
+
       // Retornar usuário básico em caso de erro
       return {
         id: supabaseUser.id,
@@ -309,7 +309,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
-    
+
     try {
       // Validações básicas
       if (!validateEmailFormat(email)) {
@@ -324,8 +324,8 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
       }
 
       const sessionInfo = await captureSessionInfo();
-      
-      await logAuthEvent('login_attempt', { 
+
+      await logAuthEvent('login_attempt', {
         email,
         ip_address: sessionInfo.ip_address,
         user_agent: sessionInfo.user_agent,
@@ -334,7 +334,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
 
       // Limpeza antes do login
       cleanupAuthState();
-      
+
       try {
         await supabase.auth.signOut({ scope: 'global' });
       } catch (err) {
@@ -347,23 +347,23 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
       });
 
       if (error) {
-        await logAuthEvent('login_failure', { 
-          reason: error.message, 
+        await logAuthEvent('login_failure', {
+          reason: error.message,
           email,
           ip_address: sessionInfo.ip_address
         });
         throw error;
       }
-      
+
       if (data.user && data.session) {
         setSession(data.session);
-        
+
         // Construir usuário de forma assíncrona para não bloquear
         setTimeout(async () => {
           try {
             const authUser = await buildUserObject(data.user);
             setUser(authUser);
-            
+
             // Definir tenant no contexto
             if (authUser.tenantId) {
               try {
@@ -377,7 +377,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
                 console.warn('[AUTH] Erro ao definir tenant:', error);
               }
             }
-            
+
             // Atualizar dados de login
             try {
               const { data: currentProfile } = await supabase
@@ -385,22 +385,24 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
                 .select('login_count')
                 .eq('user_id', data.user.id)
                 .single();
-              
+
               const currentCount = currentProfile?.login_count || 0;
-              
+
               await supabase
                 .from('profiles')
                 .update({
                   last_login_at: new Date().toISOString(),
-                  login_count: currentCount + 1
+                  login_count: currentCount + 1,
+                  is_active: true,
+                  must_change_password: false,
                 })
                 .eq('user_id', data.user.id);
-                
+
               console.log('✅ Dados de login atualizados');
             } catch (updateError) {
               console.warn('[AUTH] Erro ao atualizar dados de login:', updateError);
             }
-            
+
             await logAuthEvent('login_success', {
               user_id: data.user.id,
               email,
@@ -413,9 +415,9 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
       }
     } catch (error: any) {
       const sessionInfo = await captureSessionInfo();
-      
-      await logAuthEvent('login_failure', { 
-        reason: error.message, 
+
+      await logAuthEvent('login_failure', {
+        reason: error.message,
         email,
         ip_address: sessionInfo.ip_address
       });
@@ -427,7 +429,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const signup = async (email: string, password: string, fullName: string, jobTitle?: string): Promise<void> => {
     setIsLoading(true);
-    
+
     try {
       if (!validateEmailFormat(email)) {
         await logAuthEvent('signup_failure', { reason: 'invalid_email_format', email });
@@ -462,7 +464,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
         await logAuthEvent('signup_failure', { reason: error.message, email });
         throw error;
       }
-      
+
       if (data.user) {
         // Atribuir role padrão
         await supabase
@@ -482,15 +484,15 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
   const logout = async () => {
     try {
       await logAuthEvent('logout', { user_id: user?.id });
-      
+
       // Limpar cache
       roleCache.clear();
-      
+
       await performSecureSignOut(supabase);
-      
+
       setUser(null);
       setSession(null);
-      
+
       // Forçar reload para estado limpo
       setTimeout(() => {
         window.location.href = '/login';
@@ -503,13 +505,13 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
 
   useEffect(() => {
     console.log('[AUTH] Inicializando AuthProvider otimizado');
-    
+
     // Configurar listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[AUTH] Mudança de estado:', event);
         setSession(session);
-        
+
         if (event === 'SIGNED_IN' && session?.user) {
           // Defer para evitar deadlocks
           setTimeout(async () => {
@@ -526,7 +528,7 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
           roleCache.clear();
           cleanupAuthState();
         }
-        
+
         setIsLoading(false);
       }
     );
