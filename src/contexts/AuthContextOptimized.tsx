@@ -114,7 +114,7 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
     risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read', 'assessment.read'],
     compliance_officer: ['read', 'write', 'compliance.read', 'compliance.write', 'privacy.read', 'audit.read', 'assessment.read'],
     auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
-    user: ['read', 'all']
+    user: ['read', 'common.read']
   };
 
   const allPermissions = new Set<string>();
@@ -138,7 +138,11 @@ const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
   vendor_portal: ['vendor.read', 'vendor.write'],
   policies: ['compliance.read'],
   privacy: ['privacy.read', 'privacy.write'],
-  reports: ['report.read']
+  reports: ['report.read'],
+  ethics: ['ethics.read'],
+  assessments: ['assessment.read'],
+  action_plans: ['action_plan.read'],
+  strategic_planning: ['strategic.read']
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {

@@ -43,35 +43,35 @@ const navigationItems = [{
       title: 'Auditoria',
       url: '/auditorias',
       icon: Search,
-      permissions: ['all'],
+      permissions: ['audit.read'],
       description: 'Motor de assurance dinâmico e conectado'
     },
     {
       title: 'Assessments',
       url: '/assessments',
       icon: Target,
-      permissions: ['all'],
+      permissions: ['assessment.read'],
       description: 'Avaliações de maturidade e compliance'
     },
     {
       title: 'Conformidade',
       url: '/compliance',
       icon: FileCheck,
-      permissions: ['compliance.read', 'all'],
+      permissions: ['compliance.read'],
       description: 'Gestão de conformidade e frameworks regulatórios'
     },
     {
       title: 'Ética',
       url: '/ethics',
       icon: Shield,
-      permissions: ['all'],
+      permissions: ['ethics.read'],
       description: 'Denúncias e questões éticas'
     },
     {
       title: 'Vulnerabilidades',
       url: '/vulnerabilities',
       icon: Bug,
-      permissions: ['security.read', 'vulnerability.read', 'all'],
+      permissions: ['vulnerability.read'],
       description: 'Gestão de vulnerabilidades de segurança'
     },
     {
@@ -86,14 +86,14 @@ const navigationItems = [{
       title: 'Dashboard',
       url: '/dashboard',
       icon: LayoutDashboard,
-      permissions: ['all'],
+      permissions: ['common.read'],
       description: 'Visão geral e métricas principais'
     },
     {
       title: 'Notificações',
       url: '/notifications',
       icon: Bell,
-      permissions: ['all'],
+      permissions: ['common.read'],
       description: 'Central de notificações e alertas'
     },
     {
@@ -107,7 +107,7 @@ const navigationItems = [{
       title: 'Planos de Ação',
       url: '/action-plans',
       icon: Target,
-      permissions: ['all'],
+      permissions: ['action_plan.read'],
       description: 'Gestão centralizada de planos de ação'
     },
     {
@@ -149,7 +149,7 @@ const navigationItems = [{
       title: 'Ajuda',
       url: '/help',
       icon: HelpCircle,
-      permissions: ['all'],
+      permissions: ['common.read'],
       description: 'Centro de ajuda e documentação'
     }
   ]
@@ -465,10 +465,7 @@ export function AppSidebarFixed() {
       return true;
     }
 
-    // Verificar permissão 'all' (acesso público)
-    if (permissions.includes('all')) {
-      return true;
-    }
+    // MODO NORMAL (role original do usuário)
 
     // Verificar permissões específicas do usuário
     const userPermissions = user.permissions || [];
