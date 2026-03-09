@@ -111,17 +111,11 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
   const permissionMap: Record<string, string[]> = {
     admin: [
       'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete',
-      'assessment.read', 'dashboard.read', 'risk.read', 'risk.write', 'compliance.read', 'compliance.write',
-      'audit.read', 'audit.write', 'incident.read', 'incident.write', 'asset.read', 'asset.write',
-      'vulnerability.read', 'security.read', 'privacy.read', 'privacy.write', 'report.read', 'report.export',
-      'common.read', 'settings.read', 'settings.write', 'all', '*'
+      'common.read', 'settings.read', 'settings.write'
     ],
     tenant_admin: [
       'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete',
-      'assessment.read', 'dashboard.read', 'risk.read', 'risk.write', 'compliance.read', 'compliance.write',
-      'audit.read', 'audit.write', 'incident.read', 'incident.write', 'asset.read', 'asset.write',
-      'vulnerability.read', 'security.read', 'privacy.read', 'privacy.write', 'report.read', 'report.export',
-      'common.read', 'settings.read', 'settings.write', 'all', '*'
+      'common.read', 'settings.read', 'settings.write'
     ],
     ciso: ['read', 'write', 'admin', 'users.read', 'users.update', 'security.read', 'incidents.read', 'vulnerabilities.read', 'assessment.read'],
     risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read', 'assessment.read'],
@@ -235,8 +229,10 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         const rolesList = fullProfile.roles || [];
         const platformAdminData = fullProfile.platform_admin;
 
-        // Fetch Tenant Modules from RPC result
-        let enabledModules: string[] = modulesList.map((m: any) => m.module_key);
+        // Fetch Tenant Modules from RPC result (filtering only enabled ones)
+        let enabledModules: string[] = modulesList
+          .filter((m: any) => m.is_enabled === true)
+          .map((m: any) => m.module_key);
         console.log('📦 [AUTH] Enabled Modules for Tenant:', enabledModules);
 
         console.log('📊 [AUTH] Profile loaded via RPC:', {

@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 const WidgetSkeleton = () => <Skeleton className="h-full w-full rounded-xl min-h-[220px] bg-slate-800/50" />;
 
 export default function ModernDashboard() {
-    const { user } = useAuth();
+    const { user, checkModuleAccess } = useAuth();
     const tenantId = useCurrentTenantId();
     const date = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -92,69 +92,93 @@ export default function ModernDashboard() {
             {/* Main Grid - Ultimate 12 Modules (4x3) for Expert GRC Coverage */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 {/* Row 1: Strategic & High Level */}
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <RiskWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <ComplianceWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <PrivacyWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <TPRMWidget />
-                    </Suspense>
-                </div>
+                {checkModuleAccess('risk_management') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <RiskWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('compliance') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <ComplianceWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('privacy') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <PrivacyWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('tprm') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <TPRMWidget />
+                        </Suspense>
+                    </div>
+                )}
 
                 {/* Row 2: Operational & Tactical */}
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <VulnerabilityWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <IncidentsWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <AuditWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <PolicyWidget />
-                    </Suspense>
-                </div>
+                {checkModuleAccess('vulnerabilities') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <VulnerabilityWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('incidents') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <IncidentsWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('audit') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <AuditWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('policy_management') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <PolicyWidget />
+                        </Suspense>
+                    </div>
+                )}
 
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <EthicsWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <AssessmentsWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <NotificationsWidget />
-                    </Suspense>
-                </div>
-                <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
-                    <Suspense fallback={<WidgetSkeleton />}>
-                        <ActionPlanWidget />
-                    </Suspense>
-                </div>
+                {checkModuleAccess('ethics') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <EthicsWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('assessments') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <AssessmentsWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('notifications') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <NotificationsWidget />
+                        </Suspense>
+                    </div>
+                )}
+                {checkModuleAccess('action_plans') && (
+                    <div className="min-h-[160px] sm:min-h-[260px] lg:min-h-[350px] h-auto w-full">
+                        <Suspense fallback={<WidgetSkeleton />}>
+                            <ActionPlanWidget />
+                        </Suspense>
+                    </div>
+                )}
             </div>
 
 

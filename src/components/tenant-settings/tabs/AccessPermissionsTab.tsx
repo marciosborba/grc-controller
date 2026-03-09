@@ -236,6 +236,7 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
     const [selectedRole, setSelectedRole] = useState<TenantRole | null>(null);
     const [saving, setSaving] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [enabledModules, setEnabledModules] = useState<string[]>([]);
 
     useEffect(() => { fetchData(); }, [tenantId]);
 
@@ -243,6 +244,16 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
         setLoading(true);
         const { data: rolesData } = await supabase.from('tenant_roles').select('*').eq('tenant_id', tenantId).order('name');
         const { data: permsData } = await supabase.from('role_module_permissions').select('*').in('role_id', (rolesData || []).map(r => r.id));
+        const { data: tenantModules } = await supabase.from('tenant_modules').select('module_key, is_enabled').eq('tenant_id', tenantId);
+
+        let enabledKeys: string[] = [];
+        if (tenantModules && tenantModules.length > 0) {
+            enabledKeys = tenantModules.filter(m => m.is_enabled).map(m => m.module_key);
+        } else {
+            // Fallback default
+            enabledKeys = ['dashboard', 'risk_management', 'compliance', 'incidents', 'settings'];
+        }
+        setEnabledModules(enabledKeys);
 
         const permsMap: Record<string, Record<string, boolean>> = {};
         (permsData || []).forEach((p: RolePermission) => {
@@ -322,7 +333,7 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-border">
-                                        {MODULES.map(mod => {
+                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings').map(mod => {
                                             const allowed = permissions[selectedRole.id]?.[mod.key] ?? false;
                                             const isSaving = saving === `${selectedRole.id}-${mod.key}`;
                                             return (
