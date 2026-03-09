@@ -860,7 +860,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="user">👤 Usuário Interno — acesso padrão</SelectItem>
-                                <SelectItem value="admin">🔑 Administrador — gerencia usuários e config.</SelectItem>
+                                {isPlatformAdmin && <SelectItem value="admin">🔑 Administrador — gerencia usuários e config.</SelectItem>}
                                 <SelectItem value="tenant_admin">👑 Admin da Organização — acesso total</SelectItem>
                                 <SelectItem value="guest">🔗 Convidado — somente Portal de Riscos</SelectItem>
                               </SelectContent>
@@ -1214,7 +1214,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="user">Usuário Interno</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
+                      {isPlatformAdmin && <SelectItem value="admin">Administrador</SelectItem>}
                       <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
                       <SelectItem value="guest">Convidado (Risco)</SelectItem>
                     </SelectContent>

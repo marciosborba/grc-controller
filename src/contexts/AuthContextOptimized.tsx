@@ -146,7 +146,9 @@ const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
   tprm: ['vendor.read', 'vendor.write'],
   policy_management: ['compliance.read'],
   ai_manager: ['admin'],
-  dashboard: ['dashboard.read']
+  dashboard: ['dashboard.read'],
+  settings: ['admin'],
+  users: ['users.read']
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -237,13 +239,6 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         if (platformAdminData) {
           isPlatformAdmin = true;
           adminSource = 'platform_admins_table';
-        } else {
-          // Fallback para roles apenas se platform_admins não existir (compatibilidade)
-          const hasAdminRole = rolesList.some((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role));
-          if (hasAdminRole) {
-            isPlatformAdmin = true;
-            adminSource = 'user_roles_fallback';
-          }
         }
 
         console.log('🔐 [AUTH] Platform Admin verification (SECURE):', {

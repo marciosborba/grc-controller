@@ -78,7 +78,7 @@ const navigationItems = [{
       title: 'Configurações',
       url: '/tenant-settings',
       icon: Settings,
-      permissions: ['tenant_admin', 'admin', 'platform_admin'],
+      permissions: ['admin'],
       description: 'Configurações da organização'
     },
     // Módulo de Compliance removido
@@ -86,7 +86,7 @@ const navigationItems = [{
       title: 'Dashboard',
       url: '/dashboard',
       icon: LayoutDashboard,
-      permissions: ['common.read'],
+      permissions: ['dashboard.read'],
       description: 'Visão geral e métricas principais'
     },
     {
@@ -536,8 +536,8 @@ export function AppSidebarFixed() {
               'TPRM': 'tprm',
               'Relatórios': 'reports',
               'Vulnerabilidades': 'vulnerabilities',
-              'Configurações': 'admin', // Settings usually enabled or controlled by role
-              'Usuários': 'admin',
+              'Configurações': 'settings', // Fixed mapping
+              'Usuários': 'users', // Fixed mapping
               'Dashboard': 'dashboard',
               'Notificações': 'notifications',
               'Ajuda': 'help',
