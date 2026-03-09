@@ -59,13 +59,16 @@ export const CommunicationTab: React.FC<CommunicationTabProps> = ({ risk, user, 
         }
         setAddingSending(true);
         try {
+            const effectiveTenantId = userTenantId || (risk as any).tenant_id;
             const { error: dbErr } = await supabase.from('risk_stakeholders').insert({
-                risk_id: risk.id,
+                risk_registration_id: risk.id,
+                tenant_id: effectiveTenantId,
                 name: newPerson.name.trim(),
                 position: newPerson.position.trim() || null,
                 email: newPerson.email.trim().toLowerCase(),
                 notification_type: 'awareness',
                 response_status: 'pending',
+                notified_at: new Date().toISOString(),
             });
             if (dbErr) throw dbErr;
 

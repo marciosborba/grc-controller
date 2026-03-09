@@ -98,27 +98,47 @@ serve(async (req: Request) => {
 
         console.log(`🔗 Invite link generated for ${emailNorm}: ${inviteLink?.substring(0, 80)}...`);
 
-        // 4. Always upsert profile as guest — ensures tenant_id and system_role are always set
-        // (Auth trigger may create a profile with null tenant_id before we can set it)
+        // 4. Upsert profile as guest — ensure tenant_id and system_role are always set
         if (userId) {
-            const { error: profileErr } = await supabaseAdmin.from('profiles').upsert({
+            // Check if profile already exists (may have been created by Auth trigger with wrong tenant)
+            const { data: existingProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('user_id', userId)
+                .single();
+
+            const profilePayload = {
                 user_id: userId,
                 email: emailNorm,
                 full_name: full_name || emailNorm,
                 tenant_id,
                 system_role: 'guest',
                 is_active: false,
-            }, { onConflict: 'user_id' });
-            if (profileErr) console.error('⚠️ Profile upsert error:', profileErr.message);
-            else console.log(`✅ Profile upserted for guest ${emailNorm} in tenant ${tenant_id}`);
+                must_change_password: true,
+            };
 
-            // Insert role so they appear in User Management
-            await supabaseAdmin.from('user_roles').upsert({
-                user_id: userId,
-                role: 'guest',
-                tenant_id,
-            }, { onConflict: 'user_id, role' }).then(({ error }) => {
-                if (error) console.warn('⚠️ Role upsert warn:', error.message);
+            if (existingProfile) {
+                const { error: profileErr } = await supabaseAdmin
+                    .from('profiles')
+                    .update(profilePayload)
+                    .eq('id', existingProfile.id);
+                if (profileErr) console.error('Profile update error:', profileErr.message);
+                else console.log(`Profile updated for guest ${emailNorm} in tenant ${tenant_id}`);
+            } else {
+                const { error: profileErr } = await supabaseAdmin
+                    .from('profiles')
+                    .insert([profilePayload]);
+                if (profileErr) console.error('Profile insert error:', profileErr.message);
+                else console.log(`Profile inserted for guest ${emailNorm} in tenant ${tenant_id}`);
+            }
+
+            // Assign 'user' role in user_roles (app_role enum does not have 'guest')
+            // 'guest' is tracked via profiles.system_role only
+            await supabaseAdmin.from('user_roles').upsert(
+                { user_id: userId, role: 'user' },
+                { onConflict: 'user_id, role' }
+            ).then(({ error }) => {
+                if (error) console.warn('Role upsert warn:', error.message);
             });
         }
 
