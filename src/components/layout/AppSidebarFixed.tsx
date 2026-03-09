@@ -554,14 +554,20 @@ export function AppSidebarFixed() {
             return map[title] || '';
           };
 
+          // Check if user has functional roles
+          const userHasFunctionalRole = user?.isPlatformAdmin || user?.roles?.some((r: string) =>
+            ['admin', 'super_admin', 'ciso', 'risk_manager', 'compliance_officer', 'auditor', 'tenant_admin'].includes(r)
+          );
+
           const filteredItems = group.items.filter(item => {
+            // Se o usuário não tem função funcional (está pendente de acesso), esconde TUDO do painel
+            if (!userHasFunctionalRole) return false;
+
             // 1. Check Permissions (User Role)
             const hasPerm = hasPermission(item.permissions);
 
             // 2. Check Module Enablement (Tenant Config)
             const moduleKey = getModuleKey(item.title);
-            // If key is mapped, check access. If not mapped or mapped to empty, assume enabled (or strictly disable?)
-            // Assuming enabled for unmapped items to avoid hiding system things inadvertently
             const isModuleEnabled = moduleKey ? checkModuleAccess(moduleKey) : true;
 
             return hasPerm && isModuleEnabled;
@@ -573,7 +579,7 @@ export function AppSidebarFixed() {
           return (
             <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
               {!collapsed && group.label !== 'Módulos' && (
-                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${group.label === 'Plataform Adm'
+                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${group.label === 'Área Administrativa'
                   ? 'text-orange-600 dark:text-orange-400'
                   : 'text-muted-foreground'
                   }`}>
