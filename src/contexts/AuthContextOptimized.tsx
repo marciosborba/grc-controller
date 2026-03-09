@@ -128,6 +128,19 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
   return Array.from(allPermissions);
 };
 
+const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
+  risk_management: ['risk.read', 'risk.write'],
+  compliance: ['compliance.read', 'compliance.write'],
+  audit: ['audit.read', 'audit.write'],
+  incidents: ['incident.read', 'incident.write'],
+  assets: ['asset.read', 'asset.write'],
+  vulnerabilities: ['vulnerability.read', 'security.read'],
+  vendor_portal: ['vendor.read', 'vendor.write'],
+  policies: ['compliance.read'],
+  privacy: ['privacy.read', 'privacy.write'],
+  reports: ['report.read']
+};
+
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -232,7 +245,15 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
         // Atualizar com dados completos
         const userRoles = rolesList.length > 0 ? rolesList.map((r: any) => r.role) : ['user'];
-        const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
+        const basePermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
+        const customModuleKeys = fullProfile.custom_permissions || [];
+
+        // Mapear as chaves de módulo para as permissões reais esperadas pelo Sidebar/UI
+        const mappedPermissions = customModuleKeys.flatMap((key: string) =>
+          CUSTOM_MODULE_MAPPING[key] || [key]
+        );
+
+        const finalPermissions = [...new Set([...basePermissions, ...mappedPermissions])];
 
         let isVendorOnly = false;
 
@@ -262,7 +283,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           avatar_url: profile?.avatar_url,
           tenantId: profile?.tenant_id || 'default',
           roles: isVendorOnly ? ['vendor'] : userRoles,
-          permissions: userPermissions,
+          permissions: finalPermissions,
           isPlatformAdmin,
           enabledModules,
           settings: tenantSettings,
