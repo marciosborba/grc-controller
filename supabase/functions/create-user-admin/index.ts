@@ -141,6 +141,16 @@ Deno.serve(async (req) => {
     // Determine system_role (default to 'user')
     const systemRole = userData.system_role || (userData.roles?.[0] as string) || 'user'
 
+    // SECURITY: Block assignment of platform-level roles via this endpoint.
+    // super_admin / platform_admin can ONLY be assigned in Global Settings.
+    const BLOCKED_ROLES = ['super_admin', 'platform_admin']
+    if (BLOCKED_ROLES.includes(systemRole)) {
+      throw new Error('A função Super Admin só pode ser atribuída em Configurações Globais.')
+    }
+    if (userData.roles?.some((r: string) => BLOCKED_ROLES.includes(r))) {
+      throw new Error('A função Super Admin só pode ser atribuída em Configurações Globais.')
+    }
+
     // Check tenant user limit
     if (!isPlatformAdmin) {
       const { data: tenant, error: tenantError } = await supabaseAdmin
