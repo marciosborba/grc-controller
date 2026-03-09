@@ -223,13 +223,31 @@ Deno.serve(async (req) => {
         profilePayload['permissions'] = userData.permissions
       }
 
-      // Unconditional upsert: handles both the case where Auth trigger already
-      // created the profile (with null tenant_id) and the case where it doesn't exist yet.
-      const { error: profileErr } = await supabaseAdmin
+      // Check if the profile was already created by the auth trigger
+      const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
-        .upsert(profilePayload, { onConflict: 'user_id', ignoreDuplicates: false })
-      if (profileErr) console.error('Profile upsert error:', profileErr.message)
-      else console.log(`✅ Profile upserted for ${emailNorm} in tenant ${targetTenantId}`)
+        .select('id')
+        .eq('user_id', userId)
+        .single()
+
+      if (existingProfile) {
+        // Trigger already created it (often with default or null tenant_id)
+        const { error: profileErr } = await supabaseAdmin
+          .from('profiles')
+          .update(profilePayload)
+          .eq('id', existingProfile.id)
+
+        if (profileErr) console.error('Profile update error:', profileErr.message)
+        else console.log(`✅ Profile updated for ${emailNorm} in tenant ${targetTenantId}`)
+      } else {
+        // Profile doesn't exist yet
+        const { error: profileErr } = await supabaseAdmin
+          .from('profiles')
+          .insert([profilePayload])
+
+        if (profileErr) console.error('Profile insert error:', profileErr.message)
+        else console.log(`✅ Profile inserted for ${emailNorm} in tenant ${targetTenantId}`)
+      }
 
       // ── Assign roles ──
       const rolesToAssign = userData.roles?.length ? userData.roles : [systemRole]
