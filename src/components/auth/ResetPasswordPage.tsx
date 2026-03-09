@@ -19,9 +19,9 @@ export const ResetPasswordPage = () => {
     const { toast } = useToast();
 
     const [isGuestInvite, setIsGuestInvite] = useState(() => {
-        // Initial synchronous check (might fail if hash is already processed)
+        // Initial synchronous check
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        return hashParams.get('type') === 'invite' || hashParams.get('redirect_to')?.includes('risk-portal') || false;
+        return hashParams.get('redirect_to')?.includes('risk-portal') || false;
     });
 
     const isVendorPortal = window.location.pathname.includes('/vendor-portal');
@@ -41,7 +41,7 @@ export const ResetPasswordPage = () => {
             });
         }
 
-        // Check user session to see if they are a guest (more reliable than hash)
+        // Check user session to see if they are actually a guest
         const checkUserRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user?.user_metadata?.system_role === 'guest') {
@@ -63,12 +63,11 @@ export const ResetPasswordPage = () => {
                 // Invite links fire SIGNED_IN instead of PASSWORD_RECOVERY
                 if (event === 'SIGNED_IN') {
                     const role = session?.user?.user_metadata?.system_role;
-                    const type = new URLSearchParams(window.location.hash.substring(1)).get('type');
-                    if (role === 'guest' || type === 'invite') {
+                    if (role === 'guest') {
                         console.log('🔗 [AUTH] Convite detectado via SIGNED_IN — ativando modo convidado.');
                         setIsGuestInvite(true);
-                        setHashError(null);
                     }
+                    setHashError(null);
                 }
             }
         );
