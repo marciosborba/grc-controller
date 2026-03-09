@@ -108,6 +108,18 @@ export const ResetPasswordPage = () => {
                 throw error;
             }
 
+            // Atualizar o perfil do usuário para ativo e remover a flag de mudança de senha obrigatória
+            // Isso remove o usuário do status "Pendente" no painel de IAM
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase.from('profiles').update({
+                    is_active: true,
+                    must_change_password: false,
+                    last_login_at: new Date().toISOString()
+                }).eq('user_id', user.id);
+                console.log('✅ Perfil atualizado: is_active=true, must_change_password=false');
+            }
+
             setSuccess(true);
             toast({
                 title: isGuestInvite ? "Bem-vindo(a) ao Portal de Riscos!" : "Senha alterada com sucesso!",
