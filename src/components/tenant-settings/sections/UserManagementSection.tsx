@@ -100,7 +100,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     send_invitation: true,
     permissions: [] as string[],
   });
-  const [tenantRoles, setTenantRoles] = useState<{ id: string; name: string; color: string }[]>([]);
+  const [tenantRoles, setTenantRoles] = useState<{ id: string; name: string; color: string; display_name?: string }[]>([]);
 
   // Hook de permissões
   const permissions = usePermissions();
@@ -109,12 +109,30 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   // Fetch custom tenant roles for the role picker
   const loadTenantRoles = async () => {
     if (!tenantId) return;
-    const { data } = await supabase
+
+    // A maioria das permissões RBAC do GRC são salvas em custom_roles
+    const { data: customRoles } = await supabase
+      .from('custom_roles')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name');
+
+    // Algumas implementações antigas usavam tenant_roles
+    const { data: legacyRoles } = await supabase
       .from('tenant_roles')
       .select('id, name, color')
       .eq('tenant_id', tenantId)
       .order('name');
-    setTenantRoles(data || []);
+
+    const mergedRoles = [
+      ...(customRoles || []).map(r => ({ id: r.id, name: r.name, display_name: r.name, color: '#64748b' })),
+      ...(legacyRoles || []).map(r => ({ id: r.id, name: r.name, display_name: r.name, color: r.color || '#64748b' }))
+    ];
+
+    // Remover duplicatas
+    const uniqueRoles = Array.from(new Map(mergedRoles.map(item => [item.id, item])).values());
+
+    setTenantRoles(uniqueRoles);
   };
 
   // Verificar se é Super Admin Global diretamente no banco (evita problema de cache de auth)
@@ -490,22 +508,24 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           return;
         }
 
-        // Atualizar role se necessário (tabela user_roles)
-        if (formData.system_role !== selectedUser.role) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('id', selectedUser.id)
-            .single();
+        // Atualizar role e tenant_role_id se necessário (tabela user_roles)
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('id', selectedUser.id)
+          .single();
 
-          if (profileData?.user_id) {
-            await supabase.from('user_roles').delete().eq('user_id', profileData.user_id);
-            await supabase.from('user_roles').insert({
-              user_id: profileData.user_id,
-              role: formData.system_role,
-              tenant_id: tenantId,
-            });
-          }
+        if (profileData?.user_id) {
+          // Deleta as roles atuais para este tenant
+          await supabase.from('user_roles').delete().eq('user_id', profileData.user_id).eq('tenant_id', tenantId);
+
+          // Insere a nova configuração
+          await supabase.from('user_roles').insert({
+            user_id: profileData.user_id,
+            role: formData.system_role,
+            tenant_id: tenantId,
+            tenant_role_id: formData.tenant_role_id || null, // salva a função específica se houver
+          });
         }
 
         // Fechar diálogo e resetar estado
@@ -643,18 +663,41 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     });
   };
 
-  const openEditDialog = (user: User) => {
+  const openEditDialog = async (user: User) => {
     setSelectedUser(user);
+
+    // Buscar o tenant_role_id atual do usuário na tabela user_roles
+    let currentTenantRoleId = '';
+    try {
+      if (user.user_id) {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('tenant_role_id')
+          .eq('user_id', user.user_id)
+          .eq('tenant_id', tenantId)
+          .not('tenant_role_id', 'is', null)
+          .maybeSingle();
+
+        if (roleData?.tenant_role_id) {
+          currentTenantRoleId = roleData.tenant_role_id;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch tenant_role_id for user", e);
+    }
+
     setFormData({
       email: user.email,
       full_name: user.full_name,
-      system_role: (user.role === 'vendor' ? 'user' : user.role) as typeof formData.system_role,
-      tenant_role_id: '',
+      system_role: user.role === 'tenant_admin' ? 'tenant_admin'
+        : user.role === 'admin' ? 'admin'
+          : user.role === 'guest' ? 'guest' : 'user',
       department: user.department || '',
       phone: user.phone || '',
-      job_title: '',
       send_invitation: false,
       permissions: [],
+      job_title: '',
+      tenant_role_id: currentTenantRoleId,
     });
     setIsEditDialogOpen(true);
   };
@@ -1183,6 +1226,34 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {tenantRoles.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_tenant_role">Perfil Customizado (opcional)</Label>
+                    <Select
+                      value={formData.tenant_role_id || 'none'}
+                      onValueChange={(v) => setFormData({ ...formData, tenant_role_id: v === 'none' ? '' : v })}
+                    >
+                      <SelectTrigger id="edit_tenant_role">
+                        <SelectValue placeholder="Nenhum perfil adicional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {tenantRoles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full shrink-0"
+                                style={{ backgroundColor: role.color }}
+                              />
+                              <span className="truncate">{role.display_name || role.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="grid gap-2">
                   <Label htmlFor="edit_department">Departamento</Label>
