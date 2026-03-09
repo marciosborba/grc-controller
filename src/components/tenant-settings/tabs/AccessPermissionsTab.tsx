@@ -55,16 +55,23 @@ interface GuestUser {
 // ────────────────────────────────────────────────────────────
 
 const MODULES = [
-    { key: 'risk_portal', label: 'Portal de Riscos', description: 'Acesso ao portal de riscos para partes interessadas' },
+    { key: 'dashboard', label: 'Dashboard Principal', description: 'Visão geral, métricas e painel executivo' },
     { key: 'risk_management', label: 'Gestão de Riscos', description: 'Módulo de registro e gestão de riscos' },
     { key: 'compliance', label: 'Compliance', description: 'Frameworks e controles de compliance' },
     { key: 'audit', label: 'Auditoria', description: 'Módulo de auditoria interna' },
     { key: 'incidents', label: 'Incidentes', description: 'Gestão de incidentes de segurança' },
     { key: 'assets', label: 'Ativos', description: 'Inventário e gestão de ativos' },
     { key: 'vulnerabilities', label: 'Vulnerabilidades', description: 'Gestão de vulnerabilidades' },
+    { key: 'privacy', label: 'Privacidade (LGPD/GDPR)', description: 'Gestão de privacidade e proteção de dados' },
+    { key: 'ethics', label: 'Canal de Ética', description: 'Denúncias e acompanhamento ético' },
+    { key: 'tprm', label: 'Gestão de Terceiros', description: 'Avaliação de riscos de fornecedores (TPRM)' },
+    { key: 'action_plans', label: 'Planos de Ação', description: 'Gestão e acompanhamento de planos de ação' },
+    { key: 'reports', label: 'Analytics e Relatórios', description: 'Geração de relatórios gerenciais e técnicos' },
+    { key: 'strategic_planning', label: 'Planejamento Estratégico', description: 'Metas e objetivos corporativos' },
+    { key: 'policies', label: 'Políticas', description: 'Gestão de políticas e documentos normativos' },
+    { key: 'risk_portal', label: 'Portal de Riscos', description: 'Acesso ao portal para partes interessadas' },
     { key: 'vendor_portal', label: 'Portal do Fornecedor', description: 'Acesso ao portal de fornecedores' },
-    { key: 'policies', label: 'Políticas', description: 'Gestão de políticas de segurança' },
-    { key: 'settings', label: 'Configurações', description: 'Configurações da organização' },
+    { key: 'settings', label: 'Configurações', description: 'Configurações da organização e IAM' },
 ];
 
 const ROLE_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];

@@ -145,7 +145,8 @@ const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
   strategic_planning: ['strategic.read'],
   tprm: ['vendor.read', 'vendor.write'],
   policy_management: ['compliance.read'],
-  ai_manager: ['admin']
+  ai_manager: ['admin'],
+  dashboard: ['dashboard.read']
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -716,7 +717,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     }
 
     // Public modules or basic ones - Ensure common.read is checked for these
-    if (['dashboard', 'help', 'notifications'].includes(moduleKey)) {
+    if (['help', 'notifications'].includes(moduleKey)) {
       return user.permissions?.includes('common.read') || user.permissions?.includes('all') || user.permissions?.includes('*');
     }
 

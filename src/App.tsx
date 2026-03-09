@@ -328,6 +328,20 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Main App Component
+// Redirecionamento de pouso inicial com base em permissões
+const RootRedirect = () => {
+  const { user, checkModuleAccess } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+
+  // Se tem acesso ao dashboard, pousa lá
+  if (checkModuleAccess('dashboard')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Pouso padrão (Notificações) para quem não tem dashboard
+  return <Navigate to="/notifications" replace />;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -414,9 +428,9 @@ const App = () => (
                         <AppLayout />
                       </ProtectedRoute>
                     }>
-                      <Route index element={<Navigate to="/dashboard" replace />} />
+                      <Route index element={<RootRedirect />} />
                       <Route path="dashboard" element={
-                        <ModuleGuard moduleKey="dashboard">
+                        <ModuleGuard moduleKey="dashboard" redirectTo="/notifications">
                           <DashboardPage />
                         </ModuleGuard>
                       } />
