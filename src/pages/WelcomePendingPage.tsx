@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '@/components/OptimizedAuthProvider';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 const WelcomePendingPage: React.FC = () => {
     const { user } = useAuth();
