@@ -716,8 +716,11 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       return user.permissions?.includes('common.read') || user.permissions?.includes('all') || user.permissions?.includes('*');
     }
 
-    // 1. Is it enabled for the tenant?
-    if (!user.enabledModules?.includes(moduleKey)) return false;
+    // Core platform modules that skip the tenant-level "enabledModules" check
+    const isCoreModule = ['dashboard', 'settings', 'users', 'admin', 'help', 'notifications'].includes(moduleKey);
+
+    // 1. Is it enabled for the tenant? (Skip check for core platform features)
+    if (!isCoreModule && !user.enabledModules?.includes(moduleKey)) return false;
 
     // 2. Map moduleKey to required permissions
     const requiredPermissions = CUSTOM_MODULE_MAPPING[moduleKey] || [];
