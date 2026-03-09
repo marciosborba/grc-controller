@@ -244,7 +244,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Isolating Guest Environment: If user is a guest, they can ONLY access /risk-portal
   // We check this BEFORE isVendorOnly because a user's email might exist as both a vendor
   // and a risk stakeholder, but the risk invite flow explicitly lands them here.
-  if (user.system_role === 'guest' || user.roles?.includes('guest') || (user as any).system_role === 'guest') {
+  const isGuest = user.system_role === 'guest' || user.roles?.includes('guest') || (user as any).system_role === 'guest';
+  const isAdmin = user.roles?.some(r => ['admin', 'tenant_admin', 'super_admin'].includes(r));
+
+  if (isGuest && !isAdmin) {
     if (!location.pathname.startsWith('/risk-portal')) {
       console.warn('⚠️ [ROUTING] Usuário convidado restrito ao portal de riscos. Redirecionando...');
       return <Navigate to="/risk-portal" replace />;

@@ -73,7 +73,7 @@ interface SettingsMetrics {
 }
 
 const TenantSettingsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, checkModuleAccess } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [tenantInfo, setTenantInfo] = useState<TenantInfo | null>(null);
   const [metrics, setMetrics] = useState<SettingsMetrics | null>(null);
@@ -82,9 +82,8 @@ const TenantSettingsPage: React.FC = () => {
 
   const { selectedTenantId } = useTenantSelector();
 
-  const isPlatformAdmin = user?.isPlatformAdmin || user?.roles?.includes('platform_admin');
-  const isTenantAdmin = user?.roles?.includes('tenant_admin') || user?.roles?.includes('admin');
-  const hasAccess = isPlatformAdmin || isTenantAdmin;
+  const isPlatformAdmin = user?.isPlatformAdmin;
+  const hasAccess = checkModuleAccess('settings');
 
   useEffect(() => {
     if (selectedTenantId) {

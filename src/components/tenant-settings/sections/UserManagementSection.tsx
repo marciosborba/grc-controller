@@ -92,7 +92,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
-    system_role: 'user' as 'user' | 'admin' | 'tenant_admin' | 'guest',
+    system_role: 'user' as 'user' | 'admin' | 'tenant_admin' | 'guest' | 'vendor',
     tenant_role_id: '',
     department: '',
     phone: '',
@@ -104,7 +104,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
   // Hook de permissões
   const permissions = usePermissions();
-  const { user: currentUser } = useAuth();
+  const { user: authUser, checkModuleAccess } = useAuth();
 
   // Fetch custom tenant roles for the role picker
   const loadTenantRoles = async () => {
@@ -171,7 +171,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       // Montar redirect URL com params para o banner detectar a sessão
       const redirectUrl = new URL(window.location.origin);
       redirectUrl.searchParams.set('impersonated', 'true');
-      redirectUrl.searchParams.set('impersonated_by', currentUser?.email || '');
+      redirectUrl.searchParams.set('impersonated_by', authUser?.email || '');
       redirectUrl.searchParams.set('impersonated_user', targetUser.email);
 
       const { data, error } = await supabase.functions.invoke('impersonate-user', {
@@ -281,16 +281,18 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         // Buscar roles do usuário (vindo do user_roles)
         const userRoles = userRolesData.filter(ur => ur.user_id === profile.user_id).map(ur => ur.role);
 
-        // Determinar role principal
+        // Determinar role principal - priorizando system_role da tabela profiles
         let role: User['role'] = 'user';
 
-        // Verifica primeiro os roles privilegiados
-        if (userRoles.includes('tenant_admin')) role = 'tenant_admin';
-        else if (userRoles.includes('admin') || userRoles.includes('super_admin')) role = 'admin';
-        // Se sistema marcou explicitamente como convidado ou vendor na tabela profiles
+        // 1. Prioridade para o system_role salvo no perfil (mais descritivo para a UI)
+        if (profile.system_role === 'tenant_admin') role = 'tenant_admin';
+        else if (profile.system_role === 'admin') role = 'admin';
         else if (profile.system_role === 'guest') role = 'guest';
-        else if (profile.system_role === 'vendor' || userRoles.includes('vendor')) role = 'vendor';
-        // Ou se na tabela role estiver explicito
+        else if (profile.system_role === 'vendor') role = 'vendor';
+        // 2. Fallback para roles do banco (user_roles) se o profile estiver incompleto
+        else if (userRoles.includes('tenant_admin')) role = 'tenant_admin';
+        else if (userRoles.includes('admin') || userRoles.includes('super_admin')) role = 'admin';
+        else if (userRoles.includes('vendor')) role = 'vendor';
         else if (userRoles.includes('guest')) role = 'guest';
 
         // Determinar status baseado no user_id e is_active
@@ -492,6 +494,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           full_name: formData.full_name,
           department: formData.department || null,
           phone: formData.phone || null,
+          system_role: formData.system_role, // Ensure system_role is sync'd in profiles table
           custom_role_id: formData.tenant_role_id || null, // Salva o perfil RBAC customizado
           updated_at: new Date().toISOString()
         };
@@ -516,14 +519,44 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
         if (profileData?.user_id) {
           // Deleta as roles atuais para este tenant
-          await supabase.from('user_roles').delete().eq('user_id', profileData.user_id).eq('tenant_id', tenantId);
+          const { error: deleteError } = await supabase.from('user_roles').delete().eq('user_id', profileData.user_id).eq('tenant_id', tenantId);
+
+          if (deleteError) {
+            console.error('❌ [IAM] Erro ao deletar roles antigas:', deleteError);
+            toast.error('Erro ao limpar permissões anteriores');
+            setIsProcessing(false);
+            return;
+          }
+
+          // Mapear role do sistema para role do banco (enum app_role)
+          // tenant_admin -> admin
+          // guest -> user
+          const mapSystemRoleToDbRole = (role: string): string => {
+            if (role === 'tenant_admin') return 'admin';
+            if (role === 'guest') return 'user';
+            return role;
+          };
+
+          const dbRole = mapSystemRoleToDbRole(formData.system_role);
 
           // Insere a nova configuração
-          await supabase.from('user_roles').insert({
+          const { error: insertError } = await supabase.from('user_roles').insert({
             user_id: profileData.user_id,
-            role: formData.system_role,
+            role: dbRole,
             tenant_id: tenantId,
           });
+
+          if (insertError) {
+            console.error('❌ [IAM] Erro ao inserir nova role:', insertError);
+            // Se for erro de RLS ou trigger, mostrar mensagem mais clara
+            if (insertError.code === '42501') {
+              toast.error('Sem permissão de banco (RLS) para alterar cargos de terceiros');
+            } else {
+              toast.error(`Erro ao salvar novo cargo: ${insertError.message}`);
+            }
+            setIsProcessing(false);
+            return;
+          }
         }
 
         // Fechar diálogo e resetar estado
@@ -683,9 +716,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     setFormData({
       email: user.email,
       full_name: user.full_name,
-      system_role: user.role === 'tenant_admin' ? 'tenant_admin'
-        : user.role === 'admin' ? 'admin'
-          : user.role === 'guest' ? 'guest' : 'user',
+      system_role: user.role,
       department: user.department || '',
       phone: user.phone || '',
       send_invitation: false,
@@ -731,7 +762,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   }
 
   // Se não tem permissão, mostrar informações sobre permissões
-  if (!permissions.isLoading && !permissions.canAccessTenant(tenantId)) {
+  const hasAccessToUsers = checkModuleAccess('settings') || checkModuleAccess('users');
+
+  if (!isLoading && !hasAccessToUsers) {
     return (
       <div className="space-y-6">
         <PermissionsInfo />
@@ -1217,6 +1250,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                       {isPlatformAdmin && <SelectItem value="admin">Administrador</SelectItem>}
                       <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
                       <SelectItem value="guest">Convidado (Risco)</SelectItem>
+                      <SelectItem value="vendor">Fornecedor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

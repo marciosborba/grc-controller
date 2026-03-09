@@ -109,7 +109,20 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
 
   // Mapeamento básico de permissões para roles do sistema
   const permissionMap: Record<string, string[]> = {
-    admin: ['read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'assessment.read', 'all'],
+    admin: [
+      'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete',
+      'assessment.read', 'dashboard.read', 'risk.read', 'risk.write', 'compliance.read', 'compliance.write',
+      'audit.read', 'audit.write', 'incident.read', 'incident.write', 'asset.read', 'asset.write',
+      'vulnerability.read', 'security.read', 'privacy.read', 'privacy.write', 'report.read', 'report.export',
+      'common.read', 'settings.read', 'settings.write', 'all', '*'
+    ],
+    tenant_admin: [
+      'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete',
+      'assessment.read', 'dashboard.read', 'risk.read', 'risk.write', 'compliance.read', 'compliance.write',
+      'audit.read', 'audit.write', 'incident.read', 'incident.write', 'asset.read', 'asset.write',
+      'vulnerability.read', 'security.read', 'privacy.read', 'privacy.write', 'report.read', 'report.export',
+      'common.read', 'settings.read', 'settings.write', 'all', '*'
+    ],
     ciso: ['read', 'write', 'admin', 'users.read', 'users.update', 'security.read', 'incidents.read', 'vulnerabilities.read', 'assessment.read'],
     risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read', 'assessment.read'],
     compliance_officer: ['read', 'write', 'compliance.read', 'compliance.write', 'privacy.read', 'audit.read', 'assessment.read'],
