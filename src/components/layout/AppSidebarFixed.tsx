@@ -555,9 +555,11 @@ export function AppSidebarFixed() {
           };
 
           // Check if user has functional roles
-          const userHasFunctionalRole = user?.isPlatformAdmin || user?.roles?.some((r: string) =>
-            ['admin', 'super_admin', 'ciso', 'risk_manager', 'compliance_officer', 'auditor', 'tenant_admin'].includes(r)
-          );
+          const userHasFunctionalRole = user?.isPlatformAdmin ||
+            user?.customRoleId ||
+            user?.roles?.some((r: string) =>
+              ['admin', 'super_admin', 'ciso', 'risk_manager', 'compliance_officer', 'auditor', 'tenant_admin'].includes(r)
+            );
 
           const filteredItems = group.items.filter(item => {
             // Se o usuário não tem função funcional (está pendente de acesso), esconde TUDO do painel

@@ -49,6 +49,7 @@ export interface AuthUser {
   mfaEnabled?: boolean;
   isVendorOnly?: boolean; // Added field to identify vendor users
   system_role?: string; // Identifies guest users natively
+  customRoleId?: string;
 }
 
 // ... (existing code)
@@ -277,7 +278,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           } : undefined,
           mfaEnabled: false,
           isVendorOnly: isVendorOnly,
-          system_role: profile?.system_role
+          system_role: profile?.system_role,
+          customRoleId: profile?.custom_role_id
         };
 
         // Check MFA Status

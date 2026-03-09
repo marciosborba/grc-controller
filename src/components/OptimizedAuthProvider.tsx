@@ -41,6 +41,7 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   isPlatformAdmin: boolean;
+  customRoleId?: string;
 }
 
 interface AuthContextType {
@@ -276,7 +277,8 @@ export const OptimizedAuthProvider: React.FC<{ children: ReactNode }> = ({ child
         tenant,
         roles,
         permissions,
-        isPlatformAdmin
+        isPlatformAdmin,
+        customRoleId: profile?.custom_role_id
       };
 
       console.log(`[AUTH] Usuário criado:`, {

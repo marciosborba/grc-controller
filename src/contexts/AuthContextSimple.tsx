@@ -11,6 +11,7 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   isPlatformAdmin: boolean;
+  customRoleId?: string;
 }
 
 interface AuthContextType {
@@ -40,13 +41,13 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
     auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
     user: ['read', 'all']
   };
-  
+
   const allPermissions = new Set<string>();
   roles.forEach(role => {
     const rolePermissions = permissionMap[role] || ['read'];
     rolePermissions.forEach(permission => allPermissions.add(permission));
   });
-  
+
   return Array.from(allPermissions);
 };
 
@@ -58,7 +59,7 @@ export const AuthProviderSimple: React.FC<{ children: ReactNode }> = ({ children
   const loadUserData = async (supabaseUser: User): Promise<AuthUser | null> => {
     try {
       console.log('Loading user data for:', supabaseUser.id);
-      
+
       // Create basic user first
       const basicUser: AuthUser = {
         id: supabaseUser.id,
@@ -81,11 +82,11 @@ export const AuthProviderSimple: React.FC<{ children: ReactNode }> = ({ children
         const profile = profileResult?.data;
         const roles = rolesResult?.data || [];
         const platformAdmin = platformAdminResult?.data;
-        
+
         const isPlatformAdmin = !!platformAdmin;
         const userRoles = roles.length > 0 ? roles.map((r: any) => r.role) : ['user'];
         const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
-        
+
         return {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
@@ -96,7 +97,7 @@ export const AuthProviderSimple: React.FC<{ children: ReactNode }> = ({ children
           permissions: userPermissions,
           isPlatformAdmin
         };
-        
+
       } catch (dbError) {
         console.warn('Error loading user data from database, using basic user:', dbError);
         return basicUser;
@@ -110,7 +111,7 @@ export const AuthProviderSimple: React.FC<{ children: ReactNode }> = ({ children
 
   const handleAuthChange = async (event: string, session: Session | null) => {
     console.log('Auth state changed:', { event, hasSession: !!session });
-    
+
     setSession(session);
 
     if (event === 'SIGNED_OUT' || !session) {
@@ -145,15 +146,15 @@ export const AuthProviderSimple: React.FC<{ children: ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
-    
+
     const initializeAuth = async () => {
       try {
         console.log('Initializing auth...');
-        
+
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-        
+
         if (!mounted) return;
-        
+
         if (error) {
           console.warn('Error getting session:', error);
           setIsLoading(false);
@@ -220,7 +221,7 @@ export const AuthProviderSimple: React.FC<{ children: ReactNode }> = ({ children
 
   const refreshUserData = async () => {
     if (!session?.user) return;
-    
+
     try {
       const userData = await loadUserData(session.user);
       setUser(userData);

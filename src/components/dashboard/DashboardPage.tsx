@@ -32,6 +32,7 @@ const DashboardPage = () => {
   // If user has NO functional role (only basic 'user') and is not a platform admin,
   // show the welcome/pending page instead of the full dashboard
   const hasFunctionalRole = user.isPlatformAdmin ||
+    user.customRoleId ||
     user.roles?.some(r => FUNCTIONAL_ROLES.includes(r));
 
   if (!hasFunctionalRole) {
