@@ -110,29 +110,26 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   const loadTenantRoles = async () => {
     if (!tenantId) return;
 
-    // A maioria das permissões RBAC do GRC são salvas em custom_roles
-    const { data: customRoles } = await supabase
-      .from('custom_roles')
-      .select('id, name')
-      .eq('is_active', true)
-      .order('name');
-
-    // Algumas implementações antigas usavam tenant_roles
-    const { data: legacyRoles } = await supabase
+    // As funções RBAC do GRC são salvas em tenant_roles (configuradas na aba de Permissões)
+    const { data: legacyRoles, error } = await supabase
       .from('tenant_roles')
       .select('id, name, color')
       .eq('tenant_id', tenantId)
       .order('name');
 
-    const mergedRoles = [
-      ...(customRoles || []).map(r => ({ id: r.id, name: r.name, display_name: r.name, color: '#64748b' })),
-      ...(legacyRoles || []).map(r => ({ id: r.id, name: r.name, display_name: r.name, color: r.color || '#64748b' }))
-    ];
+    if (error) {
+      console.error('Error loading tenant roles:', error);
+      return;
+    }
 
-    // Remover duplicatas
-    const uniqueRoles = Array.from(new Map(mergedRoles.map(item => [item.id, item])).values());
+    const roles = (legacyRoles || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      display_name: r.name,
+      color: r.color || '#64748b'
+    }));
 
-    setTenantRoles(uniqueRoles);
+    setTenantRoles(roles);
   };
 
   // Verificar se é Super Admin Global diretamente no banco (evita problema de cache de auth)
@@ -489,11 +486,13 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
       // Atualizar no banco de dados se for usuário real (não temporário)
       if (!selectedUser.id.startsWith('temp_')) {
+        // Atualizar perfil na tabela profiles
         const updateData = {
           email: formData.email,
           full_name: formData.full_name,
           department: formData.department || null,
           phone: formData.phone || null,
+          custom_role_id: formData.tenant_role_id || null, // Salva o perfil RBAC customizado
           updated_at: new Date().toISOString()
         };
 
@@ -508,7 +507,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           return;
         }
 
-        // Atualizar role e tenant_role_id se necessário (tabela user_roles)
+        // Atualizar role do sistema se necessário (tabela user_roles)
         const { data: profileData } = await supabase
           .from('profiles')
           .select('user_id')
@@ -524,7 +523,6 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
             user_id: profileData.user_id,
             role: formData.system_role,
             tenant_id: tenantId,
-            tenant_role_id: formData.tenant_role_id || null, // salva a função específica se houver
           });
         }
 
@@ -666,24 +664,20 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   const openEditDialog = async (user: User) => {
     setSelectedUser(user);
 
-    // Buscar o tenant_role_id atual do usuário na tabela user_roles
+    // Buscar o custom_role_id atual do perfil
     let currentTenantRoleId = '';
     try {
-      if (user.user_id) {
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('tenant_role_id')
-          .eq('user_id', user.user_id)
-          .eq('tenant_id', tenantId)
-          .not('tenant_role_id', 'is', null)
-          .maybeSingle();
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('custom_role_id')
+        .eq('id', user.id)
+        .single();
 
-        if (roleData?.tenant_role_id) {
-          currentTenantRoleId = roleData.tenant_role_id;
-        }
+      if (profileData?.custom_role_id) {
+        currentTenantRoleId = profileData.custom_role_id;
       }
     } catch (e) {
-      console.warn("Could not fetch tenant_role_id for user", e);
+      console.warn("Could not fetch custom_role_id for user", e);
     }
 
     setFormData({
