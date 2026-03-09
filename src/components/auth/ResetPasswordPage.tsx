@@ -122,19 +122,16 @@ export const ResetPasswordPage = () => {
 
             setSuccess(true);
             toast({
-                title: isGuestInvite ? "Bem-vindo(a) ao Portal de Riscos!" : "Senha alterada com sucesso!",
-                description: isGuestInvite
-                    ? "Sua senha foi criada. Redirecionando para o portal..."
-                    : "Você será redirecionado para o login.",
+                title: isGuestInvite ? "Bem-vindo(a) ao Portal de Riscos!" : "Bem-vindo(a) ao GEPRIV!",
+                description: "Sua senha foi criada. Redirecionando para a aplicação...",
             });
 
             if (isGuestInvite) {
-                // Guest invite: keep session active and go straight to risk portal
+                // Guest invite: go straight to risk portal
                 setTimeout(() => navigate('/risk-portal'), 2000);
             } else {
-                // Regular password reset: sign out and go to login
-                await supabase.auth.signOut();
-                setTimeout(() => navigate(loginRoute), 3000);
+                // Regular user: go straight to dashboard (they are already logged in via Supabase)
+                setTimeout(() => navigate('/dashboard'), 2000);
             }
 
         } catch (error: any) {
