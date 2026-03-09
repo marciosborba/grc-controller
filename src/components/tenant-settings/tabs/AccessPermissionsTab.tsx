@@ -68,7 +68,7 @@ const MODULES = [
     { key: 'action_plans', label: 'Planos de Ação', description: 'Gestão e acompanhamento de planos de ação' },
     { key: 'reports', label: 'Analytics e Relatórios', description: 'Geração de relatórios gerenciais e técnicos' },
     { key: 'strategic_planning', label: 'Planejamento Estratégico', description: 'Metas e objetivos corporativos' },
-    { key: 'policies', label: 'Políticas', description: 'Gestão de políticas e documentos normativos' },
+    { key: 'policy_management', label: 'Políticas', description: 'Gestão de políticas e documentos normativos' },
     { key: 'risk_portal', label: 'Portal de Riscos', description: 'Acesso ao portal para partes interessadas' },
     { key: 'vendor_portal', label: 'Portal do Fornecedor', description: 'Acesso ao portal de fornecedores' },
     { key: 'settings', label: 'Configurações', description: 'Configurações da organização e IAM' },
