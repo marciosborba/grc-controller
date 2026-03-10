@@ -1,0 +1,23 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  enable debug logging with { debug: true }
+
+--- Columns in vendor_portal_users ---
+- id: uuid (nullable: NO)
+- email: text (nullable: NO)
+- vendor_id: uuid (nullable: YES)
+- tenant_id: uuid (nullable: YES)
+- force_password_change: boolean (nullable: YES)
+- created_at: timestamp with time zone (nullable: YES)
+- updated_at: timestamp with time zone (nullable: YES)
+- is_active: boolean (nullable: YES)
+
+--- Columns in vendor_users ---
+- id: uuid (nullable: NO)
+- vendor_id: uuid (nullable: NO)
+- auth_user_id: uuid (nullable: YES)
+- email: text (nullable: NO)
+- name: text (nullable: NO)
+- role: text (nullable: YES)
+- is_active: boolean (nullable: YES)
+- last_login: timestamp with time zone (nullable: YES)
+- created_at: timestamp with time zone (nullable: YES)
+- updated_at: timestamp with time zone (nullable: YES)

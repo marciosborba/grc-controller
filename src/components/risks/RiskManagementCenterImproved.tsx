@@ -72,7 +72,6 @@ import ExpandableCardsView from './views/ExpandableCardsView';
 import { KanbanView } from './views/KanbanView';
 import { ProcessView } from './views/ProcessView';
 import { RiskMatrixView } from './views/RiskMatrixView';
-import { AlexRiskTest } from './AlexRiskTest';
 import { AlexRiskGuidedProcess } from './AlexRiskGuidedProcess';
 import { RiskDocumentation } from './RiskDocumentation';
 import { NotificationPanel } from './NotificationPanel';

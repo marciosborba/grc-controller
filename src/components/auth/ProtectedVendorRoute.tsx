@@ -25,14 +25,14 @@ export const ProtectedVendorRoute = ({ children }: { children: React.ReactNode }
                 // Primeira tentativa: buscar em vendor_users
                 const { data: vendorUser, error: vendorError } = await supabase
                     .from('vendor_users')
-                    .select('id')
+                    .select('id, is_active')
                     .eq('auth_user_id', session.user.id)
                     .limit(1)
                     .maybeSingle();
 
                 if (vendorUser) {
                     if (mounted) {
-                        setIsVendor(true);
+                        setIsVendor(vendorUser.is_active !== false);
                         setLoading(false);
                     }
                     return;
@@ -41,14 +41,14 @@ export const ProtectedVendorRoute = ({ children }: { children: React.ReactNode }
                 // Segunda tentativa: buscar em vendor_portal_users
                 const { data: portalUser, error: portalError } = await supabase
                     .from('vendor_portal_users')
-                    .select('vendor_id')
+                    .select('vendor_id, is_active')
                     .eq('email', session.user.email?.trim().toLowerCase())
                     .limit(1)
                     .maybeSingle();
 
                 if (mounted) {
                     if (portalUser) {
-                        setIsVendor(true);
+                        setIsVendor(portalUser.is_active !== false);
                     } else {
                         setIsVendor(false);
                     }
@@ -64,12 +64,56 @@ export const ProtectedVendorRoute = ({ children }: { children: React.ReactNode }
 
         if (!authLoading) {
             checkVendorAccess();
+
+            // Subscrever a mudanças em tempo real no status is_active (tabela vendor_users)
+            const vendorUsersChannel = supabase
+                .channel('vendor_users_status')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'vendor_users',
+                        filter: `auth_user_id=eq.${session?.user?.id}`
+                    },
+                    (payload) => {
+                        if (payload.new && 'is_active' in payload.new) {
+                            if (mounted) setIsVendor(payload.new.is_active !== false);
+                        }
+                    }
+                )
+                .subscribe();
+
+            // Subscrever a mudanças em tempo real no status is_active (tabela vendor_portal_users)
+            const portalUsersChannel = supabase
+                .channel('portal_users_status')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'vendor_portal_users',
+                        filter: `email=eq.${session?.user?.email}`
+                    },
+                    (payload) => {
+                        if (payload.new && 'is_active' in payload.new) {
+                            if (mounted) setIsVendor(payload.new.is_active !== false);
+                        }
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                mounted = false;
+                supabase.removeChannel(vendorUsersChannel);
+                supabase.removeChannel(portalUsersChannel);
+            };
         }
 
         return () => {
             mounted = false;
         };
-    }, [session, authLoading]);
+    }, [session, authLoading, location.pathname]);
 
     if (authLoading || loading) {
         return (

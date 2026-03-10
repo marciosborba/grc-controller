@@ -2,7 +2,7 @@
 const { Client } = require('pg');
 require('dotenv').config();
 
-async function checkTables() {
+async function inspect() {
     const client = new Client({
         host: 'db.myxvxponlmulnjstbjwd.supabase.co',
         port: 5432,
@@ -14,19 +14,15 @@ async function checkTables() {
 
     try {
         await client.connect();
-        const res = await client.query(`
-      SELECT tablename 
-      FROM pg_catalog.pg_tables 
-      WHERE schemaname = 'public' 
-      ORDER BY tablename;
-    `);
-        console.log('--- TABLES IN PUBLIC SCHEMA ---');
-        res.rows.forEach(r => console.log(r.tablename));
-    } catch (err) {
-        console.error(err);
-    } finally {
+
+        console.log('--- RPC get_user_complete_profile ---');
+        const res = await client.query("SELECT routine_definition FROM information_schema.routines WHERE routine_name = 'get_user_complete_profile';");
+        console.log(res.rows[0]?.routine_definition);
+
         await client.end();
+    } catch (err) {
+        console.error('❌ Error:', err.message);
     }
 }
 
-checkTables();
+inspect();

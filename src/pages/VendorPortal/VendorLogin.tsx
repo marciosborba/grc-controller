@@ -46,14 +46,14 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                 // Verify the user is a vendor via vendor_users (preferred) or vendor_portal_users (fallback)
                 const { data: vendorUser } = await supabase
                     .from('vendor_users')
-                    .select('id, name')
+                    .select('id, name, is_active')
                     .eq('auth_user_id', data.user.id)
                     .maybeSingle();
 
                 // Fallback: check vendor_portal_users by email
                 const { data: portalUserCheck } = await supabase
                     .from('vendor_portal_users')
-                    .select('vendor_id, email, force_password_change')
+                    .select('vendor_id, email, force_password_change, is_active')
                     .eq('email', email.trim().toLowerCase())
                     .maybeSingle();
 
@@ -64,6 +64,23 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                         description: "Esta conta não possui permissões de fornecedor no sistema.",
                         variant: "destructive"
                     });
+                    return;
+                }
+
+                // CHECK IF ACTIVE
+                const isActive = vendorUser ? (vendorUser as any).is_active : portalUserCheck?.is_active;
+
+                if (isActive === false) {
+                    try {
+                        await supabase.auth.signOut();
+                    } catch (e) { }
+
+                    toast({
+                        title: "Conta Desativada",
+                        description: "Sua conta de acesso ao portal está desativada. Entre em contato com o administrador.",
+                        variant: "destructive"
+                    });
+                    setIsLoading(false);
                     return;
                 }
 

@@ -1,0 +1,36 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  write to custom object with { processEnv: myObject }
+--- AUTH USERS ---
+[
+  {
+    "id": "8c50e41c-7339-404a-98d3-6d7f4237ec05",
+    "email": "lucas.alcantara@gepriv.com",
+    "created_at": "2026-03-08T18:20:34.191Z"
+  }
+]
+--- VENDOR PORTAL USERS (VPU) ---
+[
+  {
+    "id": "d07eb4c1-acbd-42ce-aba0-01daa2b7b856",
+    "email": "lucas.alcantara@gepriv.com",
+    "is_active": false,
+    "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00"
+  }
+]
+--- RPC check_is_vendor ---
+
+DECLARE
+    is_vendor boolean := false;
+BEGIN
+    -- Check vendor_users by uid
+    IF EXISTS (SELECT 1 FROM public.vendor_users WHERE auth_user_id = check_uid) THEN
+        is_vendor := true;
+    END IF;
+    
+    -- Check vendor_portal_users by email
+    IF NOT is_vendor AND EXISTS (SELECT 1 FROM public.vendor_portal_users WHERE lower(email) = lower(check_email)) THEN
+        is_vendor := true;
+    END IF;
+    
+    RETURN is_vendor;
+END;
+

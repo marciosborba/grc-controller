@@ -2,7 +2,7 @@
 const { Client } = require('pg');
 require('dotenv').config();
 
-async function checkTables() {
+async function checkEmailCase() {
     const client = new Client({
         host: 'db.myxvxponlmulnjstbjwd.supabase.co',
         port: 5432,
@@ -14,19 +14,15 @@ async function checkTables() {
 
     try {
         await client.connect();
-        const res = await client.query(`
-      SELECT tablename 
-      FROM pg_catalog.pg_tables 
-      WHERE schemaname = 'public' 
-      ORDER BY tablename;
-    `);
-        console.log('--- TABLES IN PUBLIC SCHEMA ---');
-        res.rows.forEach(r => console.log(r.tablename));
-    } catch (err) {
-        console.error(err);
-    } finally {
+
+        console.log('--- EMAIL CASE CHECK ---');
+        const res = await client.query("SELECT email, LOWER(email) as lower_email, (email = LOWER(email)) as is_lowercase FROM vendor_portal_users WHERE email ILIKE '%lucas%';");
+        console.log(JSON.stringify(res.rows, null, 2));
+
         await client.end();
+    } catch (err) {
+        console.error('❌ Error:', err.message);
     }
 }
 
-checkTables();
+checkEmailCase();

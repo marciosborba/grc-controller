@@ -16,9 +16,6 @@ import { MfaVerifyPage } from "@/components/auth/MfaVerifyPage";
 import { ResetPasswordPage } from "@/components/auth/ResetPasswordPage";
 import DashboardPage from "@/components/dashboard/DashboardPage";
 import ProtectedVendorRoute from "@/components/auth/ProtectedVendorRoute";
-import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
-import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltraMinimal";
-import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
@@ -911,21 +908,6 @@ const App = () => (
                         <Route path="user-debug" element={
                           <Suspense fallback={<PageLoader />}>
                             <UserDebugInfo />
-                          </Suspense>
-                        } />
-                        <Route path="auth-debug" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <AuthDebugComponent />
-                          </Suspense>
-                        } />
-                        <Route path="permissions-debug" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <UserPermissionsDebug />
-                          </Suspense>
-                        } />
-                        <Route path="ai-manager-test" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <AIManagerDirectTest />
                           </Suspense>
                         } />
                       </Route>

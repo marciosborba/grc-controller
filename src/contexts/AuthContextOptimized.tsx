@@ -633,7 +633,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
   // Logout otimizado
   const logout = useCallback(async () => {
-    // Limpar cache
+    console.log('🚪 [AUTH] Iniciando processo de logout...');
+
+    // Limpar cache imediatamente
     authCache.clear();
 
     // Clear MFA Bypass Flag
@@ -641,11 +643,24 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       sessionStorage.removeItem('grc_mfa_completed');
     } catch (e) { }
 
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Erro no logout:', error);
-      throw new Error('Erro ao fazer logout');
+    // Limpar estado local ANTES ou INDEPENDENTE do resultado do servidor
+    // Isso garante que a UI não trave em um estado "logado" se o servidor der 403
+    setUser(null);
+    setSession(null);
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('⚠️ [AUTH] Erro ao chamar signOut no Supabase (pode ser sessão já expirada):', error.message);
+      } else {
+        console.log('✅ [AUTH] Logout concluído com sucesso no servidor');
+      }
+    } catch (err) {
+      console.error('❌ [AUTH] Exceção durante signOut:', err);
     }
+
+    // Forçar recarregamento se necessário para limpar estados residuais de memória
+    // mas o setUser(null) já deve disparar os redirects do ProtectedRoute
   }, []);
 
   // Signup otimizado

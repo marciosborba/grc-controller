@@ -40,8 +40,6 @@ import { RiskProcessGuide } from './RiskProcessGuide';
 import { IntegratedRiskManagement } from './IntegratedRiskManagement';
 import RiskManagementPage from './RiskManagementPage';
 import { AlexRiskGuidedProcess } from './AlexRiskGuidedProcess';
-import { AlexRiskGuidedProcessSimple } from './AlexRiskGuidedProcessSimple';
-import { AlexRiskTest } from './AlexRiskTest';
 
 interface DashboardMetrics {
   total_risks: number;
@@ -534,8 +532,8 @@ export const RiskManagementHub: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <span className="text-sm font-bold">{category.count}</span>
                         <TrendingUp className={`h-4 w-4 ${category.trend === 'up' ? 'text-red-500' :
-                            category.trend === 'down' ? 'text-green-500' :
-                              'text-gray-500'
+                          category.trend === 'down' ? 'text-green-500' :
+                            'text-gray-500'
                           }`} />
                       </div>
                     </div>
@@ -631,7 +629,7 @@ export const RiskManagementHub: React.FC = () => {
       {showAlexRiskProcess && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-6xl w-full max-h-[95vh] overflow-y-auto">
-            <AlexRiskTest
+            <AlexRiskGuidedProcess
               onComplete={(riskData) => {
                 setShowAlexRiskProcess(false);
                 fetchDashboardData(); // Atualizar dashboard

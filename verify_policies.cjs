@@ -2,7 +2,7 @@
 const { Client } = require('pg');
 require('dotenv').config();
 
-async function checkTables() {
+async function verifyPolicies() {
     const client = new Client({
         host: 'db.myxvxponlmulnjstbjwd.supabase.co',
         port: 5432,
@@ -15,13 +15,18 @@ async function checkTables() {
     try {
         await client.connect();
         const res = await client.query(`
-      SELECT tablename 
-      FROM pg_catalog.pg_tables 
-      WHERE schemaname = 'public' 
-      ORDER BY tablename;
+      SELECT policyname, qual, with_check
+      FROM pg_policies
+      WHERE tablename = 'vendor_registry'
+      AND schemaname = 'public';
     `);
-        console.log('--- TABLES IN PUBLIC SCHEMA ---');
-        res.rows.forEach(r => console.log(r.tablename));
+        console.log('--- ACTIVE RLS POLICIES FOR vendor_registry ---');
+        res.rows.forEach(r => {
+            console.log(`Policy: ${r.policyname}`);
+            console.log(`USING: ${r.qual}`);
+            console.log(`WITH CHECK: ${r.with_check}`);
+            console.log('---');
+        });
     } catch (err) {
         console.error(err);
     } finally {
@@ -29,4 +34,4 @@ async function checkTables() {
     }
 }
 
-checkTables();
+verifyPolicies();

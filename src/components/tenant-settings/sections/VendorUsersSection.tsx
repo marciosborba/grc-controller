@@ -63,7 +63,7 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
 
             const { data: portalUsers, error: puError } = await supabase
                 .from('vendor_portal_users')
-                .select('id, email, vendor_id, tenant_id, created_at, force_password_change')
+                .select('id, email, vendor_id, tenant_id, created_at, force_password_change, is_active')
                 .in('vendor_id', vendorIds)
                 .order('created_at', { ascending: false });
 
@@ -84,7 +84,7 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                 tenant_id: u.tenant_id,
                 created_at: u.created_at || '',
                 force_password_change: u.force_password_change ?? true,
-                is_active: vendorUserMap[u.email?.toLowerCase()] ?? true,
+                is_active: u.is_active ?? vendorUserMap[u.email?.toLowerCase()] ?? true,
             }));
 
             setUsers(mapped);
@@ -100,17 +100,19 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
         const newActive = !user.is_active;
         setIsProcessing(user.id);
         try {
-            // Update vendor_users table
-            const { error } = await supabase
-                .from('vendor_users')
-                .update({ is_active: newActive })
-                .eq('email', user.email.toLowerCase())
-                .eq('vendor_id', user.vendor_id);
+            const { data, error } = await supabase.rpc('toggle_vendor_user_status', {
+                p_email: user.email,
+                p_vendor_id: user.vendor_id,
+                p_is_active: newActive
+            });
 
             if (error) throw error;
-            toast.success(newActive ? `${user.email} reativado.` : `${user.email} desativado.`);
+            if (data?.success === false) throw new Error(data.error || 'Erro desconhecido');
+
+            toast.success(newActive ? `${user.email} reativado.` : `${user.email} desativado e sessões encerradas.`);
             await loadVendorPortalUsers();
         } catch (err: any) {
+            console.error('Error toggling vendor status:', err);
             toast.error(`Erro: ${err.message}`);
         } finally {
             setIsProcessing(null);

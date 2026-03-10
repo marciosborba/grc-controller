@@ -76,10 +76,6 @@ export const useFrameworks = (options: UseFrameworksOptions = {}) => {
         query = query.in('tipo_framework', filters.tipo_framework);
       }
 
-      if (filters.is_active !== undefined) {
-        query = query.eq('is_active', filters.is_active);
-      }
-
       if (filters.is_standard !== undefined) {
         query = query.eq('is_standard', filters.is_standard);
       }
@@ -213,13 +209,13 @@ export const useFrameworks = (options: UseFrameworksOptions = {}) => {
     frameworks,
     isLoading,
     error,
-    
+
     // Ações
     refetch,
     createFramework: createFrameworkMutation.mutate,
     updateFramework: updateFrameworkMutation.mutate,
     deleteFramework: deleteFrameworkMutation.mutate,
-    
+
     // Estados das mutations
     isCreating: createFrameworkMutation.isPending,
     isUpdating: updateFrameworkMutation.isPending,
@@ -570,7 +566,6 @@ export const useFrameworkStats = () => {
           id,
           nome,
           tipo_framework,
-          is_active,
           domains:assessment_domains(count),
           assessments:assessments(count)
         `)
@@ -583,7 +578,7 @@ export const useFrameworkStats = () => {
 
       const stats = {
         total_frameworks: frameworks?.length || 0,
-        active_frameworks: frameworks?.filter(f => f.is_active).length || 0,
+        active_frameworks: frameworks?.length || 0, // Fallback since is_active is missing
         frameworks_by_type: frameworks?.reduce((acc, f) => {
           acc[f.tipo_framework] = (acc[f.tipo_framework] || 0) + 1;
           return acc;

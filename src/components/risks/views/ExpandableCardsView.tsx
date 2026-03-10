@@ -20,6 +20,12 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   ChevronDown,
   ChevronUp,
   Edit,
@@ -85,6 +91,7 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   const [savingCards, setSavingCards] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
 
   const { toast } = useToast();
   const { tenantSettings, isMatrix4x4, getRiskLevels, getMatrixLabels, getMatrixDimensions } = useTenantSettings();
@@ -166,7 +173,27 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     });
 
     return filtered;
+    return filtered;
   }, [risks, searchTerm, filters, sortField, sortDirection]);
+
+  const handleValidateActionPlan = async (planId: string, riskId: string) => {
+    try {
+      const { error } = await supabase
+        .from('risk_registration_action_plans')
+        .update({
+          status: 'Concluído',
+          analyst_validation_status: 'approved'
+        })
+        .eq('id', planId);
+
+      if (error) throw error;
+      toast({ title: 'Sucesso', description: 'Plano de ação validado pelo analista.' });
+
+      onUpdate(riskId, {});
+    } catch (err: any) {
+      toast({ title: 'Erro ao validar o plano', description: err.message, variant: 'destructive' });
+    }
+  };
 
   const toggleExpanded = (riskId: string) => {
     const newExpanded = new Set(expandedCards);
@@ -1717,215 +1744,123 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             </h4>
 
                             {/* Lista de Atividades das Tabelas Relacionadas */}
-                            <div className="space-y-3">
-                              {risk.risk_action_plans && risk.risk_action_plans.length > 0 ? (
-                                risk.risk_action_plans.map((actionPlan, index) => (
-                                  <div key={actionPlan.id || index} className="border rounded p-3 bg-card border-green-200 dark:border-green-800">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <Badge variant="outline" className="text-xs">
-                                        Atividade {index + 1}
-                                      </Badge>
-                                      <Badge variant="outline">
-                                        {actionPlan.priority === 'low' ? '🟢 Baixa' :
-                                          actionPlan.priority === 'medium' ? '🟡 Média' :
-                                            actionPlan.priority === 'high' ? '🟠 Alta' :
-                                              actionPlan.priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
-                                      </Badge>
-                                    </div>
+                            <Tabs defaultValue="pending" className="w-full">
+                              <TabsList className="mb-4 bg-muted w-full justify-start">
+                                <TabsTrigger value="pending" className="data-[state=active]:bg-background">
+                                  Em Aberto ({risk.risk_action_plans?.filter(p => p.status !== 'completed' && p.status !== 'Concluído').length || 0})
+                                </TabsTrigger>
+                                <TabsTrigger value="completed" className="data-[state=active]:bg-background">
+                                  Concluídos ({risk.risk_action_plans?.filter(p => p.status === 'completed' || p.status === 'Concluído').length || 0})
+                                </TabsTrigger>
+                              </TabsList>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
-                                        <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
-                                          {actionPlan.activity_name || actionPlan.name || 'Atividade não definida'}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Status</Label>
-                                        <Badge variant="outline">
-                                          {actionPlan.status === 'pending' ? '⏳ Pendente' :
-                                            actionPlan.status === 'in_progress' ? '🔄 Em Andamento' :
-                                              actionPlan.status === 'completed' ? '✅ Concluída' :
-                                                actionPlan.status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
-                                        </Badge>
-                                      </div>
-                                    </div>
+                              {['pending', 'completed'].map(tab => {
+                                const plansInTab = risk.risk_action_plans?.filter(p =>
+                                  tab === 'completed'
+                                    ? (p.status === 'completed' || p.status === 'Concluído')
+                                    : (p.status !== 'completed' && p.status !== 'Concluído')
+                                ) || [];
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Responsável</Label>
-                                        <p className="text-sm text-gray-900 dark:text-gray-100">
-                                          {actionPlan.responsible_name || actionPlan.responsible_person || 'Não atribuído'}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">E-mail</Label>
-                                        <p className="text-sm text-gray-900 dark:text-gray-100">
-                                          {actionPlan.responsible_email || 'Não informado'}
-                                        </p>
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Prazo</Label>
-                                        <p className="text-sm text-gray-900 dark:text-gray-100">
-                                          {formatDate(actionPlan.due_date || actionPlan.target_date) || 'Não definido'}
-                                        </p>
-                                      </div>
-                                    </div>
+                                return (
+                                  <TabsContent key={tab} value={tab} className="space-y-3 m-0 outline-none">
+                                    {plansInTab.length > 0 ? (
+                                      plansInTab.map((actionPlan, index) => (
+                                        <div key={actionPlan.id || index} className="border rounded p-3 bg-card border-green-200 dark:border-green-800">
+                                          <div className="flex items-center justify-between mb-3">
+                                            <Badge variant="outline" className="text-xs">
+                                              Atividade {index + 1}
+                                            </Badge>
+                                            <Badge variant="outline">
+                                              {actionPlan.priority === 'low' ? '🟢 Baixa' :
+                                                actionPlan.priority === 'medium' ? '🟡 Média' :
+                                                  actionPlan.priority === 'high' ? '🟠 Alta' :
+                                                    actionPlan.priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
+                                            </Badge>
+                                          </div>
 
-                                    {(actionPlan.activity_description || actionPlan.description) && (
-                                      <div className="mb-3">
-                                        <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
-                                        <p className="text-sm text-muted-foreground">
-                                          {actionPlan.activity_description || actionPlan.description}
-                                        </p>
-                                      </div>
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                              <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
+                                              <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">
+                                                {actionPlan.activity_name || actionPlan.name || 'Atividade não definida'}
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium mb-1 block">Status</Label>
+                                              <Badge variant="outline">
+                                                {actionPlan.status}
+                                              </Badge>
+                                            </div>
+                                          </div>
+
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                                            <div>
+                                              <Label className="text-sm font-medium mb-1 block">Responsável</Label>
+                                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                                                {actionPlan.responsible_name || actionPlan.responsible_person || 'Não atribuído'}
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium mb-1 block">E-mail</Label>
+                                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                                                {actionPlan.responsible_email || 'Não informado'}
+                                              </p>
+                                            </div>
+                                            <div>
+                                              <Label className="text-sm font-medium mb-1 block">Prazo</Label>
+                                              <p className="text-sm text-gray-900 dark:text-gray-100">
+                                                {formatDate(actionPlan.due_date || actionPlan.target_date) || 'Não definido'}
+                                              </p>
+                                            </div>
+                                          </div>
+
+                                          {(actionPlan.activity_description || actionPlan.description) && (
+                                            <div className="mb-3">
+                                              <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
+                                              <p className="text-sm text-muted-foreground">
+                                                {actionPlan.activity_description || actionPlan.description}
+                                              </p>
+                                            </div>
+                                          )}
+
+                                          {/* Evidências com Preview */}
+                                          {actionPlan.evidence_url && (
+                                            <div className="mt-3 flex items-center gap-2 bg-muted/30 p-2 rounded border border-border">
+                                              <FileText className="h-4 w-4 text-blue-500" />
+                                              <span className="text-xs text-muted-foreground flex-1 truncate">{actionPlan.evidence_name || 'Evidência Anexada'}</span>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-xs text-blue-600 px-2"
+                                                onClick={() => setEvidencePreview({ isOpen: true, url: actionPlan.evidence_url, title: actionPlan.activity_name || actionPlan.name || 'Evidência' })}
+                                              >
+                                                <Eye className="h-3 w-3 mr-1" /> Preview
+                                              </Button>
+                                            </div>
+                                          )}
+
+                                          {/* Botão de Validação do Analista */}
+                                          {actionPlan.status !== 'completed' && actionPlan.status !== 'Concluído' && (
+                                            <div className="mt-3 flex justify-end">
+                                              <Button
+                                                variant="default"
+                                                size="sm"
+                                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                onClick={() => handleValidateActionPlan(actionPlan.id, risk.id)}
+                                              >
+                                                <CheckCircle className="h-3.5 w-3.5 mr-1" /> Validar Analista
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <p className="text-sm text-muted-foreground italic">Nenhuma atividade nesta categoria.</p>
                                     )}
-                                  </div>
-                                ))
-                              ) : (
-                                /* Fallback para campos diretos se não houver dados relacionados */
-                                risk.activity_1_name ? (
-                                  <div className="border rounded p-3 bg-card border-green-200 dark:border-green-800">
-                                    <div className="flex items-center justify-between mb-3">
-                                      <Badge variant="outline" className="text-xs">
-                                        Atividade 1 (Campo Direto)
-                                      </Badge>
-                                      <Badge variant="outline">
-                                        {risk.activity_1_priority === 'low' ? '🟢 Baixa' :
-                                          risk.activity_1_priority === 'medium' ? '🟡 Média' :
-                                            risk.activity_1_priority === 'high' ? '🟠 Alta' :
-                                              risk.activity_1_priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
-                                      </Badge>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Nome da Atividade</Label>
-                                        {isEditing ? (
-                                          <Input
-                                            value={editForm.activity_1_name || ''}
-                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_name', e.target.value)}
-                                            placeholder="Ex: Implementar controles de segurança"
-                                          />
-                                        ) : (
-                                          <p className="text-sm text-gray-900 dark:text-gray-100 font-medium">{risk.activity_1_name}</p>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Status</Label>
-                                        {isEditing ? (
-                                          <Select value={editForm.activity_1_status || ''} onValueChange={(value) => updateEditForm(risk.id, 'activity_1_status', value)}>
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="pending">⏳ Pendente</SelectItem>
-                                              <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
-                                              <SelectItem value="completed">✅ Concluída</SelectItem>
-                                              <SelectItem value="cancelled">❌ Cancelada</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        ) : (
-                                          <Badge variant="outline">
-                                            {risk.activity_1_status === 'pending' ? '⏳ Pendente' :
-                                              risk.activity_1_status === 'in_progress' ? '🔄 Em Andamento' :
-                                                risk.activity_1_status === 'completed' ? '✅ Concluída' :
-                                                  risk.activity_1_status === 'cancelled' ? '❌ Cancelada' : 'Não definido'}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Prioridade</Label>
-                                        {isEditing ? (
-                                          <Select value={editForm.activity_1_priority || ''} onValueChange={(value) => updateEditForm(risk.id, 'activity_1_priority', value)}>
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="low">Baixa</SelectItem>
-                                              <SelectItem value="medium">Média</SelectItem>
-                                              <SelectItem value="high">Alta</SelectItem>
-                                              <SelectItem value="critical">Crítica</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        ) : (
-                                          <Badge variant="outline">
-                                            {risk.activity_1_priority === 'low' ? '🟢 Baixa' :
-                                              risk.activity_1_priority === 'medium' ? '🟡 Média' :
-                                                risk.activity_1_priority === 'high' ? '🟠 Alta' :
-                                                  risk.activity_1_priority === 'critical' ? '🔴 Crítica' : 'Não definida'}
-                                          </Badge>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Responsável</Label>
-                                        {isEditing ? (
-                                          <Input
-                                            value={editForm.activity_1_responsible || ''}
-                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_responsible', e.target.value)}
-                                            placeholder="Nome do responsável"
-                                          />
-                                        ) : (
-                                          <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_responsible || 'Não atribuído'}</p>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">E-mail</Label>
-                                        {isEditing ? (
-                                          <Input
-                                            value={editForm.activity_1_email || ''}
-                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_email', e.target.value)}
-                                            placeholder="email@empresa.com"
-                                          />
-                                        ) : (
-                                          <p className="text-sm text-gray-900 dark:text-gray-100">{risk.activity_1_email || 'Não informado'}</p>
-                                        )}
-                                      </div>
-                                      <div>
-                                        <Label className="text-sm font-medium mb-1 block">Prazo</Label>
-                                        {isEditing ? (
-                                          <Input
-                                            type="date"
-                                            value={editForm.activity_1_due_date || ''}
-                                            onChange={(e) => updateEditForm(risk.id, 'activity_1_due_date', e.target.value)}
-                                          />
-                                        ) : (
-                                          <p className="text-sm text-gray-900 dark:text-gray-100">{formatDate(risk.activity_1_due_date) || 'Não definido'}</p>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="mb-3">
-                                      <Label className="text-sm font-medium mb-1 block">Descrição da Atividade</Label>
-                                      {isEditing ? (
-                                        <Textarea
-                                          value={editForm.activity_1_description || ''}
-                                          onChange={(e) => updateEditForm(risk.id, 'activity_1_description', e.target.value)}
-                                          placeholder="Descreva detalhadamente esta atividade"
-                                          rows={2}
-                                        />
-                                      ) : (
-                                        <p className="text-sm text-muted-foreground">{risk.activity_1_description || 'Nenhuma descrição'}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ) : (
-                                  /* Nenhum plano de ação encontrado */
-                                  <div className="text-center p-6 border-2 border-dashed border-muted-foreground/20 rounded">
-                                    <Clipboard className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                                    <p className="text-sm text-muted-foreground">
-                                      <strong>Nenhum plano de ação cadastrado</strong>
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Use o formulário de registro de riscos para adicionar atividades
-                                    </p>
-                                  </div>
-                                )
-                              )}
-                            </div>
+                                  </TabsContent>
+                                );
+                              })}
+                            </Tabs>
                           </div>
 
                           {/* Resumo do Plano de Ação */}
@@ -2299,18 +2234,48 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             </div>
                           </div>
                         </TabsContent>
-
-
                       </Tabs>
                     </div>
                   </CardContent>
-                )
-                }
+                )}
               </Card>
             );
           })
+
         )}
       </div>
+
+      {/* Modal de Preview de Evidência */}
+      <Dialog open={evidencePreview.isOpen} onOpenChange={(open) => setEvidencePreview(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{evidencePreview.title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden rounded-md border bg-muted/30 relative flex items-center justify-center min-h-[500px]">
+            {evidencePreview.url ? (
+              evidencePreview.url.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                <img src={evidencePreview.url} alt="Evidence" className="max-w-full max-h-full object-contain" />
+              ) : evidencePreview.url.match(/\.pdf$/i) ? (
+                <iframe src={`${evidencePreview.url}#toolbar=0`} className="w-full h-full border-0 min-h-[60vh]"></iframe>
+              ) : (
+                <div className="text-center p-8 bg-card rounded-lg shadow-sm border max-w-sm">
+                  <FileText className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Este tipo de arquivo não suporta preview direto.
+                  </p>
+                  <Button asChild>
+                    <a href={evidencePreview.url} target="_blank" rel="noopener noreferrer" download>
+                      <Download className="h-4 w-4 mr-2" /> Baixar Arquivo
+                    </a>
+                  </Button>
+                </div>
+              )
+            ) : (
+              <p className="text-sm text-muted-foreground">URL não encontrada.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div >
   );
 };

@@ -12,7 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, Brain, Shield, Target, Users, Mail, FileText, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Plus, Search, Calendar as CalendarIcon, Edit, Trash2, Brain, Shield, Target, Users, Mail, FileText, CheckCircle, Eye, Clipboard } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContextOptimized';
@@ -40,8 +40,11 @@ const RiskManagementPage = React.memo(() => {
     description: '',
     responsible_person: '',
     deadline: '',
-    status: 'Pendente'
+    status: 'Pendente',
+    evidence_url: '',
+    evidence_description: ''
   });
+  const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
 
   // Estados para comunicação
   const [communications, setCommunications] = useState<any[]>([]);
@@ -234,7 +237,9 @@ const RiskManagementPage = React.memo(() => {
       description: '',
       responsible_person: '',
       deadline: '',
-      status: 'Pendente'
+      status: 'Pendente',
+      evidence_url: '',
+      evidence_description: ''
     });
     setNewCommunication({
       person_name: '',
@@ -270,15 +275,15 @@ const RiskManagementPage = React.memo(() => {
         id: '',
         action_plan_id: '',
         ...newActivity,
-        deadline: newActivity.deadline || null,
-        evidence_url: null,
-        evidence_description: null
+        deadline: newActivity.deadline || null
       }]);
       setNewActivity({
         description: '',
         responsible_person: '',
         deadline: '',
-        status: 'Pendente'
+        status: 'Pendente',
+        evidence_url: '',
+        evidence_description: ''
       });
     }
   };
@@ -536,30 +541,57 @@ const RiskManagementPage = React.memo(() => {
                       </div>
 
                       <div>
-                        <Label className="text-lg font-medium">Atividades do Plano de Ação</Label>
-                        <div className="space-y-3 mt-2">
-                          <div className="grid grid-cols-4 gap-2">
-                            <Input
-                              placeholder="Descrição da atividade"
-                              value={newActivity.description}
-                              onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
-                            />
-                            <Input
-                              placeholder="Responsável"
-                              value={newActivity.responsible_person}
-                              onChange={(e) => setNewActivity({ ...newActivity, responsible_person: e.target.value })}
-                            />
-                            <Input
-                              type="date"
-                              value={newActivity.deadline}
-                              onChange={(e) => setNewActivity({ ...newActivity, deadline: e.target.value })}
-                            />
-                            <div className="flex space-x-2">
+                        <div>
+                          <Label className="text-lg font-medium flex items-center gap-2">
+                            <Clipboard className="h-5 w-5 text-primary" />
+                            Atividades do Plano de Ação
+                          </Label>
+
+                          {/* Formulário de Nova Atividade */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 p-4 border rounded-lg bg-muted/20">
+                            <div className="lg:col-span-2">
+                              <Label className="text-xs">Descrição</Label>
+                              <Input
+                                placeholder="Descrição da atividade"
+                                value={newActivity.description}
+                                onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
+                                className="h-9"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Responsável</Label>
+                              <Input
+                                placeholder="Responsável"
+                                value={newActivity.responsible_person}
+                                onChange={(e) => setNewActivity({ ...newActivity, responsible_person: e.target.value })}
+                                className="h-9"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Prazo</Label>
+                              <Input
+                                type="date"
+                                value={newActivity.deadline}
+                                onChange={(e) => setNewActivity({ ...newActivity, deadline: e.target.value })}
+                                className="h-9"
+                              />
+                            </div>
+                            <div className="lg:col-span-2">
+                              <Label className="text-xs">URL da Evidência</Label>
+                              <Input
+                                placeholder="https://..."
+                                value={newActivity.evidence_url}
+                                onChange={(e) => setNewActivity({ ...newActivity, evidence_url: e.target.value })}
+                                className="h-9"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Status Inicial</Label>
                               <Select
                                 value={newActivity.status}
                                 onValueChange={(value) => setNewActivity({ ...newActivity, status: value })}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="h-9">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -569,53 +601,92 @@ const RiskManagementPage = React.memo(() => {
                                   <SelectItem value="Atrasada">Atrasada</SelectItem>
                                 </SelectContent>
                               </Select>
-                              <Button type="button" onClick={addActivity} size="sm">
-                                <Plus className="h-4 w-4" />
+                            </div>
+                            <div className="flex items-end">
+                              <Button type="button" onClick={addActivity} className="w-full h-9">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar
                               </Button>
                             </div>
                           </div>
 
-                          {activities.length > 0 && (
-                            <div className="border rounded-lg">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="text-xs">Atividade</TableHead>
-                                    <TableHead className="text-xs">Responsável</TableHead>
-                                    <TableHead className="text-xs">Prazo</TableHead>
-                                    <TableHead className="text-xs">Status</TableHead>
-                                    <TableHead className="text-xs">Ações</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {activities.map((activity, index) => (
-                                    <TableRow key={index}>
-                                      <TableCell className="text-xs">{activity.description}</TableCell>
-                                      <TableCell className="text-xs">{activity.responsible_person}</TableCell>
-                                      <TableCell className="text-xs">
-                                        {activity.deadline ? format(new Date(activity.deadline), 'dd/MM/yyyy') : '-'}
-                                      </TableCell>
-                                      <TableCell className="text-xs">
-                                        <Badge variant={activity.status === 'Concluída' ? 'default' : 'secondary'}>
-                                          {activity.status}
-                                        </Badge>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Button
-                                          type="button"
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => removeActivity(index)}
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          )}
+                          <div className="mt-6">
+                            <Tabs defaultValue="pending" className="w-full">
+                              <TabsList className="bg-muted mb-4">
+                                <TabsTrigger value="pending" className="data-[state=active]:bg-background">
+                                  Em Aberto ({activities.filter(a => a.analyst_validation_status !== 'approved' && a.status !== 'Concluída').length})
+                                </TabsTrigger>
+                                <TabsTrigger value="completed" className="data-[state=active]:bg-background">
+                                  Concluídos ({activities.filter(a => a.analyst_validation_status === 'approved' || a.status === 'Concluída').length})
+                                </TabsTrigger>
+                              </TabsList>
+
+                              {['pending', 'completed'].map(tab => {
+                                const activitiesInTab = activities.filter(a =>
+                                  tab === 'completed'
+                                    ? (a.analyst_validation_status === 'approved' || a.status === 'Concluída')
+                                    : (a.analyst_validation_status !== 'approved' && a.status !== 'Concluída')
+                                );
+
+                                return (
+                                  <TabsContent key={tab} value={tab} className="space-y-3 m-0 outline-none">
+                                    {activitiesInTab.length === 0 ? (
+                                      <p className="text-sm text-muted-foreground italic text-center py-8 bg-muted/10 rounded-lg border border-dashed">
+                                        Nenhuma atividade nesta categoria.
+                                      </p>
+                                    ) : activitiesInTab.map((activity, index) => (
+                                      <div key={index} className="p-4 rounded-lg border bg-card hover:border-primary/30 transition-colors">
+                                        <div className="flex items-start justify-between gap-4">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex flex-wrap gap-2 mb-2">
+                                              <Badge variant={activity.status === 'Concluída' ? 'default' : 'secondary'} className="text-[10px] h-5">
+                                                {activity.status}
+                                              </Badge>
+                                              {activity.analyst_validation_status === 'approved' && (
+                                                <Badge variant="outline" className="text-[10px] h-5 border-emerald-500/40 text-emerald-600 bg-emerald-500/10">✅ Validada</Badge>
+                                              )}
+                                            </div>
+                                            <p className="font-medium text-sm text-foreground mb-1">{activity.description}</p>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                                              <span>Responsável: <span className="text-foreground">{activity.responsible_person}</span></span>
+                                              <span>Prazo: <span className="text-foreground">{activity.deadline ? format(new Date(activity.deadline), 'dd/MM/yyyy') : '-'}</span></span>
+                                            </div>
+
+                                            {activity.evidence_url && (
+                                              <div className="mt-3 flex items-center gap-2 bg-muted/40 p-2 rounded border border-border">
+                                                <FileText className="h-3.5 w-3.5 text-blue-500" />
+                                                <span className="text-xs text-muted-foreground flex-1 truncate">Evidência Anexada</span>
+                                                <Button
+                                                  type="button"
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-6 text-[10px] text-blue-600 px-2"
+                                                  onClick={() => setEvidencePreview({ isOpen: true, url: activity.evidence_url, title: activity.description })}
+                                                >
+                                                  <Eye className="h-3 w-3 mr-1" /> Preview
+                                                </Button>
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="flex flex-col gap-2">
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                              onClick={() => removeActivity(index)}
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </TabsContent>
+                                );
+                              })}
+                            </Tabs>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -880,6 +951,29 @@ const RiskManagementPage = React.memo(() => {
       </Card>
 
 
+      {/* Preview de Evidência Dialog */}
+      <Dialog open={evidencePreview.isOpen} onOpenChange={(open) => setEvidencePreview(prev => ({ ...prev, isOpen: open }))}>
+        <DialogContent className="sm:max-w-[800px] h-[80vh] flex flex-col p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>Visualização de Evidência: {evidencePreview.title}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 w-full relative bg-muted/10 overflow-hidden flex items-center justify-center p-4">
+            {evidencePreview.url.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+              <img src={evidencePreview.url} alt="Evidência" className="max-w-full max-h-full object-contain" />
+            ) : evidencePreview.url.match(/\.pdf$/i) ? (
+              <iframe src={evidencePreview.url} title="Preview Documento" className="w-full h-full border-0 bg-white" />
+            ) : (
+              <div className="text-center">
+                <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm font-medium">Este tipo de arquivo não pode ser visualizado diretamente.</p>
+                <Button variant="outline" className="mt-4" onClick={() => window.open(evidencePreview.url, '_blank')}>
+                  Abrir em nova aba
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 });
