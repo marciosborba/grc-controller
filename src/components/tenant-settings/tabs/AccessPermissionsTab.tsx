@@ -244,7 +244,7 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
         setLoading(true);
         const { data: rolesData } = await supabase.from('tenant_roles').select('*').eq('tenant_id', tenantId).order('name');
         const { data: permsData } = await supabase.from('role_module_permissions').select('*').in('role_id', (rolesData || []).map(r => r.id));
-        const { data: tenantModules } = await supabase.from('tenant_modules').select('module_key, is_enabled').eq('tenant_id', tenantId);
+        const { data: tenantModules } = await supabase.rpc('get_tenant_modules_for_rbac', { p_tenant_id: tenantId });
 
         let enabledKeys: string[] = [];
         if (tenantModules && tenantModules.length > 0) {
