@@ -374,7 +374,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
     try {
       const { data, error } = await supabase
         .from('risk_registration_action_plans')
-        .select('*')
+        .select('id, activity_name, activity_description, responsible_name, responsible_email, due_date, priority, status')
         .eq('risk_registration_id', riskId)
         .order('created_at', { ascending: true });
 

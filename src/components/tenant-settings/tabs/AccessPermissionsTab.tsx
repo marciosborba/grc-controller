@@ -244,7 +244,12 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
         setLoading(true);
         const { data: rolesData } = await supabase.from('tenant_roles').select('*').eq('tenant_id', tenantId).order('name');
         const { data: permsData } = await supabase.from('role_module_permissions').select('*').in('role_id', (rolesData || []).map(r => r.id));
-        const { data: tenantModules } = await supabase.rpc('get_tenant_modules_for_rbac', { p_tenant_id: tenantId });
+        const { data: tenantModules, error: tmError } = await supabase.rpc('get_tenant_modules_for_rbac', { p_tenant_id: tenantId });
+
+        if (tmError) {
+            console.error('Error fetching tenant modules via RPC:', tmError);
+            toast.error('Erro ao carregar os módulos da organização.');
+        }
 
         let enabledKeys: string[] = [];
         if (tenantModules && tenantModules.length > 0) {

@@ -1,0 +1,12 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ­ƒöÉ prevent building .env in docker: https://dotenvx.com/prebuild
+CREATE OR REPLACE FUNCTION public.update_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$function$
+

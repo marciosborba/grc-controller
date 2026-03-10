@@ -30,6 +30,32 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   }
 });
 
+// ============================================================================
+// DEBUG: Intercept errors on risk_registration_action_plans to find source
+// This can be removed once the error is found and fixed.
+// ============================================================================
+if (typeof window !== 'undefined') {
+  const originalFetch = window.fetch;
+  window.fetch = async function (...args) {
+    const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
+    if (url.includes('risk_registration_action_plans')) {
+      const response = await originalFetch.apply(this, args);
+      const clone = response.clone();
+      clone.json().then((body: any) => {
+        if (body && body.message && body.message.includes('description')) {
+          console.error('🚨 [DEBUG] DESCRIPTION ERROR CAUGHT!');
+          console.error('🚨 [DEBUG] URL:', url);
+          console.error('🚨 [DEBUG] Body:', JSON.stringify(body));
+          console.error('🚨 [DEBUG] Stack trace:');
+          console.trace();
+        }
+      }).catch(() => { });
+      return response;
+    }
+    return originalFetch.apply(this, args);
+  };
+}
+
 // Cliente isolado por sessionStorage para uso em abas de impersonação.
 // Cada aba tem seu próprio sessionStorage — a sessão do usuário impersonado
 // fica separada da sessão do admin (que usa localStorage).

@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
     Target, Calendar, FileText, CheckCircle, Clock, ChevronRight, ChevronDown,
     ArrowLeft, UploadCloud, Paperclip, ShieldAlert, Trash2, AlertTriangle,
-    CheckCheck, XCircle, MessageSquare, Activity, Plus, Edit2
+    CheckCheck, XCircle, MessageSquare, Activity, Plus, Edit2, Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -77,6 +77,7 @@ export const RiskPortalActionPlans = () => {
         evidence_url: '',
         evidence_name: '',
     });
+    const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
 
     const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
     const [editingActivity, setEditingActivity] = useState<RiskPlan | null>(null);
@@ -608,15 +609,15 @@ export const RiskPortalActionPlans = () => {
                                             {selectedPlan.evidence_url && (
                                                 <div>
                                                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Evidência Anexada</p>
-                                                    <a
-                                                        href={selectedPlan.evidence_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 h-auto"
+                                                        onClick={() => setEvidencePreview({ isOpen: true, url: selectedPlan.evidence_url as string, title: selectedPlan.evidence_name || 'Evidência' })}
                                                     >
-                                                        <Paperclip className="h-4 w-4" />
-                                                        {selectedPlan.evidence_name || 'Ver Evidência'}
-                                                    </a>
+                                                        <Eye className="h-4 w-4" />
+                                                        Preview: {selectedPlan.evidence_name || 'Ver Evidência'}
+                                                    </Button>
                                                 </div>
                                             )}
                                         </div>
@@ -906,6 +907,22 @@ export const RiskPortalActionPlans = () => {
                             {isSaving ? 'Salvando...' : 'Salvar Atividade'}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog Preview Evidência */}
+            <Dialog open={evidencePreview.isOpen} onOpenChange={(open) => setEvidencePreview(prev => ({ ...prev, isOpen: open }))}>
+                <DialogContent className="sm:max-w-[700px] h-[80vh] flex flex-col p-0">
+                    <DialogHeader className="p-4 border-b">
+                        <DialogTitle>Visualização de Evidência: {evidencePreview.title}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 w-full relative bg-muted/30 overflow-hidden flex items-center justify-center p-4">
+                        {evidencePreview.url.match(/\.(jpeg|jpg|gif|png)$/) != null ? (
+                            <img src={evidencePreview.url} alt="Evidência" className="max-w-full max-h-full object-contain" />
+                        ) : (
+                            <iframe src={evidencePreview.url} title="Preview Documento" className="w-full h-full border-0 bg-white" />
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

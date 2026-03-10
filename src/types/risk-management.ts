@@ -251,6 +251,11 @@ export interface Activity {
   evidenceDescription?: string;
   completionPercentage: number; // 0-100
 
+  // Sub-atividades e Validação
+  subActivities?: { id: string; text: string; done: boolean }[];
+  analystValidationStatus?: 'pending' | 'approved' | 'rejected';
+  analystNotes?: string;
+
   // Controles
   createdBy: string;
   createdAt: Date;

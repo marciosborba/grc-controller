@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     ArrowLeft, ShieldAlert, Users, Target, AlertTriangle,
     Calendar, UploadCloud, Paperclip, FileText, Trash2,
-    CheckCircle, XCircle, Clock, Activity, Plus, Edit2
+    CheckCircle, XCircle, Clock, Activity, Plus, Edit2, Eye
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -48,6 +48,7 @@ export const RiskPortalRiskDetail = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [evidenceForm, setEvidenceForm] = useState({ notes: '', evidence_url: '', evidence_name: '' });
+    const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
 
     const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
     const [editingActivity, setEditingActivity] = useState<any>(null);
@@ -476,10 +477,14 @@ export const RiskPortalRiskDetail = () => {
                                                                 </p>
                                                             )}
                                                             {ap.evidence_url && (
-                                                                <a href={ap.evidence_url} target="_blank" rel="noopener noreferrer"
-                                                                    className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-                                                                    <Paperclip className="h-3 w-3" /> {ap.evidence_name || 'Ver Evidência'}
-                                                                </a>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 text-xs text-blue-600 px-2 mt-1 p-0 justify-start"
+                                                                    onClick={() => setEvidencePreview({ isOpen: true, url: ap.evidence_url, title: ap.evidence_name || 'Evidência' })}
+                                                                >
+                                                                    <Eye className="h-3 w-3 mr-1" /> Preview Documento
+                                                                </Button>
                                                             )}
                                                         </div>
                                                     )}
@@ -758,6 +763,22 @@ export const RiskPortalRiskDetail = () => {
                             {isSaving ? 'Salvando...' : 'Salvar Atividade'}
                         </Button>
                     </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog Preview Evidência */}
+            <Dialog open={evidencePreview.isOpen} onOpenChange={(open) => setEvidencePreview(prev => ({ ...prev, isOpen: open }))}>
+                <DialogContent className="sm:max-w-[700px] h-[80vh] flex flex-col p-0">
+                    <DialogHeader className="p-4 border-b">
+                        <DialogTitle>Visualização de Evidência: {evidencePreview.title}</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 w-full relative bg-muted/30 overflow-hidden flex items-center justify-center p-4">
+                        {evidencePreview.url.match(/\.(jpeg|jpg|gif|png)$/) != null ? (
+                            <img src={evidencePreview.url} alt="Evidência" className="max-w-full max-h-full object-contain" />
+                        ) : (
+                            <iframe src={evidencePreview.url} title="Preview Documento" className="w-full h-full border-0 bg-white" />
+                        )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div >

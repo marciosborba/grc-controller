@@ -1,0 +1,145 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ­ƒôí auto-backup env with Radar: https://dotenvx.com/radar
+=== VIEW DEFINITION: vw_action_plans_unified ===
+
+ WITH unified_plans AS (
+         SELECT ap.id,
+            ap.codigo,
+            ap.titulo AS title,
+            ap.descricao AS description,
+                CASE
+                    WHEN ((ap.modulo_origem)::text = 'vendor_risk'::text) THEN 'tprm'::character varying
+                    ELSE COALESCE(ap.modulo_origem, 'action_plans'::character varying)
+                END AS module,
+            (ap.entidade_origem_id)::text AS origin_id,
+                CASE
+                    WHEN ((ap.entidade_origem_tipo)::text = 'assessment'::text) THEN a.titulo
+                    WHEN ((ap.entidade_origem_tipo)::text = 'vendor'::text) THEN (v.name)::character varying
+                    ELSE NULL::character varying
+                END AS origin_name,
+            ap.status,
+            ap.prioridade AS priority,
+            ap.data_fim_planejada AS due_date,
+            ap.responsavel_plano AS responsible_id,
+            NULL::text AS direct_responsible_name,
+            NULL::text AS direct_responsible_email,
+            ap.created_at,
+            ap.tenant_id,
+            ap.percentual_conclusao
+           FROM ((action_plans ap
+             LEFT JOIN assessments a ON ((((ap.entidade_origem_id)::text = (a.id)::text) AND ((ap.entidade_origem_tipo)::text = 'assessment'::text))))
+             LEFT JOIN vendors v ON ((((ap.entidade_origem_id)::text = (v.id)::text) AND ((ap.entidade_origem_tipo)::text = 'vendor'::text))))
+        UNION ALL
+         SELECT rap.id,
+            ('R-'::text || rap.risk_registration_id) AS codigo,
+            rap.activity_name AS title,
+            rap.activity_description AS description,
+            'risk_management'::character varying AS module,
+            (rap.risk_registration_id)::text AS origin_id,
+            rr.risk_title AS origin_name,
+                CASE
+                    WHEN ((rap.status)::text = 'pendente'::text) THEN 'pending'::character varying
+                    WHEN ((rap.status)::text = 'em_andamento'::text) THEN 'in_progress'::character varying
+                    WHEN ((rap.status)::text = 'concluido'::text) THEN 'completed'::character varying
+                    WHEN ((rap.status)::text = 'cancelado'::text) THEN 'cancelled'::character varying
+                    ELSE rap.status
+                END AS status,
+                CASE
+                    WHEN ((rap.priority)::text = 'baixa'::text) THEN 'low'::character varying
+                    WHEN ((rap.priority)::text = 'media'::text) THEN 'medium'::character varying
+                    WHEN ((rap.priority)::text = 'alta'::text) THEN 'high'::character varying
+                    WHEN ((rap.priority)::text = 'critica'::text) THEN 'critical'::character varying
+                    ELSE rap.priority
+                END AS priority,
+            rap.due_date,
+            NULL::uuid AS responsible_id,
+            rap.responsible_name AS direct_responsible_name,
+            rap.responsible_email AS direct_responsible_email,
+            rap.created_at,
+            rap.tenant_id,
+            0 AS percentual_conclusao
+           FROM (risk_registration_action_plans rap
+             LEFT JOIN risk_registrations rr ON ((rap.risk_registration_id = rr.id)))
+        UNION ALL
+         SELECT vap.id,
+            ('V-'::text || vap.vendor_id) AS codigo,
+            vap.title,
+            vap.description,
+            'tprm'::character varying AS module,
+            (vap.vendor_id)::text AS origin_id,
+            v.name AS origin_name,
+                CASE
+                    WHEN (vap.status = 'Aberto'::text) THEN 'open'::text
+                    WHEN (vap.status = 'Em Andamento'::text) THEN 'in_progress'::text
+                    WHEN (vap.status = 'Conclu├¡do'::text) THEN 'completed'::text
+                    ELSE 'pending'::text
+                END AS status,
+                CASE
+                    WHEN (vap.priority = 'Baixa'::text) THEN 'low'::text
+                    WHEN (vap.priority = 'M├®dia'::text) THEN 'medium'::text
+                    WHEN (vap.priority = 'Alta'::text) THEN 'high'::text
+                    ELSE 'medium'::text
+                END AS priority,
+            vap.due_date,
+            vap.assigned_to AS responsible_id,
+            NULL::text AS direct_responsible_name,
+            NULL::text AS direct_responsible_email,
+            vap.created_at,
+            vap.tenant_id,
+            vap.progress_percentage AS percentual_conclusao
+           FROM (vendor_risk_action_plans vap
+             LEFT JOIN vendors v ON ((vap.vendor_id = v.id)))
+        UNION ALL
+         SELECT aap.id,
+            ('A-'::text || aap.assessment_id) AS codigo,
+            aap.titulo AS title,
+            aap.descricao AS description,
+            'assessments'::character varying AS module,
+            (aap.assessment_id)::text AS origin_id,
+            a.titulo AS origin_name,
+                CASE
+                    WHEN ((aap.status)::text = 'pendente'::text) THEN 'pending'::character varying
+                    WHEN ((aap.status)::text = 'em_progresso'::text) THEN 'in_progress'::character varying
+                    WHEN ((aap.status)::text = 'concluido'::text) THEN 'completed'::character varying
+                    ELSE aap.status
+                END AS status,
+                CASE
+                    WHEN ((aap.prioridade)::text = 'baixa'::text) THEN 'low'::text
+                    WHEN ((aap.prioridade)::text = 'media'::text) THEN 'medium'::text
+                    WHEN ((aap.prioridade)::text = 'alta'::text) THEN 'high'::text
+                    ELSE 'medium'::text
+                END AS priority,
+            aap.data_fim_planejada AS due_date,
+            aap.responsavel_plano AS responsible_id,
+            NULL::text AS direct_responsible_name,
+            NULL::text AS direct_responsible_email,
+            aap.created_at,
+            aap.tenant_id,
+            aap.percentual_conclusao
+           FROM (assessment_action_plans aap
+             LEFT JOIN assessments a ON ((aap.assessment_id = a.id)))
+        )
+ SELECT u.id,
+    u.codigo,
+    u.title,
+    u.description,
+    u.module,
+    u.origin_id,
+    u.origin_name,
+    u.status,
+    u.priority,
+    u.due_date,
+    u.responsible_id,
+    COALESCE(p.full_name, u.direct_responsible_name) AS responsible_name,
+    COALESCE(p.email, u.direct_responsible_email) AS responsible_email,
+    p.avatar_url AS responsible_avatar,
+    u.created_at,
+    u.tenant_id,
+    u.percentual_conclusao
+   FROM (unified_plans u
+     LEFT JOIN users p ON ((u.responsible_id = p.id)));
+
+=== VIEWS USING vw_action_plans_unified ===
+None found.
+
+=== FUNCTIONS QUERYING vw_action_plans_unified ===
+None found.

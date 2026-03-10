@@ -72,7 +72,7 @@ export const RiskPortalDashboard = () => {
                 const riskIds = risks.map(r => r.id);
                 const { count } = await supabase
                     .from('risk_registration_action_plans')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id', { count: 'exact', head: true })
                     .in('risk_registration_id', riskIds)
                     .neq('status', 'completed');
                 setActionPlansCount(count || 0);

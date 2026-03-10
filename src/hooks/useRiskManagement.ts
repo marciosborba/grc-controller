@@ -225,7 +225,20 @@ export const useRiskManagement = () => {
       const { data, error } = await supabase
         .from('risk_registrations')
         .select(`
-          *,
+          id, tenant_id, created_by, current_step, status, completion_percentage, 
+          risk_title, risk_description, risk_category, risk_source, identified_date, 
+          business_area, impact_score, likelihood_score, risk_score, risk_level, 
+          analysis_methodology, analysis_notes, gut_gravity, gut_urgency, 
+          gut_tendency, gut_score, gut_priority, treatment_strategy, 
+          treatment_rationale, treatment_cost, treatment_timeline, 
+          monitoring_frequency, monitoring_responsible, residual_impact, 
+          residual_likelihood, residual_score, closure_criteria, closure_date, 
+          closure_notes, created_at, updated_at,
+          risk_code, activity_1_name, activity_1_description, activity_1_responsible,
+          activity_1_email, activity_1_priority, activity_1_status, activity_1_due_date,
+          awareness_person_1_name, awareness_person_1_position, awareness_person_1_email,
+          approval_person_1_name, approval_person_1_position, approval_person_1_email,
+          approval_person_1_status, requires_approval,
           risk_registration_action_plans(
             id,
             activity_name,
@@ -562,7 +575,7 @@ export const useRiskManagement = () => {
       const { data, error } = await supabase
         .from('risk_registrations')
         .insert([baseRiskData])
-        .select()
+        .select('id, risk_title, status, current_step')
         .single();
 
       if (error) {
@@ -612,7 +625,7 @@ export const useRiskManagement = () => {
           const { data: insertedPlans, error: planError } = await supabase
             .from('risk_registration_action_plans')
             .insert(plansToInsert)
-            .select();
+            .select('id, activity_name, activity_description, responsible_name, due_date, status');
 
           if (planError) {
             console.error('❌ Erro ao criar plano de ação:', planError);
@@ -835,7 +848,7 @@ export const useRiskManagement = () => {
         .from('risk_registrations')
         .update(updateData)
         .eq('id', riskId)
-        .select()
+        .select('id, risk_title, likelihood_score, impact_score, risk_level, risk_score')
         .single();
 
       if (error) {
@@ -955,7 +968,7 @@ export const useRiskManagement = () => {
           status: 'TBD',
           evidence_description: activity.details
         }])
-        .select()
+        .select('id, action_plan_id, description, responsible_person, status')
         .single();
 
       if (error) throw error;
@@ -1007,7 +1020,7 @@ export const useRiskManagement = () => {
           justification: letterData.justification,
           created_by: user?.id
         }])
-        .select()
+        .select('id, name, content')
         .single();
 
       if (error) throw error;

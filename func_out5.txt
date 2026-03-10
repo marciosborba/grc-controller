@@ -1,0 +1,4 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ­ƒøá´©Å  run anywhere with `dotenvx run -- yourcommand`
+=== ADDING DESCRIPTION COLUMN ===
+Column 'description' added successfully to risk_registration_action_plans.
+Schema cache reloaded.

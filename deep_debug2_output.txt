@@ -1,0 +1,33 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ­ƒôí version env with Radar: https://dotenvx.com/radar
+Connected.
+
+=== FUNCTIONS WITH risk_registration_action_plans ===
+None found.
+
+
+=== RECENT QUERIES IN pg_stat_activity ===
+  State: active, Query: 
+            SELECT query, state, query_start
+            FROM pg_stat_activity
+            WHERE query ILIKE '%risk_registration_action_plans%'
+            AND state != 'idle'
+            LIMIT 10
+  
+
+=== TESTING: SELECT description FROM risk_registration_action_plans LIMIT 1 ===
+Error (expected): column "description" does not exist
+
+=== MATERIALIZED VIEWS ===
+None found.
+
+=== ALL RLS POLICIES ON risk_registration_action_plans ===
+  Policy: Users can manage risk_registration_action_plans from their tena (ALL) | has 'description': false
+
+=== CHECK CONSTRAINTS ON risk_registration_action_plans ===
+  Constraint: risk_registration_action_plans_priority_check | has 'description': false
+  Constraint: risk_registration_action_plans_status_check | has 'description': false
+
+=== ALL SCHEMAS AND THEIR FUNCTIONS WITH description + rap ===
+Schema: public, Function: submit_vendor_assessment_secure
+
+Done.

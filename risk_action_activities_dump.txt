@@ -1,0 +1,17 @@
+--- COLUMNS IN risk_action_activities ---
+id (uuid)
+tenant_id (uuid)
+action_plan_id (uuid)
+description (text)
+responsible_person (text)
+deadline (timestamp with time zone)
+status (character varying)
+priority (character varying)
+evidence_url (text)
+evidence_description (text)
+completion_percentage (integer)
+created_by (uuid)
+created_at (timestamp with time zone)
+updated_at (timestamp with time zone)
+completed_at (timestamp with time zone)
+

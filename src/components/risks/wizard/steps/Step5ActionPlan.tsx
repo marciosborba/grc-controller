@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   ClipboardList,
   Plus,
   Edit,
@@ -65,7 +65,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
   actionPlanItems,
   setActionPlanItems
 }) => {
-  
+
   // Debug logs
   console.log('Step5ActionPlan props:', {
     registrationId,
@@ -87,7 +87,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
 
   // Se a estratégia é aceitar, pular esta etapa
   const isAcceptStrategy = data.treatment_strategy === 'accept';
-  
+
   // Carregar action plan items do banco quando registrationId estiver disponível
   useEffect(() => {
     const loadActionPlanItems = async () => {
@@ -95,20 +95,20 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
         console.log('Step5: Sem registrationId, não carregando items');
         return;
       }
-      
+
       try {
         console.log('Step5: Carregando action plan items para registrationId:', registrationId);
         const { data: items, error } = await supabase
           .from('risk_registration_action_plans')
-          .select('*')
+          .select('id, activity_name, activity_description, responsible_name, responsible_email, due_date, priority, status')
           .eq('risk_registration_id', registrationId)
           .order('created_at', { ascending: true });
-        
+
         if (error) {
           console.error('Step5: Erro ao carregar action plan items:', error);
           return;
         }
-        
+
         console.log('Step5: Action plan items carregados:', items);
         if (items && items.length > 0) {
           setActionPlanItems(items);
@@ -117,7 +117,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
         console.error('Step5: Erro ao carregar action plan items:', error);
       }
     };
-    
+
     loadActionPlanItems();
   }, [registrationId, setActionPlanItems]);
 
@@ -137,15 +137,15 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
 
   const validateItem = (item: ActionPlanItem) => {
     const errors = [];
-    
+
     if (!item.activity_name?.trim()) {
       errors.push('Nome da atividade é obrigatório');
     }
-    
+
     if (!item.responsible_name?.trim()) {
       errors.push('Nome do responsável é obrigatório');
     }
-    
+
     if (!item.responsible_email?.trim()) {
       errors.push('Email do responsável é obrigatório');
     } else {
@@ -155,11 +155,11 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
         errors.push('Email do responsável deve ter um formato válido');
       }
     }
-    
+
     if (!item.due_date) {
       errors.push('Data de vencimento é obrigatória');
     }
-    
+
     return {
       isValid: errors.length === 0,
       errors
@@ -172,14 +172,14 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
       toast.error(`Erro de validação:\n${validation.errors.join('\n')}`);
       return;
     }
-    
+
     console.log('Iniciando salvamento da atividade:', {
       newItem,
       registrationId,
       editingIndex,
       hasRegistrationId: !!registrationId
     });
-    
+
     // Verificar se registrationId existe
     if (!registrationId) {
       console.warn('registrationId não encontrado, salvando apenas na memória');
@@ -191,7 +191,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
       if (editingIndex !== null) {
         // Atualizar item existente
         updatedItems[editingIndex] = { ...newItem };
-        
+
         if (registrationId && newItem.id) {
           // Atualizar no banco
           console.log('Atualizando item existente no banco:', newItem.id);
@@ -207,7 +207,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
               status: newItem.status
             })
             .eq('id', newItem.id);
-          
+
           if (error) {
             console.error('Erro ao atualizar no banco:', error);
             throw error;
@@ -230,20 +230,20 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
             risk_registration_id: registrationId,
             tenant_id: '46b1c048-85a1-423b-96fc-776007c8de1f'
           };
-          
+
           console.log('Dados a serem inseridos:', itemToInsert);
-          
+
           const { data: savedItem, error } = await supabase
             .from('risk_registration_action_plans')
             .insert([itemToInsert])
-            .select()
+            .select('id, activity_name, activity_description, responsible_name, responsible_email, due_date, priority, status')
             .single();
-          
+
           if (error) {
             console.error('Erro ao salvar no banco:', error);
             throw error;
           }
-          
+
           console.log('Item salvo com sucesso:', savedItem);
           updatedItems.push(savedItem);
         } else {
@@ -255,13 +255,13 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
 
       setActionPlanItems(updatedItems);
       resetForm();
-      
+
       const successMessage = editingIndex !== null ? 'Atividade atualizada!' : 'Atividade adicionada!';
       console.log(successMessage);
       toast.success(successMessage);
     } catch (error) {
       console.error('Erro ao salvar atividade:', error);
-      
+
       let errorMessage = 'Erro ao salvar atividade';
       if (error?.message) {
         errorMessage += `: ${error.message}`;
@@ -269,7 +269,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
       if (error?.details) {
         errorMessage += ` (${error.details})`;
       }
-      
+
       toast.error(errorMessage);
     }
   };
@@ -285,16 +285,16 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
   const deleteItem = async (index: number) => {
     try {
       if (!actionPlanItems || !actionPlanItems[index]) return;
-      
+
       const item = actionPlanItems[index];
-      
+
       if (registrationId && item.id && !item.id.toString().startsWith('temp-')) {
         // Deletar do banco
         const { error } = await supabase
           .from('risk_registration_action_plans')
           .delete()
           .eq('id', item.id);
-        
+
         if (error) throw error;
       }
 
@@ -331,8 +331,8 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              <strong>Estratégia de Aceitação:</strong> Como você escolheu aceitar o risco, 
-              não é necessário definir um plano de ação específico. O risco será tratado 
+              <strong>Estratégia de Aceitação:</strong> Como você escolheu aceitar o risco,
+              não é necessário definir um plano de ação específico. O risco será tratado
               através de comunicação e monitoramento (próximas etapas).
             </AlertDescription>
           </Alert>
@@ -358,8 +358,8 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
           <Alert>
             <Target className="h-4 w-4" />
             <AlertDescription>
-              <strong>Estratégia Selecionada:</strong> {data.treatment_strategy ? 
-                data.treatment_strategy.charAt(0).toUpperCase() + data.treatment_strategy.slice(1) : 
+              <strong>Estratégia Selecionada:</strong> {data.treatment_strategy ?
+                data.treatment_strategy.charAt(0).toUpperCase() + data.treatment_strategy.slice(1) :
                 'Não definida'
               }. Crie atividades específicas, mensuráveis e com responsáveis definidos.
             </AlertDescription>
@@ -383,7 +383,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
               <Input
                 id="activity_name"
                 value={newItem.activity_name}
-                onChange={(e) => setNewItem({...newItem, activity_name: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, activity_name: e.target.value })}
                 placeholder="Ex: Implementar backup automático diário"
               />
             </div>
@@ -397,7 +397,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
               <Input
                 id="responsible_name"
                 value={newItem.responsible_name}
-                onChange={(e) => setNewItem({...newItem, responsible_name: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, responsible_name: e.target.value })}
                 placeholder="Nome do responsável"
               />
             </div>
@@ -409,7 +409,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                 id="responsible_email"
                 type="email"
                 value={newItem.responsible_email}
-                onChange={(e) => setNewItem({...newItem, responsible_email: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, responsible_email: e.target.value })}
                 placeholder="email@empresa.com"
               />
             </div>
@@ -424,16 +424,16 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                 id="due_date"
                 type="date"
                 value={newItem.due_date}
-                onChange={(e) => setNewItem({...newItem, due_date: e.target.value})}
+                onChange={(e) => setNewItem({ ...newItem, due_date: e.target.value })}
               />
             </div>
 
             {/* Prioridade */}
             <div>
               <Label htmlFor="priority">Prioridade</Label>
-              <Select 
-                value={newItem.priority} 
-                onValueChange={(value: any) => setNewItem({...newItem, priority: value})}
+              <Select
+                value={newItem.priority}
+                onValueChange={(value: any) => setNewItem({ ...newItem, priority: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -460,7 +460,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
             <Textarea
               id="activity_description"
               value={newItem.activity_description}
-              onChange={(e) => setNewItem({...newItem, activity_description: e.target.value})}
+              onChange={(e) => setNewItem({ ...newItem, activity_description: e.target.value })}
               placeholder="Descreva detalhadamente o que deve ser feito, como e quais recursos são necessários..."
               rows={3}
             />
@@ -504,7 +504,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
               {actionPlanItems?.map((item, index) => {
                 const priorityInfo = getPriorityInfo(item.priority);
                 const statusInfo = getStatusInfo(item.status);
-                
+
                 return (
                   <Card key={item.id || index} className="border-l-4 border-l-primary">
                     <CardContent className="pt-4">
@@ -519,13 +519,13 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                               {statusInfo.label}
                             </Badge>
                           </div>
-                          
+
                           {item.activity_description && (
                             <p className="text-sm text-muted-foreground mb-3">
                               {item.activity_description}
                             </p>
                           )}
-                          
+
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4 text-muted-foreground" />
@@ -534,7 +534,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                                 <div className="text-xs text-muted-foreground">{item.responsible_email}</div>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                               <Calendar className="h-4 w-4 text-muted-foreground" />
                               <div>
@@ -546,7 +546,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-muted-foreground" />
                               <div>
@@ -556,7 +556,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -619,7 +619,7 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
                 </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold text-sm mb-3">💡 Exemplos por Estratégia</h4>
               <div className="space-y-3 text-sm">
@@ -646,9 +646,8 @@ export const Step5ActionPlan: React.FC<Step5Props> = ({
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${
-(actionPlanItems?.length || 0) > 0 ? 'bg-green-500' : 'bg-yellow-500'
-              }`} />
+              <div className={`w-3 h-3 rounded-full ${(actionPlanItems?.length || 0) > 0 ? 'bg-green-500' : 'bg-yellow-500'
+                }`} />
               <span className="text-sm font-medium">
                 Status da Etapa 5: Plano de Ação
               </span>

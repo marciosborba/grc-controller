@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useTenantSecurity } from '@/utils/tenantSecurity';
 import { toast } from 'sonner';
 
@@ -63,7 +63,7 @@ export const useActionPlanNotifications = () => {
       for (const risk of riskData || []) {
         const { data: activities, error: activitiesError } = await supabase
           .from('risk_registration_action_plans')
-          .select('*')
+          .select('id, activity_name, activity_description, responsible_name, due_date, priority, status')
           .eq('risk_registration_id', risk.id)
           .neq('status', 'completed')
           .neq('status', 'cancelled');
@@ -120,7 +120,7 @@ export const useActionPlanNotifications = () => {
         const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
         const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
         if (priorityDiff !== 0) return priorityDiff;
-        
+
         // Se mesma prioridade, ordenar por data de vencimento
         if (a.type === 'overdue' && b.type === 'overdue') {
           return (b.daysOverdue || 0) - (a.daysOverdue || 0);
@@ -155,9 +155,9 @@ export const useActionPlanNotifications = () => {
 
   // Marcar notificação como lida
   const markAsRead = useCallback((notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
+    setNotifications(prev =>
+      prev.map(notification =>
+        notification.id === notificationId
           ? { ...notification, read: true }
           : notification
       )
@@ -167,7 +167,7 @@ export const useActionPlanNotifications = () => {
 
   // Marcar todas como lidas
   const markAllAsRead = useCallback(() => {
-    setNotifications(prev => 
+    setNotifications(prev =>
       prev.map(notification => ({ ...notification, read: true }))
     );
     setUnreadCount(0);
@@ -177,9 +177,9 @@ export const useActionPlanNotifications = () => {
   const clearOldNotifications = useCallback(() => {
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-    
-    setNotifications(prev => 
-      prev.filter(notification => 
+
+    setNotifications(prev =>
+      prev.filter(notification =>
         notification.createdAt > oneDayAgo || !notification.read
       )
     );
