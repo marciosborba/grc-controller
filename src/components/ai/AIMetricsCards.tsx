@@ -57,16 +57,16 @@ export const AIMetricsCards: React.FC<AIMetricsCardsProps> = ({ tenantId, mode }
     };
 
     return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
                 <CardContent className="p-4 h-full">
-                    <div className="flex flex-col h-full min-h-[100px] text-center">
+                    <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px] text-center">
                         <div className="flex justify-center mb-2">
                             <Cpu className="h-5 w-5 text-blue-500" />
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Provedores Ativos</p>
                         <div className="flex-1 flex flex-col justify-center">
-                            <p className="text-2xl font-bold text-foreground mb-1">
+                            <p className="text-xl sm:text-2xl font-bold text-foreground mb-1">
                                 {loading ? '...' : metrics.active_providers_count}
                             </p>
                         </div>
@@ -76,13 +76,13 @@ export const AIMetricsCards: React.FC<AIMetricsCardsProps> = ({ tenantId, mode }
 
             <Card>
                 <CardContent className="p-4 h-full">
-                    <div className="flex flex-col h-full min-h-[100px] text-center">
+                    <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px] text-center">
                         <div className="flex justify-center mb-2">
                             <MessageSquare className="h-5 w-5 text-purple-500" />
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Prompts Ativos</p>
                         <div className="flex-1 flex flex-col justify-center">
-                            <p className="text-2xl font-bold text-foreground mb-1">
+                            <p className="text-xl sm:text-2xl font-bold text-foreground mb-1">
                                 {loading ? '...' : metrics.active_prompts_count}
                             </p>
                             <p className="text-xs text-muted-foreground">Configurados</p>
@@ -93,13 +93,13 @@ export const AIMetricsCards: React.FC<AIMetricsCardsProps> = ({ tenantId, mode }
 
             <Card>
                 <CardContent className="p-4 h-full">
-                    <div className="flex flex-col h-full min-h-[100px] text-center">
+                    <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px] text-center">
                         <div className="flex justify-center mb-2">
                             <Workflow className="h-5 w-5 text-green-500" />
                         </div>
                         <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2">Workflows Ativos</p>
                         <div className="flex-1 flex flex-col justify-center">
-                            <p className="text-2xl font-bold text-foreground mb-1">-</p>
+                            <p className="text-xl sm:text-2xl font-bold text-foreground mb-1">-</p>
                             <p className="text-xs text-muted-foreground">Em desenvolvimento</p>
                         </div>
                     </div>
@@ -111,7 +111,7 @@ export const AIMetricsCards: React.FC<AIMetricsCardsProps> = ({ tenantId, mode }
                     <BarChart3 className="w-12 h-12 text-blue-500" />
                 </div>
                 <CardContent className="p-4 h-full">
-                    <div className="flex flex-col h-full min-h-[100px] text-center">
+                    <div className="flex flex-col h-full min-h-[80px] sm:min-h-[100px] text-center">
                         <div className="flex justify-center mb-2">
                             <BarChart3 className="h-5 w-5 text-orange-500" />
                         </div>

@@ -546,13 +546,13 @@ const AssessmentsManagement: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative z-50">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <CheckCircle className="h-8 w-8 text-green-600" />
+        <div className="w-full">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 shrink-0" />
             Avaliações de Conformidade
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -591,14 +591,14 @@ const AssessmentsManagement: React.FC = () => {
             Gestão de avaliações periódicas de conformidade e compliance
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <Button
             variant={showSearch ? "secondary" : "outline"}
             onClick={() => {
-              console.log('Clicked Search, toggling to:', !showSearch);
               setShowSearch(!showSearch);
               if (showFilters) setShowFilters(false);
             }}
+            className="flex-1 sm:flex-none"
           >
             <Search className="h-4 w-4 mr-2" />
             Buscar
@@ -606,18 +606,17 @@ const AssessmentsManagement: React.FC = () => {
           <Button
             variant={showFilters ? "secondary" : "outline"}
             onClick={() => {
-              console.log('Clicked Filters, toggling to:', !showFilters);
               setShowFilters(!showFilters);
               if (showSearch) setShowSearch(false);
             }}
+            className="flex-1 sm:flex-none"
           >
             <ListFilter className="h-4 w-4 mr-2" />
             Filtros
           </Button>
           <Button onClick={() => {
-            console.log('Clicked Nova Avaliacao');
             setIsDialogOpen(true);
-          }} className="bg-primary hover:bg-primary/90">
+          }} className="bg-primary hover:bg-primary/90 w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nova Avaliação
           </Button>
@@ -745,104 +744,111 @@ const AssessmentsManagement: React.FC = () => {
       </div>
 
       {/* Lista de Avaliações */}
-      <div className="grid gap-4">
+      <div className="grid gap-2 sm:gap-4">
         {filteredAssessments.map((assessment) => {
           const daysToPlanned = calculateDaysToPlanned(assessment.data_planejada);
           const conformityPercentage = assessment.score_conformidade || 0;
 
           return (
             <Card key={assessment.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <CardTitle className="text-lg">{assessment.codigo}</CardTitle>
-                      <Badge className={getStatusColor(assessment.status || '')}>
+              <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-3 mb-2">
+                      <CardTitle className="text-sm sm:text-lg">{assessment.codigo}</CardTitle>
+                      <Badge className={`text-[10px] sm:text-xs px-1.5 py-0 ${getStatusColor(assessment.status || '')}`}>
                         <div className="flex items-center gap-1">
                           {getStatusIcon(assessment.status || '')}
-                          {assessment.status?.replace('_', ' ').toUpperCase()}
+                          <span className="hidden sm:inline">{assessment.status?.replace('_', ' ').toUpperCase()}</span>
                         </div>
                       </Badge>
-                      <Badge className={getTypeColor(assessment.tipo_avaliacao || '')} variant="outline">
+                      <Badge className={`text-[10px] sm:text-xs px-1.5 py-0 hidden sm:inline-flex ${getTypeColor(assessment.tipo_avaliacao || '')}`} variant="outline">
                         {assessment.tipo_avaliacao?.replace('_', ' ').toUpperCase()}
                       </Badge>
                     </div>
-                    <h3 className="font-semibold text-lg mb-2">{assessment.titulo}</h3>
-                    <CardDescription className="text-sm">
+                    <h3 className="font-semibold text-sm sm:text-lg mb-1 sm:mb-2 truncate">{assessment.titulo}</h3>
+                    <CardDescription className="text-xs sm:text-sm line-clamp-2">
                       {assessment.framework_nome} - {assessment.requisito_titulo}
                     </CardDescription>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-3 sm:mt-0">
                     {assessment.status === 'planejada' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="w-full text-xs justify-start sm:justify-center"
                         onClick={() => handleStartAssessment(assessment.id)}
                       >
                         <PlayCircle className="h-4 w-4 mr-2" />
-                        Iniciar
+                        <span>Iniciar</span>
                       </Button>
                     )}
                     {assessment.status === 'em_andamento' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="w-full text-xs justify-start sm:justify-center"
                         onClick={() => handleCompleteAssessment(assessment.id)}
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
-                        Concluir
+                        <span>Concluir</span>
                       </Button>
                     )}
                     {assessment.status === 'concluida' && (
                       <Button
                         variant="outline"
                         size="sm"
+                        className="w-full text-xs justify-start sm:justify-center"
                         onClick={() => handleReopenAssessment(assessment.id)}
                       >
                         <Activity className="h-4 w-4 mr-2" />
-                        Reabrir
+                        <span>Reabrir</span>
                       </Button>
                     )}
                     <Button
                       variant="default"
                       size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-purple-600 hover:bg-purple-700 w-full text-xs justify-start sm:justify-center"
                       onClick={() => handleExecuteClick(assessment)}
                     >
                       <CheckSquare className="h-4 w-4 mr-2" />
-                      Auditar
+                      <span>Auditar</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full text-xs justify-start sm:justify-center"
                       onClick={() => setSelectedAssessment(assessment)}
+                      title="Visualizar"
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      Visualizar
+                      <span>Visualizar</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full text-xs justify-start sm:justify-center"
                       onClick={() => handleEditClick(assessment)}
+                      title="Editar"
                     >
                       <Edit className="h-4 w-4 mr-2" />
-                      Editar
+                      <span>Editar</span>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Avaliador</p>
-                    <p className="text-sm">{assessment.avaliador_nome}</p>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Avaliador</p>
+                    <p className="text-xs sm:text-sm truncate mt-0.5" title={assessment.avaliador_nome}>{assessment.avaliador_nome || '-'}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Data Planejada</p>
-                    <p className={`text-sm ${daysToPlanned < 0 ? 'text-red-600' : daysToPlanned < 7 ? 'text-orange-600' : ''}`}>
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Data Planejada</p>
+                    <p className={`text-xs sm:text-sm mt-0.5 ${daysToPlanned < 0 ? 'text-red-600' : daysToPlanned < 7 ? 'text-orange-600' : ''}`}>
                       {format(new Date(assessment.data_planejada), 'dd/MM/yyyy')}
                       {daysToPlanned !== null && (
-                        <span className="block text-xs">
+                        <span className="block text-[9px] sm:text-xs text-muted-foreground mt-0.5">
                           {daysToPlanned < 0 ? `${Math.abs(daysToPlanned)} dias atrasado` :
                             daysToPlanned === 0 ? 'Hoje' :
                               `Em ${daysToPlanned} dias`}
@@ -850,16 +856,16 @@ const AssessmentsManagement: React.FC = () => {
                       )}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Metodologia</p>
-                    <p className="text-sm capitalize">{assessment.metodologia?.replace('_', ' ')}</p>
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Metodologia</p>
+                    <p className="text-xs sm:text-sm capitalize mt-0.5">{assessment.metodologia?.replace('_', ' ')}</p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Amostra</p>
-                    <p className="text-sm">
+                  <div className="bg-muted/30 p-2 sm:p-3 rounded-lg">
+                    <p className="text-[10px] sm:text-sm font-medium text-muted-foreground uppercase">Amostra</p>
+                    <p className="text-xs sm:text-sm mt-0.5">
                       {assessment.amostra_testada}/{assessment.populacao_total}
                       {assessment.populacao_total && (
-                        <span className="text-xs text-muted-foreground ml-1">
+                        <span className="text-[9px] sm:text-xs text-muted-foreground ml-1">
                           ({((assessment.amostra_testada || 0) / assessment.populacao_total * 100).toFixed(1)}%)
                         </span>
                       )}
@@ -936,10 +942,10 @@ const AssessmentsManagement: React.FC = () => {
           </div>
 
           {executingAssessment && (
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
 
               {/* Left Column: Context (Requirement Details) */}
-              <div className="w-[45%] border-r bg-muted/10 flex flex-col overflow-y-auto p-6 space-y-6">
+              <div className="w-full md:w-[45%] border-b md:border-b-0 md:border-r bg-muted/10 flex flex-col md:overflow-y-auto p-4 sm:p-6 space-y-6 shrink-0">
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <Target className="h-4 w-4" />
@@ -994,7 +1000,7 @@ const AssessmentsManagement: React.FC = () => {
               </div>
 
               {/* Right Column: Execution Form */}
-              <div className="flex-1 flex flex-col overflow-y-auto bg-background p-6 space-y-6">
+              <div className="flex-1 flex flex-col md:overflow-y-auto bg-background p-4 sm:p-6 space-y-6">
 
                 <div className="space-y-4">
                   <Label className="text-base font-semibold">Resultado da Avaliação</Label>
@@ -1127,7 +1133,7 @@ const AssessmentsManagement: React.FC = () => {
           )}
 
           {/* Footer Actions */}
-          <div className="p-4 border-t bg-background shrink-0 flex justify-between items-center">
+          <div className="p-4 border-t bg-background shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-center gap-2">
               <Checkbox
                 id="complete-check"
@@ -1139,15 +1145,15 @@ const AssessmentsManagement: React.FC = () => {
                 <label htmlFor="complete-check" className="text-sm font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Marcar avaliação como Concluída
                 </label>
-                <span className="text-xs text-muted-foreground">Isso encerrará a auditoria e calculará a pontuação.</span>
+                <span className="text-xs text-muted-foreground hidden sm:block">Isso encerrará a auditoria e calculará a pontuação.</span>
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => setExecutingAssessment(null)}>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setExecutingAssessment(null)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSaveExecution} className="min-w-[140px] bg-purple-600 hover:bg-purple-700">
+              <Button onClick={handleSaveExecution} className="flex-1 sm:flex-none min-w-[140px] bg-purple-600 hover:bg-purple-700">
                 <Save className="h-4 w-4 mr-2" />
                 Salvar Execução
               </Button>
@@ -1206,7 +1212,7 @@ const AssessmentsManagement: React.FC = () => {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={assessmentForm.control}
                         name="tipo_avaliacao"
@@ -1290,7 +1296,7 @@ const AssessmentsManagement: React.FC = () => {
                       )}
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={assessmentForm.control}
                         name="data_planejada"
@@ -1359,7 +1365,7 @@ const AssessmentsManagement: React.FC = () => {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <FormField
                         control={assessmentForm.control}
                         name="amostra_testada"
@@ -1399,11 +1405,11 @@ const AssessmentsManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button variant="outline" type="button" onClick={() => setEditingAssessment(null)}>
+                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+                  <Button variant="outline" type="button" className="w-full sm:w-auto" onClick={() => setEditingAssessment(null)}>
                     Cancelar
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" className="w-full sm:w-auto">
                     Salvar Alterações
                   </Button>
                 </div>
@@ -1428,7 +1434,7 @@ const AssessmentsManagement: React.FC = () => {
             </DialogHeader>
 
             <Tabs defaultValue="details">
-              <TabsList>
+              <TabsList className="grid grid-cols-2 sm:flex sm:flex-row w-full h-auto p-1 gap-1">
                 <TabsTrigger value="details">Detalhes</TabsTrigger>
                 <TabsTrigger value="results">Resultados</TabsTrigger>
                 <TabsTrigger value="evidence">Evidências</TabsTrigger>
@@ -1440,7 +1446,7 @@ const AssessmentsManagement: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <h4 className="font-semibold mb-2">Informações Básicas</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Status:</p>
                           <Badge className={getStatusColor(selectedAssessment.status || '')}>
@@ -1547,7 +1553,7 @@ const AssessmentsManagement: React.FC = () => {
 
                     <div>
                       <h4 className="font-semibold mb-2">Análise da Amostra</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Amostra Testada:</p>
                           <p>{selectedAssessment.amostra_testada || 0} itens</p>

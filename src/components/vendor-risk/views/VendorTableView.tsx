@@ -5,14 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -42,13 +36,30 @@ import {
   Upload,
   Brain,
   Zap,
-  Search
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Lock,
+  Unlock,
+  KeyRound,
+  UserPlus,
+  ShieldCheck,
+  ShieldOff,
+  Copy,
+  Settings,
+  X,
+  PlusCircle
 } from 'lucide-react';
 import { useVendorRiskManagement, VendorRegistry, VendorFilters } from '@/hooks/useVendorRiskManagement';
 import { VendorOnboardingWorkflow } from '../workflows/VendorOnboardingWorkflow';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffectiveTenant } from '@/hooks/useEffectiveTenant';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
+import { calculateVendorMaturity, calculateVendorDynamicRisk, extractAssessmentScore } from '@/lib/tprmCalculations';
 
 interface VendorTableViewProps {
   searchTerm: string;
@@ -74,6 +85,8 @@ interface VendorFormData {
   primary_contact_name: string;
   primary_contact_email: string;
   primary_contact_phone: string;
+  contract_owner_name: string;
+  contract_owner_email: string;
 }
 
 export const VendorTableView: React.FC<VendorTableViewProps> = ({
@@ -108,6 +121,17 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const [expandedProcessDetails, setExpandedProcessDetails] = useState<string | null>(null);
   const [localFilters, setLocalFilters] = useState<VendorFilters>({});
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
+  const [portalUsers, setPortalUsers] = useState<Record<string, any[]>>({});
+  const [loadingPortalUsers, setLoadingPortalUsers] = useState<string | null>(null);
+  const [newPortalUserEmail, setNewPortalUserEmail] = useState('');
+  const [newPortalUserPassword, setNewPortalUserPassword] = useState('');
+  const [showAddPortalUser, setShowAddPortalUser] = useState<string | null>(null);
+
+  // Custom fields from centralized hook
+  const { effectiveTenantId } = useEffectiveTenant();
+  const { fields: customFields, fieldValues: customFieldFormValues, setFieldValues: setCustomFieldFormValues } = useCustomFields('vendor_registration');
+  const [editingFieldValues, setEditingFieldValues] = useState<Record<string, Record<string, any>>>({});
 
   // Form state
   const [formData, setFormData] = useState<Partial<VendorFormData>>({
@@ -116,6 +140,9 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     annual_spend: 0,
     contract_value: 0
   });
+
+  // State for inline risk overrides
+  const [pendingOverrides, setPendingOverrides] = useState<Record<string, { level: string | null, reason: string }>>({});
 
   // Load vendors on mount and when filters change
   useEffect(() => {
@@ -200,11 +227,22 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Merge custom field values into metadata
+    const existingMeta = (formData as any).metadata || {};
+    const metadataWithCustomFields = {
+      ...existingMeta,
+      custom_fields: {
+        ...(existingMeta.custom_fields || {}),
+        ...customFieldFormValues
+      }
+    };
+    const submitData = { ...formData, metadata: metadataWithCustomFields } as any;
+
     if (editingVendor) {
-      await updateVendor(editingVendor.id, formData);
+      await updateVendor(editingVendor.id, submitData);
       setEditingVendor(null);
     } else {
-      await createVendor(formData as Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>);
+      await createVendor(submitData as Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>);
       setShowCreateDialog(false);
     }
 
@@ -214,11 +252,14 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
       annual_spend: 0,
       contract_value: 0
     });
+    setCustomFieldFormValues({});
   };
 
   const handleEdit = (vendor: VendorRegistry) => {
     setFormData(vendor);
     setEditingVendor(vendor);
+    // Load existing custom field values
+    setCustomFieldFormValues((vendor as any).metadata?.custom_fields || {});
     setShowCreateDialog(true);
   };
 
@@ -414,330 +455,977 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
     }
   };
 
+  // Portal user management functions
+  const fetchPortalUsers = async (vendorId: string) => {
+    setLoadingPortalUsers(vendorId);
+    try {
+      const { data, error } = await supabase
+        .from('vendor_portal_users')
+        .select('*')
+        .eq('vendor_id', vendorId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPortalUsers(prev => ({ ...prev, [vendorId]: data || [] }));
+    } catch (e) {
+      console.error('Error fetching portal users:', e);
+    } finally {
+      setLoadingPortalUsers(null);
+    }
+  };
+
+  const handleAddPortalUser = async (vendorId: string) => {
+    if (!newPortalUserEmail) return;
+    try {
+      // Create auth user via Supabase Auth
+      const tempPassword = newPortalUserPassword || Math.random().toString(36).slice(-10) + 'A1!';
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: newPortalUserEmail,
+        password: tempPassword,
+        options: { data: { role: 'vendor', vendor_id: vendorId } }
+      });
+      if (authError) throw authError;
+
+      // Create vendor_portal_users record
+      const vendor = vendors.find(v => v.id === vendorId);
+      const { error: insertError } = await supabase
+        .from('vendor_portal_users')
+        .insert({
+          email: newPortalUserEmail,
+          vendor_id: vendorId,
+          tenant_id: vendor?.tenant_id,
+          is_active: true,
+          force_password_change: true
+        });
+      if (insertError) throw insertError;
+
+      // Automatically trigger the "reset password" email so the user can set their own password immediately
+      await supabase.auth.resetPasswordForEmail(newPortalUserEmail, {
+        redirectTo: `${window.location.origin}/vendor-portal/reset-password`
+      });
+
+      toast({ title: 'Usuário criado', description: `Acesso criado para ${newPortalUserEmail}. Um e-mail foi enviado para o fornecedor definir sua senha.` });
+      setNewPortalUserEmail('');
+      setNewPortalUserPassword('');
+      setShowAddPortalUser(null);
+      fetchPortalUsers(vendorId);
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message || 'Erro ao criar usuário', variant: 'destructive' });
+    }
+  };
+
+  const handleTogglePortalUser = async (userId: string, vendorId: string, currentActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('vendor_portal_users')
+        .update({ is_active: !currentActive })
+        .eq('id', userId);
+      if (error) throw error;
+      toast({ title: currentActive ? 'Portal bloqueado' : 'Portal desbloqueado' });
+      fetchPortalUsers(vendorId);
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const handleResetPassword = async (portalUser: any) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(portalUser.email, {
+        redirectTo: `${window.location.origin}/vendor-portal/reset-password`
+      });
+      if (error) throw error;
+      toast({ title: 'E-mail enviado', description: `Link de redefinição enviado para ${portalUser.email}` });
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const handleUpdateEmail = async (userId: string, vendorId: string, newEmail: string) => {
+    try {
+      const { error } = await supabase
+        .from('vendor_portal_users')
+        .update({ email: newEmail })
+        .eq('id', userId);
+      if (error) throw error;
+      toast({ title: 'E-mail atualizado' });
+      fetchPortalUsers(vendorId);
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const toggleVendorExpand = (vendorId: string) => {
+    if (expandedVendorId === vendorId) {
+      setExpandedVendorId(null);
+    } else {
+      setExpandedVendorId(vendorId);
+      if (!portalUsers[vendorId]) {
+        fetchPortalUsers(vendorId);
+      }
+    }
+  };
+
+  // ── Custom Fields Functions ──────────────────────────────────
+  // CRUD moved to Configurações > Customização. Only value helpers remain.
+
+  const handleSaveCustomFieldValue = async (vendorId: string, fieldKey: string, value: any) => {
+    try {
+      const vendor = vendors.find(v => v.id === vendorId);
+      const currentMeta = (vendor as any)?.metadata || {};
+      const updatedMeta = {
+        ...currentMeta,
+        custom_fields: {
+          ...(currentMeta.custom_fields || {}),
+          [fieldKey]: value
+        }
+      };
+      const { error } = await supabase
+        .from('vendor_registry')
+        .update({ metadata: updatedMeta })
+        .eq('id', vendorId);
+      if (error) throw error;
+      setEditingFieldValues(prev => ({
+        ...prev,
+        [vendorId]: { ...(prev[vendorId] || {}), [fieldKey]: value }
+      }));
+      fetchVendors();
+    } catch (e: any) {
+      toast({ title: 'Erro ao salvar', description: e.message, variant: 'destructive' });
+    }
+  };
+
+  const getCustomFieldValue = (vendor: any, fieldKey: string) => {
+    if (editingFieldValues[vendor.id] && editingFieldValues[vendor.id][fieldKey] !== undefined) {
+      return editingFieldValues[vendor.id][fieldKey];
+    }
+    return vendor.metadata?.custom_fields?.[fieldKey] ?? '';
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full">
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1">
+      <Card className="overflow-hidden w-full">
+        <CardContent className="p-3 sm:p-6 w-full">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 lg:items-center w-full">
+            <div className="w-full lg:flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   placeholder="Pesquisar fornecedores..."
                   value={localSearchTerm}
                   onChange={(e) => setLocalSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full h-9 sm:h-10 text-xs sm:text-sm"
                 />
               </div>
             </div>
 
-            <Select
-              value={localFilters.status?.[0] || 'all'}
-              onValueChange={(value) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  status: value === 'all' ? undefined : [value]
-                }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Status</SelectItem>
-                <SelectItem value="active">Ativo</SelectItem>
-                <SelectItem value="inactive">Inativo</SelectItem>
-                <SelectItem value="onboarding">Onboarding</SelectItem>
-                <SelectItem value="suspended">Suspenso</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 lg:flex lg:flex-row gap-2 sm:gap-4 w-full lg:w-auto flex-wrap mt-2 lg:mt-0">
 
-            <Select
-              value={localFilters.criticality_level?.[0] || 'all'}
-              onValueChange={(value) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  criticality_level: value === 'all' ? undefined : [value]
-                }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Criticidade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
-                <SelectItem value="critical">Crítica</SelectItem>
-                <SelectItem value="high">Alta</SelectItem>
-                <SelectItem value="medium">Média</SelectItem>
-                <SelectItem value="low">Baixa</SelectItem>
-              </SelectContent>
-            </Select>
+              {/* Dynamic Custom Fields Filters */}
+              {customFields.filter(f => f.show_in_filters).map(field => {
+                const value = localFilters.custom_fields?.[field.field_key] || 'all';
+                const handleChange = (v: any) => {
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    custom_fields: {
+                      ...(prev.custom_fields || {}),
+                      [field.field_key]: v === 'all' || v === '' ? undefined : v
+                    }
+                  }));
+                };
 
-            <Select
-              value={localFilters.vendor_type?.[0] || 'all'}
-              onValueChange={(value) =>
-                setLocalFilters(prev => ({
-                  ...prev,
-                  vendor_type: value === 'all' ? undefined : [value]
-                }))
-              }
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Tipos</SelectItem>
-                <SelectItem value="strategic">Estratégico</SelectItem>
-                <SelectItem value="operational">Operacional</SelectItem>
-                <SelectItem value="transactional">Transacional</SelectItem>
-                <SelectItem value="critical">Crítico</SelectItem>
-              </SelectContent>
-            </Select>
+                if (field.field_type === 'select' || field.field_type === 'multiselect' || field.field_type === 'radio') {
+                  return (
+                    <Select key={field.id} value={value} onValueChange={handleChange}>
+                      <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                        <SelectValue placeholder={field.field_name} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Filtro: {field.field_name}</SelectItem>
+                        {(field.options || []).map((opt: string) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  );
+                }
 
-            <Button
-              onClick={() => setShowCreateDialog(true)}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Novo Fornecedor
-            </Button>
+                if (field.field_type === 'boolean' || field.field_type === 'checkbox') {
+                  return (
+                    <Select key={field.id} value={value} onValueChange={handleChange}>
+                      <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                        <SelectValue placeholder={field.field_name} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Filtro: {field.field_name}</SelectItem>
+                        <SelectItem value="true">Sim / Verdadeiro</SelectItem>
+                        <SelectItem value="false">Não / Falso</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  );
+                }
+
+                // Default to text input for text, number, date, etc.
+                return (
+                  <div key={field.id} className="relative w-full sm:w-36">
+                    <Input
+                      placeholder={field.field_name}
+                      value={value === 'all' ? '' : value}
+                      onChange={(e) => handleChange(e.target.value)}
+                      className="w-full h-9 sm:h-10 text-xs sm:text-sm"
+                    />
+                  </div>
+                );
+              })}
+
+            </div>
+
+            <div className="grid grid-cols-3 lg:flex lg:flex-row gap-2 sm:gap-4 w-full lg:w-auto mt-2 lg:mt-0">
+
+              <Select
+                value={localFilters.status?.[0] || 'all'}
+                onValueChange={(value) =>
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    status: value === 'all' ? undefined : [value]
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="inactive">Inativo</SelectItem>
+                  <SelectItem value="onboarding">Onboarding</SelectItem>
+                  <SelectItem value="suspended">Suspenso</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={localFilters.criticality_level?.[0] || 'all'}
+                onValueChange={(value) =>
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    criticality_level: value === 'all' ? undefined : [value]
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Criticidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="critical">Crítica</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={localFilters.vendor_type?.[0] || 'all'}
+                onValueChange={(value) =>
+                  setLocalFilters(prev => ({
+                    ...prev,
+                    vendor_type: value === 'all' ? undefined : [value]
+                  }))
+                }
+              >
+                <SelectTrigger className="w-full sm:w-36 h-9 sm:h-10 text-xs sm:text-sm">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  <SelectItem value="strategic">Estratégico</SelectItem>
+                  <SelectItem value="operational">Operacional</SelectItem>
+                  <SelectItem value="transactional">Transacional</SelectItem>
+                  <SelectItem value="critical">Crítico</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={() => setShowCreateDialog(true)}
+                className="col-span-3 lg:col-span-1 h-9 sm:h-10 text-[10px] sm:text-sm w-full lg:w-auto"
+              >
+                <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Novo Fornecedor</span>
+                <span className="inline sm:hidden">Novo</span>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Vendor Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="w-5 h-5 text-primary" />
-                <span>Fornecedores Registrados</span>
-              </CardTitle>
-              <CardDescription>
-                Gerencie seu catálogo completo de fornecedores e parceiros
-              </CardDescription>
-            </div>
-            {selectedVendors.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <Badge variant="secondary">
-                  {selectedVendors.length} selecionados
-                </Badge>
-                <Button size="sm" variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar
-                </Button>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="w-full">
-            <Table className="w-full">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedVendors.length === paginatedVendors.length && paginatedVendors.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[25%]"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs font-medium">Fornecedor</span>
-                      {sortBy === 'name' && (
-                        <span className="text-xs">
-                          {sortOrder === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[12%]">Tipo</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[12%]">Criticidade</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[10%]">Status</TableHead>
-                  <TableHead
-                    className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium p-3 w-[8%]"
-                    onClick={() => handleSort('risk_score')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span className="text-xs font-medium">Risco</span>
-                      {sortBy === 'risk_score' && (
-                        <span className="text-xs">
-                          {sortOrder === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[12%]">Status do Processo</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[10%]">Contrato</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[10%]">Último Assessment</TableHead>
-                  <TableHead className="text-xs font-medium p-3 w-[11%]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedVendors.map((vendor) => (
-                  <TableRow key={vendor.id} className="h-12">
-                    <TableCell className="p-3">
-                      <Checkbox
-                        checked={selectedVendors.includes(vendor.id)}
-                        onCheckedChange={(checked) => handleVendorSelect(vendor.id, !!checked)}
-                        className="h-4 w-4"
-                      />
-                    </TableCell>
+      {/* Vendor Cards Grid */}
+      <div className="space-y-3">
+        {paginatedVendors.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Building className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+              <p className="text-muted-foreground">Nenhum fornecedor encontrado</p>
+            </CardContent>
+          </Card>
+        )}
 
-                    <TableCell className="text-xs p-3 w-[25%]">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-shrink-0">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-                            <span className="text-xs font-medium text-white">
-                              {vendor.name.charAt(0).toUpperCase()}
-                            </span>
+        {paginatedVendors.map((vendor) => {
+          const processStatus = analyzeVendorProcessStatus(vendor);
+          const isExpanded = expandedVendorId === vendor.id;
+
+          return (
+            <Card key={vendor.id} className={`overflow-hidden transition-all ${isExpanded ? 'ring-1 ring-primary/30' : 'hover:shadow-md'}`}>
+              {/* Card Header - Always visible */}
+              <div
+                className="flex items-center gap-3 p-3 sm:p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => toggleVendorExpand(vendor.id)}
+              >
+                {/* Avatar */}
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center shrink-0">
+                  <span className="text-xs sm:text-sm font-bold text-white">{vendor.name.charAt(0).toUpperCase()}</span>
+                </div>
+
+                {/* Name + info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-sm sm:text-base truncate">{vendor.name}</h3>
+                    <Badge className={`text-[8px] sm:text-[10px] px-1.5 py-0 shrink-0 ${getStatusBadgeStyle(vendor.status)}`}>
+                      {getStatusText(vendor.status)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                      {vendor.legal_name || vendor.business_category || 'Sem categoria'}
+                    </span>
+                    {vendor.tax_id && (
+                      <span className="text-[10px] text-muted-foreground hidden sm:inline">• {vendor.tax_id}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Badges + Custom important fields */}
+                <div className="hidden sm:flex items-center gap-1.5 shrink-0 flex-wrap">
+                  {/* Custom fields marked as show_on_card */}
+                  {customFields.filter((f: any) => f.show_on_card).map((field: any) => {
+                    const val = getCustomFieldValue(vendor, field.field_key);
+                    if (!val && val !== 0 && val !== false) return null;
+                    return (
+                      <Badge key={field.id} variant="outline" className="text-[9px] px-1.5 py-0 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border-violet-200">
+                        {field.field_type === 'boolean' ? (val ? 'Sim' : 'Não') : String(val)}
+                      </Badge>
+                    );
+                  })}
+                  <Badge className={`text-[9px] px-1.5 py-0 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
+                    {getVendorTypeText(vendor.vendor_type)}
+                  </Badge>
+                  <Badge className={`text-[9px] px-1.5 py-0 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
+                    {getCriticalityText(vendor.criticality_level)}
+                  </Badge>
+                  <Badge className={`text-[9px] px-1.5 py-0 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
+                    {getRiskLevelText(vendor.risk_score)}
+                  </Badge>
+                  <Badge className={`text-[9px] px-1.5 py-0 ${getProcessStatusBadgeStyle(processStatus.status)}`}>
+                    {processStatus.label}
+                  </Badge>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={(e) => { e.stopPropagation(); handleEditWithWorkflow(vendor); }} title="Editar">
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0 hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(vendor.id); }} title="Excluir">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                  {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                </div>
+              </div>
+
+              {/* Mobile Badges Row */}
+              <div className="flex sm:hidden items-center gap-1 px-3 pb-2 flex-wrap">
+                <Badge className={`text-[8px] px-1 py-0 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>{getVendorTypeText(vendor.vendor_type)}</Badge>
+                <Badge className={`text-[8px] px-1 py-0 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>{getCriticalityText(vendor.criticality_level)}</Badge>
+                <Badge className={`text-[8px] px-1 py-0 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>{getRiskLevelText(vendor.risk_score)}</Badge>
+              </div>
+
+              {/* Expanded Content */}
+              {isExpanded && (
+                <div className="border-t">
+                  <Tabs defaultValue="cadastro" className="w-full">
+                    <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 h-9">
+                      <TabsTrigger value="cadastro" className="text-xs data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                        <Building className="h-3.5 w-3.5 mr-1.5" /> Cadastro
+                      </TabsTrigger>
+                      <TabsTrigger value="portal" className="text-xs data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                        <Globe className="h-3.5 w-3.5 mr-1.5" /> Portal do Fornecedor
+                      </TabsTrigger>
+                      <TabsTrigger value="risco" className="text-xs data-[state=active]:bg-background rounded-none border-b-2 border-transparent data-[state=active]:border-primary">
+                        <Shield className="h-3.5 w-3.5 mr-1.5" /> Avaliações e Risco
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* ── TAB: Cadastro ──────────────────────────────────────────── */}
+                    <TabsContent value="cadastro" className="p-4 mt-0">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {/* Dados Básicos */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dados Básicos</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Razão Social</span>
+                              <p className="text-sm font-medium">{vendor.legal_name || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">CNPJ/CPF</span>
+                              <p className="text-sm font-medium">{vendor.tax_id || '—'}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Categoria</span>
+                              <p className="text-sm">{vendor.business_category || '—'}</p>
+                            </div>
+                            {vendor.website && (
+                              <div>
+                                <span className="text-[10px] text-muted-foreground">Website</span>
+                                <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
+                                  <Globe className="h-3 w-3" /> {vendor.website.replace(/^https?:\/\//, '')}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium truncate">
-                            {vendor.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {vendor.primary_contact_email || vendor.website?.replace(/^https?:\/\//, '') || ''}
-                          </p>
+
+                        {/* Contato */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contato Principal</h4>
+                          <div className="space-y-2">
+                            {vendor.primary_contact_name && (
+                              <div className="flex items-center gap-2">
+                                <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-sm">{vendor.primary_contact_name}</span>
+                              </div>
+                            )}
+                            {vendor.primary_contact_email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                <a href={`mailto:${vendor.primary_contact_email}`} className="text-sm text-primary hover:underline">{vendor.primary_contact_email}</a>
+                              </div>
+                            )}
+                            {vendor.primary_contact_phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-sm">{vendor.primary_contact_phone}</span>
+                              </div>
+                            )}
+                            {!vendor.primary_contact_name && !vendor.primary_contact_email && (
+                              <p className="text-sm text-muted-foreground italic">Sem contato cadastrado</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Dono do Contrato */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Dono do Contrato (Interno)</h4>
+                          <div className="space-y-2">
+                            {vendor.contract_owner_name && (
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-sm">{vendor.contract_owner_name}</span>
+                              </div>
+                            )}
+                            {vendor.contract_owner_email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                <a href={`mailto:${vendor.contract_owner_email}`} className="text-sm text-primary hover:underline">{vendor.contract_owner_email}</a>
+                              </div>
+                            )}
+                            {!vendor.contract_owner_name && !vendor.contract_owner_email && (
+                              <p className="text-sm text-muted-foreground italic">Sem responsável</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Contrato & Classificação */}
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contrato & Risco</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Valor do Contrato</span>
+                              <p className="text-sm font-medium">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendor.contract_value || 0)}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Gasto Anual</span>
+                              <p className="text-sm font-medium">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(vendor.annual_spend || 0)}
+                              </p>
+                            </div>
+                            {vendor.contract_end_date && (
+                              <div>
+                                <span className="text-[10px] text-muted-foreground">Vencimento</span>
+                                <p className="text-sm">{format(new Date(vendor.contract_end_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                              </div>
+                            )}
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Tipo de Fornecedor</span>
+                              <p className="text-sm">{getVendorTypeText(vendor.vendor_type)}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground">Criticidade</span>
+                              <p className="text-sm">{getCriticalityText(vendor.criticality_level)}</p>
+                            </div>
+                            {vendor.risk_score && (
+                              <div>
+                                <span className="text-[10px] text-muted-foreground">Score de Risco</span>
+                                <p className="text-sm font-medium">{getRiskLevelText(vendor.risk_score)} ({vendor.risk_score.toFixed(1)})</p>
+                              </div>
+                            )}
+                            {vendor.last_assessment_date && (
+                              <div>
+                                <span className="text-[10px] text-muted-foreground">Último Assessment</span>
+                                <p className="text-sm">{format(new Date(vendor.last_assessment_date), 'dd/MM/yyyy', { locale: ptBR })}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </TableCell>
 
-                    <TableCell className="text-xs p-3 w-[12%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getVendorTypeBadgeStyle(vendor.vendor_type)}`}>
-                        {getVendorTypeText(vendor.vendor_type)}
-                      </Badge>
-                    </TableCell>
+                      {vendor.description && (
+                        <div className="mt-4 pt-3 border-t">
+                          <span className="text-[10px] text-muted-foreground">Descrição</span>
+                          <p className="text-sm mt-0.5">{vendor.description}</p>
+                        </div>
+                      )}
 
-                    <TableCell className="text-xs p-3 w-[12%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
-                        {getCriticalityText(vendor.criticality_level)}
-                      </Badge>
-                    </TableCell>
+                      {/* Quick Actions */}
+                      {/* ── Custom Fields Section (Informações Adicionais) ────────────────────── */}
+                      {customFields.filter(f => f.show_in_interior !== false).length > 0 && (
+                        <div className="mt-4 pt-3 border-t">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                              <Settings className="h-3 w-3" /> Informações Adicionais
+                            </h4>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {customFields.filter(f => f.show_in_interior !== false).map((field: any) => (
+                              <div key={field.id}>
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  {field.field_name}
+                                  {field.required && <span className="text-red-500 ml-0.5">*</span>}
+                                </span>
+                                {field.field_type === 'text' && (
+                                  <Input
+                                    className="h-7 text-xs mt-0.5"
+                                    value={getCustomFieldValue(vendor, field.field_key)}
+                                    onChange={(e) => setEditingFieldValues(prev => ({
+                                      ...prev,
+                                      [vendor.id]: { ...(prev[vendor.id] || {}), [field.field_key]: e.target.value }
+                                    }))}
+                                    onBlur={(e) => handleSaveCustomFieldValue(vendor.id, field.field_key, e.target.value)}
+                                    placeholder={field.field_name}
+                                  />
+                                )}
+                                {field.field_type === 'number' && (
+                                  <Input
+                                    type="number"
+                                    className="h-7 text-xs mt-0.5"
+                                    value={getCustomFieldValue(vendor, field.field_key)}
+                                    onChange={(e) => setEditingFieldValues(prev => ({
+                                      ...prev,
+                                      [vendor.id]: { ...(prev[vendor.id] || {}), [field.field_key]: e.target.value }
+                                    }))}
+                                    onBlur={(e) => handleSaveCustomFieldValue(vendor.id, field.field_key, Number(e.target.value))}
+                                    placeholder="0"
+                                  />
+                                )}
+                                {field.field_type === 'date' && (
+                                  <Input
+                                    type="date"
+                                    className="h-7 text-xs mt-0.5"
+                                    value={getCustomFieldValue(vendor, field.field_key)}
+                                    onChange={(e) => {
+                                      setEditingFieldValues(prev => ({
+                                        ...prev,
+                                        [vendor.id]: { ...(prev[vendor.id] || {}), [field.field_key]: e.target.value }
+                                      }));
+                                      handleSaveCustomFieldValue(vendor.id, field.field_key, e.target.value);
+                                    }}
+                                  />
+                                )}
+                                {field.field_type === 'boolean' && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Checkbox
+                                      checked={!!getCustomFieldValue(vendor, field.field_key)}
+                                      onCheckedChange={(checked) => handleSaveCustomFieldValue(vendor.id, field.field_key, !!checked)}
+                                    />
+                                    <span className="text-xs">{getCustomFieldValue(vendor, field.field_key) ? 'Sim' : 'Não'}</span>
+                                  </div>
+                                )}
+                                {field.field_type === 'select' && (
+                                  <Select
+                                    value={getCustomFieldValue(vendor, field.field_key) || ''}
+                                    onValueChange={(v) => handleSaveCustomFieldValue(vendor.id, field.field_key, v)}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs mt-0.5">
+                                      <SelectValue placeholder="Selecione..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(field.options || []).map((opt: string) => (
+                                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
-                    <TableCell className="text-xs p-3 w-[10%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getStatusBadgeStyle(vendor.status)}`}>
-                        {getStatusText(vendor.status)}
-                      </Badge>
-                    </TableCell>
+                      {/* Note about managing custom fields */}
+                      {customFields.filter(f => f.show_in_interior !== false).length > 0 && (
+                        <p className="text-[10px] text-muted-foreground mt-3 italic">
+                          Para adicionar ou remover campos, use o formulário "Novo Fornecedor" ou "Editar Fornecedor".
+                        </p>
+                      )}
 
-                    <TableCell className="text-xs p-3 w-[8%]">
-                      <Badge className={`text-[10px] px-2 py-0.5 ${getRiskLevelBadgeStyle(vendor.risk_score)}`}>
-                        {getRiskLevelText(vendor.risk_score)}
-                        {vendor.risk_score && (
-                          <span className="ml-1 opacity-75 text-[10px]">
-                            ({vendor.risk_score.toFixed(1)})
-                          </span>
-                        )}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="text-xs p-3 w-[12%]">
-                      {(() => {
-                        const processStatus = analyzeVendorProcessStatus(vendor);
-                        return (
-                          <Badge
-                            className={`text-[10px] px-2 py-0.5 ${getProcessStatusBadgeStyle(processStatus.status)}`}
-                            title={processStatus.description}
-                          >
-                            {processStatus.label}
-                          </Badge>
-                        );
-                      })()}
-                    </TableCell>
-
-                    <TableCell className="text-xs p-3 w-[10%]">
-                      <div className="text-xs text-muted-foreground">
-                        <span className="text-xs">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 0,
-                            notation: 'compact'
-                          }).format(vendor.contract_value || 0)}
-                        </span>
+                      <div className="flex items-center gap-2 mt-4 pt-3 border-t">
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleEditWithWorkflow(vendor)}>
+                          <Edit className="h-3 w-3 mr-1" /> Editar Cadastro
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => {
+                          const portalLink = `${window.location.origin}/vendor-portal`;
+                          navigator.clipboard.writeText(portalLink);
+                          toast({ title: 'Link Copiado', description: 'Link do Portal do Fornecedor copiado.' });
+                        }}>
+                          <Copy className="h-3 w-3 mr-1" /> Copiar Link Portal
+                        </Button>
                       </div>
-                    </TableCell>
+                    </TabsContent>
 
-                    <TableCell className="text-xs p-3 w-[10%]">
-                      {(() => {
-                        // Tenta encontrar a data no campo do fornecedor ou na lista de assessments
-                        let displayDate = vendor.last_assessment_date;
+                    {/* ── TAB: Portal do Fornecedor ──────────────────────────────── */}
+                    <TabsContent value="portal" className="p-4 mt-0">
+                      <div className="space-y-4">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="text-sm font-semibold">Usuários do Portal</h4>
+                            <p className="text-[10px] text-muted-foreground">Gerencie o acesso do fornecedor ao portal</p>
+                          </div>
+                          <Button size="sm" className="h-7 text-xs" onClick={() => setShowAddPortalUser(showAddPortalUser === vendor.id ? null : vendor.id)}>
+                            <UserPlus className="h-3 w-3 mr-1" /> Novo Usuário
+                          </Button>
+                        </div>
 
-                        // Se não tem data no fornecedor, procura na lista de assessments
-                        if (!displayDate && assessments && assessments.length > 0) {
-                          const vendorAssessments = assessments
-                            .filter(a => a.vendor_id === vendor.id && (a.status === 'completed' || a.status === 'approved' || (a.status === 'submitted' && a.vendor_submitted_at)))
-                            .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime());
+                        {/* Add User Form */}
+                        {showAddPortalUser === vendor.id && (
+                          <Card className="border-dashed border-primary/30 bg-primary/5">
+                            <CardContent className="p-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <Input
+                                  placeholder="E-mail do usuário"
+                                  type="email"
+                                  value={newPortalUserEmail}
+                                  onChange={e => setNewPortalUserEmail(e.target.value)}
+                                  className="h-8 text-xs"
+                                />
+                                <Input
+                                  placeholder="Senha temporária (opcional)"
+                                  type="text"
+                                  value={newPortalUserPassword}
+                                  onChange={e => setNewPortalUserPassword(e.target.value)}
+                                  className="h-8 text-xs"
+                                />
+                                <div className="flex gap-1">
+                                  <Button size="sm" className="h-8 text-xs flex-1" onClick={() => handleAddPortalUser(vendor.id)}>
+                                    Criar Acesso
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setShowAddPortalUser(null)}>
+                                    Cancelar
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
 
-                          if (vendorAssessments.length > 0) {
-                            displayDate = vendorAssessments[0].vendor_submitted_at || vendorAssessments[0].updated_at || vendorAssessments[0].created_at;
-                          }
-                        }
-
-                        // Se ainda não encontrou e o fornecedor está ativo, usa a data de atualização
-                        if (!displayDate && vendor.status === 'active') {
-                          displayDate = vendor.updated_at || vendor.created_at;
-                        }
-
-                        return displayDate ? (
-                          <div className="text-xs text-muted-foreground">
-                            <div className="text-xs">{format(new Date(displayDate), 'dd/MM/yy', { locale: ptBR })}</div>
+                        {/* Portal Users List */}
+                        {loadingPortalUsers === vendor.id ? (
+                          <div className="flex items-center justify-center py-6">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                          </div>
+                        ) : (portalUsers[vendor.id] && portalUsers[vendor.id].length > 0) ? (
+                          <div className="space-y-2">
+                            {portalUsers[vendor.id].map((pu: any) => (
+                              <div key={pu.id} className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${pu.is_active === false ? 'bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-800' : 'bg-muted/20'
+                                }`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${pu.is_active === false ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'
+                                    }`}>
+                                    {pu.is_active === false
+                                      ? <ShieldOff className="h-3.5 w-3.5 text-red-600" />
+                                      : <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
+                                    }
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">{pu.email}</p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      Criado em {pu.created_at ? format(new Date(pu.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : '—'}
+                                      {pu.is_active === false && <span className="text-red-600 font-medium ml-2">• BLOQUEADO</span>}
+                                      {pu.force_password_change && <span className="text-amber-600 font-medium ml-2">• Aguardando troca de senha</span>}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Resetar Senha" onClick={() => handleResetPassword(pu)}>
+                                    <KeyRound className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    size="sm" variant="ghost"
+                                    className={`h-7 w-7 p-0 ${pu.is_active === false ? 'hover:text-green-600' : 'hover:text-red-600'}`}
+                                    title={pu.is_active === false ? 'Desbloquear Portal' : 'Bloquear Portal'}
+                                    onClick={() => handleTogglePortalUser(pu.id, vendor.id, pu.is_active !== false)}
+                                  >
+                                    {pu.is_active === false ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Nunca avaliado</span>
+                          <div className="text-center py-8 border rounded-lg border-dashed bg-muted/10">
+                            <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">Nenhum usuário de portal cadastrado</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">Adicione um usuário para que o fornecedor acesse o portal</p>
+                          </div>
+                        )}
+
+                        {/* Portal Link */}
+                        <div className="flex items-center gap-2 pt-3 border-t">
+                          <span className="text-xs text-muted-foreground">Link do Portal:</span>
+                          <code className="text-[10px] bg-muted px-2 py-1 rounded flex-1 truncate">{window.location.origin}/vendor-portal</code>
+                          <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/vendor-portal`);
+                            toast({ title: 'Link copiado!' });
+                          }}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    {/* ── TAB: Risco e Avaliações ──────────────────────────────── */}
+                    <TabsContent value="risco" className="p-4 mt-0">
+                      {(() => {
+                        const vendorAssessments = assessments.filter((a: any) => a.vendor_id === vendor.id);
+                        const maturity = calculateVendorMaturity(vendorAssessments);
+                        const risk = calculateVendorDynamicRisk(maturity.score, vendor.criticality_level, vendor.risk_override_level);
+
+                        // Handlers for override
+                        const handleOverrideSave = async (level: string | null) => {
+                          const reason = level ? prompt('Por favor, informe a justificativa para essa alteração qualitativa:') : null;
+                          if (level && !reason) {
+                            toast({ title: 'Atenção', description: 'A justificativa é obrigatória para alterar o risco.', variant: 'destructive' });
+                            return;
+                          }
+
+                          try {
+                            await updateVendor(vendor.id, {
+                              risk_override_level: level,
+                              risk_override_reason: level ? reason : null
+                            } as any);
+                            toast({ title: 'Sucesso', description: 'Nível de risco atualizado com sucesso.' });
+                            fetchVendors(); // Refresh vendors to show updated risk
+                          } catch (error) {
+                            toast({ title: 'Erro', description: 'Não foi possível atualizar o nível de risco.', variant: 'destructive' });
+                          }
+                        };
+
+                        return (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="border rounded-lg p-3 bg-muted/10 flex flex-col justify-between">
+                                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Criticidade do Fornecedor</h4>
+                                <Badge className={`text-sm py-1 w-fit mt-auto ${getCriticalityBadgeStyle(vendor.criticality_level)}`}>
+                                  {getCriticalityText(vendor.criticality_level)}
+                                </Badge>
+                              </div>
+                              <div className="border rounded-lg p-3 bg-muted/10 flex flex-col justify-between">
+                                <div>
+                                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Maturidade (Assessments)</h4>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xl font-bold">{maturity.score > 0 ? maturity.score.toFixed(1) : 'N/A'}</span>
+                                    <span className="text-xs text-muted-foreground">/ 100</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Progress value={maturity.score} className="h-2 flex-1" />
+                                  <Badge className={maturity.labelColor}>{maturity.level}</Badge>
+                                </div>
+                              </div>
+                              <div className="border rounded-lg p-3 bg-muted/10 flex flex-col justify-between relative">
+                                {risk.isOverridden && (
+                                  <div className="absolute top-2 right-2 text-primary" title={`Risco original era ${risk.originalLevel}`}>
+                                    <AlertTriangle className="h-4 w-4" />
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Risco TPRM Atual</h4>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xl font-bold">{risk.score.toFixed(1)}</span>
+                                    <span className="text-xs text-muted-foreground">Score Base</span>
+                                  </div>
+                                </div>
+                                <Badge className={`text-sm py-1 w-fit mt-auto ${risk.labelColor}`}>{risk.level}</Badge>
+                              </div>
+                            </div>
+
+                            {/* Override Section */}
+                            <div className="border rounded-lg p-4 bg-muted/5 mt-4">
+                              <div className="flex flex-col gap-4">
+                                <div>
+                                  <h4 className="text-sm font-semibold flex items-center gap-2">Avaliação Qualitativa <Badge variant="outline" className="text-[10px]">Opcional</Badge></h4>
+                                  <p className="text-xs text-muted-foreground mt-1">Ajuste manualmente o nível de risco TPRM mediante justificativa.</p>
+                                  {vendor.risk_override_reason && !pendingOverrides[vendor.id] && (
+                                    <p className="text-xs mt-2 p-2 bg-muted rounded border-l-2 border-primary italic">
+                                      <strong>Justificativa atual:</strong> {vendor.risk_override_reason}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium w-24">Nível de Risco:</span>
+                                    <Select
+                                      value={pendingOverrides[vendor.id]?.level !== undefined ? (pendingOverrides[vendor.id].level || "auto") : (vendor.risk_override_level || "auto")}
+                                      onValueChange={(val) => setPendingOverrides(prev => ({
+                                        ...prev,
+                                        [vendor.id]: {
+                                          level: val === "auto" ? null : val,
+                                          reason: prev[vendor.id]?.reason || vendor.risk_override_reason || ''
+                                        }
+                                      }))}
+                                    >
+                                      <SelectTrigger className="w-[160px] h-8 text-xs">
+                                        <SelectValue placeholder="Automático" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="auto">Automático ({risk.originalLevel})</SelectItem>
+                                        <SelectItem value="low">Baixo</SelectItem>
+                                        <SelectItem value="medium">Médio</SelectItem>
+                                        <SelectItem value="high">Alto</SelectItem>
+                                        <SelectItem value="critical">Crítico</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  {pendingOverrides[vendor.id] && pendingOverrides[vendor.id].level !== (vendor.risk_override_level || null) && (
+                                    <div className="space-y-2">
+                                      <span className="text-xs font-medium">Justificativa obrigatória:</span>
+                                      <div className="flex flex-col sm:flex-row gap-2">
+                                        <Input
+                                          placeholder="Explique o motivo do ajuste qualitativo..."
+                                          className="text-xs h-8 flex-1"
+                                          value={pendingOverrides[vendor.id].reason}
+                                          onChange={(e) => setPendingOverrides(prev => ({
+                                            ...prev, [vendor.id]: { ...prev[vendor.id], reason: e.target.value }
+                                          }))}
+                                        />
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <Button
+                                            size="sm"
+                                            className="h-8 text-xs bg-primary"
+                                            onClick={async () => {
+                                              const currentOverride = pendingOverrides[vendor.id];
+                                              if (currentOverride.level && !currentOverride.reason.trim()) {
+                                                toast({ title: 'Atenção', description: 'A justificativa é obrigatória.', variant: 'destructive' });
+                                                return;
+                                              }
+                                              try {
+                                                await updateVendor(vendor.id, {
+                                                  risk_override_level: currentOverride.level,
+                                                  risk_override_reason: currentOverride.level ? currentOverride.reason : null
+                                                } as any);
+                                                toast({ title: 'Sucesso', description: 'Nível de risco atualizado com sucesso.' });
+                                                setPendingOverrides(prev => { const copy = { ...prev }; delete copy[vendor.id]; return copy; });
+                                                fetchVendors();
+                                              } catch (error) {
+                                                toast({ title: 'Erro', description: 'Erro ao atualizar risco.', variant: 'destructive' });
+                                              }
+                                            }}
+                                          >
+                                            Salvar
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-8 text-xs"
+                                            onClick={() => setPendingOverrides(prev => { const copy = { ...prev }; delete copy[vendor.id]; return copy; })}
+                                          >
+                                            Cancelar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="pt-2">
+                              <h4 className="text-sm font-semibold mb-3">Histórico de Assessments</h4>
+                              {vendorAssessments.length > 0 ? (
+                                <div className="space-y-2">
+                                  {vendorAssessments.map((a: any) => {
+                                    const extractedScore = extractAssessmentScore(a);
+                                    return (
+                                      <div key={a.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border bg-card text-card-foreground">
+                                        <div className="flex-1">
+                                          <p className="text-sm font-medium flex items-center gap-2">
+                                            {a.assessment_name}
+                                            <Badge variant="outline" className={`text-[10px] ${a.status.toLowerCase() === 'completed' || a.status.toLowerCase() === 'approved' ? 'border-green-200 text-green-700 bg-green-50' : 'border-blue-200 text-blue-700 bg-blue-50'}`}>
+                                              {a.status}
+                                            </Badge>
+                                          </p>
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            {a.completion_date ? `Concluído em: ${format(new Date(a.completion_date), 'dd/MM/yyyy')}` : (a.due_date ? `Vence em: ${format(new Date(a.due_date), 'dd/MM/yyyy')}` : 'Sem data')}
+                                          </p>
+                                        </div>
+                                        <div className="mt-2 sm:mt-0 flex items-center gap-4">
+                                          <div className="text-right">
+                                            <p className="text-[10px] text-muted-foreground">Maturidade</p>
+                                            <p className="text-sm font-bold">
+                                              {extractedScore !== null ? extractedScore.toFixed(1) : 'N/A'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="text-center py-6 border rounded-lg border-dashed bg-muted/5">
+                                  <FileCheck className="h-8 w-8 mx-auto text-muted-foreground mb-2 opacity-50" />
+                                  <p className="text-sm text-muted-foreground">Nenhum assessment registrado.</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         );
                       })()}
-                    </TableCell>
-
-                    <TableCell className="p-3 w-[11%]">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEditWithWorkflow(vendor)}
-                          title="Editar fornecedor"
-                          className="h-7 w-7 p-0 hover:bg-blue-50"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(vendor.id)}
-                          className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
-                          title="Excluir fornecedor"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          {paginatedVendors.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Nenhum fornecedor encontrado</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 mt-4 mb-2">
+          <div className="flex items-center text-xs sm:text-sm text-muted-foreground w-full sm:w-auto justify-center sm:justify-start">
             <span>
-              Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, sortedVendors.length)} de {sortedVendors.length} fornecedores
+              Mostrando {startIndex + 1} a {Math.min(startIndex + itemsPerPage, sortedVendors.length)} de {sortedVendors.length}
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -746,17 +1434,19 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
               variant="outline"
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
+              className="h-8 text-xs sm:text-sm"
             >
               Anterior
             </Button>
-            <span className="text-sm text-muted-foreground">
-              Página {currentPage} de {totalPages}
+            <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+              {currentPage} / {totalPages}
             </span>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
+              className="h-8 text-xs sm:text-sm"
             >
               Próxima
             </Button>
@@ -908,6 +1598,40 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 </div>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium">Dono do Contrato (Interno)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-slate-600">Nome do Responsável</label>
+                  <Input
+                    value={formData.contract_owner_name || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contract_owner_name: e.target.value }))}
+                    placeholder="João Silva"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-600">E-mail do Responsável</label>
+                  <Input
+                    type="email"
+                    value={formData.contract_owner_email || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, contract_owner_email: e.target.value }))}
+                    placeholder="joao@empresa.com"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Custom fields as normal inputs (from Configurações > Customização) ── */}
+            {customFields.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <CustomFieldInputs
+                  fields={customFields}
+                  values={customFieldFormValues}
+                  onChange={setCustomFieldFormValues}
+                />
+              </div>
+            )}
 
             <div className="flex justify-end space-x-2 pt-4 border-t">
               <Button
@@ -1090,6 +1814,29 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                 </div>
               )}
 
+              {/* Contract Owner Info */}
+              {(viewingVendor.contract_owner_name || viewingVendor.contract_owner_email) && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold">Dono do Contrato (Interno)</h4>
+                  <div className="space-y-2">
+                    {viewingVendor.contract_owner_name && (
+                      <div className="flex items-center space-x-2">
+                        <Shield className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm">{viewingVendor.contract_owner_name}</span>
+                      </div>
+                    )}
+                    {viewingVendor.contract_owner_email && (
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4 text-slate-500" />
+                        <a href={`mailto:${viewingVendor.contract_owner_email}`} className="text-sm text-primary hover:underline">
+                          {viewingVendor.contract_owner_email}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Onboarding Progress */}
               {viewingVendor.onboarding_status !== 'completed' && (
                 <div className="space-y-3">
@@ -1137,6 +1884,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
           onClose={() => {
             setShowOnboardingWorkflow(false);
             setEditingVendorId(null);
+            fetchVendors(); // Agressovely fetch items on close to fix Reactivity.
           }}
           onComplete={(vendor) => {
             setShowOnboardingWorkflow(false);

@@ -250,7 +250,7 @@ const SystemDiagnosticPage = () => {
       case 'healthy': return <CheckCircle className="h-4 w-4" />;
       case 'warning': return <AlertTriangle className="h-4 w-4" />;
       case 'critical': return <XCircle className="h-4 w-4" />;
-      default: return <Monitor className="h-4 w-4" />;
+      default: return <Monitor className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />;
     }
   };
 
@@ -259,15 +259,15 @@ const SystemDiagnosticPage = () => {
   return (
     <div className="w-full h-full space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col space-y-3 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">System Diagnostic</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">System Diagnostic</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Painel de diagnóstico e monitoramento da plataforma
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2 w-full sm:w-auto">
+          <span className="hidden sm:inline text-sm text-muted-foreground">
             Última atualização: {lastRefresh.toLocaleTimeString('pt-BR')}
           </span>
           <Button
@@ -283,163 +283,163 @@ const SystemDiagnosticPage = () => {
       </div>
 
       {/* System Health Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Status Geral</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Status Geral</CardTitle>
             <div className={getHealthColor(systemHealth.overall)}>
               {getHealthIcon(systemHealth.overall)}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{systemHealth.overall}</div>
-            <p className="text-xs text-muted-foreground">Sistema operacional</p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold capitalize">{systemHealth.overall}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Sistema operacional</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Base de Dados</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Base de Dados</CardTitle>
             <div className={getHealthColor(systemHealth.database)}>
               <Database className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{systemHealth.database}</div>
-            <p className="text-xs text-muted-foreground">{systemStats.dbConnections} conexões ativas</p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold capitalize">{systemHealth.database}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{systemStats.dbConnections} conexões ativas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Autenticação</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Autenticação</CardTitle>
             <div className={getHealthColor(systemHealth.auth)}>
               <Lock className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{systemHealth.auth}</div>
-            <p className="text-xs text-muted-foreground">{systemStats.todayLogins} logins hoje</p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold capitalize">{systemHealth.auth}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{systemStats.todayLogins} logins hoje</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Armazenamento</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Armazenamento</CardTitle>
             <div className={getHealthColor(systemHealth.storage)}>
               <HardDrive className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{storagePercentage.toFixed(1)}%</div>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{storagePercentage.toFixed(1)}%</div>
             <Progress value={storagePercentage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               {systemStats.storageUsed}GB de {systemStats.storageTotal}GB
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Performance</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Performance</CardTitle>
             <div className={getHealthColor(systemHealth.performance)}>
               <TrendingUp className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{systemHealth.performance}</div>
-            <p className="text-xs text-muted-foreground">Uptime: {systemStats.systemUptime}</p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="text-xl sm:text-2xl font-bold capitalize">{systemHealth.performance}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">Uptime: {systemStats.systemUptime}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview" className="flex items-center space-x-2">
-            <Monitor className="h-4 w-4" />
-            <span>Visão Geral</span>
+        <TabsList className="flex w-full overflow-x-auto sm:grid sm:grid-cols-6 no-scrollbar">
+          <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+            <Monitor className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Visão Geral</span><span className="sm:hidden">Geral</span>
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
-            <span>Usuários</span>
+          <TabsTrigger value="users" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Usuários</span><span className="sm:hidden">Users</span>
           </TabsTrigger>
-          <TabsTrigger value="logs" className="flex items-center space-x-2">
-            <Activity className="h-4 w-4" />
+          <TabsTrigger value="logs" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+            <Activity className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
             <span>Logs</span>
           </TabsTrigger>
-          <TabsTrigger value="security" className="flex items-center space-x-2">
-            <Shield className="h-4 w-4" />
-            <span>Segurança</span>
+          <TabsTrigger value="security" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+            <Shield className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Segurança</span><span className="sm:hidden">Seg.</span>
           </TabsTrigger>
-          <TabsTrigger value="storage" className="flex items-center space-x-2">
-            <Database className="h-4 w-4" />
-            <span>Armazenamento</span>
+          <TabsTrigger value="storage" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+            <Database className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Armazenamento</span><span className="sm:hidden">Arm.</span>
           </TabsTrigger>
-          <TabsTrigger value="diagnostic" className="flex items-center space-x-2">
-            <Settings className="h-4 w-4" />
-            <span>Diagnóstico</span>
+          <TabsTrigger value="diagnostic" className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-sm px-2 sm:px-3 min-w-fit">
+            <Settings className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+            <span className="hidden sm:inline">Diagnóstico</span><span className="sm:hidden">Diag.</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           {/* Critical Security Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Riscos Críticos</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Riscos Críticos</CardTitle>
                 <ShieldAlert className={`h-4 w-4 ${securityMetrics.criticalRisks > 0 ? 'text-red-600' : 'text-green-600'}`} />
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${securityMetrics.criticalRisks > 0 ? 'text-red-700' : 'text-green-700'}`}>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className={`text-xl sm:text-2xl font-bold ${securityMetrics.criticalRisks > 0 ? 'text-red-700' : 'text-green-700'}`}>
                   {securityMetrics.criticalRisks}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {securityMetrics.criticalRisks > 0 ? 'Requer ação imediata' : 'Nenhum risco crítico'}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Score Compliance</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Score Compliance</CardTitle>
                 <Target className={`h-4 w-4 ${securityMetrics.complianceScore < 80 ? 'text-orange-600' : 'text-green-600'}`} />
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${securityMetrics.complianceScore < 80 ? 'text-orange-700' : 'text-green-700'}`}>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className={`text-xl sm:text-2xl font-bold ${securityMetrics.complianceScore < 80 ? 'text-orange-700' : 'text-green-700'}`}>
                   {securityMetrics.complianceScore}%
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {securityMetrics.pendingAssessments} assessments pendentes
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Incidentes (30d)</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Incidentes (30d)</CardTitle>
                 <AlertTriangle className={`h-4 w-4 ${securityMetrics.securityIncidents > 5 ? 'text-red-600' : 'text-blue-600'}`} />
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${securityMetrics.securityIncidents > 5 ? 'text-red-700' : 'text-blue-700'}`}>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className={`text-xl sm:text-2xl font-bold ${securityMetrics.securityIncidents > 5 ? 'text-red-700' : 'text-blue-700'}`}>
                   {securityMetrics.securityIncidents}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {securityMetrics.suspiciousActivities} atividades suspeitas
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Falhas Login (hoje)</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Falhas Login (hoje)</CardTitle>
                 <UserX className={`h-4 w-4 ${securityMetrics.failedLogins > 10 ? 'text-yellow-600' : 'text-gray-600'}`} />
               </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${securityMetrics.failedLogins > 10 ? 'text-yellow-700' : 'text-gray-700'}`}>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className={`text-xl sm:text-2xl font-bold ${securityMetrics.failedLogins > 10 ? 'text-yellow-700' : 'text-gray-700'}`}>
                   {securityMetrics.failedLogins}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   {securityMetrics.dataBreachAttempts} tentativas de violação
                 </p>
               </CardContent>
@@ -447,62 +447,62 @@ const SystemDiagnosticPage = () => {
           </div>
 
           {/* Critical Security Indicators */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Saúde Geral</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Saúde Geral</CardTitle>
                 <Activity className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{Math.max(0, 100 - securityMetrics.criticalRisks * 15 - securityMetrics.securityIncidents * 2)}%</div>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className="text-xl sm:text-2xl font-bold">{Math.max(0, 100 - securityMetrics.criticalRisks * 15 - securityMetrics.securityIncidents * 2)}%</div>
                 <Progress value={Math.max(0, 100 - securityMetrics.criticalRisks * 15 - securityMetrics.securityIncidents * 2)} className="mt-2" />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                   Score baseado em riscos
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Vulnerabilidades OWASP</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Vulnerabilidades OWASP</CardTitle>
                 <Shield className="h-4 w-4 text-orange-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-700">{securityMetrics.vulnerableAssets}</div>
-                <p className="text-xs text-muted-foreground">detectadas no sistema</p>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className="text-xl sm:text-2xl font-bold text-orange-700">{securityMetrics.vulnerableAssets}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">detectadas no sistema</p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Controles Falhos</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Controles Falhos</CardTitle>
                 <XCircle className="h-4 w-4 text-red-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">{securityMetrics.overduePolicies}</div>
-                <p className="text-xs text-muted-foreground">necessitam correção</p>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className="text-xl sm:text-2xl font-bold text-red-600">{securityMetrics.overduePolicies}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">necessitam correção</p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Logs Suspeitos</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Logs Suspeitos</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{securityMetrics.suspiciousActivities}</div>
-                <p className="text-xs text-muted-foreground">requerem investigação</p>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className="text-xl sm:text-2xl font-bold text-yellow-600">{securityMetrics.suspiciousActivities}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">requerem investigação</p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Acesso Não Autorizado</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Acesso Não Autorizado</CardTitle>
                 <UserX className="h-4 w-4 text-red-800" />
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-800">{securityMetrics.dataBreachAttempts}</div>
-                <p className="text-xs text-muted-foreground">tentativas bloqueadas</p>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+                <div className="text-xl sm:text-2xl font-bold text-red-800">{securityMetrics.dataBreachAttempts}</div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">tentativas bloqueadas</p>
               </CardContent>
             </Card>
           </div>
@@ -511,56 +511,56 @@ const SystemDiagnosticPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                   <AlertTriangle className="h-5 w-5 text-orange-600" />
                   <span>Alertas de Segurança</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Itens que requerem atenção imediata
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                 <div className="space-y-3">
                   {securityMetrics.criticalRisks > 0 && (
                     <div className="flex items-center space-x-2 text-red-700">
                       <ShieldAlert className="h-4 w-4" />
-                      <span className="text-sm">{securityMetrics.criticalRisks} riscos críticos precisam de mitigação</span>
+                      <span className="text-xs sm:text-sm">{securityMetrics.criticalRisks} riscos críticos precisam de mitigação</span>
                     </div>
                   )}
                   {securityMetrics.overduePolicies > 0 && (
                     <div className="flex items-center space-x-2 text-orange-700">
                       <XCircle className="h-4 w-4" />
-                      <span className="text-sm">{securityMetrics.overduePolicies} controles de segurança falharam</span>
+                      <span className="text-xs sm:text-sm">{securityMetrics.overduePolicies} controles de segurança falharam</span>
                     </div>
                   )}
                   {securityMetrics.vulnerableAssets > 0 && (
                     <div className="flex items-center space-x-2 text-red-700">
                       <Shield className="h-4 w-4" />
-                      <span className="text-sm">{securityMetrics.vulnerableAssets} vulnerabilidades OWASP detectadas</span>
+                      <span className="text-xs sm:text-sm">{securityMetrics.vulnerableAssets} vulnerabilidades OWASP detectadas</span>
                     </div>
                   )}
                   {securityMetrics.suspiciousActivities > 0 && (
                     <div className="flex items-center space-x-2 text-yellow-700">
                       <AlertTriangle className="h-4 w-4" />
-                      <span className="text-sm">{securityMetrics.suspiciousActivities} atividades suspeitas requerem investigação</span>
+                      <span className="text-xs sm:text-sm">{securityMetrics.suspiciousActivities} atividades suspeitas requerem investigação</span>
                     </div>
                   )}
                   {securityMetrics.pendingAssessments > 0 && (
                     <div className="flex items-center space-x-2 text-yellow-700">
                       <Eye className="h-4 w-4" />
-                      <span className="text-sm">{securityMetrics.pendingAssessments} assessments aguardando conclusão</span>
+                      <span className="text-xs sm:text-sm">{securityMetrics.pendingAssessments} assessments aguardando conclusão</span>
                     </div>
                   )}
                   {securityMetrics.complianceScore < 80 && (
                     <div className="flex items-center space-x-2 text-orange-700">
                       <TrendingDown className="h-4 w-4" />
-                      <span className="text-sm">Score de compliance abaixo do recomendado (80%)</span>
+                      <span className="text-xs sm:text-sm">Score de compliance abaixo do recomendado (80%)</span>
                     </div>
                   )}
                   {securityMetrics.criticalRisks === 0 && securityMetrics.overduePolicies === 0 && securityMetrics.vulnerableAssets === 0 && securityMetrics.complianceScore >= 80 && (
                     <div className="flex items-center space-x-2 text-green-700">
                       <CheckCircle className="h-4 w-4" />
-                      <span className="text-sm">✅ Sistema seguro - Nenhum alerta crítico</span>
+                      <span className="text-xs sm:text-sm">✅ Sistema seguro - Nenhum alerta crítico</span>
                     </div>
                   )}
                 </div>
@@ -569,18 +569,18 @@ const SystemDiagnosticPage = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center space-x-2 text-base sm:text-lg">
                   <TrendingUp className="h-5 w-5 text-blue-600" />
                   <span>Métricas de Performance</span>
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Indicadores de segurança e eficiência
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Compliance Score:</span>
+                    <span className="text-xs sm:text-sm font-medium">Compliance Score:</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-20 bg-gray-200 rounded-full h-2">
                         <div
@@ -590,22 +590,22 @@ const SystemDiagnosticPage = () => {
                           style={{ width: `${securityMetrics.complianceScore}%` }}
                         />
                       </div>
-                      <span className="text-sm font-bold">{securityMetrics.complianceScore}%</span>
+                      <span className="text-xs sm:text-sm font-bold">{securityMetrics.complianceScore}%</span>
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">Uptime do Sistema:</span>
-                    <span className="text-sm font-medium">{systemStats.systemUptime}</span>
+                    <span className="text-xs sm:text-sm">Uptime do Sistema:</span>
+                    <span className="text-xs sm:text-sm font-medium">{systemStats.systemUptime}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">Último Backup:</span>
-                    <span className="text-sm font-medium">
+                    <span className="text-xs sm:text-sm">Último Backup:</span>
+                    <span className="text-xs sm:text-sm font-medium">
                       {systemStats.lastBackup ? new Date(systemStats.lastBackup).toLocaleDateString('pt-BR') : 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm">Usuários Ativos:</span>
-                    <span className="text-sm font-medium">{systemStats.activeUsers}/{systemStats.totalUsers}</span>
+                    <span className="text-xs sm:text-sm">Usuários Ativos:</span>
+                    <span className="text-xs sm:text-sm font-medium">{systemStats.activeUsers}/{systemStats.totalUsers}</span>
                   </div>
                 </div>
               </CardContent>

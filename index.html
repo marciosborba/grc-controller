@@ -3,19 +3,22 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GRC Controller</title>
-  <meta name="description" content="Lovable Generated Project" />
-  <meta name="author" content="Lovable" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+  <title>GEPRIV</title>
+  <meta name="description" content="GEPRIV Application" />
+  <meta name="author" content="GEPRIV" />
 
-  <meta property="og:title" content="GRC Controller" />
-  <meta property="og:description" content="Lovable Generated Project" />
+  <meta property="og:title" content="GEPRIV" />
+  <meta property="og:description" content="GEPRIV Application" />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  <meta property="og:image" content="/logo.png?v=2" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="@lovable_dev" />
-  <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  <meta name="twitter:site" content="@GEPRIV" />
+  <meta name="twitter:image" content="/logo.png?v=2" />
+
+  <link rel="icon" type="image/png" href="/logo.png?v=2" />
+
   <!-- Preload font for faster loading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -105,9 +108,7 @@
 
   <div id="root" style="opacity: 0; transition: opacity 0.3s ease;"></div>
 
-  <script type="module" src="/src/main.tsx"></script>
 
-  <!-- Remove preloader when app loads -->
   <script>
     window.addEventListener('load', function () {
       setTimeout(function () {
@@ -137,6 +138,7 @@
       }
     }
   </style>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 
 </html>

@@ -60,6 +60,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -350,7 +356,7 @@ const DroppableColumn: React.FC<DroppableColumnProps> = ({
   const { setNodeRef } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex-1 min-w-[320px] h-full flex flex-col">
+    <div className="flex-1 w-full h-full flex flex-col">
       <div className={`
         rounded-xl border h-full flex flex-col shadow-sm transition-all
         ${column.bgConfig} bg-opacity-40
@@ -547,30 +553,30 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
   return (
     <div className="space-y-6 h-full flex flex-col">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 shrink-0 px-1 sm:px-0">
         <Card className="bg-card border-none shadow-sm ring-1 ring-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                <FileCheck className="h-6 w-6" />
+          <CardContent className="p-2.5 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl bg-primary/10 text-primary w-fit">
+                <FileCheck className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Assessments</p>
-                <p className="text-2xl font-bold text-foreground">{filteredAssessments.length}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground truncate">Total de Assessments</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">{filteredAssessments.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card border-none shadow-sm ring-1 ring-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <Clock className="h-6 w-6" />
+          <CardContent className="p-2.5 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 w-fit">
+                <Clock className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Em Progresso</p>
-                <p className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground truncate">Em Progresso</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">
                   {assessmentsByStatus.in_progress.length}
                 </p>
               </div>
@@ -579,14 +585,14 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
         </Card>
 
         <Card className="bg-card border-none shadow-sm ring-1 ring-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400">
-                <CheckCircle2 className="h-6 w-6" />
+          <CardContent className="p-2.5 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl bg-green-500/10 text-green-600 dark:text-green-400 w-fit">
+                <CheckCircle2 className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Aprovados</p>
-                <p className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground truncate">Aprovados</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">
                   {assessmentsByStatus.approved.length}
                 </p>
               </div>
@@ -595,14 +601,14 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
         </Card>
 
         <Card className="bg-card border-none shadow-sm ring-1 ring-border">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400">
-                <AlertCircle className="h-6 w-6" />
+          <CardContent className="p-2.5 sm:p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 w-fit">
+                <AlertCircle className="h-4 w-4 sm:h-6 sm:w-6" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Atrasados</p>
-                <p className="text-2xl font-bold text-foreground">
+              <div className="min-w-0">
+                <p className="text-[10px] sm:text-sm font-medium text-muted-foreground truncate">Atrasados</p>
+                <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">
                   {Object.values(assessmentsByStatus).flat().filter(a => {
                     if (!a.due_date) return false;
                     return new Date(a.due_date) < new Date();
@@ -615,24 +621,66 @@ export const VendorKanbanView: React.FC<VendorKanbanViewProps> = ({
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto min-h-0 pb-2">
+      <div className="flex-1 min-h-0 pb-2">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="flex gap-4 h-full min-w-max pb-2">
+          {/* Desktop View */}
+          <div className="hidden lg:flex overflow-x-auto gap-4 h-full min-w-max pb-2 px-1 lg:px-0">
             {KANBAN_COLUMNS.map((column) => (
-              <DroppableColumn
-                key={column.id}
-                column={column}
-                assessments={assessmentsByStatus[column.id]}
-                stats={getColumnStats(assessmentsByStatus[column.id])}
-                onUpdate={handleUpdateAssessment}
-                onView={handleViewAssessment}
-              />
+              <div key={column.id} className="shrink-0 w-auto flex-1 min-w-[320px]">
+                <DroppableColumn
+                  column={column}
+                  assessments={assessmentsByStatus[column.id]}
+                  stats={getColumnStats(assessmentsByStatus[column.id])}
+                  onUpdate={handleUpdateAssessment}
+                  onView={handleViewAssessment}
+                />
+              </div>
             ))}
+          </div>
+
+          {/* Mobile View (Tabs) */}
+          <div className="lg:hidden h-full flex flex-col px-1">
+            <Tabs defaultValue={KANBAN_COLUMNS[0].id} className="flex-1 flex flex-col h-full min-h-0">
+              <div
+                className="w-full shrink-0 border-b border-border/40 overflow-x-auto touch-pan-x flex"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <TabsList className="w-max inline-flex h-12 items-center justify-start rounded-none bg-transparent p-0">
+                  {KANBAN_COLUMNS.map((column) => (
+                    <TabsTrigger
+                      key={column.id}
+                      value={column.id}
+                      className="inline-flex items-center justify-center whitespace-nowrap rounded-none border-b-2 border-transparent px-3 py-2 text-xs sm:text-sm sm:px-4 sm:py-3 font-medium text-muted-foreground transition-all hover:bg-muted/50 data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:bg-background"
+                    >
+                      <column.icon className={`mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4 ${column.color}`} />
+                      {column.title}
+                      <Badge variant="secondary" className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[9px] sm:text-[10px]">
+                        {assessmentsByStatus[column.id].length}
+                      </Badge>
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              <div className="flex-1 overflow-hidden mt-3">
+                {KANBAN_COLUMNS.map((column) => (
+                  <TabsContent key={column.id} value={column.id} className="h-full m-0 p-0 outline-none focus-visible:ring-0">
+                    <DroppableColumn
+                      column={column}
+                      assessments={assessmentsByStatus[column.id]}
+                      stats={getColumnStats(assessmentsByStatus[column.id])}
+                      onUpdate={handleUpdateAssessment}
+                      onView={handleViewAssessment}
+                    />
+                  </TabsContent>
+                ))}
+              </div>
+            </Tabs>
           </div>
 
           <DragOverlay>

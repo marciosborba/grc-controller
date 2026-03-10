@@ -62,74 +62,104 @@ export const AIUsageTab: React.FC<AIUsageTabProps> = ({ tenantId, readonly = fal
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-                    <CardContent className="p-6">
-                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-                            <BarChart3 className="h-4 w-4 text-orange-400" /> Custo Estimado (Recente)
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground mb-2">
+                            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-400" /> Custo Estimado (Recente)
                         </div>
-                        <div className="text-2xl font-bold text-white">${totalCost.toFixed(4)}</div>
+                        <div className="text-xl sm:text-2xl font-bold text-white">${totalCost.toFixed(4)}</div>
                     </CardContent>
                 </Card>
                 <Card className="bg-white/5 border-white/10 backdrop-blur-md">
-                    <CardContent className="p-6">
-                        <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
-                            <Zap className="h-4 w-4 text-yellow-400" /> Total Tokens (Recente)
+                    <CardContent className="p-4">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground mb-2">
+                            <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-400" /> Total Tokens (Recente)
                         </div>
-                        <div className="text-2xl font-bold text-white">{totalTokens.toLocaleString()}</div>
+                        <div className="text-xl sm:text-2xl font-bold text-white">{totalTokens.toLocaleString()}</div>
                     </CardContent>
                 </Card>
             </div>
 
             <Card className="border-white/10 bg-white/5 backdrop-blur-md">
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader className="bg-white/5">
-                            <TableRow className="border-white/5 hover:bg-transparent">
-                                <TableHead className="text-white">Data</TableHead>
-                                <TableHead className="text-white">Modelo</TableHead>
-                                <TableHead className="text-white">Tokens (In/Out)</TableHead>
-                                <TableHead className="text-white">Custo</TableHead>
-                                <TableHead className="text-white text-right">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
+                    {/* ── MOBILE: cards ── */}
+                    <div className="sm:hidden divide-y divide-white/5">
+                        {loading ? (
+                            <div className="text-center py-8 text-muted-foreground text-sm">Carregando...</div>
+                        ) : logs.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground text-sm">Nenhum registro de uso encontrado.</div>
+                        ) : logs.map((log) => (
+                            <div key={log.id} className="p-3 space-y-1">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="font-mono text-[10px] text-muted-foreground">
+                                        {new Date(log.created_at).toLocaleString('pt-BR')}
+                                    </div>
+                                    <Badge variant={log.status === 'error' ? 'destructive' : 'default'} className={`text-[10px] shrink-0 ${log.status === 'success' ? 'bg-green-500/20 text-green-400' : ''}`}>
+                                        {log.status === 'success' ? 'Sucesso' : 'Erro'}
+                                    </Badge>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 text-xs">
+                                    <span className="text-white">{log.model_name || 'N/A'} <span className="text-muted-foreground">({log.provider || 'default'})</span></span>
+                                    <span className="text-white shrink-0">${(log.cost_usd || 0).toFixed(6)}</span>
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">
+                                    Tokens: <span className="text-green-400">{log.tokens_input}</span> in / <span className="text-blue-400">{log.tokens_output}</span> out
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* ── DESKTOP: tabela ── */}
+                    <div className="hidden sm:block">
+                        <Table>
+                            <TableHeader className="bg-white/5">
+                                <TableRow className="border-white/5 hover:bg-transparent">
+                                    <TableHead className="text-white">Data</TableHead>
+                                    <TableHead className="text-white">Modelo</TableHead>
+                                    <TableHead className="text-white">Tokens (In/Out)</TableHead>
+                                    <TableHead className="text-white">Custo</TableHead>
+                                    <TableHead className="text-white text-right">Status</TableHead>
                                 </TableRow>
-                            ) : logs.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                                        Nenhum registro de uso encontrado.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                logs.map((log) => (
-                                    <TableRow key={log.id} className="border-white/5 hover:bg-white/5">
-                                        <TableCell className="text-muted-foreground font-mono text-xs">
-                                            {new Date(log.created_at).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="text-sm text-white">{log.model_name || 'N/A'}</div>
-                                            <div className="text-xs text-muted-foreground">{log.provider || 'default'}</div>
-                                        </TableCell>
-                                        <TableCell className="text-sm">
-                                            <span className="text-green-400">{log.tokens_input}</span> / <span className="text-blue-400">{log.tokens_output}</span>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-white">
-                                            ${(log.cost_usd || 0).toFixed(6)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Badge variant={log.status === 'error' ? 'destructive' : 'default'} className={log.status === 'success' ? 'bg-green-500/20 text-green-400' : ''}>
-                                                {log.status === 'success' ? 'Sucesso' : 'Erro'}
-                                            </Badge>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell>
+                                    </TableRow>
+                                ) : logs.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                                            Nenhum registro de uso encontrado.
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    logs.map((log) => (
+                                        <TableRow key={log.id} className="border-white/5 hover:bg-white/5">
+                                            <TableCell className="text-muted-foreground font-mono text-xs">
+                                                {new Date(log.created_at).toLocaleString()}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm text-white">{log.model_name || 'N/A'}</div>
+                                                <div className="text-xs text-muted-foreground">{log.provider || 'default'}</div>
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                                <span className="text-green-400">{log.tokens_input}</span> / <span className="text-blue-400">{log.tokens_output}</span>
+                                            </TableCell>
+                                            <TableCell className="text-sm text-white">
+                                                ${(log.cost_usd || 0).toFixed(6)}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Badge variant={log.status === 'error' ? 'destructive' : 'default'} className={log.status === 'success' ? 'bg-green-500/20 text-green-400' : ''}>
+                                                    {log.status === 'success' ? 'Sucesso' : 'Erro'}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
         </div>

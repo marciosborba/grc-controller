@@ -1,0 +1,387 @@
+/* ============================================================================ */
+/* SISTEMA DE CORES ESTÁTICO - GRC CONTROLLER */
+/* ============================================================================ */
+/* Este arquivo contém todas as cores da aplicação em formato estático */
+/* Sem JavaScript dinâmico - apenas toggle dark/light via classe CSS */
+
+@layer base {
+  /* ========================================================================== */
+  /* LIGHT MODE - CORES PRINCIPAIS */
+  /* ========================================================================== */
+  :root {
+    /* Brand Colors - Baseado no estado atual da aplicação */
+    --background: 0 0% 100%;                /* Branco puro */
+    --foreground: 225 71% 12%;              /* Azul escuro para texto */
+
+    /* Cards - Preservando estado atual */
+    --card: 0 0% 100%;                      /* Cards brancos */
+    --card-foreground: 225 71% 12%;         /* Texto dos cards */
+
+    /* Popover */
+    --popover: 0 0% 100%;                   /* Popover branco */
+    --popover-foreground: 225 71% 12%;      /* Texto popover */
+
+    /* Primary - Verde/Teal UI Nativa (cores atuais preservadas) */
+    --primary: 173 88% 58%;                 /* Verde vibrante */
+    --primary-foreground: 210 40% 98%;      /* Texto quase branco */
+    --primary-hover: 173 88% 54%;           /* Verde hover mais escuro */
+    --primary-glow: 173 95% 78%;            /* Verde glow claro */
+
+    /* Secondary - Roxo (preservando valores atuais) */
+    --secondary: 272 64% 47%;               /* Roxo */
+    --secondary-foreground: 210 40% 98%;    /* Texto claro */
+
+    /* Colors funcionais */
+    --success: 142 76% 36%;                 /* Verde sucesso */
+    --success-foreground: 210 40% 98%;      /* Texto branco */
+    --success-light: 142 76% 94%;           /* Verde claro para fundos */
+
+    --warning: 38 92% 50%;                  /* Laranja aviso */
+    --warning-foreground: 225 71% 12%;      /* Texto escuro */
+    --warning-light: 38 92% 94%;            /* Laranja claro */
+
+    --danger: 0 84% 60%;                    /* Vermelho perigo */
+    --danger-foreground: 210 40% 98%;       /* Texto branco */
+    --danger-light: 0 84% 94%;              /* Vermelho claro */
+
+    /* Muted colors */
+    --muted: 210 20% 96%;                   /* Cinza muito claro */
+    --muted-foreground: 215 16% 47%;        /* Cinza médio para texto */
+
+    /* Accent - Rosa (preservando valores atuais) */
+    --accent: 335 56% 42%;                  /* Rosa accent */
+    --accent-foreground: 210 40% 98%;       /* Texto claro */
+
+    /* Destructive */
+    --destructive: 0 84% 60%;               /* Vermelho destrutivo */
+    --destructive-foreground: 210 40% 98%;  /* Texto branco */
+
+    /* Borders e inputs */
+    --border: 214 32% 91%;                  /* Bordas cinza claro */
+    --input: 214 32% 91%;                   /* Input backgrounds */
+    --ring: 219 78% 26%;                    /* Focus rings */
+
+    /* Cores específicas GRC - Risk levels (light mode) */
+    --risk-critical: 0 84% 60%;             /* Vermelho crítico */
+    --risk-high: 24 95% 53%;                /* Laranja alto */
+    --risk-medium: 38 92% 50%;              /* Amarelo médio */
+    --risk-low: 142 76% 36%;                /* Verde baixo */
+
+    /* Gradients */
+    --gradient-brand: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 50%));
+    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)), hsl(0 84% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Radius */
+    --radius: 0.75rem;
+
+    /* Sidebar específico - Light mode */
+    --sidebar-background: 0 0% 98%;         /* Cinza muito claro */
+    --sidebar-foreground: 240 5.3% 26.1%;  /* Texto cinza escuro */
+    --sidebar-primary: 240 5.9% 10%;       /* Texto primário escuro */
+    --sidebar-primary-foreground: 0 0% 98%; /* Texto sobre primário */
+    --sidebar-accent: 240 4.8% 95.9%;      /* Accent claro */
+    --sidebar-accent-foreground: 240 5.9% 10%; /* Texto sobre accent */
+    --sidebar-border: 220 13% 91%;          /* Border sidebar */
+    --sidebar-ring: 217.2 91.2% 59.8%;     /* Focus ring sidebar */
+  }
+
+  /* ========================================================================== */
+  /* DARK MODE - CORES PRINCIPAIS */
+  /* ========================================================================== */
+  .dark {
+    /* Dark theme otimizado para profissionais GRC */
+    --background: 222 18% 4%;               /* Preto suave */
+    --foreground: 0 0% 100%;                /* Branco texto */
+
+    /* Cards - Dark mode */
+    --card: 215 8% 12%;                     /* Cards cinza escuro */
+    --card-foreground: 0 0% 100%;           /* Texto branco */
+
+    /* Popover dark */
+    --popover: 222 13% 11%;                 /* Popover escuro */
+    --popover-foreground: 0 0% 100%;        /* Texto branco */
+
+    /* Primary - Verde/Teal (mesmo do light mode para consistência) */
+    --primary: 173 88% 58%;                 /* Verde vibrante */
+    --primary-foreground: 225 39% 5%;       /* Texto muito escuro */
+    --primary-hover: 173 88% 54%;           /* Verde hover */
+    --primary-glow: 173 95% 78%;            /* Verde glow */
+
+    /* Secondary - Dark mode */
+    --secondary: 215 12% 20%;               /* Cinza escuro */
+    --secondary-foreground: 0 0% 100%;      /* Texto branco */
+
+    /* Success dark */
+    --success: 142 76% 46%;                 /* Verde sucesso mais claro */
+    --success-foreground: 225 39% 5%;       /* Texto escuro */
+    --success-light: 142 76% 12%;           /* Verde escuro para fundos */
+
+    /* Warning dark */
+    --warning: 38 92% 60%;                  /* Laranja mais claro */
+    --warning-foreground: 225 39% 5%;       /* Texto escuro */
+    --warning-light: 38 92% 15%;            /* Laranja escuro */
+
+    /* Danger dark */
+    --danger: 0 84% 70%;                    /* Vermelho mais claro */
+    --danger-foreground: 225 39% 5%;        /* Texto escuro */
+    --danger-light: 0 84% 15%;              /* Vermelho escuro */
+
+    /* Muted dark */
+    --muted: 215 12% 16%;                   /* Cinza escuro */
+    --muted-foreground: 215 20% 65%;        /* Cinza claro para texto */
+
+    /* Accent dark */
+    --accent: 335 56% 62%;                  /* Rosa mais claro */
+    --accent-foreground: 225 39% 5%;        /* Texto escuro */
+
+    /* Destructive dark */
+    --destructive: 0 84% 70%;               /* Vermelho mais claro */
+    --destructive-foreground: 225 39% 5%;   /* Texto escuro */
+
+    /* Borders e inputs dark */
+    --border: 215 10% 22%;                  /* Bordas cinza escuro */
+    --input: 215 10% 22%;                   /* Input backgrounds escuros */
+    --ring: 219 95% 68%;                    /* Focus rings mais claros */
+
+    /* Cores específicas GRC - Risk levels (dark mode) */
+    --risk-critical: 0 84% 70%;             /* Vermelho crítico mais claro */
+    --risk-high: 24 95% 63%;                /* Laranja alto mais claro */
+    --risk-medium: 38 92% 60%;              /* Amarelo médio mais claro */
+    --risk-low: 142 76% 46%;                /* Verde baixo mais claro */
+
+    /* Sidebar específico - Dark mode (igual aos cards) */
+    --sidebar-background: 215 8% 12%;       /* Mesmo cinza dos cards */
+    --sidebar-foreground: 0 0% 100%;        /* Texto branco */
+    --sidebar-primary: 219 95% 68%;         /* Primary claro */
+    --sidebar-primary-foreground: 215 8% 12%; /* Texto escuro sobre primary */
+    --sidebar-accent: 215 8% 10%;           /* Accent escuro */
+    --sidebar-accent-foreground: 0 0% 100%; /* Texto branco sobre accent */
+    --sidebar-border: 215 10% 22%;          /* Border escura */
+    --sidebar-ring: 219 95% 68%;            /* Focus ring clara */
+  }
+}
+
+/* ============================================================================ */
+/* BASE STYLES - APLICAÇÃO DAS CORES */  
+/* ============================================================================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Melhorar renderização e nitidez do texto */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
+    font-kerning: normal;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-display: swap;
+    font-variant-ligatures: normal;
+    font-variant-numeric: tabular-nums;
+    
+    /* Melhorias adicionais de nitidez */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    
+    /* Garantir que as cores dark mode sejam aplicadas */
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Melhorar renderização para todos os elementos */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    -webkit-font-smoothing: inherit;
+    -moz-osx-font-smoothing: inherit;
+  }
+}
+
+/* ============================================================================ */
+/* COMPONENTES - APLICAÇÃO ESPECÍFICA DAS CORES */
+/* ============================================================================ */
+
+/* Cards com alta especificidade */
+html .card,
+html [data-radix-card],
+html [class*="rounded-lg border bg-card"],
+html div[class*="rounded-lg border"] {
+  background-color: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-color: hsl(var(--border));
+}
+
+/* Estados hover para cards */
+html .card:hover,
+html [data-radix-card]:hover {
+  background-color: hsl(var(--card));
+  border-color: hsl(var(--border));
+  opacity: 0.95;
+}
+
+/* Botões primários */
+html button[class*="bg-primary"],
+html [role="button"][class*="bg-primary"] {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+html button[class*="bg-primary"]:hover,
+html [role="button"][class*="bg-primary"]:hover {
+  background-color: hsl(var(--primary-hover));
+}
+
+/* Inputs usando variáveis de tema */
+html input[type="text"],
+html input[type="email"], 
+html input[type="password"],
+html input[type="search"],
+html textarea,
+html select {
+  background-color: hsl(var(--background));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+/* Dark mode específico para inputs */
+html.dark input[type="text"],
+html.dark input[type="email"],
+html.dark input[type="password"], 
+html.dark input[type="search"],
+html.dark textarea,
+html.dark select {
+  background-color: hsl(var(--muted));
+  border-color: hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+/* Focus states */
+html input:focus,
+html textarea:focus,
+html select:focus {
+  border-color: hsl(var(--ring));
+  outline: 2px solid hsl(var(--ring) / 0.2);
+  outline-offset: 2px;
+}
+
+/* Placeholders */
+html input::placeholder,
+html textarea::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Sidebar usando variáveis específicas */
+html [data-sidebar="sidebar"] {
+  background-color: hsl(var(--sidebar-background));
+  color: hsl(var(--sidebar-foreground));
+  border-color: hsl(var(--sidebar-border));
+}
+
+/* Links de navegação no sidebar */
+html [data-sidebar="sidebar"] a,
+html [data-sidebar="menu-button"] {
+  color: hsl(var(--sidebar-foreground));
+  background-color: transparent;
+}
+
+/* Estados ativos no sidebar */
+html [data-sidebar="sidebar"] [class*="text-primary"],
+html [data-sidebar="sidebar"] .active {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+/* Hover states para navegação */
+html [data-sidebar="sidebar"] a:hover,
+html [data-sidebar="menu-button"]:hover {
+  background-color: hsl(var(--sidebar-accent) / 0.1);
+}
+
+/* Indicadores de risco GRC */
+html .risk-critical,
+html [data-risk="critical"] {
+  color: hsl(var(--risk-critical));
+  background-color: hsl(var(--risk-critical) / 0.1);
+  border-color: hsl(var(--risk-critical) / 0.3);
+}
+
+html .risk-high,
+html [data-risk="high"] {
+  color: hsl(var(--risk-high));
+  background-color: hsl(var(--risk-high) / 0.1);
+  border-color: hsl(var(--risk-high) / 0.3);
+}
+
+html .risk-medium,
+html [data-risk="medium"] {
+  color: hsl(var(--risk-medium));
+  background-color: hsl(var(--risk-medium) / 0.1);
+  border-color: hsl(var(--risk-medium) / 0.3);
+}
+
+html .risk-low,
+html [data-risk="low"] {
+  color: hsl(var(--risk-low));
+  background-color: hsl(var(--risk-low) / 0.1);
+  border-color: hsl(var(--risk-low) / 0.3);
+}
+
+/* ============================================================================ */
+/* TRANSIÇÕES SUAVES */
+/* ============================================================================ */
+html * {
+  transition: 
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+/* Desabilitar transições durante mudança de tema */
+html.theme-changing * {
+  transition: none;
+}
+
+/* ============================================================================ */
+/* PRINT STYLES */
+/* ============================================================================ */
+@media print {
+  html * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  html .card,
+  html [role="dialog"] {
+    background-color: white;
+    color: black;
+    border-color: #e5e7eb;
+  }
+}
+
+/* ============================================================================ */
+/* RESPONSIVIDADE */  
+/* ============================================================================ */
+@media (max-width: 768px) {
+  html [data-sidebar="sidebar"] {
+    background-color: hsl(var(--background));
+    border-color: hsl(var(--border));
+  }
+}

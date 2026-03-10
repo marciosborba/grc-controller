@@ -341,10 +341,10 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Notificações Regulatórias</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Notificações Regulatórias</h3>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -353,7 +353,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               Nova Notificação
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingNotification ? 'Editar Notificação Regulatória' : 'Nova Notificação Regulatória'}
@@ -361,15 +361,15 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
             </DialogHeader>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="submission">Submissão</TabsTrigger>
-                <TabsTrigger value="legal">Legal</TabsTrigger>
-                <TabsTrigger value="impact">Impacto</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                <TabsTrigger value="submission" className="text-xs sm:text-sm">Submissão</TabsTrigger>
+                <TabsTrigger value="legal" className="text-xs sm:text-sm">Legal</TabsTrigger>
+                <TabsTrigger value="impact" className="text-xs sm:text-sm">Impacto</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="regulatory_body">Órgão Regulador</Label>
                     <Select
@@ -470,7 +470,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               </TabsContent>
 
               <TabsContent value="submission" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="submission_method">Método de Submissão</Label>
                     <Select
@@ -631,12 +631,12 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button className="w-full sm:w-auto" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar Notificação
               </Button>
@@ -671,15 +671,18 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
 
             return (
               <Card key={notification.id} className={`hover:shadow-md transition-shadow ${overdue ? 'border-red-200' : ''}`}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
+                <CardHeader className="p-4 sm:p-6 pb-2">
+                  <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sm:items-start">
                     <div className="flex items-center gap-3">
-                      <Scale className="h-5 w-5 text-primary" />
+                      <div className="hidden sm:block">
+                        <Scale className="h-5 w-5 text-primary" />
+                      </div>
                       <div>
-                        <CardTitle className="text-lg">
+                        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                          <span className="sm:hidden"><Scale className="h-4 w-4 text-primary" /></span>
                           {regulatoryBody?.name || notification.regulatory_body}
                         </CardTitle>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                           {notification.notification_type === 'mandatory' ? 'Obrigatória' :
                             notification.notification_type === 'voluntary' ? 'Voluntária' :
                               notification.notification_type === 'whistleblower' ? 'Whistleblower' :
@@ -688,20 +691,20 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                       {overdue && (
-                        <Badge className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300">
+                        <Badge className="text-[10px] sm:text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300">
                           <AlertCircle className="h-3 w-3 mr-1" />
                           Atrasado
                         </Badge>
                       )}
                       {notification.privilege_concerns && (
-                        <Badge className="text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300">
+                        <Badge className="text-[10px] sm:text-xs px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300">
                           <Shield className="h-3 w-3 mr-1" />
                           Privilegiado
                         </Badge>
                       )}
-                      <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(notification.notification_status)}`}>
+                      <Badge className={`text-[10px] sm:text-xs px-2 py-0.5 ${getStatusColor(notification.notification_status)}`}>
                         {notification.notification_status === 'pending' ? 'Pendente' :
                           notification.notification_status === 'prepared' ? 'Preparada' :
                             notification.notification_status === 'submitted' ? 'Submetida' :
@@ -709,43 +712,43 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                                 notification.notification_status === 'closed' ? 'Fechada' :
                                   notification.notification_status}
                       </Badge>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(notification)}>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(notification)} className="h-8 w-8 p-0">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setItemToDelete(notification.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                      <Button variant="ghost" size="sm" onClick={() => setItemToDelete(notification.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8 p-0">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0">
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-semibold text-sm mb-1">Motivo da Notificação:</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <h4 className="font-semibold text-xs sm:text-sm mb-1">Motivo da Notificação:</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         {notification.notification_trigger}
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm bg-muted/30 p-3 rounded-md">
                       {notification.notification_deadline && (
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-500" />
-                          <span className={overdue ? 'text-red-600 font-medium' : ''}>
+                          <Calendar className={`h-4 w-4 shrink-0 ${overdue ? 'text-red-500' : 'text-gray-500'}`} />
+                          <span className={`truncate ${overdue ? 'text-red-600 font-medium' : ''}`}>
                             {format(new Date(notification.notification_deadline), 'dd/MM/yyyy', { locale: ptBR })}
                           </span>
                         </div>
                       )}
                       {notification.submission_date && (
                         <div className="flex items-center gap-2">
-                          <Send className="h-4 w-4 text-gray-500" />
-                          <span>Submetida: {format(new Date(notification.submission_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                          <Send className="h-4 w-4 text-gray-500 shrink-0" />
+                          <span className="truncate">Submetida: {format(new Date(notification.submission_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-gray-500" />
-                        <span>Risco: </span>
-                        <Badge className={`text-xs px-1 py-0.5 ${getRiskColor(notification.public_disclosure_risk)}`}>
+                        <AlertTriangle className="h-4 w-4 text-gray-500 shrink-0" />
+                        <span className="truncate">Risco: </span>
+                        <Badge className={`text-[10px] sm:text-xs px-1 py-0.5 ${getRiskColor(notification.public_disclosure_risk)}`}>
                           {notification.public_disclosure_risk === 'none' ? 'Nenhum' :
                             notification.public_disclosure_risk === 'low' ? 'Baixo' :
                               notification.public_disclosure_risk === 'medium' ? 'Médio' :
@@ -757,27 +760,28 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                       {regulatoryBody && (
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-3 h-3 rounded-full ${getUrgencyColor(regulatoryBody.urgency)}`}
+                            className={`w-3 h-3 rounded-full shrink-0 ${getUrgencyColor(regulatoryBody.urgency)}`}
                           />
-                          <span>Urgência: {regulatoryBody.urgency}</span>
+                          <span className="truncate">Urgência: {regulatoryBody.urgency}</span>
                         </div>
                       )}
                     </div>
 
                     {notification.submission_reference && (
                       <div className="border-t pt-2">
-                        <span className="font-medium text-sm">Referência: </span>
-                        <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+                        <span className="font-medium text-xs sm:text-sm">Referência: </span>
+                        <span className="text-xs sm:text-sm font-mono text-gray-600 dark:text-gray-400 break-all">
                           {notification.submission_reference}
                         </span>
                       </div>
                     )}
 
-                    <div className="flex gap-2 pt-2 border-t">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t mt-4">
                       {notification.notification_status === 'pending' && (
                         <Button
                           size="sm"
                           onClick={() => updateStatus(notification.id, 'prepared')}
+                          className="w-full sm:w-auto"
                         >
                           <FileText className="h-4 w-4 mr-1" />
                           Preparar
@@ -787,6 +791,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                         <Button
                           size="sm"
                           onClick={() => updateStatus(notification.id, 'submitted')}
+                          className="w-full sm:w-auto"
                         >
                           <Send className="h-4 w-4 mr-1" />
                           Submeter
@@ -797,6 +802,7 @@ const RegulatoryNotificationManager: React.FC<RegulatoryNotificationManagerProps
                           size="sm"
                           variant="outline"
                           onClick={() => updateStatus(notification.id, 'acknowledged')}
+                          className="w-full sm:w-auto"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Reconhecer

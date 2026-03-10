@@ -1,0 +1,10 @@
+FORCE RELOAD SIDEBAR - TIMESTAMP: 2025-08-23 08:50:00
+Menu atualizado para: Gestão de Políticas
+URL: /policy-management
+Descrição: Ciclo completo de gestão de políticas com Alex Policy IA - NOVO
+
+Se ainda aparecer "Políticas":
+1. Pare o servidor (Ctrl+C)
+2. Limpe cache: rm -rf node_modules/.vite
+3. Reinicie: npm run dev
+4. Hard refresh no navegador: Ctrl+F5

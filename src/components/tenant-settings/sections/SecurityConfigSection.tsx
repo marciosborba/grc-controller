@@ -8,55 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { 
-  Shield, 
-  Key, 
-  Lock, 
-  AlertTriangle, 
-  CheckCircle, 
+  Shield,
+  Key,
+  Lock,
+  AlertTriangle,
   Clock,
   Eye,
-  EyeOff,
-  Info
+  Laptop
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-interface SecuritySettings {
-  passwordPolicy: {
-    minLength: number;
-    requireUppercase: boolean;
-    requireLowercase: boolean;
-    requireNumbers: boolean;
-    requireSpecialChars: boolean;
-    expiresDays: number;
-    preventReuse: number;
-  };
-  sessionSecurity: {
-    timeoutMinutes: number;
-    maxConcurrentSessions: number;
-    requireMFA: boolean;
-    forceLogoutOnPasswordChange: boolean;
-  };
-  accessControl: {
-    failedLoginLimit: number;
-    lockoutDurationMinutes: number;
-    ipWhitelisting: boolean;
-    allowedIPs: string[];
-    requireDeviceApproval: boolean;
-  };
-  monitoring: {
-    logAllActivities: boolean;
-    alertOnSuspicious: boolean;
-    retentionDays: number;
-    realTimeAlerts: boolean;
-  };
-}
+import { SecuritySettings, defaultSecuritySettings, calculateSecurityScore } from '@/utils/security-score';
+import { CryptoKeysSection } from './CryptoKeysSection';
+import { EncryptionConfigSection } from './EncryptionConfigSection';
+
 
 interface SecurityConfigSectionProps {
   tenantId: string;
@@ -67,59 +33,44 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
   tenantId,
   onSettingsChange
 }) => {
-  const [settings, setSettings] = useState<SecuritySettings>({
-    passwordPolicy: {
-      minLength: 8,
-      requireUppercase: true,
-      requireLowercase: true,
-      requireNumbers: true,
-      requireSpecialChars: true,
-      expiresDays: 90,
-      preventReuse: 5
-    },
-    sessionSecurity: {
-      timeoutMinutes: 30,
-      maxConcurrentSessions: 3,
-      requireMFA: false,
-      forceLogoutOnPasswordChange: true
-    },
-    accessControl: {
-      failedLoginLimit: 5,
-      lockoutDurationMinutes: 15,
-      ipWhitelisting: false,
-      allowedIPs: [],
-      requireDeviceApproval: false
-    },
-    monitoring: {
-      logAllActivities: true,
-      alertOnSuspicious: true,
-      retentionDays: 365,
-      realTimeAlerts: true
-    }
-  });
+  const [settings, setSettings] = useState<SecuritySettings>(defaultSecuritySettings);
 
   const [isLoading, setIsLoading] = useState(false);
   const [securityScore, setSecurityScore] = useState(0);
   const [newIP, setNewIP] = useState('');
 
   useEffect(() => {
-    loadSecuritySettings();
+    if (tenantId) {
+      loadSecuritySettings();
+    }
   }, [tenantId]);
 
   useEffect(() => {
-    calculateSecurityScore();
+    setSecurityScore(calculateSecurityScore(settings));
   }, [settings]);
 
   const loadSecuritySettings = async () => {
     try {
       setIsLoading(true);
-      // Carregar configurações de segurança da tenant
-      // Em produção, isso viria de uma API
-      
-      // Simular carregamento
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // As configurações já estão no estado inicial
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenantId)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.settings?.security) {
+        // Merge with default to ensure new fields are present
+        setSettings(prev => ({
+          ...prev,
+          ...data.settings.security,
+          accessControl: {
+            ...prev.accessControl,
+            ...data.settings.security.accessControl
+          }
+        }));
+      }
     } catch (error) {
       console.error('Erro ao carregar configurações de segurança:', error);
       toast.error('Erro ao carregar configurações de segurança');
@@ -128,49 +79,31 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
     }
   };
 
-  const calculateSecurityScore = () => {
-    let score = 0;
-    const maxScore = 100;
-    
-    // Política de senhas (30 pontos)
-    if (settings.passwordPolicy.minLength >= 8) score += 5;
-    if (settings.passwordPolicy.minLength >= 12) score += 5;
-    if (settings.passwordPolicy.requireUppercase) score += 3;
-    if (settings.passwordPolicy.requireLowercase) score += 3;
-    if (settings.passwordPolicy.requireNumbers) score += 3;
-    if (settings.passwordPolicy.requireSpecialChars) score += 5;
-    if (settings.passwordPolicy.expiresDays <= 90) score += 3;
-    if (settings.passwordPolicy.preventReuse >= 5) score += 3;
-    
-    // Segurança de sessão (25 pontos)
-    if (settings.sessionSecurity.timeoutMinutes <= 30) score += 5;
-    if (settings.sessionSecurity.maxConcurrentSessions <= 3) score += 5;
-    if (settings.sessionSecurity.requireMFA) score += 10;
-    if (settings.sessionSecurity.forceLogoutOnPasswordChange) score += 5;
-    
-    // Controle de acesso (25 pontos)
-    if (settings.accessControl.failedLoginLimit <= 5) score += 5;
-    if (settings.accessControl.lockoutDurationMinutes >= 15) score += 5;
-    if (settings.accessControl.ipWhitelisting && settings.accessControl.allowedIPs.length > 0) score += 10;
-    if (settings.accessControl.requireDeviceApproval) score += 5;
-    
-    // Monitoramento (20 pontos)
-    if (settings.monitoring.logAllActivities) score += 5;
-    if (settings.monitoring.alertOnSuspicious) score += 5;
-    if (settings.monitoring.retentionDays >= 365) score += 5;
-    if (settings.monitoring.realTimeAlerts) score += 5;
-    
-    setSecurityScore(Math.min(score, maxScore));
-  };
-
   const handleSaveSettings = async () => {
     try {
       setIsLoading(true);
-      // Salvar configurações de segurança
-      // Em produção, isso seria uma chamada para API
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      // Get current settings first to preserve other sections
+      const { data: currentData } = await supabase
+        .from('tenants')
+        .select('settings')
+        .eq('id', tenantId)
+        .single();
+
+      const currentSettings = currentData?.settings || {};
+
+      const updatedSettings = {
+        ...currentSettings,
+        security: settings // Save under 'security' key
+      };
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({ settings: updatedSettings })
+        .eq('id', tenantId);
+
+      if (error) throw error;
+
       onSettingsChange();
       toast.success('Configurações de segurança salvas com sucesso!');
     } catch (error) {
@@ -223,19 +156,19 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
 
   const addAllowedIP = () => {
     if (!newIP.trim()) return;
-    
+
     // Validação básica de IP
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     if (!ipRegex.test(newIP.trim())) {
       toast.error('Formato de IP inválido');
       return;
     }
-    
+
     if (settings.accessControl.allowedIPs.includes(newIP.trim())) {
       toast.error('IP já está na lista');
       return;
     }
-    
+
     updateAccessControl('allowedIPs', [...settings.accessControl.allowedIPs, newIP.trim()]);
     setNewIP('');
     toast.success('IP adicionado à lista branca');
@@ -263,8 +196,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
       {/* Score de Segurança */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
             Score de Segurança da Organização
           </CardTitle>
           <CardDescription>
@@ -272,27 +205,27 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <div className={`p-4 rounded-full ${getSecurityScoreBg(securityScore)}`}>
-                <Shield className={`h-8 w-8 ${getSecurityScoreColor(securityScore)}`} />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-3 sm:p-4 rounded-full ${getSecurityScoreBg(securityScore)}`}>
+                <Shield className={`h-6 w-6 sm:h-8 sm:w-8 ${getSecurityScoreColor(securityScore)}`} />
               </div>
               <div>
-                <div className={`text-3xl font-bold ${getSecurityScoreColor(securityScore)}`}>
+                <div className={`text-xl sm:text-3xl font-bold ${getSecurityScoreColor(securityScore)}`}>
                   {String(securityScore)}%
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {securityScore >= 80 ? 'Excelente' : 
-                   securityScore >= 60 ? 'Bom' : 'Precisa melhorar'}
+                <div className="text-xs sm:text-sm text-muted-foreground">
+                  {securityScore >= 80 ? 'Excelente' :
+                    securityScore >= 60 ? 'Bom' : 'Precisa melhorar'}
                 </div>
               </div>
             </div>
-            <Button onClick={handleSaveSettings} disabled={isLoading}>
+            <Button onClick={handleSaveSettings} disabled={isLoading} className="w-full sm:w-auto">
               {isLoading ? 'Salvando...' : 'Salvar Configurações'}
             </Button>
           </div>
           <Progress value={Number(securityScore)} className="h-3" />
-          
+
           {securityScore < 80 && (
             <Alert className="mt-4">
               <AlertTriangle className="h-4 w-4" />
@@ -304,12 +237,17 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <EncryptionConfigSection />
+          <CryptoKeysSection />
+        </div>
+
         {/* Política de Senhas */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Key className="h-4 w-4 sm:h-5 sm:w-5" />
               Política de Senhas
             </CardTitle>
             <CardDescription>
@@ -396,8 +334,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Segurança de Sessão */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               Segurança de Sessão
             </CardTitle>
             <CardDescription>
@@ -458,8 +396,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Controle de Acesso */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Lock className="h-4 w-4 sm:h-5 sm:w-5" />
               Controle de Acesso
             </CardTitle>
             <CardDescription>
@@ -491,7 +429,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
               />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-t pt-4">
               <div>
                 <Label htmlFor="requireDeviceApproval">Exigir Aprovação de Dispositivos</Label>
                 <p className="text-xs text-muted-foreground">Novos dispositivos precisam ser aprovados</p>
@@ -503,7 +441,21 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
               />
             </div>
 
-            <div className="space-y-3">
+            <div className="flex items-center justify-between border-t pt-4">
+              <div>
+                <Label htmlFor="allowTrustedDevices">Permitir Dispositivos Confiáveis</Label>
+                <p className="text-xs text-muted-foreground">
+                  Usuários podem pular MFA por 90 dias em dispositivos confiáveis
+                </p>
+              </div>
+              <Switch
+                id="allowTrustedDevices"
+                checked={settings.accessControl.allowTrustedDevices}
+                onCheckedChange={(checked) => updateAccessControl('allowTrustedDevices', checked)}
+              />
+            </div>
+
+            <div className="space-y-3 border-t pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="ipWhitelisting">Lista Branca de IPs</Label>
@@ -528,7 +480,7 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
                       Adicionar
                     </Button>
                   </div>
-                  
+
                   {settings.accessControl.allowedIPs.length > 0 && (
                     <div className="space-y-1">
                       {settings.accessControl.allowedIPs.map((ip, index) => (
@@ -555,8 +507,8 @@ export const SecurityConfigSection: React.FC<SecurityConfigSectionProps> = ({
         {/* Monitoramento */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
               Monitoramento e Logs
             </CardTitle>
             <CardDescription>

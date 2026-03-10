@@ -1,0 +1,4 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  load multiple .env files with { path: ['.env.local', '.env'] }
+=== ADDING SUB_ACTIVITIES COLUMN ===
+Column 'sub_activities' added successfully to risk_registration_action_plans.
+Schema cache reloaded.

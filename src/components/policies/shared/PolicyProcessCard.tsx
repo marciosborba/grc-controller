@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   ChevronDown,
@@ -19,7 +17,8 @@ import {
   Lightbulb,
   BookOpen,
   Paperclip,
-  Download
+  Download,
+  Tag
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -55,441 +54,246 @@ interface PolicyProcessCardProps {
   className?: string;
 }
 
+const STATUS_MAP: Record<string, { label: string; accent: string; pill: string; icon: React.ElementType }> = {
+  draft: { label: 'Rascunho', accent: 'border-l-slate-400', pill: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300', icon: FileText },
+  pending_approval: { label: 'Pendente', accent: 'border-l-amber-500', pill: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200', icon: Clock },
+  approved: { label: 'Aprovada', accent: 'border-l-green-500', pill: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200', icon: CheckCircle },
+  under_review: { label: 'Em Revisão', accent: 'border-l-blue-500', pill: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200', icon: Eye },
+  rejected: { label: 'Rejeitada', accent: 'border-l-red-500', pill: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200', icon: AlertTriangle },
+  published: { label: 'Publicada', accent: 'border-l-emerald-500', pill: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-200', icon: BookOpen },
+  expired: { label: 'Expirada', accent: 'border-l-orange-500', pill: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200', icon: AlertTriangle },
+};
+
+const ACTIONS_MAP: Record<string, Array<{ label: string; action: string; icon: React.ElementType; variant: 'outline' | 'default' | 'secondary' | 'destructive' }>> = {
+  elaboration: [
+    { label: 'Editar', action: 'edit', icon: Edit, variant: 'outline' },
+    { label: 'Enviar Revisão', action: 'send_review', icon: Eye, variant: 'default' },
+  ],
+  review: [
+    { label: 'Revisar', action: 'review', icon: Eye, variant: 'outline' },
+    { label: 'Comentar', action: 'comment', icon: MessageSquare, variant: 'outline' },
+    { label: 'Aprovar', action: 'approve', icon: CheckCircle, variant: 'default' },
+  ],
+  approval: [
+    { label: 'Visualizar', action: 'view', icon: Eye, variant: 'outline' },
+    { label: 'Aprovar', action: 'approve', icon: CheckCircle, variant: 'default' },
+    { label: 'Rejeitar', action: 'reject', icon: AlertTriangle, variant: 'destructive' },
+  ],
+  publication: [
+    { label: 'Publicar', action: 'publish', icon: BookOpen, variant: 'default' },
+    { label: 'Agendar', action: 'schedule', icon: Calendar, variant: 'outline' },
+  ],
+  lifecycle: [
+    { label: 'Visualizar', action: 'view', icon: Eye, variant: 'outline' },
+    { label: 'Renovar', action: 'renew', icon: Calendar, variant: 'default' },
+    { label: 'Arquivar', action: 'archive', icon: Trash2, variant: 'destructive' },
+  ],
+};
+
 const PolicyProcessCard: React.FC<PolicyProcessCardProps> = ({
   policy,
   mode,
   onAction,
   alexInsights = [],
-  className
+  className,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Sistema de cores com máximo contraste - fundos saturados com texto branco
-  const getStatusConfig = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return {
-          color: 'bg-gray-600 text-white border-gray-700',
-          style: { backgroundColor: '#4b5563', color: '#ffffff', borderColor: '#374151', fontWeight: '600' },
-          icon: FileText,
-          label: 'Rascunho'
-        };
-      case 'pending_approval':
-        return {
-          color: 'bg-yellow-600 text-white border-yellow-700',
-          style: { backgroundColor: '#d97706', color: '#ffffff', borderColor: '#b45309', fontWeight: '600' },
-          icon: Clock,
-          label: 'Aguardando Aprovação'
-        };
-      case 'approved':
-        return {
-          color: 'bg-green-600 text-white border-green-700',
-          style: { backgroundColor: '#16a34a', color: '#ffffff', borderColor: '#15803d', fontWeight: '600' },
-          icon: CheckCircle,
-          label: 'Aprovada'
-        };
-      case 'under_review':
-        return {
-          color: 'bg-blue-600 text-white border-blue-700',
-          style: { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#1d4ed8', fontWeight: '600' },
-          icon: Eye,
-          label: 'Em Revisão'
-        };
-      case 'rejected':
-        return {
-          color: 'bg-red-600 text-white border-red-700',
-          style: { backgroundColor: '#dc2626', color: '#ffffff', borderColor: '#b91c1c', fontWeight: '600' },
-          icon: AlertTriangle,
-          label: 'Rejeitada'
-        };
-      case 'published':
-        return {
-          color: 'bg-emerald-600 text-white border-emerald-700',
-          style: { backgroundColor: '#059669', color: '#ffffff', borderColor: '#047857', fontWeight: '600' },
-          icon: BookOpen,
-          label: 'Publicada'
-        };
-      case 'expired':
-        return {
-          color: 'bg-orange-600 text-white border-orange-700',
-          style: { backgroundColor: '#ea580c', color: '#ffffff', borderColor: '#c2410c', fontWeight: '600' },
-          icon: AlertTriangle,
-          label: 'Expirada'
-        };
-      default:
-        return {
-          color: 'bg-gray-600 text-white border-gray-700',
-          style: { backgroundColor: '#4b5563', color: '#ffffff', borderColor: '#374151', fontWeight: '600' },
-          icon: FileText,
-          label: status
-        };
-    }
+  const statusKey = policy.status?.toLowerCase() ?? 'draft';
+  const status = STATUS_MAP[statusKey] ?? { ...STATUS_MAP.draft, label: policy.status };
+  const StatusIcon = status.icon;
+  const actions = ACTIONS_MAP[mode] ?? ACTIONS_MAP.elaboration;
+
+  const formatDate = (d?: string) => {
+    if (!d) return '—';
+    try { return format(new Date(d), 'dd/MM/yy', { locale: ptBR }); }
+    catch { return '—'; }
   };
 
-  const statusConfig = getStatusConfig(policy.status);
-  const StatusIcon = statusConfig.icon;
-
-  const getModeActions = () => {
-    switch (mode) {
-      case 'elaboration':
-        return [
-          { label: 'Editar', action: 'edit', icon: Edit, variant: 'outline' as const },
-          { label: 'Alex Sugestões', action: 'alex_suggestions', icon: Lightbulb, variant: 'secondary' as const },
-          { label: 'Enviar para Revisão', action: 'send_review', icon: Eye, variant: 'default' as const }
-        ];
-      case 'review':
-        return [
-          { label: 'Revisar', action: 'review', icon: Eye, variant: 'outline' as const },
-          { label: 'Comentar', action: 'comment', icon: MessageSquare, variant: 'secondary' as const },
-          { label: 'Aprovar', action: 'approve', icon: CheckCircle, variant: 'default' as const }
-        ];
-      case 'approval':
-        return [
-          { label: 'Visualizar', action: 'view', icon: Eye, variant: 'outline' as const },
-          { label: 'Aprovar', action: 'approve', icon: CheckCircle, variant: 'default' as const },
-          { label: 'Rejeitar', action: 'reject', icon: AlertTriangle, variant: 'destructive' as const }
-        ];
-      case 'publication':
-        return [
-          { label: 'Publicar', action: 'publish', icon: BookOpen, variant: 'default' as const },
-          { label: 'Agendar', action: 'schedule', icon: Calendar, variant: 'outline' as const }
-        ];
-      case 'lifecycle':
-        return [
-          { label: 'Visualizar', action: 'view', icon: Eye, variant: 'outline' as const },
-          { label: 'Renovar', action: 'renew', icon: Calendar, variant: 'default' as const },
-          { label: 'Arquivar', action: 'archive', icon: Trash2, variant: 'destructive' as const }
-        ];
-      default:
-        return [
-          { label: 'Visualizar', action: 'view', icon: Eye, variant: 'outline' as const },
-          { label: 'Editar', action: 'edit', icon: Edit, variant: 'default' as const }
-        ];
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Não definida';
+  const getAttachedDocs = (): any[] => {
+    if (!policy.metadata) return [];
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy', { locale: ptBR });
-    } catch {
-      return 'Data inválida';
-    }
+      const p = typeof policy.metadata === 'string' ? JSON.parse(policy.metadata) : policy.metadata;
+      return Array.isArray(p.attachedDocuments) ? p.attachedDocuments : [];
+    } catch { return []; }
   };
-
-  const actions = getModeActions();
+  const attachedDocs = getAttachedDocs();
+  const totalDocs = (policy.document_url ? 1 : 0) + attachedDocs.length;
 
   return (
-    <Card className={`w-full transition-all duration-200 hover:shadow-md rounded-[7px] ${className}`}>
+    <div className={`rounded-lg border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow ${className}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+
+        {/* ── Collapsed Row ── */}
         <CollapsibleTrigger asChild>
-          <CardHeader className="cursor-pointer hover:bg-gradient-to-r hover:from-primary/20 hover:to-transparent transition-all duration-300">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 min-w-0 flex-1">
-                <div className="flex-shrink-0">
-                  {isExpanded ? (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-                
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h3 className="font-semibold text-lg truncate">{policy.title}</h3>
-                    <div 
-                      className="flex items-center space-x-1 border px-2 py-1 rounded-full text-xs font-medium"
-                      style={statusConfig.style}
-                    >
-                      <StatusIcon className="h-3 w-3" />
-                      <span>{statusConfig.label}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                    <span className="flex items-center space-x-1">
-                      <FileText className="h-3 w-3" />
-                      <span>{policy.document_type}</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>v{policy.version}</span>
-                    </span>
-                    <span className="flex items-center space-x-1">
-                      <User className="h-3 w-3" />
-                      <span>{policy.category}</span>
-                    </span>
-                    {(policy.document_url || policy.metadata?.attachedDocuments?.length > 0) && (
-                      <span className="flex items-center space-x-1">
-                        <Paperclip className="h-3 w-3" />
-                        <span>
-                          {policy.metadata?.attachedDocuments?.length || 1} doc(s)
-                        </span>
-                      </span>
-                    )}
-                  </div>
-                </div>
+          <div className={`border-l-[3px] ${status.accent} flex items-start gap-2 px-3 py-3 cursor-pointer hover:bg-muted/30 transition-colors`}>
+
+            {/* Chevron */}
+            <div className="mt-0.5 shrink-0 text-muted-foreground">
+              {isExpanded
+                ? <ChevronDown className="h-3.5 w-3.5" />
+                : <ChevronRight className="h-3.5 w-3.5" />}
+            </div>
+
+            {/* Main info */}
+            <div className="flex-1 min-w-0 space-y-1">
+              {/* Title row */}
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold leading-tight truncate">{policy.title}</p>
+                {/* Status pill — fixed width, no wrapping */}
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${status.pill}`}>
+                  <StatusIcon className="h-2.5 w-2.5" />
+                  {status.label}
+                </span>
               </div>
 
-              <div className="flex items-center space-x-2 flex-shrink-0">
+              {/* Meta row — soft, small, wrapping allowed */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <FileText className="h-2.5 w-2.5 shrink-0" />
+                  {policy.document_type}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Tag className="h-2.5 w-2.5 shrink-0" />
+                  {policy.category}
+                </span>
+                <span className="flex items-center gap-1 shrink-0">
+                  <Calendar className="h-2.5 w-2.5" />
+                  v{policy.version}
+                </span>
+                {totalDocs > 0 && (
+                  <span className="flex items-center gap-0.5 shrink-0">
+                    <Paperclip className="h-2.5 w-2.5" />
+                    {totalDocs}
+                  </span>
+                )}
                 {alexInsights.length > 0 && (
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-900 border-blue-200 dark:bg-blue-950/30 dark:text-blue-100 dark:border-blue-700">
-                    <Lightbulb className="h-3 w-3 mr-1" />
-                    {alexInsights.length} Alex Insights
-                  </Badge>
+                  <span className="flex items-center gap-0.5 text-blue-500 dark:text-blue-400 shrink-0">
+                    <Lightbulb className="h-2.5 w-2.5" />
+                    {alexInsights.length}
+                  </span>
                 )}
               </div>
             </div>
-          </CardHeader>
+          </div>
         </CollapsibleTrigger>
 
+        {/* ── Expanded Content ── */}
         <CollapsibleContent>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Coluna 1: Informações Básicas */}
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-sm text-muted-foreground mb-2">INFORMAÇÕES BÁSICAS</h4>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="font-medium">Descrição:</span>
-                      <p className="text-muted-foreground mt-1">{policy.description || 'Sem descrição'}</p>
+          <div className={`border-l-[3px] ${status.accent} px-4 py-3 space-y-4 border-t bg-muted/10`}>
+
+            {/* Description */}
+            {policy.description && (
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {policy.description}
+              </p>
+            )}
+
+            {/* Dates + Docs */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Dates */}
+              <div className="space-y-2">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Datas</p>
+                <div className="space-y-1.5 text-xs">
+                  {[
+                    { label: 'Criada', value: policy.created_at },
+                    { label: 'Atualizada', value: policy.updated_at },
+                    { label: 'Vigência', value: policy.effective_date },
+                    { label: 'Expiração', value: policy.expiry_date },
+                  ].filter(row => !!row.value).map(row => (
+                    <div key={row.label} className="flex items-center justify-between gap-1">
+                      <span className="text-muted-foreground">{row.label}</span>
+                      <span className="font-medium tabular-nums">{formatDate(row.value)}</span>
                     </div>
-                    <div>
-                      <span className="font-medium">Categoria:</span>
-                      <span className="ml-2 text-muted-foreground">{policy.category}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Tipo:</span>
-                      <span className="ml-2 text-muted-foreground">{policy.document_type}</span>
-                    </div>
-                    <div>
-                      <span className="font-medium">Versão:</span>
-                      <span className="ml-2 text-muted-foreground">{policy.version}</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Coluna 2: Timeline e Documentos */}
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-sm text-muted-foreground mb-2">TIMELINE</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="font-medium">Criada:</span>
-                      <span className="text-muted-foreground">{formatDate(policy.created_at)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="font-medium">Atualizada:</span>
-                      <span className="text-muted-foreground">{formatDate(policy.updated_at)}</span>
-                    </div>
-                    {policy.effective_date && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Vigência:</span>
-                        <span className="text-muted-foreground">{formatDate(policy.effective_date)}</span>
-                      </div>
+              {/* Documents */}
+              <div className="space-y-2">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Documentos</p>
+                {totalDocs === 0 ? (
+                  <p className="text-[11px] text-muted-foreground italic">Nenhum</p>
+                ) : (
+                  <div className="space-y-1">
+                    {policy.document_url && (
+                      <DocItem
+                        name="Principal"
+                        icon={<FileText className="h-3 w-3 text-blue-500" />}
+                        url={policy.document_url}
+                      />
                     )}
-                    {policy.review_date && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Revisão:</span>
-                        <span className="text-muted-foreground">{formatDate(policy.review_date)}</span>
-                      </div>
-                    )}
-                    {policy.expiry_date && (
-                      <div className="flex justify-between">
-                        <span className="font-medium">Expiração:</span>
-                        <span className="text-muted-foreground">{formatDate(policy.expiry_date)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Documentos Anexados */}
-                <div>
-                  <h4 className="font-medium text-sm text-muted-foreground mb-2">DOCUMENTOS</h4>
-                  <div className="space-y-2">
-                    {(() => {
-                      // Verificar se tem documentos (debug simplificado)
-                      let attachedDocs = [];
-                      
-                      if (policy.metadata) {
-                        try {
-                          let parsedMetadata;
-                          if (typeof policy.metadata === 'string') {
-                            parsedMetadata = JSON.parse(policy.metadata);
-                          } else {
-                            parsedMetadata = policy.metadata;
-                          }
-                          
-                          if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
-                            attachedDocs = parsedMetadata.attachedDocuments;
-                          }
-                        } catch (error) {
-                          console.error('📄 Erro ao processar metadata do card:', error);
-                        }
-                      }
-                      
-                      const hasDocuments = policy.document_url || attachedDocs.length > 0;
-                      
-                      // Log apenas erros
-                      // Logs de sucesso removidos para limpar console
-                      
-                      return hasDocuments;
-                    })() ? (
-                      <div className="space-y-1">
-                        {policy.document_url && (
-                          <div className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
-                            <div className="flex items-center space-x-2">
-                              <FileText className="h-3 w-3 text-blue-500" />
-                              <span>Documento Principal</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                window.open(policy.document_url, '_blank');
-                              }}
-                            >
-                              <Download className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
-                        {(() => {
-                          let attachedDocs = [];
-                          if (policy.metadata) {
-                            try {
-                              let parsedMetadata;
-                              if (typeof policy.metadata === 'string') {
-                                parsedMetadata = JSON.parse(policy.metadata);
-                              } else {
-                                parsedMetadata = policy.metadata;
-                              }
-                              
-                              if (parsedMetadata.attachedDocuments && Array.isArray(parsedMetadata.attachedDocuments)) {
-                                attachedDocs = parsedMetadata.attachedDocuments;
-                              }
-                            } catch (error) {
-                              console.error('Erro ao processar metadata no render:', error);
-                            }
-                          }
-                          
-                          return attachedDocs.map((doc: any, index: number) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-muted/50 rounded text-xs">
-                              <div className="flex items-center space-x-2">
-                                <Paperclip className="h-3 w-3 text-gray-500" />
-                                <span className="truncate max-w-[120px]">{doc.name || `Documento ${index + 1}`}</span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (doc.url) {
-                                    window.open(doc.url, '_blank');
-                                  }
-                                }}
-                              >
-                                <Download className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-muted-foreground italic">
-                        Nenhum documento anexado
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Coluna 3: Ações e Alex Insights */}
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-sm text-muted-foreground mb-2">AÇÕES</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {actions.map((action, index) => {
-                      const ActionIcon = action.icon;
-                      return (
-                        <Button
-                          key={index}
-                          variant={action.variant}
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAction(action.action, policy.id);
-                          }}
-                          className="flex items-center space-x-1"
-                        >
-                          <ActionIcon className="h-3 w-3" />
-                          <span>{action.label}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Alex Insights */}
-                {alexInsights.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-sm text-muted-foreground mb-2">ALEX POLICY INSIGHTS</h4>
-                    <div className="space-y-2">
-                      {alexInsights.slice(0, 3).map((insight, index) => (
-                        <div
-                          key={index}
-                          className={`p-2 rounded-md text-xs ${
-                            insight.type === 'suggestion'
-                              ? 'bg-blue-50 text-blue-900 border border-blue-200 dark:bg-blue-950/20 dark:text-blue-100 dark:border-blue-800'
-                              : insight.type === 'warning'
-                              ? 'bg-amber-50 text-amber-900 border border-amber-200 dark:bg-amber-950/20 dark:text-amber-100 dark:border-amber-800'
-                              : 'bg-gray-50 text-gray-900 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-100 dark:border-gray-800'
-                          }`}
-                        >
-                          <div className="font-medium">{insight.title}</div>
-                          <div className="mt-1 text-muted-foreground">{insight.description}</div>
-                          {insight.action && (
-                            <Button
-                              variant="link"
-                              size="sm"
-                              className="p-0 h-auto mt-1 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onAction(insight.action!, policy.id);
-                              }}
-                            >
-                              Aplicar sugestão
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {alexInsights.length > 3 && (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="p-0 h-auto text-xs"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onAction('view_all_insights', policy.id);
-                          }}
-                        >
-                          Ver todos os {alexInsights.length} insights
-                        </Button>
-                      )}
-                    </div>
+                    {attachedDocs.slice(0, 4).map((doc: any, i: number) => (
+                      <DocItem
+                        key={i}
+                        name={doc.name || `Doc ${i + 1}`}
+                        icon={<Paperclip className="h-3 w-3 text-muted-foreground" />}
+                        url={doc.url}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
             </div>
-          </CardContent>
+
+            {/* Insights */}
+            {alexInsights.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">Insights</p>
+                {alexInsights.slice(0, 2).map((ins, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-2 px-2.5 py-2 rounded-md text-xs ${ins.type === 'warning'
+                        ? 'bg-amber-50 dark:bg-amber-950/25 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700'
+                        : 'bg-blue-50 dark:bg-blue-950/25 text-blue-900 dark:text-blue-200 border border-blue-200 dark:border-blue-700'
+                      }`}
+                  >
+                    <Lightbulb className="h-3 w-3 mt-0.5 shrink-0 opacity-70" />
+                    <span className="leading-snug">{ins.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50">
+              {actions.map((act, i) => {
+                const Icon = act.icon;
+                return (
+                  <Button
+                    key={i}
+                    variant={act.variant}
+                    size="sm"
+                    className="h-7 text-xs px-3 gap-1.5"
+                    onClick={(e) => { e.stopPropagation(); onAction(act.action, policy.id); }}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {act.label}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
         </CollapsibleContent>
       </Collapsible>
-    </Card>
+    </div>
   );
 };
+
+/** Sub-component: single document row */
+const DocItem: React.FC<{ name: string; icon: React.ReactNode; url?: string }> = ({ name, icon, url }) => (
+  <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-muted/60 text-[11px]">
+    {icon}
+    <span className="truncate flex-1">{name}</span>
+    {url && (
+      <button
+        className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+        onClick={(e) => { e.stopPropagation(); window.open(url, '_blank'); }}
+      >
+        <Download className="h-3 w-3" />
+      </button>
+    )}
+  </div>
+);
 
 export default PolicyProcessCard;

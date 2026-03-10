@@ -7,9 +7,9 @@ export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 export type NotificationStatus = 'unread' | 'read' | 'archived' | 'dismissed';
 
 // Módulos e submódulos que podem gerar notificações
-export type NotificationModule = 
+export type NotificationModule =
   | 'assessments'
-  | 'risks' 
+  | 'risks'
   | 'compliance'
   | 'policies'
   | 'privacy'
@@ -21,7 +21,7 @@ export type NotificationModule =
   | 'incidents';
 
 // Tipos específicos de notificação por módulo
-export type NotificationType = 
+export type NotificationType =
   // Assessments
   | 'assessment_due'
   | 'assessment_completed'
@@ -31,7 +31,7 @@ export type NotificationType =
   | 'assessment_overdue'
   | 'assessment_assigned'
   | 'assessment_evidence_required'
-  
+
   // Risks
   | 'risk_identified'
   | 'risk_updated'
@@ -40,28 +40,28 @@ export type NotificationType =
   | 'risk_review_due'
   | 'risk_treatment_overdue'
   | 'risk_threshold_exceeded'
-  
+
   // Compliance
   | 'compliance_deadline'
   | 'compliance_violation'
   | 'compliance_report_ready'
   | 'compliance_audit_scheduled'
   | 'compliance_gap_identified'
-  
+
   // Policies
   | 'policy_review_due'
   | 'policy_updated'
   | 'policy_approval_pending'
   | 'policy_acknowledged'
   | 'policy_expired'
-  
+
   // Privacy/LGPD
   | 'data_breach_detected'
   | 'privacy_request_received'
   | 'dpia_required'
   | 'consent_expired'
   | 'data_retention_alert'
-  
+
   // System
   | 'system_maintenance'
   | 'system_alert'
@@ -69,21 +69,23 @@ export type NotificationType =
   | 'backup_failed'
   | 'integration_error'
   | 'security_alert'
-  
+
   // Users
   | 'user_access_request'
   | 'user_role_changed'
   | 'user_login_anomaly'
   | 'user_password_expiry'
   | 'user_mfa_required'
-  
+
   // General
   | 'workflow_step_completed'
   | 'approval_requested'
   | 'document_signed'
   | 'deadline_reminder'
   | 'task_assigned'
-  | 'task_completed';
+  | 'task_completed'
+  | 'action_plan_due'
+  | 'risk_acceptance_pending';
 
 // Ações que podem ser executadas nas notificações
 export interface NotificationAction {
@@ -114,24 +116,24 @@ export interface NotificationMetadata {
   parentEntityId?: string;
   userId?: string;
   tenantId?: string;
-  
+
   // Dados do workflow
   workflowStage?: string;
   approvalLevel?: number;
   escalationLevel?: number;
-  
+
   // Dados específicos do domínio
   assessmentId?: string;
   riskId?: string;
   policyId?: string;
   frameworkId?: string;
   controlId?: string;
-  
+
   // Prazos e datas
   dueDate?: string;
   deadline?: string;
   reminderDate?: string;
-  
+
   // Dados adicionais
   severity?: NotificationPriority;
   category?: string;
@@ -144,38 +146,38 @@ export interface Notification {
   id: string;
   type: NotificationType;
   module: NotificationModule;
-  
+
   // Conteúdo
   title: string;
   message: string;
   shortMessage?: string; // para preview/badges
-  
+
   // Status e classificação
   status: NotificationStatus;
   priority: NotificationPriority;
   isSticky?: boolean; // não pode ser descartada automaticamente
-  
+
   // Destinatários
   userId: string;
   assignedTo?: string[];
   roleBasedAccess?: string[]; // roles que podem ver a notificação
-  
+
   // Temporização
   createdAt: string;
   updatedAt: string;
   readAt?: string;
   expiresAt?: string;
   scheduledFor?: string; // notificações agendadas
-  
+
   // Ações disponíveis
   actions?: NotificationAction[];
-  
+
   // Metadados e contexto
   metadata: NotificationMetadata;
-  
+
   // Configurações de e-mail
   emailSettings?: EmailSettings;
-  
+
   // Rastreamento
   source?: string; // qual processo/função gerou a notificação
   correlationId?: string; // para agrupar notificações relacionadas
@@ -200,13 +202,12 @@ export interface NotificationFilters {
 // Configurações de preferências do usuário
 export interface NotificationPreferences {
   userId: string;
-  
+
   // Preferências por módulo
   moduleSettings: Record<NotificationModule, {
     enabled: boolean;
     emailEnabled: boolean;
     pushEnabled: boolean;
-    smsEnabled: boolean;
     digestMode: 'immediate' | 'hourly' | 'daily' | 'weekly' | 'disabled';
     quietHours?: {
       start: string; // HH:mm
@@ -214,7 +215,15 @@ export interface NotificationPreferences {
       timezone: string;
     };
   }>;
-  
+
+  // Preferências de eventos granulares importantes
+  granularEvents: {
+    actionPlanDue: { enabled: boolean; emailEnabled: boolean; pushEnabled: boolean };
+    criticalRisk: { enabled: boolean; emailEnabled: boolean; pushEnabled: boolean };
+    policyApproval: { enabled: boolean; emailEnabled: boolean; pushEnabled: boolean };
+    riskLetterPending: { enabled: boolean; emailEnabled: boolean; pushEnabled: boolean };
+  };
+
   // Preferências por tipo
   typeSettings: Record<NotificationType, {
     enabled: boolean;
@@ -222,7 +231,7 @@ export interface NotificationPreferences {
     autoArchive?: boolean;
     autoArchiveAfterDays?: number;
   }>;
-  
+
   // Configurações gerais
   globalSettings: {
     maxNotificationsPerPage: number;
@@ -303,7 +312,7 @@ export interface EscalationRule {
   description: string;
   module: NotificationModule;
   type: NotificationType;
-  
+
   // Condições para ativar escalação
   conditions: {
     priority?: NotificationPriority[];
@@ -311,7 +320,7 @@ export interface EscalationRule {
     noActionTaken?: boolean;
     overdueDays?: number;
   };
-  
+
   // Ações de escalação
   escalationActions: {
     increasePriority?: boolean;
@@ -320,14 +329,13 @@ export interface EscalationRule {
     assignToUsers?: string[];
     createNewNotification?: boolean;
     sendEmail?: boolean;
-    sendSms?: boolean;
   };
-  
+
   // Configurações
   isActive: boolean;
   maxEscalations?: number;
   escalationIntervalMinutes: number;
-  
+
   // Auditoria
   createdBy: string;
   createdAt: string;

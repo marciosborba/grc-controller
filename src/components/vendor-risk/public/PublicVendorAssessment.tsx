@@ -48,12 +48,19 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { DEFAULT_ASSESSMENT_QUESTIONS, calculateAssessmentStats } from '../shared/RiskAssessmentManager';
+import {
+  scoreAssessment,
+  generateActionPlansFromRules,
+  loadScoringConfig,
+  DEFAULT_SCORING_CONFIG,
+} from '@/hooks/useAssessmentScoring';
 
 interface Question {
   id: string;
   category: string;
   question: string;
-  type: 'yes_no' | 'multiple_choice' | 'text' | 'number' | 'file_upload' | 'rating' | 'scale';
+  text?: string;
+  type: 'yes_no' | 'yes_no_na' | 'multiple_choice' | 'text' | 'number' | 'file_upload' | 'rating' | 'scale';
   options?: string[];
   required: boolean;
   weight: number;
@@ -82,7 +89,26 @@ interface AssessmentData {
   };
   public_link_expires_at?: string;
   vendor_id: string;
+  tenant_id?: string;
+  framework_id?: string;
+  metadata?: any;
 }
+
+const DEFAULT_QUESTIONS: Question[] = DEFAULT_ASSESSMENT_QUESTIONS.map(q => ({
+  id: q.id,
+  category: q.category,
+  question: q.question,
+  type: q.type as any,
+  options: q.options,
+  required: q.required,
+  weight: q.weight,
+  help_text: q.description,
+  scale_min: q.scale_min,
+  scale_max: q.scale_max,
+  scale_labels: q.scale_labels
+}));
+
+import { VendorLogin } from '@/pages/VendorPortal/VendorLogin';
 
 interface Message {
   id: string;
@@ -108,6 +134,77 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [fetchedQuestions, setFetchedQuestions] = useState<Question[]>([]);
+
+  // Login State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Fetch questions if absent
+  useEffect(() => {
+    const loadQuestions = async () => {
+      if (!assessment) return;
+
+      if (assessment.vendor_assessment_frameworks?.questions && assessment.vendor_assessment_frameworks.questions.length > 0) {
+        setFetchedQuestions(assessment.vendor_assessment_frameworks.questions);
+        return;
+      }
+
+      // Read snapshot questions from metadata directly first (to bypass RLS for public vendors)
+      if (assessment.metadata?.questions && assessment.metadata.questions.length > 0) {
+        setFetchedQuestions(assessment.metadata.questions);
+        return;
+      }
+
+      const vendorFrameworkId = assessment.metadata?.vendor_framework_id;
+      const coreFrameworkId = assessment.framework_id;
+
+      if (vendorFrameworkId || coreFrameworkId) {
+        try {
+          let foundQuestions = null;
+
+          if (vendorFrameworkId) {
+            const { data } = await supabase
+              .from('vendor_assessment_frameworks')
+              .select('questions')
+              .eq('id', vendorFrameworkId)
+              .single();
+            if (data?.questions) foundQuestions = data.questions;
+          }
+
+          if (!foundQuestions && coreFrameworkId) {
+            const { data } = await supabase
+              .from('vendor_assessment_frameworks')
+              .select('questions')
+              .eq('id', coreFrameworkId)
+              .single();
+            if (data?.questions) foundQuestions = data.questions;
+          }
+
+          if (!foundQuestions && coreFrameworkId) {
+            const { data: data2 } = await supabase
+              .from('assessment_frameworks')
+              .select('questions')
+              .eq('id', coreFrameworkId)
+              .single();
+            if (data2?.questions) foundQuestions = data2.questions;
+          }
+
+          if (foundQuestions && foundQuestions.length > 0) {
+            setFetchedQuestions(foundQuestions);
+          } else {
+            setFetchedQuestions(DEFAULT_QUESTIONS);
+          }
+        } catch (e) {
+          console.error('Error fetching questions:', e);
+          setFetchedQuestions(DEFAULT_QUESTIONS);
+        }
+      } else {
+        setFetchedQuestions(DEFAULT_QUESTIONS);
+      }
+    };
+
+    loadQuestions();
+  }, [assessment]);
 
   // Messaging State
   const [showChat, setShowChat] = useState(false);
@@ -118,6 +215,12 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Scoring state (populated after submission)
+  const [maturityScore, setMaturityScore] = useState<number | null>(null);
+  const [maturityLevelName, setMaturityLevelName] = useState<string | null>(null);
+  const [maturityLevelColor, setMaturityLevelColor] = useState<string>('blue');
+  const [generatedPlansCount, setGeneratedPlansCount] = useState<number>(0);
 
   // Load messages
   const loadMessages = async () => {
@@ -250,9 +353,10 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
       // Use RPC to bypass RLS and get joined data safely
       console.log('🔍 Fetching assessment data for link:', publicLinkId);
 
-      const { data, error } = await supabase
+      const { data: rawRpcData, error } = await supabase
         .rpc('get_public_assessment_data', { p_link: publicLinkId })
         .single();
+      const data = rawRpcData as any;
 
       console.log('📡 RPC Response:', { data, error });
 
@@ -336,36 +440,25 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     }
   };
 
-  // Expanded Default Questions (imported from shared source)
-  const DEFAULT_QUESTIONS: Question[] = DEFAULT_ASSESSMENT_QUESTIONS.map(q => ({
-    id: q.id,
-    category: q.category,
-    question: q.question,
-    type: q.type as any, // Cast type as they are compatible
-    options: q.options,
-    required: q.required,
-    weight: q.weight,
-    help_text: q.description,
-    scale_min: q.scale_min,
-    scale_max: q.scale_max,
-    scale_labels: q.scale_labels
-  }));
-
   // Group questions by category
   const getQuestionsByCategory = () => {
-    // Use framework questions if available (mapped from 'questoes' if it existed, but it doesn't)
-    // Or use default questions if no framework questions found
-    const questions = assessment?.vendor_assessment_frameworks?.questions || DEFAULT_QUESTIONS;
+    const questions = fetchedQuestions;
 
     if (!questions || questions.length === 0) return [];
 
     const categories: Record<string, Question[]> = {};
 
-    questions.forEach((question: Question) => {
-      if (!categories[question.category]) {
-        categories[question.category] = [];
+    questions.forEach((q: any) => {
+      if (!q) return;
+      const category = q.category || 'Geral';
+      if (!categories[category]) {
+        categories[category] = [];
       }
-      categories[question.category].push(question);
+      categories[category].push({
+        ...q,
+        category,
+        question: q.question || q.text || 'Questão sem título'
+      });
     });
 
     return Object.entries(categories).map(([category, questions]) => ({
@@ -380,7 +473,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
   const calculateProgress = () => {
     if (!assessment) return 0;
 
-    const questionsToUse = assessment.vendor_assessment_frameworks?.questions || DEFAULT_QUESTIONS;
+    const questionsToUse = fetchedQuestions;
 
     // Use shared calculation logic
     // We need to cast questionsToUse to any because of slight interface mismatch (help_text vs description)
@@ -450,7 +543,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     if (!assessment) return;
 
     // Final validation of all sections
-    const allQuestions = assessment.vendor_assessment_frameworks?.questions || DEFAULT_QUESTIONS;
+    const allQuestions = (assessment.metadata?.questions?.length > 0 ? assessment.metadata.questions : assessment.vendor_assessment_frameworks?.questions) || DEFAULT_QUESTIONS;
     const requiredQuestions = allQuestions.filter(q => q.required);
     const unansweredRequired = requiredQuestions.filter(q =>
       !responses[q.id] || responses[q.id] === ''
@@ -479,28 +572,59 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     try {
       setSubmitting(true);
 
-      // Generate submission summary
+      // ── 1. Run scoring engine ──────────────────────────────────────
+      // Load config from localStorage (tenant unknown in public portal → use default)
+      const scoringConfig = (() => {
+        try {
+          // Try to infer tenantId from assessment metadata
+          const keys = Object.keys(localStorage).filter(k => k.startsWith('tprm_scoring_config_'));
+          if (keys.length > 0) return JSON.parse(localStorage.getItem(keys[0])!);
+        } catch { /* ignore */ }
+        return DEFAULT_SCORING_CONFIG;
+      })();
+
+      const scoreResult = scoreAssessment(responses, allQuestions as any[], scoringConfig);
+      const generatedPlans = generateActionPlansFromRules(
+        scoreResult.scoredControls,
+        scoringConfig.actionPlanRules,
+        assessment.vendor_registry?.name,
+        scoringConfig,
+        scoreResult.maturityLevel,
+      );
+
+      // ── 2. Save maturity score to assessment ───────────────────────
       const submissionSummary = {
         submitted_at: new Date().toISOString(),
         total_questions: allQuestions.length,
         answered_questions: Object.keys(responses).filter(k => !k.endsWith('_evidence')).length,
         completion_percentage: 100,
         vendor_contact: assessment.vendor_registry?.primary_contact_name,
-        vendor_name: assessment.vendor_registry?.name
+        vendor_name: assessment.vendor_registry?.name,
+        maturity_score: scoreResult.score,
+        maturity_level: scoreResult.maturityLevel.name,
+        generated_plans_count: generatedPlans.length,
       };
 
-      // Use RPC function for secure submission
-      const { error } = await supabase.rpc('update_vendor_assessment_public', {
+      // ── 2. Use Secure RPC to finalize assessment and action plans ──
+      const { error } = await supabase.rpc('submit_vendor_assessment_secure', {
         p_id: assessment.id,
         p_responses: responses,
         p_progress: 100,
-        p_status: 'completed',
-        p_submission_summary: JSON.stringify(submissionSummary) // RPC expects text for summary? No, let's check definition.
+        p_submission_summary: JSON.stringify(submissionSummary),
+        p_generated_plans: generatedPlans
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('RPC Error:', error);
+        throw error;
+      }
 
-      // Update local state to show completion
+      // ── 4. Update local state ─────────────────────────────────────
+      setMaturityScore(scoreResult.score);
+      setMaturityLevelName(scoreResult.maturityLevel.name);
+      setMaturityLevelColor(scoreResult.maturityLevel.color);
+      setGeneratedPlansCount(generatedPlans.length);
+
       setAssessment(prev => prev ? {
         ...prev,
         status: 'completed',
@@ -510,15 +634,15 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
       toast({
         title: "🎉 Assessment Concluído com Sucesso!",
-        description: "Obrigado por completar o assessment. Nossa equipe irá revisar e entrar em contato em breve.",
-        duration: 6000
+        description: "Suas respostas foram registradas e enviadas para análise da nossa equipe.",
+        duration: 8000
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao enviar assessment:', error);
       toast({
         title: "❌ Erro ao Enviar",
-        description: "Não foi possível finalizar o assessment. Tente novamente.",
+        description: error.message || "Não foi possível finalizar o assessment. Tente novamente.",
         variant: "destructive"
       });
     } finally {
@@ -537,7 +661,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     for (const question of requiredQuestions) {
       const response = responses[question.id];
       if (!response || response === '' || (typeof response === 'string' && response.trim() === '')) {
-        missingQuestions.push(question.question);
+        missingQuestions.push(question.question || question.text || 'Questão sem texto');
       }
     }
 
@@ -701,6 +825,31 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
           </RadioGroup>
         );
 
+      case 'yes_no_na':
+        return (
+          <RadioGroup
+            value={value}
+            onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}
+            className="flex flex-col sm:flex-row gap-4"
+          >
+            <div className={`flex-1 flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all duration-200 ${value === 'yes' ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-sm' : 'border-border hover:border-primary/50 hover:bg-accent/50'
+              }`}>
+              <RadioGroupItem value="yes" id={`${question.id}_yes`} />
+              <Label htmlFor={`${question.id}_yes`} className="cursor-pointer font-medium flex-1 text-foreground">Sim</Label>
+            </div>
+            <div className={`flex-1 flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all duration-200 ${value === 'no' ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-sm' : 'border-border hover:border-primary/50 hover:bg-accent/50'
+              }`}>
+              <RadioGroupItem value="no" id={`${question.id}_no`} />
+              <Label htmlFor={`${question.id}_no`} className="cursor-pointer font-medium flex-1 text-foreground">Não</Label>
+            </div>
+            <div className={`flex-1 flex items-center space-x-3 border rounded-xl p-4 cursor-pointer transition-all duration-200 ${value === 'na' ? 'border-primary bg-primary/10 ring-1 ring-primary shadow-sm' : 'border-border hover:border-primary/50 hover:bg-accent/50'
+              }`}>
+              <RadioGroupItem value="na" id={`${question.id}_na`} />
+              <Label htmlFor={`${question.id}_na`} className="cursor-pointer font-medium flex-1 text-foreground">Não Aplicável (N/A)</Label>
+            </div>
+          </RadioGroup>
+        );
+
       case 'multiple_choice':
         return (
           <Select value={value} onValueChange={(val) => setResponses(prev => ({ ...prev, [question.id]: val }))}>
@@ -708,7 +857,7 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
               <SelectValue placeholder="Selecione uma opção" />
             </SelectTrigger>
             <SelectContent>
-              {question.options?.map(option => (
+              {(Array.isArray(question.options) ? question.options : (typeof question.options === 'string' ? (question.options as string).split(',').map(s => s.trim()) : [])).map(option => (
                 <SelectItem key={option} value={option} className="py-3 cursor-pointer">{option}</SelectItem>
               ))}
             </SelectContent>
@@ -1035,6 +1184,19 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
     );
   }
 
+  // ── Authentication Barrier ──────────────────────────────────────────
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
+        <div className="mb-4 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 border-b pb-2 mb-2 inline-block">Acesso Restrito</h2>
+          <p className="text-gray-600 mt-2">Por favor, identifique-se para acessar o Portal.</p>
+        </div>
+        <VendorLogin onLoginSuccess={() => setIsAuthenticated(true)} />
+      </div>
+    );
+  }
+
   // Welcome Screen
   if (showWelcome) {
     return (
@@ -1094,39 +1256,45 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
   // Success Screen
   if (assessment?.status === 'completed' && assessment?.vendor_submitted_at) {
+    const scoreColorClass = maturityLevelColor === 'red' ? 'text-red-600 dark:text-red-400'
+      : maturityLevelColor === 'orange' ? 'text-orange-600 dark:text-orange-400'
+        : maturityLevelColor === 'yellow' ? 'text-yellow-600 dark:text-yellow-400'
+          : maturityLevelColor === 'green' ? 'text-green-600 dark:text-green-400'
+            : 'text-blue-600 dark:text-blue-400';
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4 font-sans">
         <div className="max-w-2xl w-full">
           <Card className="border-border shadow-xl overflow-hidden">
             <div className="bg-green-600 h-2 w-full"></div>
-            <CardHeader className="text-center pb-2 pt-12">
-              <div className="w-24 h-24 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-500">
-                <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400" />
+            <CardHeader className="text-center pb-2 pt-8 sm:pt-12">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6 animate-in zoom-in duration-500">
+                <CheckCircle className="h-10 w-10 sm:h-12 sm:w-12 text-green-600 dark:text-green-400" />
               </div>
-              <CardTitle className="text-3xl font-bold text-foreground mb-2 tracking-tight">
-                Assessment Enviado!
-              </CardTitle>
-              <p className="text-muted-foreground text-lg">
-                Suas respostas foram registradas com sucesso.
-              </p>
+              <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground mb-2 tracking-tight">Assessment Enviado!</CardTitle>
+              <p className="text-muted-foreground">Suas respostas foram registradas com sucesso.</p>
             </CardHeader>
 
-            <CardContent className="space-y-8 p-8">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="text-center p-6 bg-muted/50 rounded-2xl border border-border">
-                  <div className="text-3xl font-bold text-foreground mb-1">
+            <CardContent className="space-y-6 p-4 sm:p-8">
+              {/* Score grid */}
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="text-center p-4 sm:p-6 bg-muted/50 rounded-2xl border border-border">
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
                     {assessment.vendor_assessment_frameworks?.questions?.length || DEFAULT_QUESTIONS.length}
                   </div>
-                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Questões</div>
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Questões</div>
                 </div>
-                <div className="text-center p-6 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30">
-                  <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-1">100%</div>
-                  <div className="text-sm font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Concluído</div>
+                <div className="text-center p-4 sm:p-6 bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-900/30">
+                  <div className="text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400 mb-1">100%</div>
+                  <div className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">Concluído</div>
                 </div>
               </div>
 
-              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-4">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              {/* Generated plans notice removed per user request */}
+
+              {/* Timestamp */}
+              <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 sm:p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 flex items-start gap-3 sm:gap-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg shrink-0">
                   <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
@@ -1139,19 +1307,15 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => window.print()}
-                  className="h-12 px-6 border-border hover:bg-accent hover:text-accent-foreground"
-                >
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                <Button variant="outline" onClick={() => window.print()} className="h-12 px-6">
                   <Download className="h-4 w-4 mr-2" />
                   Salvar Comprovante
                 </Button>
               </div>
             </CardContent>
           </Card>
-          <div className="text-center mt-8 text-sm text-muted-foreground">
+          <div className="text-center mt-6 text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} GRC Controller. Todos os direitos reservados.
           </div>
           {renderChatInterface()}
@@ -1233,98 +1397,108 @@ export const PublicVendorAssessment: React.FC<PublicVendorAssessmentProps> = ({
 
           {/* Main Content */}
           <div className="lg:col-span-9 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">
-                {currentSectionData.category}
-              </h2>
-              <span className="text-sm text-muted-foreground bg-card px-3 py-1 rounded-full border border-border shadow-sm">
-                Seção {currentSection + 1} de {sections.length}
-              </span>
-            </div>
+            {!currentSectionData ? (
+              <div className="text-center p-12 bg-card border rounded-2xl shadow-sm">
+                <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <h2 className="text-xl font-semibold text-foreground mb-2">Sem questões disponíveis</h2>
+                <p className="text-muted-foreground">Não foi possível carregar as questões deste assessment. Entre em contato com a administração do sistema.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-foreground">
+                    {currentSectionData.category}
+                  </h2>
+                  <span className="text-sm text-muted-foreground bg-card px-3 py-1 rounded-full border border-border shadow-sm">
+                    Seção {currentSection + 1} de {sections.length}
+                  </span>
+                </div>
 
-            <div className="space-y-6">
-              {currentSectionData.questions.map((question) => (
-                <Card
-                  key={question.id}
-                  id={`question-${question.id}`}
-                  className={`border-border shadow-sm ring-1 ring-border transition-all duration-300 hover:shadow-md ${!responses[question.id] && question.required ? 'border-l-4 border-l-orange-400 dark:border-l-orange-500' : ''
-                    }`}
-                >
-                  <CardContent className="p-6 sm:p-8 space-y-4">
-                    <div className="space-y-2">
-                      <div className="flex items-start justify-between gap-4">
-                        <Label className="text-lg font-semibold text-foreground leading-relaxed">
-                          {question.question}
-                          {question.required && <span className="text-red-500 ml-1">*</span>}
-                        </Label>
-                        {question.help_text && (
-                          <div className="group relative">
-                            <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
-                            <div className="absolute right-0 w-64 p-3 bg-popover text-popover-foreground text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 mt-2 border border-border">
-                              {question.help_text}
-                            </div>
+                <div className="space-y-6">
+                  {currentSectionData.questions.map((question) => (
+                    <Card
+                      key={question.id}
+                      id={`question-${question.id}`}
+                      className={`border-border shadow-sm ring-1 ring-border transition-all duration-300 hover:shadow-md ${!responses[question.id] && question.required ? 'border-l-4 border-l-orange-400 dark:border-l-orange-500' : ''
+                        }`}
+                    >
+                      <CardContent className="p-6 sm:p-8 space-y-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-4">
+                            <Label className="text-lg font-semibold text-foreground leading-relaxed">
+                              {question.question || question.text}
+                              {question.required && <span className="text-red-500 ml-1">*</span>}
+                            </Label>
+                            {question.help_text && (
+                              <div className="group relative">
+                                <HelpCircle className="h-5 w-5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
+                                <div className="absolute right-0 w-64 p-3 bg-popover text-popover-foreground text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 mt-2 border border-border">
+                                  {question.help_text}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                      {question.required && !responses[question.id] && (
-                        <p className="text-xs text-orange-500 dark:text-orange-400 font-medium flex items-center">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          Obrigatório
-                        </p>
-                      )}
-                    </div>
+                          {question.required && !responses[question.id] && (
+                            <p className="text-xs text-orange-500 dark:text-orange-400 font-medium flex items-center">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Obrigatório
+                            </p>
+                          )}
+                        </div>
 
-                    <div className="pt-2">
-                      {renderQuestionInput(question)}
+                        <div className="pt-2">
+                          {renderQuestionInput(question)}
 
-                      {/* Universal Evidence Upload for ALL questions */}
-                      {question.type !== 'file_upload' && renderEvidenceUpload(question.id)}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                          {/* Universal Evidence Upload for ALL questions */}
+                          {question.type !== 'file_upload' && renderEvidenceUpload(question.id)}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
 
-            {/* Navigation Buttons */}
-            <div className="flex items-center justify-between pt-8 border-t border-border mt-12">
-              <Button
-                variant="ghost"
-                onClick={previousSection}
-                disabled={currentSection === 0}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Anterior
-              </Button>
+                {/* Navigation Buttons */}
+                <div className="flex items-center justify-between pt-8 border-t border-border mt-12">
+                  <Button
+                    variant="ghost"
+                    onClick={previousSection}
+                    disabled={currentSection === 0}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Anterior
+                  </Button>
 
-              {currentSection < sections.length - 1 ? (
-                <Button
-                  onClick={nextSection}
-                  className="px-8 h-12 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-1"
-                >
-                  Próxima Seção
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={submitAssessment}
-                  disabled={submitting}
-                  className="px-8 h-12 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 hover:shadow-green-600/30 transition-all hover:-translate-y-1"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Enviando...
-                    </>
+                  {currentSection < sections.length - 1 ? (
+                    <Button
+                      onClick={nextSection}
+                      className="px-8 h-12 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all hover:-translate-y-1"
+                    >
+                      Próxima Seção
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
                   ) : (
-                    <>
-                      Finalizar e Enviar
-                      <Send className="ml-2 h-4 w-4" />
-                    </>
+                    <Button
+                      onClick={submitAssessment}
+                      disabled={submitting}
+                      className="px-8 h-12 bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 hover:shadow-green-600/30 transition-all hover:-translate-y-1"
+                    >
+                      {submitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          Finalizar e Enviar
+                          <Send className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
                   )}
-                </Button>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </main>

@@ -1,0 +1,30 @@
+[
+  {
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "tenant_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "module_key",
+    "data_type": "text"
+  },
+  {
+    "column_name": "is_enabled",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "configuration",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  }
+]

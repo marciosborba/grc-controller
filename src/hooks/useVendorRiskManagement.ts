@@ -28,6 +28,10 @@ export interface VendorRegistry {
   primary_contact_name?: string;
   primary_contact_email?: string;
   primary_contact_phone?: string;
+  contract_owner_name?: string;
+  contract_owner_email?: string;
+  risk_override_level?: 'low' | 'medium' | 'high' | 'critical' | null;
+  risk_override_reason?: string | null;
   address?: any;
   status: 'active' | 'inactive' | 'suspended' | 'onboarding' | 'offboarding';
   onboarding_status: 'not_started' | 'in_progress' | 'completed' | 'on_hold';
@@ -61,6 +65,22 @@ export interface VendorContact {
   updated_at: string;
 }
 
+export interface VendorAssessmentQuestion {
+  id: string;
+  text: string;
+  question?: string; // For backward compatibility
+  category: string;
+  type: 'yes_no' | 'yes_no_na' | 'multiple_choice' | 'text' | 'checkbox' | 'rating' | 'scale' | 'file_upload';
+  criticality: 'baixo' | 'medio' | 'alto' | 'critico' | 'info';
+  requires_evidence: boolean;
+  required?: boolean;
+  options?: string;
+  optionWeights?: { label: string; weight: number }[];
+  riskWeight?: number;
+  weight?: number;
+  help_text?: string;
+}
+
 export interface VendorAssessmentFramework {
   id: string;
   tenant_id: string;
@@ -70,7 +90,7 @@ export interface VendorAssessmentFramework {
   industry?: string;
   version?: string;
   is_active: boolean;
-  questions: any[];
+  questions: VendorAssessmentQuestion[];
   scoring_model: any;
   alex_recommendations?: any;
   created_at: string;
@@ -240,6 +260,7 @@ export interface VendorFilters {
   risk_level?: string[];
   contract_status?: string[];
   search?: string;
+  custom_fields?: Record<string, any>;
 }
 
 export interface AssessmentFilters {
@@ -313,6 +334,7 @@ export const useVendorRiskManagement = () => {
   }
 
   const { user } = authContext;
+  const { effectiveTenantId, isPlatformAdmin } = useEffectiveTenant();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -351,8 +373,8 @@ export const useVendorRiskManagement = () => {
 
   const fetchVendors = useCallback(async (filters?: VendorFilters) => {
     // Validate tenantId
-    if (!user?.tenantId || user.tenantId === 'default') {
-      console.warn('fetchVendors: Invalid or default tenantId', user?.tenantId);
+    if (!effectiveTenantId && !isPlatformAdmin) {
+      console.warn('fetch method: Invalid or default tenantId');
       return;
     }
 
@@ -360,7 +382,7 @@ export const useVendorRiskManagement = () => {
     resetError();
 
     try {
-      const tenantId = user.tenantId;
+      const tenantId = effectiveTenantId;
       let query = supabase
         .from('vendor_registry')
         .select('*')
@@ -386,6 +408,14 @@ export const useVendorRiskManagement = () => {
       if (filters?.search) {
         query = query.or(`name.ilike.%${filters.search}%,legal_name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
       }
+      if (filters?.custom_fields) {
+        Object.entries(filters.custom_fields).forEach(([key, value]) => {
+          if (value !== undefined && value !== '' && value !== 'all') {
+            // Use Supabase JSONB querying ->> operator to get text, then ilike for case-insensitive partial match
+            query = query.ilike(`metadata->custom_fields->>${key}`, `%${value}%`);
+          }
+        });
+      }
 
       const { data, error } = await query;
 
@@ -397,21 +427,21 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenantId, user?.tenant_id, handleError, resetError]);
+  }, [effectiveTenantId, isPlatformAdmin, handleError, resetError]);
 
   const createVendor = useCallback(async (vendor: Omit<VendorRegistry, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenantId || user.tenantId === 'default') return null;
+    if (!effectiveTenantId && !isPlatformAdmin) return null;
 
     setLoading(true);
     resetError();
 
     try {
-      const tenantId = user.tenantId || user.tenant_id;
+      const tenantId = effectiveTenantId;
       const { data, error } = await supabase
         .from('vendor_registry')
         .insert({
           ...vendor,
-          tenant_id: tenantId,
+          tenant_id: effectiveTenantId || '00000000-0000-0000-0000-000000000000',
           created_by: user.id,
         })
         .select()
@@ -500,11 +530,6 @@ export const useVendorRiskManagement = () => {
   // VENDOR ASSESSMENTS OPERATIONS
   // ================================================
 
-  /* 
-   * Integrating Tenant Selector for Platform Admins 
-   */
-  const { effectiveTenantId, isPlatformAdmin } = useEffectiveTenant();
-
   const fetchAssessments = useCallback(async (filters?: AssessmentFilters) => {
     // Basic validation: ensure we have an effective tenant ID or allowed bypass
     if (!effectiveTenantId || effectiveTenantId === 'default') {
@@ -575,10 +600,10 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenantId, handleError, resetError]);
+  }, [effectiveTenantId, isPlatformAdmin, handleError, resetError]);
 
   const createAssessment = useCallback(async (assessment: Omit<VendorAssessment, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenantId || user.tenantId === 'default') return null;
+    if (!effectiveTenantId && !isPlatformAdmin) return null;
 
     setLoading(true);
     resetError();
@@ -740,10 +765,10 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenant_id, handleError, resetError]);
+  }, [effectiveTenantId, isPlatformAdmin, handleError, resetError]);
 
   const createRisk = useCallback(async (risk: Omit<VendorRisk, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
-    if (!user?.tenantId || user.tenantId === 'default') return null;
+    if (!effectiveTenantId && !isPlatformAdmin) return null;
 
     setLoading(true);
     resetError();
@@ -833,7 +858,7 @@ export const useVendorRiskManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.tenant_id, handleError, resetError]);
+  }, [effectiveTenantId, isPlatformAdmin, handleError, resetError]);
 
   const fetchRiskDistribution = useCallback(async () => {
     if (!user?.tenantId || user.tenantId === 'default') return;
@@ -849,7 +874,7 @@ export const useVendorRiskManagement = () => {
     } catch (error) {
       handleError(error, 'buscar distribuição de riscos');
     }
-  }, [user?.tenant_id, handleError]);
+  }, [effectiveTenantId, isPlatformAdmin, handleError]);
 
   const fetchFrameworks = useCallback(async () => {
     if (!user?.tenantId || user.tenantId === 'default') return;
@@ -858,7 +883,7 @@ export const useVendorRiskManagement = () => {
       const { data, error } = await supabase
         .from('vendor_assessment_frameworks')
         .select('*')
-        .or(`tenant_id.eq.${user.tenant_id},tenant_id.eq.00000000-0000-0000-0000-000000000000`)
+        .or(`tenant_id.eq.${user.tenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`)
         .eq('is_active', true)
         .order('name');
 
@@ -868,19 +893,117 @@ export const useVendorRiskManagement = () => {
     } catch (error) {
       handleError(error, 'buscar frameworks');
     }
-  }, [user?.tenant_id, handleError]);
+  }, [effectiveTenantId, isPlatformAdmin, handleError]);
+
+  const createFramework = useCallback(async (frameworkData: Partial<VendorAssessmentFramework>) => {
+    setLoading(true);
+    resetError();
+
+    try {
+      const { data, error } = await supabase
+        .from('vendor_assessment_frameworks')
+        .insert({
+          ...frameworkData,
+          tenant_id: effectiveTenantId || '00000000-0000-0000-0000-000000000000',
+          created_by: user?.id,
+          updated_by: user?.id,
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFrameworks(prev => [...prev, data]);
+      toast({
+        title: 'Sucesso',
+        description: 'Framework criado com sucesso.',
+      });
+      return data;
+    } catch (error) {
+      handleError(error, 'criar framework');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user, handleError, resetError, toast]);
+
+  const updateFramework = useCallback(async (id: string, updates: Partial<VendorAssessmentFramework>) => {
+    setLoading(true);
+    resetError();
+
+    try {
+      const { data, error } = await supabase
+        .from('vendor_assessment_frameworks')
+        .update({
+          ...updates,
+          updated_by: user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .or(`tenant_id.eq.${effectiveTenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFrameworks(prev => prev.map(f => f.id === id ? data : f));
+      toast({
+        title: 'Sucesso',
+        description: 'Framework atualizado com sucesso.',
+      });
+      return data;
+    } catch (error) {
+      handleError(error, 'atualizar framework');
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.tenantId, handleError, resetError, toast]);
+
+  const deleteFramework = useCallback(async (id: string) => {
+    setLoading(true);
+    resetError();
+
+    try {
+      // Usamos soft delete marcando como inativo
+      const { error } = await supabase
+        .from('vendor_assessment_frameworks')
+        .update({
+          is_active: false,
+          updated_by: user?.id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .or(`tenant_id.eq.${effectiveTenantId},tenant_id.eq.00000000-0000-0000-0000-000000000000`);
+
+      if (error) throw error;
+
+      setFrameworks(prev => prev.filter(f => f.id !== id));
+      toast({
+        title: 'Sucesso',
+        description: 'Framework removido com sucesso.',
+      });
+      return true;
+    } catch (error) {
+      handleError(error, 'remover framework');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, user?.tenantId, handleError, resetError, toast]);
 
   // ================================================
   // INITIALIZATION
   // ================================================
 
   useEffect(() => {
-    if (user?.tenant_id) {
+    if (user?.tenantId) {
       fetchFrameworks();
       fetchDashboardMetrics();
       fetchRiskDistribution();
     }
-  }, [user?.tenant_id, fetchFrameworks, fetchDashboardMetrics, fetchRiskDistribution]);
+  }, [effectiveTenantId, isPlatformAdmin, fetchFrameworks, fetchDashboardMetrics, fetchRiskDistribution]);
 
   // ================================================
   // RETURN HOOK INTERFACE
@@ -921,7 +1044,12 @@ export const useVendorRiskManagement = () => {
     // Dashboard Operations
     fetchDashboardMetrics,
     fetchRiskDistribution,
+
+    // Framework Operations
     fetchFrameworks,
+    createFramework,
+    updateFramework,
+    deleteFramework,
 
     // Utility
     resetError,

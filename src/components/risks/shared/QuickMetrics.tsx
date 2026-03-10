@@ -12,6 +12,7 @@ import {
   Target
 } from 'lucide-react';
 import type { RiskMetrics } from '@/types/risk-management';
+import { useTenantSettings } from '@/hooks/useTenantSettings';
 
 interface QuickMetricsProps {
   metrics?: RiskMetrics;
@@ -28,6 +29,11 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     risksByLevel: metrics?.risksByLevel,
     risksByStatus: metrics?.risksByStatus
   });
+
+  const { getRiskLevels } = useTenantSettings();
+  const riskLevels = getRiskLevels();
+  const highestLevel = riskLevels[riskLevels.length - 1] || 'Muito Alto';
+  const secondHighestLevel = riskLevels.length > 1 ? riskLevels[riskLevels.length - 2] : null;
 
   // Se não tiver métricas, criar métricas padrão
   const defaultMetrics: RiskMetrics = {
@@ -84,18 +90,18 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
     },
     {
       id: 'muito-alto',
-      title: 'Muito Alto',
-      value: currentMetrics.risksByLevel['Muito Alto'] || 0,
+      title: highestLevel,
+      value: currentMetrics.risksByLevel[highestLevel] || 0,
       icon: XCircle,
-      color: getRiskLevelColor('Muito Alto'),
+      color: getRiskLevelColor(highestLevel),
       description: 'Atenção imediata'
     },
     {
       id: 'alto',
-      title: 'Alto',
-      value: currentMetrics.risksByLevel['Alto'] || 0,
+      title: secondHighestLevel || 'Alto',
+      value: secondHighestLevel ? (currentMetrics.risksByLevel[secondHighestLevel] || 0) : 0,
       icon: AlertTriangle,
-      color: getRiskLevelColor('Alto'),
+      color: secondHighestLevel ? getRiskLevelColor(secondHighestLevel) : getRiskLevelColor('Alto'),
       description: 'Prioridade alta'
     },
     {
@@ -126,66 +132,75 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
       {/* Card 1: Risk Trend Storytelling */}
       <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
         <div className={`absolute top-0 right-0 p-3 opacity-10`}>
-          <Activity className="h-24 w-24" />
+          <Activity className="h-16 w-16 sm:h-24 sm:w-24" />
         </div>
-        <CardHeader className="pb-2">
-          <CardTitle className={`text-lg font-bold flex items-center gap-2 ${currentMetrics.totalRisks > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+          <CardTitle className={`text-sm sm:text-lg font-bold flex items-center gap-2 ${currentMetrics.totalRisks > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
             Panorama de Riscos
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-3xl font-bold text-foreground">{currentMetrics.totalRisks}</span>
-            <span className="text-sm text-muted-foreground">riscos mapeados</span>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex items-baseline gap-2 mb-1 sm:mb-2">
+            <span className="text-xl sm:text-3xl font-bold text-foreground">{currentMetrics.totalRisks}</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">riscos mapeados</span>
           </div>
-          <p className="text-muted-foreground font-medium text-sm leading-relaxed">
-            {currentMetrics.risksByLevel['Muito Alto'] > 0
-              ? `${currentMetrics.risksByLevel['Muito Alto']} riscos críticos requerem atenção imediata.`
-              : 'Nenhum risco crítico identificado no momento. O ambiente está estável.'}
+          <p className="text-muted-foreground font-medium text-xs sm:text-sm leading-relaxed">
+            {currentMetrics.risksByLevel[highestLevel] > 0
+              ? `${currentMetrics.risksByLevel[highestLevel]} riscos nível ${highestLevel} requerem atenção imediata.`
+              : `Nenhum risco de nível ${highestLevel} identificado no momento. O ambiente está estável.`}
           </p>
-          <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentMetrics.risksByLevel['Muito Alto'] > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-            {currentMetrics.risksByLevel['Muito Alto'] > 0 ? 'Ação Necessária' : 'Sob Controle'}
+          <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentMetrics.risksByLevel[highestLevel] > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            {currentMetrics.risksByLevel[highestLevel] > 0 ? 'Ação Necessária' : 'Sob Controle'}
           </div>
         </CardContent>
       </Card>
 
       {/* Card 2: Highest Risk Level (Critical Data) */}
-      <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500/50">
-        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-          <AlertTriangle className="h-24 w-24 text-red-500" />
-        </div>
-        <CardContent className="p-6 flex items-center gap-4">
-          <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl">
-            <AlertTriangle className="h-8 w-8 text-red-600 dark:text-red-400" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-muted-foreground">Riscos Críticos</p>
-            <h3 className="text-3xl font-bold text-red-600 dark:text-red-500">
-              {currentMetrics.risksByLevel['Muito Alto'] || 0}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              + {currentMetrics.risksByLevel['Alto'] || 0} de nível Alto
+      <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500">
+        <CardContent className="p-3 sm:p-5 flex flex-col gap-2 h-full relative z-10 w-full overflow-hidden">
+          {/* Título isolado em uma linha superior */}
+          <div className="w-full">
+            <p className="text-sm sm:text-base font-bold text-red-600 dark:text-red-500 whitespace-nowrap overflow-visible">
+              Riscos {highestLevel}
             </p>
           </div>
+
+          {/* Ícone e número juntos abaixo */}
+          <div className="flex w-full items-center gap-3">
+            <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/50 rounded-xl sm:rounded-2xl shrink-0">
+              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
+            </div>
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <h3 className="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-500 leading-none">
+                {currentMetrics.risksByLevel[highestLevel] || 0}
+              </h3>
+            </div>
+          </div>
+
+          {secondHighestLevel && (
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium truncate w-full">
+              + {currentMetrics.risksByLevel[secondHighestLevel] || 0} de nível {secondHighestLevel}
+            </p>
+          )}
         </CardContent>
       </Card>
 
       {/* Card 3: In Treatment (Operational Status) */}
       <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-          <TrendingUp className="h-24 w-24 text-blue-500" />
+          <TrendingUp className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
         </div>
-        <CardContent className="p-6 flex items-center gap-4">
-          <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-            <TrendingUp className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+        <CardContent className="p-3 sm:p-6 flex items-center gap-3 sm:gap-4 h-full">
+          <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl">
+            <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Em Tratamento</p>
-            <h3 className="text-3xl font-bold text-foreground">
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground">Em Tratamento</p>
+            <h3 className="text-xl sm:text-3xl font-bold text-foreground">
               {currentMetrics.risksByStatus['Em Tratamento'] || 0}
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
@@ -198,21 +213,21 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
       {/* Card 4: Overdue Activities (Alert) */}
       <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-          <Clock className="h-24 w-24 text-orange-500" />
+          <Clock className="h-16 w-16 sm:h-24 sm:w-24 text-orange-500" />
         </div>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold text-foreground">
+        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+          <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
             Status de Atividades
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           <div className="flex items-baseline gap-2">
-            <span className={`text-3xl font-bold ${currentMetrics.overdueActivities > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+            <span className={`text-xl sm:text-3xl font-bold ${currentMetrics.overdueActivities > 0 ? 'text-orange-600' : 'text-green-600'}`}>
               {currentMetrics.overdueActivities}
             </span>
-            <span className="text-sm text-muted-foreground">atrasadas</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">atrasadas</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
             {currentMetrics.overdueActivities > 0 ? 'Existem atividades fora do prazo.' : 'Todas as atividades em dia.'}
           </p>
           <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">

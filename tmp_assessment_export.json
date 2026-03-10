@@ -1,0 +1,49 @@
+{
+  "id": "60b14cf8-bf89-4749-8381-aee4fb31f8ce",
+  "name": "Segurança da Informação",
+  "responses": {
+    "1": "teste",
+    "2": "teste",
+    "3": "teste",
+    "4": "teste",
+    "5": "teste"
+  },
+  "questions": [
+    {
+      "id": "1",
+      "type": "yes_no_na",
+      "category": "Governança de Privacidade",
+      "text": "A organização possui um Encarregado de Proteção de Dados (DPO) nomeado e acessível?"
+    },
+    {
+      "id": "2",
+      "type": "yes_no_na",
+      "category": "Identificação e Registro do Tratamento",
+      "text": "Existe um registro de operações de tratamento de dados pessoais (RoPA) atualizado?"
+    },
+    {
+      "id": "3",
+      "type": "yes_no_na",
+      "category": "Bases Legais",
+      "text": "As bases legais para o tratamento de dados pessoais são avaliadas e documentadas?"
+    },
+    {
+      "id": "4",
+      "type": "yes_no_na",
+      "category": "Direitos dos Titulares",
+      "text": "Existem procedimentos para atender aos direitos dos titulares de dados (acesso, correção, exclusão)?"
+    },
+    {
+      "id": "5",
+      "type": "yes_no_na",
+      "category": "Gestão de Riscos de Privacidade",
+      "text": "A organização realiza Relatórios de Impacto à Proteção de Dados (DPIA) quando necessário?"
+    },
+    {
+      "id": "6",
+      "type": "yes_no_na",
+      "category": "Privacy by Design",
+      "text": "Existem controles implementados para garantir a privacidade desde a concepção (Privacy by Design)?"
+    }
+  ]
+}

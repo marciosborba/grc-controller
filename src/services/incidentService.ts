@@ -20,8 +20,7 @@ export const incidentService = {
         affected_systems, business_impact, tenant_id, reporter_id, assignee_id,
         reporter:profiles!incidents_reporter_id_fkey(email, id, full_name, job_title),
         assignee:profiles!incidents_assignee_id_fkey(email, id, full_name, job_title)
-      `)
-            .order('created_at', { ascending: false });
+      `);
 
         if (filters?.tenant_id) {
             query = query.eq('tenant_id', filters.tenant_id);
@@ -36,7 +35,7 @@ export const incidentService = {
             query = query.eq('assignee_id', filters.assignee_id);
         }
 
-        const { data, error } = await query;
+        const { data, error } = await query.order('created_at', { ascending: false });
         if (error) throw error;
         return data;
     },

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,12 +21,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Activity, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Target, 
+import {
+  Activity,
+  Plus,
+  Edit,
+  Trash2,
+  Target,
   AlertTriangle,
   CheckCircle,
   Settings,
@@ -87,28 +87,28 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
 }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   // Usar tenant ID do usuário como fallback
   const currentTenantId = tenantId || user?.tenantId;
-  
+
   console.log('🎯 RiskMatrixConfigSection inicializado:', {
     tenantId,
     userTenantId: user?.tenantId,
     currentTenantId,
     timestamp: new Date().toISOString()
   });
-  
+
   // Funções auxiliares para ajustar arrays
   const adjustArrayToSize = (currentArray: any[], newSize: number, type: 'probability' | 'impact') => {
     const defaultLabels = {
       probability: ['Raro', 'Improvavel', 'Possivel', 'Provavel', 'Quase Certo'],
       impact: ['Insignificante', 'Menor', 'Moderado', 'Maior', 'Catastrofico']
     };
-    
+
     const defaultDescriptions = {
       probability: [
         'Evento muito improvável',
-        'Evento improvável', 
+        'Evento improvável',
         'Evento possível',
         'Evento provável',
         'Evento muito provável'
@@ -116,12 +116,12 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       impact: [
         'Impacto mínimo nas operações',
         'Impacto limitado nas operações',
-        'Impacto significativo nas operações', 
+        'Impacto significativo nas operações',
         'Impacto severo nas operações',
         'Impacto crítico nas operações'
       ]
     };
-    
+
     const defaultPercentages = ['< 5%', '5-25%', '25-50%', '50-75%', '> 75%'];
     const defaultExamples = [
       ['Atraso menor que 1 dia', 'Custo < R$ 1.000'],
@@ -130,9 +130,9 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       ['Atraso de 1 mês', 'Custo R$ 100.000-1M'],
       ['Atraso > 1 mês', 'Custo > R$ 1M']
     ];
-    
+
     const result = [];
-    
+
     for (let i = 0; i < newSize; i++) {
       if (currentArray[i]) {
         // Manter item existente
@@ -148,21 +148,21 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
           value: i + 1,
           description: defaultDescriptions[type][i]
         };
-        
+
         if (type === 'probability') {
           newItem.percentage = defaultPercentages[i];
         } else {
           newItem.examples = defaultExamples[i];
         }
-        
+
         result.push(newItem);
       }
     }
-    
+
     console.log(`🔄 Array ${type} ajustado para tamanho ${newSize}:`, result);
     return result;
   };
-  
+
   const adjustRiskLevelsToSize = (currentLevels: RiskLevel[], matrixSize: '3x3' | '4x4' | '5x5') => {
     const riskLevelConfigs = {
       '3x3': [
@@ -184,7 +184,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         { id: '5', name: 'Muito Alto', value: 5, color: '#ef4444', description: 'Risco inaceitável', minValue: 17, maxValue: 25 }
       ]
     };
-    
+
     const newLevels = riskLevelConfigs[matrixSize];
     console.log(`🎨 Níveis de risco ajustados para ${matrixSize}:`, newLevels);
     return newLevels;
@@ -199,38 +199,38 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         { id: '5', name: 'Quase Certo', value: 5, description: 'Evento muito provável', percentage: '> 75%' }
       ],
       impact: [
-        { 
-          id: '1', 
-          name: 'Insignificante', 
-          value: 1, 
+        {
+          id: '1',
+          name: 'Insignificante',
+          value: 1,
           description: 'Impacto mínimo nas operações',
           examples: ['Atraso menor que 1 dia', 'Custo < R$ 1.000']
         },
-        { 
-          id: '2', 
-          name: 'Menor', 
-          value: 2, 
+        {
+          id: '2',
+          name: 'Menor',
+          value: 2,
           description: 'Impacto limitado nas operações',
           examples: ['Atraso de 1-3 dias', 'Custo R$ 1.000-10.000']
         },
-        { 
-          id: '3', 
-          name: 'Moderado', 
-          value: 3, 
+        {
+          id: '3',
+          name: 'Moderado',
+          value: 3,
           description: 'Impacto significativo nas operações',
           examples: ['Atraso de 1-2 semanas', 'Custo R$ 10.000-100.000']
         },
-        { 
-          id: '4', 
-          name: 'Maior', 
-          value: 4, 
+        {
+          id: '4',
+          name: 'Maior',
+          value: 4,
           description: 'Impacto severo nas operações',
           examples: ['Atraso de 1 mês', 'Custo R$ 100.000-1M']
         },
-        { 
-          id: '5', 
-          name: 'Catastrofico', 
-          value: 5, 
+        {
+          id: '5',
+          name: 'Catastrofico',
+          value: 5,
           description: 'Impacto crítico nas operações',
           examples: ['Atraso > 1 mês', 'Custo > R$ 1M']
         }
@@ -274,11 +274,11 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       console.warn('⚠️ Nenhum tenant ID disponível para carregar configuração');
       return;
     }
-    
+
     try {
       setIsLoading(true);
       console.log('📥 Carregando configuração da matriz de risco para tenant:', currentTenantId);
-      
+
       const { data, error } = await supabase
         .from('tenants')
         .select('settings')
@@ -292,11 +292,11 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       }
 
       console.log('📊 Dados carregados:', data);
-      
+
       if (data?.settings?.risk_matrix) {
         const savedMatrix = data.settings.risk_matrix;
         console.log('✅ Configuração da matriz encontrada:', savedMatrix);
-        
+
         // Atualizar configuração com dados salvos
         setConfig(prev => ({
           ...prev,
@@ -306,7 +306,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
             calculationMethod: savedMatrix.calculation_method || 'multiplication'
           },
           dimensions: {
-            probability: savedMatrix.likelihood_labels ? 
+            probability: savedMatrix.likelihood_labels ?
               savedMatrix.likelihood_labels.map((label: string, index: number) => ({
                 id: String(index + 1),
                 name: label,
@@ -314,7 +314,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                 description: prev.dimensions.probability[index]?.description || '',
                 percentage: prev.dimensions.probability[index]?.percentage || ''
               })) : prev.dimensions.probability,
-            impact: savedMatrix.impact_labels ? 
+            impact: savedMatrix.impact_labels ?
               savedMatrix.impact_labels.map((label: string, index: number) => ({
                 id: String(index + 1),
                 name: label,
@@ -324,7 +324,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
               })) : prev.dimensions.impact
           },
           // Carregar níveis de risco personalizados se existirem
-          riskLevels: savedMatrix.risk_levels_custom ? 
+          riskLevels: savedMatrix.risk_levels_custom ?
             savedMatrix.risk_levels_custom.map((level: any) => ({
               id: level.id,
               name: level.name,
@@ -335,7 +335,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
               value: level.value
             })) : adjustRiskLevelsToSize(prev.riskLevels, savedMatrix.type || '5x5')
         }));
-        
+
         toast.success('Configuração da matriz carregada com sucesso!');
       } else {
         console.log('ℹ️ Nenhuma configuração salva encontrada, usando padrões');
@@ -353,14 +353,14 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       toast.error('Tenant ID não encontrado');
       return;
     }
-    
+
     try {
       setIsLoading(true);
       console.log('💾 Salvando configuração da matriz de risco:', {
         tenantId: currentTenantId,
         config
       });
-      
+
       // Converter configuração para formato do banco
       const matrixConfig = {
         type: config.settings.matrixSize,
@@ -385,7 +385,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
           critical: [11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
         }
       };
-      
+
       // Buscar configurações atuais
       const { data: currentData, error: fetchError } = await supabase
         .from('tenants')
@@ -403,13 +403,13 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         ...currentData?.settings,
         risk_matrix: matrixConfig
       };
-      
+
       console.log('📤 Enviando configuração atualizada:', updatedSettings);
-      
+
       // Salvar no banco
       const { error: updateError } = await supabase
         .from('tenants')
-        .update({ 
+        .update({
           settings: updatedSettings,
           updated_at: new Date().toISOString()
         })
@@ -421,29 +421,29 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       }
 
       console.log('✅ Configuração salva com sucesso!');
-      
+
       try {
         console.log('🔄 Invalidando cache...');
         // Invalidar cache para sincronizar com outras implementações
         await queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
         await queryClient.invalidateQueries({ queryKey: ['tenants'] });
-        
+
         // Disparar evento customizado para notificar outros componentes
         window.dispatchEvent(new CustomEvent('risk-matrix-updated', {
           detail: { tenantId: currentTenantId, config: matrixConfig }
         }));
-        
+
         console.log('✅ Cache invalidado e evento disparado com sucesso');
-        
+
         console.log('🔄 Atualizando estado...');
         setHasUnsavedChanges(false);
         onSettingsChange();
         console.log('✅ Estado atualizado com sucesso');
-        
+
         console.log('🔄 Mostrando toast de sucesso...');
         toast.success('Configuração da matriz de risco salva com sucesso!');
         console.log('✅ Toast mostrado com sucesso');
-        
+
         // Verificar se foi salvo corretamente
         setTimeout(async () => {
           try {
@@ -453,7 +453,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
               .select('settings')
               .eq('id', currentTenantId)
               .single();
-              
+
             console.log('🔍 Verificação pós-salvamento:', {
               saved: verificationData?.settings?.risk_matrix,
               expected: matrixConfig
@@ -462,12 +462,12 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
             console.error('❌ Erro na verificação pós-salvamento:', verificationError);
           }
         }, 1000);
-        
+
       } catch (postSaveError) {
         console.error('❌ Erro nas operações pós-salvamento:', postSaveError);
         throw postSaveError; // Re-lançar para o catch principal
       }
-      
+
     } catch (error) {
       console.error('💥 Erro ao salvar configuração - DETALHES COMPLETOS:', {
         error: error,
@@ -514,13 +514,13 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
 
   const handleSaveItem = () => {
     if (!editingItem || !editType) return;
-    
+
     console.log('💾 Salvando item editado:', {
       editType,
       editingItem,
       timestamp: new Date().toISOString()
     });
-    
+
     // Validação para níveis de risco
     if (editType === 'riskLevel') {
       // Verificar se min <= max
@@ -528,7 +528,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         toast.error('O valor mínimo deve ser menor ou igual ao valor máximo');
         return;
       }
-      
+
       // Verificar sobreposição com outros níveis
       const otherLevels = config.riskLevels.filter(level => level.id !== editingItem.id);
       const hasOverlap = otherLevels.some(level => {
@@ -538,7 +538,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
           (editingItem.minValue <= level.minValue && editingItem.maxValue >= level.maxValue)
         );
       });
-      
+
       if (hasOverlap) {
         toast.error('A faixa de valores não pode sobrepor com outros níveis de risco');
         return;
@@ -549,25 +549,25 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       ...config,
       dimensions: {
         ...config.dimensions,
-        [editType]: editType === 'riskLevel' 
-          ? config.riskLevels 
-          : config.dimensions[editType].map(item => 
-              item.id === editingItem.id ? editingItem : item
-            )
-      },
-      riskLevels: editType === 'riskLevel'
-        ? config.riskLevels.map(item => 
+        [editType]: editType === 'riskLevel'
+          ? config.riskLevels
+          : config.dimensions[editType].map(item =>
             item.id === editingItem.id ? editingItem : item
           )
+      },
+      riskLevels: editType === 'riskLevel'
+        ? config.riskLevels.map(item =>
+          item.id === editingItem.id ? editingItem : item
+        )
         : config.riskLevels
     };
-    
+
     console.log('🔄 Nova configuração após edição:', {
       oldRiskLevels: config.riskLevels,
       newRiskLevels: newConfig.riskLevels,
       editedItem: editingItem
     });
-    
+
     setConfig(newConfig);
     setHasUnsavedChanges(true);
 
@@ -611,144 +611,135 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       // Fallback para o último nível se não encontrar
       return config.riskLevels[config.riskLevels.length - 1];
     };
-    
+
     // Função para obter nome do nível de risco
     const getRiskLevelName = (riskValue: number) => {
       return getRiskLevelForValue(riskValue).name;
     };
 
+    // Cálculo do tamanho de célula responsivo:
+    // Reservamos ~40px para o label IMPACTO + ~24px para os números do eixo Y
+    // O espaço restante é dividido igualmente entre `size` colunas, com máx de 80px
+    const LABEL_WIDTH = 40;
+    const YAXIS_WIDTH = 28;
+
     return (
-      <div className="overflow-x-auto">
-        <div className="max-w-4xl mx-auto">
-          {/* Matriz Container */}
-          <div className="inline-block">
-            <div className="flex">
-              <div className="flex flex-col justify-center items-center mr-4">
-                <div className="text-sm font-medium text-foreground dark:text-foreground transform -rotate-90 whitespace-nowrap">
-                  IMPACTO
+      <div className="w-full">
+        {/* Wrapper */}
+        <div className="w-full">
+          {/* Linha principal: label IMPACTO + eixo Y + grid */}
+          <div className="flex w-full">
+            {/* Label IMPACTO (vertical) */}
+            <div className="flex flex-col justify-center items-center shrink-0" style={{ width: `${LABEL_WIDTH}px` }}>
+              <div className="text-[10px] sm:text-xs font-medium text-foreground transform -rotate-90 whitespace-nowrap">
+                IMPACTO
+              </div>
+            </div>
+
+            {/* Corpo: números Y + grid */}
+            <div className="flex-1 min-w-0">
+              <div className="flex">
+                {/* Números do eixo Y */}
+                <div className="flex flex-col shrink-0" style={{ width: `${YAXIS_WIDTH}px` }}>
+                  {Array.from({ length: size }, (_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-center text-[10px] sm:text-xs font-medium text-foreground"
+                      style={{ height: `calc(min((100vw - 120px) / ${size}, 80px))` }}
+                    >
+                      {size - i}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Grid Matrix */}
+                <div
+                  className="border-2 border-border shadow-lg rounded-lg overflow-hidden flex-1 min-w-0"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: `repeat(${size}, 1fr)`,
+                    gridTemplateRows: `repeat(${size}, calc(min((100vw - 120px) / ${size}, 80px)))`,
+                  }}
+                >
+                  {Array.from({ length: size }, (_, rowIndex) =>
+                    Array.from({ length: size }, (_, colIndex) => {
+                      const probability = colIndex + 1;
+                      const impact = size - rowIndex;
+
+                      let riskValue;
+                      switch (config.settings.calculationMethod) {
+                        case 'multiplication': riskValue = probability * impact; break;
+                        case 'addition': riskValue = probability + impact; break;
+                        case 'custom': riskValue = config.matrix[probability - 1]?.[impact - 1] || (probability * impact); break;
+                        default: riskValue = probability * impact;
+                      }
+
+                      const riskLevel = getRiskLevelForValue(riskValue);
+
+                      return (
+                        <div
+                          key={`${rowIndex}-${colIndex}`}
+                          className="border border-white/20 flex flex-col items-center justify-center hover:opacity-90 transition-opacity cursor-pointer overflow-hidden"
+                          style={{ backgroundColor: riskLevel.color }}
+                          title={`P: ${probability}, I: ${impact}, Risco: ${riskLevel.name} (${riskValue})`}
+                        >
+                          <span className="text-[11px] sm:text-base font-bold text-white drop-shadow leading-none">
+                            {riskValue}
+                          </span>
+                          <span className="text-[7px] sm:text-[10px] text-white/90 font-medium leading-tight text-center px-0.5 w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                            {riskLevel.name}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
-              
-              <div className="space-y-0">
-                {/* Y-axis numbers (Impact) */}
-                <div className="flex">
-                  <div className="flex flex-col space-y-0 mr-2">
-                    {Array.from({ length: size }, (_, i) => (
-                      <div key={i} className="h-20 w-20 flex items-center justify-center text-base font-medium text-foreground dark:text-foreground">
-                        {size - i}
-                      </div>
-                    ))}
+
+              {/* Números do eixo X */}
+              <div className="flex" style={{ marginLeft: `${YAXIS_WIDTH}px` }}>
+                {Array.from({ length: size }, (_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-center text-[10px] sm:text-xs font-medium text-foreground flex-1"
+                    style={{ height: '20px' }}
+                  >
+                    {i + 1}
                   </div>
-                  
-                  {/* Grid Matrix */}
-                  <div className={`grid grid-rows-${size} gap-0 border-2 border-border shadow-lg rounded-lg overflow-hidden`}>
-                    {Array.from({ length: size }, (_, rowIndex) => (
-                      <div key={rowIndex} className={`grid grid-cols-${size} gap-0`}>
-                        {Array.from({ length: size }, (_, colIndex) => {
-                          const probability = colIndex + 1;
-                          const impact = size - rowIndex;
-                          
-                          // Usar método de cálculo configurado
-                          let riskValue;
-                          switch (config.settings.calculationMethod) {
-                            case 'multiplication':
-                              riskValue = probability * impact;
-                              break;
-                            case 'addition':
-                              riskValue = probability + impact;
-                              break;
-                            case 'custom':
-                              riskValue = config.matrix[probability - 1]?.[impact - 1] || (probability * impact);
-                              break;
-                            default:
-                              riskValue = probability * impact;
-                          }
-                          
-                          // Debug do cálculo (apenas para primeira célula)
-                          if (rowIndex === 0 && colIndex === 0) {
-                            console.log('🧮 Debug do cálculo de risco:', {
-                              method: config.settings.calculationMethod,
-                              probability,
-                              impact,
-                              riskValue,
-                              formula: config.settings.calculationMethod === 'multiplication' ? `${probability} × ${impact} = ${riskValue}` :
-                                      config.settings.calculationMethod === 'addition' ? `${probability} + ${impact} = ${riskValue}` :
-                                      'Matriz personalizada'
-                            });
-                          }
-                          
-                          const riskLevel = getRiskLevelForValue(riskValue);
-                          const backgroundColor = riskLevel.color;
-                          const levelName = riskLevel.name;
-                          
-                          return (
-                            <div
-                              key={colIndex}
-                              className="h-20 w-20 border border-white flex flex-col items-center justify-center hover:scale-105 transition-transform cursor-pointer"
-                              style={{ backgroundColor }}
-                              title={`Probabilidade: ${probability}, Impacto: ${impact}, Risco: ${levelName} (${riskValue})`}
-                            >
-                              <span className="text-lg font-bold text-white drop-shadow-lg">
-                                {riskValue}
-                              </span>
-                              <span className="text-xs text-white/90 font-medium leading-tight text-center">
-                                {levelName}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* X-axis numbers (Probability) */}
-                <div className="flex justify-center mt-2">
-                  <div className="flex space-x-0 ml-22">
-                    {Array.from({ length: size }, (_, i) => (
-                      <div key={i} className="h-8 w-20 flex items-center justify-center text-base font-medium text-foreground dark:text-foreground">
-                        {i + 1}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="text-center mt-2">
-                  <div className="text-sm font-medium text-foreground dark:text-foreground">PROBABILIDADE</div>
-                </div>
+                ))}
+              </div>
+
+              <div className="text-center mt-1">
+                <div className="text-[10px] sm:text-sm font-medium text-foreground">PROBABILIDADE</div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Legenda Dinâmica */}
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-foreground dark:text-foreground mb-3">Legenda dos Níveis de Risco:</h4>
-            <div className="flex flex-wrap justify-center gap-3 text-sm">
-              {config.riskLevels.map((level) => {
-                // Usar as faixas configuradas
-                const range = level.minValue === level.maxValue 
-                  ? String(level.minValue)
-                  : `${level.minValue}-${level.maxValue}`;
-                
-                return (
-                  <div key={level.id} className="flex items-center space-x-2 bg-card dark:bg-card border border-border px-3 py-2 rounded-lg shadow-sm">
-                    <div className="w-4 h-4 rounded border border-border" style={{ backgroundColor: level.color }}></div>
-                    <span className="font-medium text-foreground dark:text-foreground">{level.name}</span>
-                    <span className="text-xs text-muted-foreground dark:text-muted-foreground">({range})</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* Legenda Dinâmica */}
+        <div className="mt-6">
+          <h4 className="text-sm font-medium text-foreground dark:text-foreground mb-3">Legenda dos Níveis de Risco:</h4>
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 text-xs sm:text-sm">
+            {config.riskLevels.map((level) => {
+              const range = level.minValue === level.maxValue
+                ? String(level.minValue)
+                : `${level.minValue}-${level.maxValue}`;
 
-          <div className="mt-4 text-center">
-            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-              Matriz {config.settings.matrixSize} - {size * size} combinações possíveis
-            </p>
-            <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
-              {config.settings.matrixSize === '5x5' ? '5 níveis de risco (incluindo Muito Baixo)' : '4 níveis de risco'}
-            </p>
+              return (
+                <div key={level.id} className="flex items-center gap-1.5 bg-card border border-border px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg shadow-sm">
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 rounded border border-border shrink-0" style={{ backgroundColor: level.color }}></div>
+                  <span className="font-medium text-foreground">{level.name}</span>
+                  <span className="text-muted-foreground">({range})</span>
+                </div>
+              );
+            })}
           </div>
+        </div>
+
+        <div className="mt-3 text-center">
+          <p className="text-xs text-muted-foreground">
+            Matriz {config.settings.matrixSize} — {size * size} combinações possíveis
+          </p>
         </div>
       </div>
     );
@@ -775,7 +766,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                   <span className="text-sm font-medium">Alterações não salvas</span>
                 </div>
               )}
-              <Button onClick={handleSaveConfig} disabled={isLoading} variant={hasUnsavedChanges ? "default" : "outline"}>
+              <Button onClick={handleSaveConfig} disabled={isLoading} variant={hasUnsavedChanges ? "default" : "outline"} className="w-full sm:w-auto">
                 {isLoading ? 'Salvando...' : 'Salvar Configuração'}
               </Button>
             </div>
@@ -783,7 +774,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
         </CardHeader>
         <CardContent>
           {/* Configurações Gerais */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             <div className="space-y-2">
               <Label>Tamanho da Matriz</Label>
               <Select
@@ -793,15 +784,15 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                     from: config.settings.matrixSize,
                     to: value
                   });
-                  
+
                   const newSize = parseInt(value.charAt(0));
-                  
+
                   setConfig(prev => {
                     // Ajustar arrays de acordo com o novo tamanho
                     const adjustedProbability = adjustArrayToSize(prev.dimensions.probability, newSize, 'probability');
                     const adjustedImpact = adjustArrayToSize(prev.dimensions.impact, newSize, 'impact');
                     const adjustedRiskLevels = adjustRiskLevelsToSize(prev.riskLevels, value as '3x3' | '4x4' | '5x5');
-                    
+
                     setHasUnsavedChanges(true);
                     return {
                       ...prev,
@@ -878,7 +869,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
       </Card>
 
       {/* Configuração de Níveis */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6">
         {/* Níveis de Probabilidade */}
         <Card>
           <CardHeader>
@@ -946,15 +937,15 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
           <CardContent>
             <div className="space-y-3">
               {config.riskLevels.map(risk => {
-                const range = risk.minValue === risk.maxValue 
+                const range = risk.minValue === risk.maxValue
                   ? String(risk.minValue)
                   : `${risk.minValue}-${risk.maxValue}`;
-                  
+
                 return (
                   <div key={risk.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-4 h-4 rounded"
                           style={{ backgroundColor: risk.color }}
                         ></div>
@@ -982,11 +973,11 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
 
       {/* Dialog de Edição */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="w-[95vw] max-w-[500px]">
           <DialogHeader>
             <DialogTitle>
-              Editar {editType === 'probability' ? 'Probabilidade' : 
-                     editType === 'impact' ? 'Impacto' : 'Nível de Risco'}
+              Editar {editType === 'probability' ? 'Probabilidade' :
+                editType === 'impact' ? 'Impacto' : 'Nível de Risco'}
             </DialogTitle>
             <DialogDescription>
               Atualize as informações do item selecionado.
@@ -1044,7 +1035,7 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="minValue">Valor Mínimo</Label>
@@ -1053,9 +1044,9 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                         type="number"
                         min="1"
                         value={editingItem.minValue || 1}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          minValue: parseInt(e.target.value) || 1 
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          minValue: parseInt(e.target.value) || 1
                         })}
                       />
                     </div>
@@ -1066,20 +1057,20 @@ export const RiskMatrixConfigSection: React.FC<RiskMatrixConfigSectionProps> = (
                         type="number"
                         min={editingItem.minValue || 1}
                         value={editingItem.maxValue || 1}
-                        onChange={(e) => setEditingItem({ 
-                          ...editingItem, 
-                          maxValue: parseInt(e.target.value) || 1 
+                        onChange={(e) => setEditingItem({
+                          ...editingItem,
+                          maxValue: parseInt(e.target.value) || 1
                         })}
                       />
                     </div>
                   </div>
-                  
+
                   <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <div className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-1">
                       Faixa Configurada:
                     </div>
                     <div className="text-sm text-blue-700 dark:text-blue-300">
-                      {editingItem.minValue === editingItem.maxValue 
+                      {editingItem.minValue === editingItem.maxValue
                         ? `Valor ${editingItem.minValue}`
                         : `Valores de ${editingItem.minValue || 1} a ${editingItem.maxValue || 1}`
                       }

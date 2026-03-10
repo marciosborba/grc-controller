@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProviderOptimized as AuthProvider, useAuth } from "@/contexts/AuthContextOptimized";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -12,11 +12,16 @@ import { TenantSelectorProvider } from "@/contexts/TenantSelectorContext";
 import LoginPage from "@/components/LoginPage";
 import AppLayout from "@/components/layout/AppLayout";
 import { ModuleGuard } from "@/components/auth/ModuleGuard";
+import { MfaVerifyPage } from "@/components/auth/MfaVerifyPage";
+import { ResetPasswordPage } from "@/components/auth/ResetPasswordPage";
 import DashboardPage from "@/components/dashboard/DashboardPage";
-// Debug dashboard pages removed
-
+import ProtectedVendorRoute from "@/components/auth/ProtectedVendorRoute";
+import DashboardPageNoQueries from "@/components/dashboard/DashboardPageNoQueries";
+import DashboardPageUltraMinimal from "@/components/dashboard/DashboardPageUltraMinimal";
+import DashboardPageIsolated from "@/components/dashboard/DashboardPageIsolated";
 import NotFound from "./pages/NotFound";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import ScrollToTop from "@/components/ScrollToTop";
 // Lazy import for GeneralSettingsPage to reduce initial bundle size
 const GeneralSettingsPage = lazy(() => import("@/components/general-settings/GeneralSettingsPage").then(module => ({ default: module.GeneralSettingsPage })));
 
@@ -55,10 +60,10 @@ const PlanejamentoAuditoriaCorrigido = lazy(() => import("@/components/planejame
 const PlanejamentoAuditoriaCompleto = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaCompleto").then(module => ({ default: module.PlanejamentoAuditoriaCompleto })));
 const PlanejamentoMinimalTest = lazy(() => import("@/components/planejamento/PlanejamentoMinimalTest").then(module => ({ default: module.PlanejamentoMinimalTest })));
 const PlanejamentoAuditoriaSimplificado = lazy(() => import("@/components/planejamento/PlanejamentoAuditoriaSimplificado").then(module => ({ default: module.PlanejamentoAuditoriaSimplificado })));
-const PlanosAcaoPage = lazy(() => import("@/components/planejamento/PlanosAcaoPage"));
-const CronogramaAtividadesPage = lazy(() => import("@/components/planejamento/CronogramaAtividadesPage"));
-const TimelineVisualizacao = lazy(() => import("@/components/planejamento/TimelineVisualizacao"));
-const NotificacoesPlanejamento = lazy(() => import("@/components/planejamento/NotificacoesPlanejamento"));
+const PlanosAcaoPage = lazy(() => import("@/components/planejamento/PlanosAcaoPage").then(module => ({ default: module.PlanosAcaoPage })));
+const CronogramaAtividadesPage = lazy(() => import("@/components/planejamento/CronogramaAtividadesPage").then(module => ({ default: module.CronogramaAtividadesPage })));
+const TimelineVisualizacao = lazy(() => import("@/components/planejamento/TimelineVisualizacao").then(module => ({ default: module.TimelineVisualizacao })));
+const NotificacoesPlanejamento = lazy(() => import("@/components/planejamento/NotificacoesPlanejamento").then(module => ({ default: module.NotificacoesPlanejamento })));
 const PolicyManagementPage = lazy(() => import("@/components/policies/PolicyManagementPage"));
 const VendorsPage = lazy(() => import("@/components/vendors/VendorsPage"));
 
@@ -77,7 +82,7 @@ const AssessmentExecutionEngine = lazy(() => import("@/components/assessments/As
 const AssessmentWizard = lazy(() => import("@/components/assessments/AssessmentWizard"));
 const AssessmentExecutionComplete = lazy(() => import("@/components/assessments/AssessmentExecutionComplete"));
 // Componente corrigido após fix do RLS
-import AssessmentsListWorking from "@/components/assessments/AssessmentsListWorking";
+const AssessmentsListWorking = lazy(() => import("@/components/assessments/AssessmentsListWorking"));
 const QuestionsManagement = lazy(() => import("@/components/assessments/QuestionsManagement"));
 const ActionPlansManagement = lazy(() => import("@/components/assessments/ActionPlansManagement"));
 const ActionPlansManagementProfessional = lazy(() => import("@/components/assessments/ActionPlansManagementProfessional"));
@@ -105,7 +110,7 @@ const ActivityLogsPage = lazy(() => import("@/components/settings/ActivityLogsPa
 // GeneralSettingsPage agora é importado diretamente acima
 const TenantManagement = lazy(() => import("@/components/admin/TenantManagement"));
 const SystemDiagnosticPage = lazy(() => import("@/components/admin/SystemDiagnosticPage"));
-const PlatformAdminMigration = lazy(() => import("@/components/admin/PlatformAdminMigration"));
+import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 
 // AI Manager - New modular structure
 const AIManagerDashboard = lazy(() => import("@/components/ai/AIManagerDashboard"));
@@ -116,11 +121,10 @@ const AIUsagePage = lazy(() => import("@/components/ai/AIUsagePage"));
 const AISettingsPage = lazy(() => import("@/components/ai/AISettingsPage"));
 const AIAuditPage = lazy(() => import("@/components/ai/AIAuditPage"));
 
-// Import direto para teste (sem lazy loading)
-import AIManagerNew from "@/components/ai/AIManagerNew";
-import AIManagementPageDirect from "@/components/ai/AIManagementPage";
-import UserStatusCheck from "@/components/UserStatusCheck";
-import FixUserPermissions from "@/components/FixUserPermissions";
+const AIManagerNew = lazy(() => import("@/components/ai/AIManagerNew"));
+const AIManagementPageDirect = lazy(() => import("@/components/ai/AIManagementPage"));
+const UserStatusCheck = lazy(() => import("@/components/UserStatusCheck"));
+const FixUserPermissions = lazy(() => import("@/components/FixUserPermissions"));
 
 
 // Ethics Module - Complete
@@ -153,6 +157,22 @@ const ApplicationFieldsCustomization = lazy(() => import("@/components/vulnerabi
 
 // Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
+
+// Portal do Fornecedor (Autenticado)
+const VendorLayout = lazy(() => import("@/pages/VendorPortal/VendorLayout"));
+const VendorLogin = lazy(() => import("@/pages/VendorPortal/VendorLogin"));
+const VendorDashboard = lazy(() => import("@/pages/VendorPortal/VendorDashboard"));
+const VendorAssessmentsList = lazy(() => import("@/pages/VendorPortal/VendorAssessmentsList"));
+const VendorAssessmentFill = lazy(() => import("@/pages/VendorPortal/VendorAssessmentFill").then(module => ({ default: module.VendorAssessmentFill })));
+const VendorActionPlans = lazy(() => import("@/pages/VendorPortal/VendorActionPlans").then(module => ({ default: module.VendorActionPlans })));
+const VendorMessages = lazy(() => import("@/pages/VendorPortal/VendorMessages").then(module => ({ default: module.VendorMessages })));
+
+// Portal de Riscos (Autenticado via SSO principal)
+const RiskPortalLayout = lazy(() => import("@/pages/RiskPortal/RiskPortalLayout").then(module => ({ default: module.RiskPortalLayout })));
+const RiskPortalDashboard = lazy(() => import("@/pages/RiskPortal/RiskPortalDashboard").then(module => ({ default: module.RiskPortalDashboard })));
+const RiskPortalMyRisks = lazy(() => import("@/pages/RiskPortal/RiskPortalMyRisks").then(module => ({ default: module.RiskPortalMyRisks })));
+const RiskPortalRiskDetail = lazy(() => import("@/pages/RiskPortal/RiskPortalRiskDetail").then(module => ({ default: module.RiskPortalRiskDetail })));
+const RiskPortalActionPlans = lazy(() => import("@/pages/RiskPortal/RiskPortalActionPlans").then(module => ({ default: module.RiskPortalActionPlans })));
 
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
@@ -192,7 +212,8 @@ const queryClient = new QueryClient({
 });
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, needsMFA } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -202,7 +223,35 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (needsMFA && location.pathname !== '/mfa-verify') {
+    return <Navigate to="/mfa-verify" replace />;
+  }
+
+  if (!needsMFA && location.pathname === '/mfa-verify') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Isolating Guest Environment: If user is a guest, they can ONLY access /risk-portal
+  // We check this BEFORE isVendorOnly because a user's email might exist as both a vendor
+  // and a risk stakeholder, but the risk invite flow explicitly lands them here.
+  const isGuest = user.system_role === 'guest' || user.roles?.includes('guest') || (user as any).system_role === 'guest';
+  const isAdmin = user.roles?.some(r => ['admin', 'tenant_admin', 'super_admin'].includes(r));
+
+  if (isGuest && !isAdmin) {
+    if (!location.pathname.startsWith('/risk-portal')) {
+      console.warn('⚠️ [ROUTING] Usuário convidado restrito ao portal de riscos. Redirecionando...');
+      return <Navigate to="/risk-portal" replace />;
+    }
+  }
+
+  if (user.isVendorOnly) {
+    console.warn('⚠️ [ROUTING] Usuário é restrito ao portal de fornecedores. Redirecionando...');
+    return <Navigate to="/vendor-portal" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
@@ -255,7 +304,7 @@ const PlatformAdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, needsMFA } = useAuth();
 
   if (isLoading) {
     return (
@@ -265,10 +314,29 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+  if (user) {
+    if (needsMFA) return <Navigate to="/mfa-verify" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 // Main App Component
+// Redirecionamento de pouso inicial com base em permissões
+const RootRedirect = () => {
+  const { user, checkModuleAccess } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+
+  // Se tem acesso ao dashboard, pousa lá
+  if (checkModuleAccess('dashboard')) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Pouso padrão (Notificações) para quem não tem dashboard
+  return <Navigate to="/notifications" replace />;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -280,12 +348,21 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <BrowserRouter>
+                  <ScrollToTop />
                   <Routes>
                     {/* Public Routes */}
                     <Route path="/login" element={
                       <PublicRoute>
                         <LoginPage />
                       </PublicRoute>
+                    } />
+                    <Route path="/reset-password" element={
+                      <ResetPasswordPage />
+                    } />
+                    <Route path="/mfa-verify" element={
+                      <ProtectedRoute>
+                        <MfaVerifyPage />
+                      </ProtectedRoute>
                     } />
                     <Route path="/privacy-portal" element={
                       <Suspense fallback={<PageLoader />}>
@@ -303,16 +380,55 @@ const App = () => (
                       </Suspense>
                     } />
 
+                    {/* Vendor Portal Routes */}
+                    <Route path="/vendor-portal/login" element={
+                      <Suspense fallback={<PageLoader />}>
+                        <VendorLogin />
+                      </Suspense>
+                    } />
+                    <Route path="/vendor-portal/reset-password" element={
+                      <ResetPasswordPage />
+                    } />
 
+                    <Route path="/vendor-portal" element={
+                      <ProtectedVendorRoute>
+                        <Suspense fallback={<PageLoader />}>
+                          <VendorLayout />
+                        </Suspense>
+                      </ProtectedVendorRoute>
+                    }>
+                      <Route index element={<VendorDashboard />} />
+                      <Route path="assessments" element={<VendorAssessmentsList />} />
+                      <Route path="assessment/:id" element={<VendorAssessmentFill />} />
+                      <Route path="action-plans" element={<VendorActionPlans />} />
+                      <Route path="messages" element={<VendorMessages />} />
+                    </Route>
+
+                    {/* Risk Portal Routes (SSO - same login as main app) */}
+                    <Route path="/risk-portal" element={
+                      <Suspense fallback={<PageLoader />}>
+                        <RiskPortalLayout />
+                      </Suspense>
+                    }>
+                      <Route index element={<RiskPortalDashboard />} />
+                      <Route path="my-risks" element={<RiskPortalMyRisks />} />
+                      <Route path="risk/:id" element={<RiskPortalRiskDetail />} />
+                      <Route path="action-plans" element={<RiskPortalActionPlans />} />
+                    </Route>
 
                     {/* Protected Routes */}
                     <Route path="/" element={
                       <ProtectedRoute>
+                        <ImpersonationBanner />
                         <AppLayout />
                       </ProtectedRoute>
                     }>
-                      <Route index element={<Navigate to="/dashboard" replace />} />
-                      <Route path="dashboard" element={<DashboardPage />} />
+                      <Route index element={<RootRedirect />} />
+                      <Route path="dashboard" element={
+                        <ModuleGuard moduleKey="dashboard" redirectTo="/notifications">
+                          <DashboardPage />
+                        </ModuleGuard>
+                      } />
                       {/* Assessment Module Routes */}
                       <Route element={<ModuleGuard moduleKey="assessments"><Outlet /></ModuleGuard>}>
                         <Route path="assessments" element={
@@ -321,7 +437,9 @@ const App = () => (
                               <EnhancedAssessmentHub />
                             </Suspense>
                           </ModuleGuard>
-                        } />
+                        }>
+                          <Route index element={<AssessmentsListWorking />} />
+                        </Route>
                         <Route path="assessments/manage" element={
                           <Suspense fallback={<PageLoader />}>
                             <AssessmentCRUD />
@@ -375,7 +493,11 @@ const App = () => (
                             <AssessmentExecutionEngine />
                           </Suspense>
                         } />
-                        <Route path="assessments/list" element={<AssessmentsListWorking />} />
+                        <Route path="assessments/list" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <AssessmentsListWorking />
+                          </Suspense>
+                        } />
                         <Route path="assessments/questions" element={
                           <Suspense fallback={<PageLoader />}>
                             <QuestionsManagement />
@@ -726,13 +848,6 @@ const App = () => (
                           </Suspense>
                         </PlatformAdminRoute>
                       } />
-                      <Route path="admin/platform-migration" element={
-                        <PlatformAdminRoute>
-                          <Suspense fallback={<PageLoader />}>
-                            <PlatformAdminMigration />
-                          </Suspense>
-                        </PlatformAdminRoute>
-                      } />
                       {/* AI Manager - New modular structure */}
                       {/* AI Manager - New modular structure */}
                       <Route element={
@@ -787,54 +902,76 @@ const App = () => (
                           </Suspense>
                         </PlatformAdminRoute>
                       } />
-                      <Route path="debug-user" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <DebugUserInfo />
-                        </Suspense>
-                      } />
-                      <Route path="user-debug" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <UserDebugInfo />
-                        </Suspense>
-                      } />
-                      {/* Debug routes removed */}
+                      <Route element={<PlatformAdminRoute><Outlet /></PlatformAdminRoute>}>
+                        <Route path="debug-user" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <DebugUserInfo />
+                          </Suspense>
+                        } />
+                        <Route path="user-debug" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <UserDebugInfo />
+                          </Suspense>
+                        } />
+                        <Route path="auth-debug" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <AuthDebugComponent />
+                          </Suspense>
+                        } />
+                        <Route path="permissions-debug" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <UserPermissionsDebug />
+                          </Suspense>
+                        } />
+                        <Route path="ai-manager-test" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <AIManagerDirectTest />
+                          </Suspense>
+                        } />
+                      </Route>
                       <Route path="profile" element={
                         <Suspense fallback={<PageLoader />}>
                           <UserProfilePage />
                         </Suspense>
                       } />
-                      <Route path="settings" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <UserManagementPage />
-                        </Suspense>
-                      } />
-                      <Route path="settings/activity-logs" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <ActivityLogsPage />
-                        </Suspense>
-                      } />
-                      <Route path="settings/general" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <GeneralSettingsPage />
-                        </Suspense>
-                      } />
-                      <Route path="tenant-settings" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <TenantSettingsPage />
-                        </Suspense>
-                      } />
+                      <Route element={<ModuleGuard moduleKey="settings"><Outlet /></ModuleGuard>}>
+                        <Route path="settings" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <UserManagementPage />
+                          </Suspense>
+                        } />
+                        <Route path="settings/activity-logs" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <ActivityLogsPage />
+                          </Suspense>
+                        } />
+                        <Route path="settings/general" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <GeneralSettingsPage />
+                          </Suspense>
+                        } />
+                        <Route path="tenant-settings" element={
+                          <Suspense fallback={<PageLoader />}>
+                            <TenantSettingsPage />
+                          </Suspense>
+                        } />
+                      </Route>
 
 
 
                       <Route path="notifications" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <NotificationsPage />
-                        </Suspense>
+                        <ModuleGuard moduleKey="notifications">
+                          <Suspense fallback={<PageLoader />}>
+                            <NotificationsPage />
+                          </Suspense>
+                        </ModuleGuard>
                       } />
                       <Route path="help" element={
-                        <Suspense fallback={<PageLoader />}>
-                          <HelpPage />
-                        </Suspense>
+                        <ModuleGuard moduleKey="help">
+                          <Suspense fallback={<PageLoader />}>
+                            <HelpPage />
+                          </Suspense>
+                        </ModuleGuard>
                       } />
 
                       {/* Rotas de teste movidas para DENTRO da estrutura aninhada */}

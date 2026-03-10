@@ -1,0 +1,51 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  specify custom .env file path with { path: '/custom/path/.env' }
+Connected.
+
+=== 1. VIEWS REFERENCING risk_registration_action_plans ===
+View: vw_action_plans_unified | references 'description': true
+  -- DEFINITION SNIPPET --
+  Line 4:             ap.descricao AS description,
+  Line 31:             rap.activity_description AS description,
+  Line 62:             vap.description,
+  Line 91:             aap.descricao AS description,
+  Line 120:     u.description,
+
+=== 2. FUNCTIONS REFERENCING BOTH TERMS ===
+None found.
+
+=== 3. ALL TRIGGERS ON risk_registration_action_plans ===
+Trigger: update_risk_registration_action_plans_updated_at, Fn: update_updated_at, has 'description': false
+Trigger: RI_ConstraintTrigger_c_21432, Fn: RI_FKey_check_ins, has 'description': false
+Trigger: RI_ConstraintTrigger_c_21433, Fn: RI_FKey_check_upd, has 'description': false
+
+=== 4. POLICIES ON risk_registration_action_plans ===
+Policy: Users can manage risk_registration_action_plans from their tena | has 'description': false
+
+=== 5. TABLE TYPE CHECK ===
+  risk_registration_action_plans: BASE TABLE
+
+=== 6. ALL COLUMNS IN risk_registration_action_plans ===
+  id (uuid)
+  tenant_id (uuid)
+  risk_registration_id (uuid)
+  activity_name (character varying)
+  activity_description (text)
+  responsible_name (character varying)
+  responsible_email (character varying)
+  due_date (date)
+  priority (character varying)
+  status (character varying)
+  created_by (uuid)
+  created_at (timestamp with time zone)
+  updated_at (timestamp with time zone)
+  stakeholder_notes (text)
+  evidence_url (text)
+  evidence_name (text)
+  analyst_validation_status (character varying)
+  analyst_notes (text)
+  metadados (jsonb)
+
+=== 7. ALL SCHEMAS WITH risk_registration_action_plans ===
+  schema=public, type=BASE TABLE
+
+Done.

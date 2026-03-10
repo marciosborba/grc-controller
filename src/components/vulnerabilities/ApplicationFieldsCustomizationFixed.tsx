@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Settings,
   ArrowLeft,
   Plus,
@@ -108,7 +108,7 @@ export default function ApplicationFieldsCustomizationFixed() {
   const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingField, setEditingField] = useState<ApplicationCustomField | null>(null);
-  
+
   const [fieldForm, setFieldForm] = useState({
     name: '',
     label: '',
@@ -144,7 +144,7 @@ export default function ApplicationFieldsCustomizationFixed() {
     };
 
     if (editingField) {
-      setCustomFields(prev => prev.map(field => 
+      setCustomFields(prev => prev.map(field =>
         field.id === editingField.id ? { ...newField, id: editingField.id } : field
       ));
     } else {
@@ -205,33 +205,34 @@ export default function ApplicationFieldsCustomizationFixed() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/vulnerabilities/applications')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-col gap-2">
+        {/* Row 1: Back + Title */}
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:w-auto sm:px-3 flex-shrink-0" onClick={() => navigate('/vulnerabilities/applications')}>
+            <ArrowLeft className="h-4 w-4" />
+            <span className="hidden sm:inline ml-1">Back</span>
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Layers className="h-8 w-8 text-primary" />
-              Application Fields Customization
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-xl font-bold flex items-center gap-1.5 truncate">
+              <Layers className="h-5 w-5 text-primary flex-shrink-0" />
+              <span className="truncate">App Fields Customization</span>
             </h1>
-            <p className="text-muted-foreground">
-              Configure custom fields for applications
-            </p>
+            <p className="text-xs text-muted-foreground">Configure custom fields for applications</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowTemplateDialog(true)}>
-            <Download className="h-4 w-4 mr-2" />
+        {/* Row 2: Action Buttons */}
+        <div className="flex gap-1.5">
+          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => setShowTemplateDialog(true)}>
+            <Download className="h-3.5 w-3.5 mr-1" />
             Templates
           </Button>
-          <Button onClick={() => {
+          <Button size="sm" className="flex-1 h-8 text-xs" onClick={() => {
             resetFieldForm();
             setShowFieldDialog(true);
           }}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-3.5 w-3.5 mr-1" />
             New Field
           </Button>
         </div>
@@ -240,7 +241,7 @@ export default function ApplicationFieldsCustomizationFixed() {
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Restricted Access:</strong> Only tenant administrators can customize application fields. 
+          <strong>Restricted Access:</strong> Only tenant administrators can customize application fields.
           Changes will affect all users in the organization.
         </AlertDescription>
       </Alert>
@@ -253,13 +254,10 @@ export default function ApplicationFieldsCustomizationFixed() {
 
         <TabsContent value="fields" className="space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Application Custom Fields ({customFields.length})</CardTitle>
-                  <CardDescription>
-                    Manage custom fields for applications
-                  </CardDescription>
+                  <CardTitle className="text-sm font-semibold">Custom Fields ({customFields.length})</CardTitle>
                 </div>
               </div>
             </CardHeader>
@@ -344,7 +342,7 @@ export default function ApplicationFieldsCustomizationFixed() {
       </Tabs>
 
       <Dialog open={showFieldDialog} onOpenChange={setShowFieldDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-full max-w-lg sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
               {editingField ? 'Edit Field' : 'New Custom Field'}
@@ -355,7 +353,7 @@ export default function ApplicationFieldsCustomizationFixed() {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="field-name">Field Name *</Label>
                 <Input
@@ -436,7 +434,7 @@ export default function ApplicationFieldsCustomizationFixed() {
       </Dialog>
 
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="w-full max-w-lg sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Application Field Templates</DialogTitle>
             <DialogDescription>

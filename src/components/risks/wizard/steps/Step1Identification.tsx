@@ -12,6 +12,8 @@ import { Target, Info, Calendar, Building, Tag, AlertTriangle, Library, Lightbul
 import { RiskLibraryIntegrated } from '../../shared/RiskLibraryIntegrated';
 import type { RiskTemplate } from '@/types/riskTemplate';
 import { useToast } from '@/hooks/use-toast';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
 
 interface Step1Props {
   data: any;
@@ -76,9 +78,9 @@ export const Step1Identification: React.FC<Step1Props> = ({
 }) => {
   const [showRiskLibrary, setShowRiskLibrary] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<RiskTemplate | null>(
-    data.template_id ? { 
-      id: data.template_id, 
-      name: data.risk_title, 
+    data.template_id ? {
+      id: data.template_id,
+      name: data.risk_title,
       description: data.risk_description,
       category: data.risk_category,
       methodology: data.template_methodology,
@@ -88,9 +90,24 @@ export const Step1Identification: React.FC<Step1Props> = ({
   );
   const { toast } = useToast();
 
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('risk_assessment', data.metadata?.custom_fields || {});
+
+  // Update metadata when customFieldValues changes
+  React.useEffect(() => {
+    // Only update if there are custom fields
+    if (Object.keys(customFieldValues).length > 0) {
+      updateData({
+        metadata: {
+          ...(data.metadata || {}),
+          custom_fields: customFieldValues
+        }
+      });
+    }
+  }, [customFieldValues]);
+
   const handleTemplateSelect = (template: RiskTemplate) => {
     setSelectedTemplate(template);
-    
+
     // Mapear dados do template para os campos do formulário
     const templateData = {
       risk_title: template.name,
@@ -104,10 +121,10 @@ export const Step1Identification: React.FC<Step1Props> = ({
       template_probability: template.probability,
       template_impact: template.impact
     };
-    
+
     updateData(templateData);
     setShowRiskLibrary(false);
-    
+
     toast({
       title: '📚 Template Aplicado',
       description: `Risco "${template.name}" foi carregado da biblioteca como base para este registro.`,
@@ -126,7 +143,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
       template_probability: null,
       template_impact: null
     });
-    
+
     toast({
       title: '🗑️ Template Removido',
       description: 'Os dados do template foram limpos. Você pode preencher manualmente.',
@@ -159,7 +176,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              <strong>Etapa 1 de 7:</strong> Defina claramente o risco, sua categoria e origem. 
+              <strong>Etapa 1 de 7:</strong> Defina claramente o risco, sua categoria e origem.
               Essas informações servirão de base para todas as análises subsequentes.
             </AlertDescription>
           </Alert>
@@ -219,11 +236,11 @@ export const Step1Identification: React.FC<Step1Props> = ({
                   </Button>
                 </div>
               </div>
-              
+
               <Alert>
                 <Lightbulb className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Template Aplicado:</strong> Os campos abaixo foram preenchidos com base no template selecionado. 
+                  <strong>Template Aplicado:</strong> Os campos abaixo foram preenchidos com base no template selecionado.
                   Você pode modificar qualquer informação conforme necessário.
                 </AlertDescription>
               </Alert>
@@ -257,7 +274,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
                   </DialogContent>
                 </Dialog>
               </div>
-              
+
               <div className="text-center">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -287,7 +304,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
             )}
           </CardTitle>
           <CardDescription>
-            {selectedTemplate 
+            {selectedTemplate
               ? 'Revise e ajuste as informações carregadas do template conforme necessário.'
               : 'Identifique e descreva claramente o risco identificado.'}
           </CardDescription>
@@ -314,7 +331,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
                 className={`mt-1 ${selectedTemplate ? 'border-purple-200 bg-purple-50/50' : ''}`}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                {selectedTemplate 
+                {selectedTemplate
                   ? "Você pode modificar o título carregado do template conforme necessário."
                   : "Descreva o risco de forma clara e concisa"}
               </p>
@@ -332,8 +349,8 @@ export const Step1Identification: React.FC<Step1Props> = ({
                 )}
                 {isRequired('risk_category') && <span className="text-red-500">*</span>}
               </Label>
-              <Select 
-                value={data.risk_category || ''} 
+              <Select
+                value={data.risk_category || ''}
                 onValueChange={(value) => handleInputChange('risk_category', value)}
               >
                 <SelectTrigger className={`mt-1 ${selectedTemplate ? 'border-purple-200 bg-purple-50/50' : ''}`}>
@@ -357,8 +374,8 @@ export const Step1Identification: React.FC<Step1Props> = ({
                 <AlertTriangle className="h-4 w-4" />
                 Fonte de Identificação
               </Label>
-              <Select 
-                value={data.risk_source || ''} 
+              <Select
+                value={data.risk_source || ''}
                 onValueChange={(value) => handleInputChange('risk_source', value)}
               >
                 <SelectTrigger className={`mt-1 ${data.risk_source === 'risk_library' ? 'border-purple-200 bg-purple-50/50' : ''}`}>
@@ -395,8 +412,8 @@ export const Step1Identification: React.FC<Step1Props> = ({
                 <Building className="h-4 w-4" />
                 Área de Negócio Afetada
               </Label>
-              <Select 
-                value={data.business_area || ''} 
+              <Select
+                value={data.business_area || ''}
                 onValueChange={(value) => handleInputChange('business_area', value)}
               >
                 <SelectTrigger className="mt-1">
@@ -435,7 +452,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
             />
             <div className="flex items-center justify-between mt-1">
               <p className="text-xs text-muted-foreground">
-                {selectedTemplate 
+                {selectedTemplate
                   ? "Você pode ajustar a descrição do template para adequar ao contexto específico."
                   : "Inclua contexto, causas potenciais e possíveis impactos"}
               </p>
@@ -468,7 +485,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
                 <li>• Relacione com objetivos estratégicos</li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold text-sm mb-2">⚠️ Evite</h4>
               <ul className="text-sm text-muted-foreground space-y-1">
@@ -483,8 +500,8 @@ export const Step1Identification: React.FC<Step1Props> = ({
 
           <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
             <p className="text-sm">
-              <strong>Lembre-se:</strong> Um risco bem identificado é a base para uma análise 
-              eficaz e um tratamento adequado. Use a biblioteca de riscos para acelerar o processo 
+              <strong>Lembre-se:</strong> Um risco bem identificado é a base para uma análise
+              eficaz e um tratamento adequado. Use a biblioteca de riscos para acelerar o processo
               com templates testados e aprovados.
             </p>
           </div>
@@ -496,11 +513,10 @@ export const Step1Identification: React.FC<Step1Props> = ({
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`w-3 h-3 rounded-full ${
-                data.risk_title && data.risk_description && data.risk_category 
-                  ? 'bg-green-500' 
+              <div className={`w-3 h-3 rounded-full ${data.risk_title && data.risk_description && data.risk_category
+                  ? 'bg-green-500'
                   : 'bg-yellow-500'
-              }`} />
+                }`} />
               <span className="text-sm font-medium">
                 Status da Etapa 1: Identificação
               </span>
@@ -515,7 +531,7 @@ export const Step1Identification: React.FC<Step1Props> = ({
               {[data.risk_title, data.risk_description, data.risk_category].filter(Boolean).length}/3 campos obrigatórios
             </div>
           </div>
-          
+
           {(!data.risk_title || !data.risk_description || !data.risk_category) && (
             <div className="mt-3 text-sm text-amber-600">
               <AlertTriangle className="h-4 w-4 inline mr-2" />

@@ -15,7 +15,7 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,9 +37,18 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filtrar políticas que precisam de revisão
-  const policiesForReview = policies.filter(p => 
+  const policiesForReview = policies.filter(p =>
     p.status === 'draft' || p.status === 'under_review' || p.workflow_stage === 'review'
   );
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
+  const totalPages = Math.ceil(policiesForReview.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, policiesForReview.length);
+  const currentPolicies = policiesForReview.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleReviewAction = async (policyId: string, action: 'approve' | 'reject' | 'request_changes') => {
     if (!reviewComment.trim() && action !== 'approve') {
@@ -53,9 +62,9 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
 
     setIsSubmitting(true);
     try {
-      const newStatus = action === 'approve' ? 'approved' : 
-                       action === 'reject' ? 'rejected' : 'draft';
-      
+      const newStatus = action === 'approve' ? 'approved' :
+        action === 'reject' ? 'rejected' : 'draft';
+
       const { error } = await supabase
         .from('policies')
         .update({
@@ -69,11 +78,11 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
       if (error) throw error;
 
       // Adicionar comentário de revisão (implementar tabela de comentários futuramente)
-      
+
       toast({
         title: "Revisão realizada",
-        description: `Política ${action === 'approve' ? 'aprovada' : 
-                                action === 'reject' ? 'rejeitada' : 'retornada'} com sucesso`,
+        description: `Política ${action === 'approve' ? 'aprovada' :
+          action === 'reject' ? 'rejeitada' : 'retornada'} com sucesso`,
       });
 
       setReviewComment('');
@@ -134,15 +143,15 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Revisão de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Revisão de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             {policiesForReview.length} política(s) aguardando revisão
           </p>
         </div>
-        
-        <div className="flex items-center space-x-2">
+
+        <div className="flex items-center">
           <Badge variant="outline" className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
             Pendentes: {policiesForReview.length}
@@ -150,17 +159,16 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Lista de políticas para revisão */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Políticas Pendentes</h3>
-          
-          {policiesForReview.map((policy) => (
-            <Card 
-              key={policy.id} 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
-              }`}
+
+          {currentPolicies.map((policy) => (
+            <Card
+              key={policy.id}
+              className={`cursor-pointer transition-all hover:shadow-md ${selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
+                }`}
               onClick={() => setSelectedPolicy(policy)}
             >
               <CardHeader className="pb-3">
@@ -174,37 +182,77 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                   {getStatusBadge(policy.status)}
                 </div>
               </CardHeader>
-              
+
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">Categoria:</span>
-                      <span>{policy.category}</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Categoria:</span>
+                    <span className="truncate max-w-[100px]">{policy.category}</span>
                   </div>
-                  
+
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+
                   {policy.priority && (
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={`text-xs ${getPriorityColor(policy.priority)}`}
                     >
                       {policy.priority === 'high' ? 'Alta' :
-                       policy.priority === 'medium' ? 'Média' : 'Baixa'}
+                        policy.priority === 'medium' ? 'Média' : 'Baixa'}
                     </Badge>
                   )}
                 </div>
               </CardContent>
             </Card>
           ))}
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
+              <span className="text-sm text-muted-foreground">
+                Mostrando {startIndex + 1}–{endIndex} de {policiesForReview.length} políticas
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-9 w-9"
+                >
+                  &lt;
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-9 w-9"
+                >
+                  &gt;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Painel de revisão */}
@@ -218,7 +266,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                     Revisão: {selectedPolicy.title}
                   </CardTitle>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   {/* Informações da política */}
                   <div className="space-y-3">
@@ -228,7 +276,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                         {selectedPolicy.description || 'Sem descrição'}
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium">Categoria</label>
@@ -239,7 +287,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                         <p className="text-sm text-muted-foreground">{selectedPolicy.version}</p>
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="text-sm font-medium">Status Atual</label>
                       <div className="mt-1">
@@ -270,7 +318,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Aprovar para Próxima Etapa
                     </Button>
-                    
+
                     <Button
                       variant="outline"
                       onClick={() => handleReviewAction(selectedPolicy.id, 'request_changes')}
@@ -280,7 +328,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                       <AlertCircle className="h-4 w-4 mr-2" />
                       Solicitar Alterações
                     </Button>
-                    
+
                     <Button
                       variant="destructive"
                       onClick={() => handleReviewAction(selectedPolicy.id, 'reject')}
@@ -303,7 +351,7 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                       Sugestões Alex Policy
                     </CardTitle>
                   </CardHeader>
-                  
+
                   <CardContent>
                     <div className="space-y-3">
                       <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
@@ -311,13 +359,13 @@ const PolicyReview: React.FC<PolicyReviewProps> = ({
                           ✅ <strong>Estrutura:</strong> A política segue a estrutura padrão recomendada.
                         </p>
                       </div>
-                      
+
                       <div className="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                         <p className="text-sm text-yellow-800">
                           ⚠️ <strong>Compliance:</strong> Considere adicionar referências às normas ISO 27001.
                         </p>
                       </div>
-                      
+
                       <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                         <p className="text-sm text-green-800">
                           💡 <strong>Sugestão:</strong> Adicione exemplos práticos para melhor compreensão.

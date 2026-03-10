@@ -1,0 +1,48 @@
+Triggers on action_plans:
+tr_action_plans_updated_at => CREATE TRIGGER tr_action_plans_updated_at BEFORE UPDATE ON public.action_plans FOR EACH ROW EXECUTE FUNCTION update_action_plans_updated_at()
+RI_ConstraintTrigger_a_19125 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19125" AFTER DELETE ON public.action_plans FROM action_plan_activities NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_cascade_del"()
+RI_ConstraintTrigger_a_19126 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19126" AFTER UPDATE ON public.action_plans FROM action_plan_activities NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_noaction_upd"()
+RI_ConstraintTrigger_a_19175 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19175" AFTER DELETE ON public.action_plans FROM action_plan_comments NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_cascade_del"()
+RI_ConstraintTrigger_a_19176 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19176" AFTER UPDATE ON public.action_plans FROM action_plan_comments NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_noaction_upd"()
+RI_ConstraintTrigger_a_19205 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19205" AFTER DELETE ON public.action_plans FROM action_plan_history NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_cascade_del"()
+RI_ConstraintTrigger_a_19206 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19206" AFTER UPDATE ON public.action_plans FROM action_plan_history NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_noaction_upd"()
+RI_ConstraintTrigger_a_19225 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19225" AFTER DELETE ON public.action_plans FROM action_plan_notifications NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_cascade_del"()
+RI_ConstraintTrigger_a_19226 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_a_19226" AFTER UPDATE ON public.action_plans FROM action_plan_notifications NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_noaction_upd"()
+RI_ConstraintTrigger_c_19267 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19267" AFTER INSERT ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19268 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19268" AFTER UPDATE ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+RI_ConstraintTrigger_c_19272 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19272" AFTER INSERT ON public.action_plans FROM action_plan_categories NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19273 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19273" AFTER UPDATE ON public.action_plans FROM action_plan_categories NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+RI_ConstraintTrigger_c_19277 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19277" AFTER INSERT ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19278 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19278" AFTER UPDATE ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+RI_ConstraintTrigger_c_19282 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19282" AFTER INSERT ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19283 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19283" AFTER UPDATE ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+RI_ConstraintTrigger_c_19287 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19287" AFTER INSERT ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19288 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19288" AFTER UPDATE ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+RI_ConstraintTrigger_c_19292 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19292" AFTER INSERT ON public.action_plans FROM tenants NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19293 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19293" AFTER UPDATE ON public.action_plans FROM tenants NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+RI_ConstraintTrigger_c_19297 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19297" AFTER INSERT ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_ins"()
+RI_ConstraintTrigger_c_19298 => CREATE CONSTRAINT TRIGGER "RI_ConstraintTrigger_c_19298" AFTER UPDATE ON public.action_plans FROM profiles NOT DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION "RI_FKey_check_upd"()
+
+RPC body snippet:
+INSERT INTO action_plans (
+                tenant_id, 
+                category_id, 
+                titulo, 
+                descricao, 
+                prioridade, 
+                data_limite, 
+                status,
+                related_entity_type,
+                related_entity_id
+            ) VALUES (
+                v_assessment.tenant_id,
+                v_category_id,
+                v_plan->>'title',
+                v_plan->>'description',
+                v_plan->>'priority',
+                (v_plan->>'dueDate')::timestamp,
+                'aguardando_validacao',
+                'vendor_assessment',
+                v_assessment.id
+            );
+        

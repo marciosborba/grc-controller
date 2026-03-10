@@ -114,13 +114,15 @@ export interface ExtendedUser {
   is_online: boolean;
 }
 
-export type AppRole = 
-  | 'admin' 
-  | 'ciso' 
-  | 'risk_manager' 
-  | 'compliance_officer' 
-  | 'auditor' 
-  | 'user';
+export type AppRole =
+  | 'admin'
+  | 'ciso'
+  | 'risk_manager'
+  | 'compliance_officer'
+  | 'auditor'
+  | 'user'
+  | 'guest'
+  | 'vendor';
 
 export interface UserManagementFilters {
   search?: string;
@@ -253,7 +255,9 @@ export const USER_ROLES: Record<AppRole, string> = {
   risk_manager: 'Gerente de Riscos',
   compliance_officer: 'Oficial de Compliance',
   auditor: 'Auditor',
-  user: 'Usuário'
+  user: 'Usuário',
+  guest: 'Convidado',
+  vendor: 'Fornecedor'
 };
 
 export const USER_STATUS = {

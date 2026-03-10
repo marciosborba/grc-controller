@@ -42,6 +42,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RiskLevelDisplay } from '@/components/ui/risk-level-display';
 import { AuditProjectCard } from './AuditProjectCard';
+import { NewAuditProjectDialog } from './NewAuditProjectDialog';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -110,7 +111,8 @@ export function AuditDashboardNew() {
     priorityFilter,
     setPriorityFilter,
     searchTerm,
-    setSearchTerm
+    setSearchTerm,
+    refresh // Get the refresh function to reload the list after creation
   } = useAuditIntegration();
 
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -131,8 +133,8 @@ export function AuditDashboardNew() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Auditoria Interna</h1>
-          <p className="text-muted-foreground">Gestão Integrada de Projetos de Auditoria</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Auditoria Interna</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Gestão Integrada de Projetos de Auditoria</p>
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto">
@@ -159,38 +161,35 @@ export function AuditDashboardNew() {
             </Select>
           </div>
 
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Projeto
-          </Button>
+          <NewAuditProjectDialog onProjectCreated={refresh} />
         </div>
       </div>
 
       {/* Métricas Principais */}
       {/* Premium Storytelling Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
 
         {/* Card 1: Dynamic Narrative Card - Execution Status */}
         <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
           <div className={`absolute top-0 right-0 p-3 opacity-10`}>
-            {(metrics?.apontamentos_criticos || 0) > 0 ? <AlertTriangle className="h-24 w-24" /> :
-              (metrics?.projetos_atrasados || 0) > 0 ? <Clock className="h-24 w-24" /> : <CheckCircle className="h-24 w-24" />}
+            {(metrics?.apontamentos_criticos || 0) > 0 ? <AlertTriangle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" /> :
+              (metrics?.projetos_atrasados || 0) > 0 ? <Clock className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" /> : <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24" />}
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className={`text-lg font-bold flex items-center gap-2 ${(metrics?.apontamentos_criticos || 0) > 0 ? 'text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
-              {(metrics?.apontamentos_criticos || 0) > 0 ? 'Pontos Críticos' :
-                (metrics?.projetos_atrasados || 0) > 0 ? 'Atrasos no Plano' : 'Execução Normal'}
+          <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6">
+            <CardTitle className={`text-xs sm:text-sm md:text-lg font-bold flex items-center gap-1.5 sm:gap-2 leading-tight ${(metrics?.apontamentos_criticos || 0) > 0 ? 'text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'text-orange-500' : 'text-emerald-500'}`}>
+              <span className="truncate">{(metrics?.apontamentos_criticos || 0) > 0 ? 'Pontos Críticos' :
+                (metrics?.projetos_atrasados || 0) > 0 ? 'Atrasos no Plano' : 'Execução Normal'}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+          <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-6 md:pb-6">
+            <p className="text-muted-foreground font-medium text-[9px] sm:text-xs md:text-sm leading-tight sm:leading-relaxed line-clamp-3 md:line-clamp-none">
               {(metrics?.apontamentos_criticos || 0) > 0
-                ? `${metrics?.apontamentos_criticos} apontamentos críticos detectados nos projetos ativos.`
+                ? `${metrics?.apontamentos_criticos} pontos críticos.`
                 : (metrics?.projetos_atrasados || 0) > 0
-                  ? 'Existem projetos com cronograma atrasado. Verifique os prazos.'
-                  : 'Todos os projetos de auditoria estão seguindo o cronograma previsto.'}
+                  ? 'Existem atrasos no plano.'
+                  : 'Projetos no cronograma.'}
             </p>
-            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${(metrics?.apontamentos_criticos || 0) > 0 ? 'bg-red-500/10 text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+            <div className={`mt-2 sm:mt-4 inline-flex items-center px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] md:text-xs font-medium ${(metrics?.apontamentos_criticos || 0) > 0 ? 'bg-red-500/10 text-red-500' : (metrics?.projetos_atrasados || 0) > 0 ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
               {(metrics?.apontamentos_criticos || 0) > 0 ? 'Ação Requerida' : (metrics?.projetos_atrasados || 0) > 0 ? 'Atenção ao Prazo' : 'Em Conformidade'}
             </div>
           </CardContent>
@@ -199,16 +198,16 @@ export function AuditDashboardNew() {
         {/* Card 2: Total Projects (Reliable Data) */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Target className="h-24 w-24 text-blue-500" />
+            <Target className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-blue-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-              <Target className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-3 sm:p-4 md:p-6 flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10">
+            <div className="p-1.5 sm:p-2 md:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-xl md:rounded-2xl shrink-0">
+              <Target className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total de Projetos</p>
-              <h3 className="text-3xl font-bold text-foreground">{metrics?.total_projetos || 0}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
+            <div className="min-w-0">
+              <p className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full truncate leading-none mb-0.5 md:mb-1">Total de Projetos</p>
+              <h3 className="text-lg sm:text-xl md:text-3xl font-bold text-foreground leading-none">{metrics?.total_projetos || 0}</h3>
+              <p className="text-[7px] sm:text-[9px] md:text-xs text-muted-foreground mt-0.5 lg:mt-1 truncate">
                 {metrics?.projetos_concluidos || 0} concluídos
               </p>
             </div>
@@ -218,17 +217,17 @@ export function AuditDashboardNew() {
         {/* Card 3: Active Execution */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <PlayCircle className="h-24 w-24 text-purple-500" />
+            <PlayCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-purple-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-2xl">
-              <PlayCircle className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          <CardContent className="p-3 sm:p-4 md:p-6 flex items-center gap-2 sm:gap-3 md:gap-4 relative z-10">
+            <div className="p-1.5 sm:p-2 md:p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg sm:rounded-xl md:rounded-2xl shrink-0">
+              <PlayCircle className="h-4 w-4 sm:h-6 sm:w-6 md:h-8 md:w-8 text-purple-600 dark:text-purple-400" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Em Execução</p>
-              <h3 className="text-3xl font-bold text-foreground">{metrics?.projetos_ativos || 0}</h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Atividades em andamento
+            <div className="min-w-0">
+              <p className="text-[8px] sm:text-[10px] md:text-sm font-medium text-muted-foreground uppercase sm:normal-case tracking-wider sm:tracking-normal w-full truncate leading-none mb-0.5 md:mb-1">Em Execução</p>
+              <h3 className="text-lg sm:text-xl md:text-3xl font-bold text-foreground leading-none">{metrics?.projetos_ativos || 0}</h3>
+              <p className="text-[7px] sm:text-[9px] md:text-xs text-muted-foreground mt-0.5 lg:mt-1 truncate">
+                Atividades ativas
               </p>
             </div>
           </CardContent>
@@ -237,22 +236,22 @@ export function AuditDashboardNew() {
         {/* Card 4: Compliance Rate */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <CheckCircle className="h-24 w-24 text-green-500" />
+            <CheckCircle className="h-12 w-12 sm:h-16 sm:w-16 md:h-24 md:w-24 text-green-500" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-foreground">
+          <CardHeader className="pb-0.5 sm:pb-1 md:pb-2 px-3 sm:px-4 md:px-6 pt-3 sm:pt-4 md:pt-6 relative z-10">
+            <CardTitle className="text-xs sm:text-sm md:text-lg font-bold text-foreground leading-tight truncate">
               Taxa de Conclusão
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-green-600">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
-              <span className="text-sm text-muted-foreground">geral</span>
+          <CardContent className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-6 md:pb-6 relative z-10">
+            <div className="flex items-baseline gap-1.5 sm:gap-2">
+              <span className="text-lg sm:text-xl md:text-3xl font-bold text-green-600 leading-none">{Math.round(metrics?.taxa_conclusao || 0)}%</span>
+              <span className="text-[8px] sm:text-[10px] md:text-sm text-muted-foreground truncate">geral</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Percentual médio de avanço dos projetos.
+            <p className="text-[8px] sm:text-[9px] md:text-sm text-muted-foreground mt-0.5 sm:mt-1 md:mt-2 truncate">
+              Avanço médio dos projetos.
             </p>
-            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 sm:mt-3 md:mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
               <div className="bg-green-500 h-full rounded-full" style={{ width: `${Math.round(metrics?.taxa_conclusao || 0)}%` }}></div>
             </div>
           </CardContent>
@@ -279,8 +278,9 @@ export function AuditDashboardNew() {
                   p.prioridade === 'alta' ? 'Alto' :
                     p.prioridade === 'media' ? 'Médio' : 'Baixo'
               }))}
-              size="md"
-              responsive={true}
+              size="sm"
+              responsive={false}
+              className="overflow-x-auto pb-2"
             />
           </CardContent>
         </Card>
@@ -291,27 +291,27 @@ export function AuditDashboardNew() {
             <CardTitle>Filtros e Pesquisa</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar por título, código ou área..."
+                    placeholder="Buscar projeto..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 h-8 text-xs sm:text-sm"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap pb-1">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline">
-                      <Filter className="h-4 w-4 mr-2" />
-                      Filtros Avançados
+                    <Button variant="outline" size="sm" className="h-8 text-xs">
+                      <Filter className="h-3.5 w-3.5 mr-1.5" />
+                      Filtros
                       {(statusFilter !== 'all' || priorityFilter !== 'all') && (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+                        <Badge variant="secondary" className="ml-1.5 h-4 px-1 py-0 text-[9px]">
                           {(statusFilter !== 'all' ? 1 : 0) + (priorityFilter !== 'all' ? 1 : 0)}
                         </Badge>
                       )}
@@ -371,6 +371,7 @@ export function AuditDashboardNew() {
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'outline'}
                   size="sm"
+                  className="h-8 text-xs px-2.5"
                   onClick={() => setViewMode('grid')}
                 >
                   Grid
@@ -378,6 +379,7 @@ export function AuditDashboardNew() {
                 <Button
                   variant={viewMode === 'list' ? 'default' : 'outline'}
                   size="sm"
+                  className="h-8 text-xs px-2.5"
                   onClick={() => setViewMode('list')}
                 >
                   Lista
@@ -391,8 +393,8 @@ export function AuditDashboardNew() {
       {/* Lista de Projetos */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Projetos de Auditoria</h2>
-          <Badge variant="secondary">{totalItems} projetos encontrados</Badge>
+          <h2 className="text-base sm:text-lg font-semibold">Projetos de Auditoria</h2>
+          <Badge variant="secondary" className="text-xs">{totalItems} projetos</Badge>
         </div>
 
         {projects.length === 0 ? (
@@ -401,10 +403,15 @@ export function AuditDashboardNew() {
               <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
               <h3 className="mt-4 text-lg font-semibold">Nenhum projeto encontrado</h3>
               <p className="text-muted-foreground">Tente ajustar seus filtros ou crie um novo projeto.</p>
-              <Button className="mt-4">
-                <Plus className="h-4 w-4 mr-2" />
-                Criar Projeto
-              </Button>
+              <NewAuditProjectDialog
+                onProjectCreated={refresh}
+                trigger={
+                  <Button className="mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Projeto
+                  </Button>
+                }
+              />
             </CardContent>
           </Card>
         ) : (
@@ -424,37 +431,34 @@ export function AuditDashboardNew() {
 
       {/* Paginação */}
       {totalItems > 0 && (
-        <div className="flex items-center justify-between border-t border-border pt-4">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {((page - 1) * perPage) + 1} a {Math.min(page * perPage, totalItems)} de {totalItems} projetos
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-3 gap-2">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {((page - 1) * perPage) + 1}–{Math.min(page * perPage, totalItems)} de {totalItems} projetos
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
+              className="h-7 px-2 text-xs"
             >
-              <ChevronLeft className="h-4 w-4 mr-1" />
+              <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               Anterior
             </Button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let p = i + 1;
-                // Simple logic to show current page surroundings if totalPages > 5
-                // enhancing this would require a complex pagination component
-                // For now, simple logic: if page > 3, shift window
                 if (totalPages > 5 && page > 3) {
                   p = page - 3 + i;
                   if (p > totalPages) p = totalPages - (4 - i);
                 }
-
                 return (
                   <Button
                     key={p}
                     variant={page === p ? "default" : "outline"}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-7 w-7 text-xs"
                     onClick={() => setPage(p)}
                   >
                     {p}
@@ -467,9 +471,10 @@ export function AuditDashboardNew() {
               size="sm"
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
+              className="h-7 px-2 text-xs"
             >
               Próxima
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
             </Button>
           </div>
         </div>

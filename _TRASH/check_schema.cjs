@@ -1,27 +1,39 @@
-const DatabaseManager = require('./database-manager.cjs');
+const { Client } = require('pg');
 
-async function checkSchema() {
-    const dbManager = new DatabaseManager();
-    const connected = await dbManager.connect();
+const client = new Client({
+    connectionString: 'postgresql://postgres:Vo1agPUE4QGwlwqS@db.myxvxponlmulnjstbjwd.supabase.co:5432/postgres'
+});
 
-    if (!connected) {
-        console.error('Failed to connect to database');
-        return;
-    }
+async function main() {
+    await client.connect();
+
+    const query = `
+    SELECT column_name, data_type 
+    FROM information_schema.columns 
+    WHERE table_name = 'sistemas' AND column_name IN ('ip_address', 'edr_enabled', 'eol_date');
+    `;
 
     try {
-        const res = await dbManager.client.query(`
-            SELECT column_name, data_type 
-            FROM information_schema.columns 
-            WHERE table_name = 'assessment_questions';
+        const res = await client.query(query);
+        console.log("Current columns in DB:", res.rows);
+
+        // Ensure all are there
+        await client.query(`
+            ALTER TABLE public.sistemas 
+            ADD COLUMN IF NOT EXISTS ip_address VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS edr_enabled BOOLEAN DEFAULT false,
+            ADD COLUMN IF NOT EXISTS eol_date DATE;
         `);
-        console.log('Columns in assessment_questions:');
-        res.rows.forEach(row => console.log(`- ${row.column_name} (${row.data_type})`));
-    } catch (err) {
-        console.error('Error querying schema:', err);
+
+        console.log("Ensured columns exist.");
+
+        await client.query(`NOTIFY pgrst, 'reload schema';`);
+        console.log("Reloaded schema cache.");
+    } catch (error) {
+        console.error("Error:", error);
     } finally {
-        await dbManager.disconnect();
+        await client.end();
     }
 }
 
-checkSchema();
+main().catch(console.error);

@@ -1,0 +1,5 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  override existing env vars with { override: true }
+=== TRIGGERS ON RISK_REGISTRATION_ACTION_PLANS ===
+Trigger: update_risk_registration_action_plans_updated_at
+Body: CREATE TRIGGER update_risk_registration_action_plans_updated_at BEFORE UPDATE ON public.risk_registration_action_plans FOR EACH ROW EXECUTE FUNCTION update_updated_at()
+

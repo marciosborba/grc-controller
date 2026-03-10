@@ -51,6 +51,19 @@ export default function AssessmentExecutionEngine() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [saving, setSaving] = useState(false);
 
+    // Auto-close sidebar on mobile devices when component mounts
+    useEffect(() => {
+        const checkMobile = () => {
+            if (window.innerWidth < 768) {
+                setSidebarOpen(false);
+            }
+        };
+        checkMobile();
+        // Optional: listen for resize if needed
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     // Load Data
     useEffect(() => {
         if (!id) return;
@@ -263,150 +276,170 @@ export default function AssessmentExecutionEngine() {
     return (
         <div className="flex flex-col h-screen bg-background text-foreground">
             {/* Header */}
-            <header className="h-16 border-b flex items-center justify-between px-6 bg-card shrink-0 shadow-sm z-20">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')}>
+            <header className="h-16 border-b flex items-center justify-between px-3 sm:px-6 bg-card shrink-0 shadow-sm z-20">
+                <div className="flex items-center gap-2 sm:gap-4 flex-1 overflow-hidden">
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')} className="shrink-0">
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
-                    <div>
-                        <h1 className="font-semibold text-lg leading-none truncate max-w-[300px] text-foreground">{assessment.titulo}</h1>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] h-5">{framework?.nome}</Badge>
-                            <span>v{framework?.versao}</span>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="md:hidden shrink-0 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                    >
+                        <Menu className="h-4 w-4" />
+                    </Button>
+                    <div className="flex-1 min-w-0 ml-1 sm:ml-0">
+                        <h1 className="font-semibold text-base sm:text-lg leading-tight truncate sm:max-w-[300px] text-foreground">{assessment.titulo}</h1>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 sm:gap-2 truncate">
+                            <Badge variant="outline" className="text-[10px] h-5 truncate max-w-[80px] sm:max-w-none">{framework?.nome}</Badge>
+                            <span className="shrink-0">v{framework?.versao}</span>
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-6">
-                    <div className="flex flex-col items-end w-48 hidden sm:flex">
+                <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+                    <div className="flex flex-col items-end w-32 sm:w-48 hidden md:flex">
                         <div className="flex justify-between w-full text-xs mb-1">
                             <span className="text-muted-foreground">Progresso Geral</span>
                             <span className="font-medium text-foreground">{assessment.percentual_conclusao || 0}%</span>
                         </div>
                         <Progress value={assessment.percentual_conclusao || 0} className="h-2" />
                     </div>
-                    <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Finalizar Assessment
+                    <Button className="bg-green-600 hover:bg-green-700 text-white shadow-sm px-2 sm:px-4">
+                        <CheckCircle className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Finalizar Assessment</span>
                     </Button>
                 </div>
             </header>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Mobile sidebar overlay backdrop */}
+                {sidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/40 z-20 md:hidden"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                )}
                 {/* Sidebar */}
-                <aside className={cn("border-r bg-card/30 flex flex-col transition-all duration-300", sidebarOpen ? 'w-96' : 'w-0 overflow-hidden')}>
-                    <div className="p-4 border-b bg-card/50 backdrop-blur sticky top-0 z-10 flex justify-between items-center">
-                        <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                            <LayoutDashboard className="h-4 w-4" /> Navegação
-                        </h3>
-                        <div className="text-xs text-muted-foreground">
-                            {allQuestions.length} questões
+                <aside className={cn(
+                    "flex flex-col transition-all duration-300 z-30 bg-background md:bg-card/30 border-r shadow-2xl md:shadow-none",
+                    "fixed md:relative left-0 top-14 md:top-auto",
+                    "h-[calc(100svh-56px)] md:h-auto md:flex-1",
+                    sidebarOpen ? 'w-full sm:w-96 md:w-96' : 'w-0 overflow-hidden'
+                )}>
+                    <div className="p-4 border-b bg-card/50 backdrop-blur sticky top-0 z-10 flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <LayoutDashboard className="h-4 w-4" /> Navegação
+                            </h3>
                         </div>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted shrink-0" onClick={() => setSidebarOpen(false)}>
+                            <X className="h-5 w-5" />
+                        </Button>
                     </div>
-                    <ScrollArea className="flex-1">
-                        <div className="p-4 space-y-4 pb-20">
-                            {domains.map((dom, domIdx) => (
-                                <div key={dom.id} className="space-y-1">
-                                    <div className="font-semibold text-sm flex items-center gap-2 text-foreground/90 sticky top-0 bg-background/95 backdrop-blur py-2 z-10 border-b mb-2">
-                                        <div className="h-5 w-5 rounded bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
-                                            {domIdx + 1}
-                                        </div>
-                                        {dom.nome}
+                    <div className="overflow-y-auto flex-1 p-4 space-y-4 pb-20">
+                        {domains.map((dom, domIdx) => (
+                            <div key={dom.id} className="space-y-1">
+                                <div className="font-semibold text-sm flex items-center gap-2 text-foreground/90 sticky top-0 bg-background/95 backdrop-blur py-2 z-10 border-b mb-2">
+                                    <div className="h-5 w-5 rounded bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                                        {domIdx + 1}
                                     </div>
-                                    <div className="pl-2 space-y-2 border-l ml-2.5 border-border/40">
-                                        {dom.controls?.map(ctrl => (
-                                            <div key={ctrl.id} className="space-y-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const firstQ = ctrl.questions?.[0];
-                                                        if (firstQ) setActiveQuestionId(firstQ.id);
-                                                    }}
-                                                    className={cn(
-                                                        "w-full text-left group flex flex-col gap-1 p-2 rounded transition-all duration-200 border border-transparent",
-                                                        // Active state if ANY question in this control is active
-                                                        ctrl.questions?.some(q => activeQuestionId === q.id)
-                                                            ? "bg-primary/10 border-primary/20 shadow-sm"
-                                                            : "hover:bg-muted/50 hover:shadow-sm"
-                                                    )}
-                                                >
-                                                    {/* Control Header with aggregated status */}
-                                                    <div className="flex items-start gap-2 w-full">
-                                                        <div className="mt-0.5 shrink-0 w-4 flex justify-center">
-                                                            {(() => {
-                                                                const allAnswered = ctrl.questions?.length && ctrl.questions.every(q => !!responses[q.id]?.resposta);
-                                                                // Active indicator logic
-                                                                const isActive = ctrl.questions?.some(q => activeQuestionId === q.id);
-
-                                                                if (allAnswered) return <CheckCircle className="h-4 w-4 text-green-600" />;
-                                                                if (isActive) return <div className="h-2 w-2 rounded-full bg-primary mt-1" />;
-                                                                return <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 mt-1 opacity-50" />;
-                                                            })()}
-                                                        </div>
-                                                        <span className="font-mono text-[10px] px-1.5 py-0.5 bg-muted rounded border opacity-70 shrink-0 mt-0.5">{ctrl.codigo}</span>
-                                                        <span className={cn(
-                                                            "text-xs font-medium leading-snug break-words mt-0.5 text-left flex-1",
-                                                            ctrl.questions?.some(q => activeQuestionId === q.id) ? "text-primary" : "text-muted-foreground"
-                                                        )} title={ctrl.titulo}>{ctrl.titulo}</span>
-
-                                                        {/* Active Arrow Indicator */}
-                                                        {ctrl.questions?.some(q => activeQuestionId === q.id) && (
-                                                            <CornerDownRight className="h-3 w-3 text-primary opacity-50 shrink-0 mt-1" />
-                                                        )}
-                                                    </div>
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {dom.nome}
                                 </div>
-                            ))}
-                        </div>
-                    </ScrollArea>
+                                <div className="pl-2 space-y-2 border-l ml-2.5 border-border/40">
+                                    {dom.controls?.map(ctrl => (
+                                        <div key={ctrl.id} className="space-y-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const firstQ = ctrl.questions?.[0];
+                                                    if (firstQ) {
+                                                        setActiveQuestionId(firstQ.id);
+                                                        if (window.innerWidth < 768) setSidebarOpen(false);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "w-full text-left group flex flex-col gap-1 p-2 rounded transition-all duration-200 border border-transparent",
+                                                    // Active state if ANY question in this control is active
+                                                    ctrl.questions?.some(q => activeQuestionId === q.id)
+                                                        ? "bg-primary/10 border-primary/20 shadow-sm"
+                                                        : "hover:bg-muted/50 hover:shadow-sm"
+                                                )}
+                                            >
+                                                {/* Control Header with aggregated status */}
+                                                <div className="flex items-start gap-2 w-full">
+                                                    <div className="mt-0.5 shrink-0 w-4 flex justify-center">
+                                                        {(() => {
+                                                            const allAnswered = ctrl.questions?.length && ctrl.questions.every(q => !!responses[q.id]?.resposta);
+                                                            // Active indicator logic
+                                                            const isActive = ctrl.questions?.some(q => activeQuestionId === q.id);
+
+                                                            if (allAnswered) return <CheckCircle className="h-4 w-4 text-green-600" />;
+                                                            if (isActive) return <div className="h-2 w-2 rounded-full bg-primary mt-1" />;
+                                                            return <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/30 mt-1 opacity-50" />;
+                                                        })()}
+                                                    </div>
+                                                    <span className="font-mono text-[10px] px-1.5 py-0.5 bg-muted rounded border opacity-70 shrink-0 mt-0.5">{ctrl.codigo}</span>
+                                                    <span className={cn(
+                                                        "text-xs font-medium leading-snug break-words mt-0.5 text-left flex-1",
+                                                        ctrl.questions?.some(q => activeQuestionId === q.id) ? "text-primary" : "text-muted-foreground"
+                                                    )} title={ctrl.titulo}>{ctrl.titulo}</span>
+
+                                                    {/* Active Arrow Indicator */}
+                                                    {ctrl.questions?.some(q => activeQuestionId === q.id) && (
+                                                        <CornerDownRight className="h-3 w-3 text-primary opacity-50 shrink-0 mt-1" />
+                                                    )}
+                                                </div>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 flex flex-col min-w-0 bg-muted/10 relative overflow-hidden">
-                    <Button variant="ghost" size="sm" className={cn("absolute top-4 left-4 z-10 h-8 w-8 p-0 bg-background shadow-sm border opacity-0 hover:opacity-100 transition-opacity", !sidebarOpen && "left-4 opacity-100", sidebarOpen && "hidden")} onClick={() => setSidebarOpen(!sidebarOpen)}>
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                    <div className="flex-1 overflow-auto p-4 md:p-8">
-                        <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
+                <main className="flex-1 flex flex-col min-w-0 bg-muted/10 relative overflow-x-hidden overflow-y-auto">
+                    <div className="p-4 md:p-8">
+                        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
                             {/* Dashboard Header */}
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 sm:pb-6 border-b">
                                 <div>
-                                    <h2 className="text-3xl font-bold tracking-tight mb-2 text-foreground">{assessment.titulo}</h2>
-                                    <p className="text-muted-foreground text-lg max-w-2xl text-balance">{assessment.descricao || 'Execute sua avaliação de conformidade verificando os requisitos abaixo.'}</p>
+                                    <h2 className="text-xl sm:text-2xl font-bold tracking-tight mb-1 sm:mb-2 text-foreground leading-tight">{assessment.titulo}</h2>
+                                    <p className="text-muted-foreground text-xs sm:text-base max-w-2xl">{assessment.descricao || 'Execute sua avaliação de conformidade verificando os requisitos abaixo.'}</p>
                                 </div>
-                                <Badge className="text-sm px-4 py-1.5 shadow-sm uppercase tracking-wide" variant={assessment.status === 'concluido' ? 'default' : 'secondary'}>
+                                <Badge className="text-xs px-3 py-1 shadow-sm uppercase tracking-wide shrink-0" variant={assessment.status === 'concluido' ? 'default' : 'secondary'}>
                                     {assessment.status ? assessment.status.replace('_', ' ') : 'Planejado'}
                                 </Badge>
                             </div>
 
                             {/* Stats */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
                                 <Card className="bg-card/50 hover:bg-card transition-colors border-l-4 border-l-blue-500 shadow-sm">
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Framework Utilizado</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold tracking-tight">{framework?.nome}</div>
-                                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                    <CardHeader className="pb-1 px-3 pt-3 sm:px-6 sm:pt-6 sm:pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Framework</CardTitle></CardHeader>
+                                    <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+                                        <div className="text-sm sm:text-xl font-bold tracking-tight line-clamp-2">{framework?.nome || '—'}</div>
+                                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:flex items-center gap-1">
                                             <Shield className="h-3 w-3" />
                                             {framework?.tipo_framework} • v{framework?.versao}
                                         </p>
                                     </CardContent>
                                 </Card>
                                 <Card className="bg-card/50 hover:bg-card transition-colors border-l-4 border-l-orange-500 shadow-sm">
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Prazo de Entrega</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold tracking-tight">{assessment.data_fim_planejada ? new Date(assessment.data_fim_planejada).toLocaleDateString() : '—'}</div>
-                                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                    <CardHeader className="pb-1 px-3 pt-3 sm:px-6 sm:pt-6 sm:pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Prazo</CardTitle></CardHeader>
+                                    <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+                                        <div className="text-sm sm:text-xl font-bold tracking-tight">{assessment.data_fim_planejada ? new Date(assessment.data_fim_planejada).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}</div>
+                                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 hidden sm:flex items-center gap-1">
                                             <History className="h-3 w-3" />
                                             Planejado
                                         </p>
                                     </CardContent>
                                 </Card>
                                 <Card className="bg-card/50 hover:bg-card transition-colors border-l-4 border-l-green-500 shadow-sm">
-                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Conclusão</CardTitle></CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold tracking-tight">{assessment.percentual_conclusao || 0}%</div>
+                                    <CardHeader className="pb-1 px-3 pt-3 sm:px-6 sm:pt-6 sm:pb-2"><CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Conclusão</CardTitle></CardHeader>
+                                    <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+                                        <div className="text-sm sm:text-xl font-bold tracking-tight">{assessment.percentual_conclusao || 0}%</div>
                                         <Progress value={assessment.percentual_conclusao} className="mt-2 h-1.5 bg-green-100" />
                                     </CardContent>
                                 </Card>
@@ -451,198 +484,199 @@ export default function AssessmentExecutionEngine() {
             </div>
 
             {/* MAIN INTERACTION MODAL */}
-            {activeQuestionObj && (
-                <Dialog open={!!activeQuestionId} onOpenChange={(open) => !open && setActiveQuestionId(null)}>
-                    <DialogContent className="max-w-5xl w-[90vw] h-[90vh] max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden sm:rounded-xl border-border/60 shadow-2xl">
-                        {/* Modal Header - Professional Style */}
-                        <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-8 py-6 flex items-start justify-between shrink-0 sticky top-0 z-20">
-                            <div className="space-y-3 pr-8 flex-1">
-                                <div className="flex items-center gap-2.5 text-xs text-muted-foreground font-medium">
-                                    <span className="bg-primary/10 text-primary px-2.5 py-1 rounded-md border border-primary/10 transition-colors hover:bg-primary/20 cursor-default">
-                                        {activeQuestionObj.domain.nome}
-                                    </span>
-                                    <ChevronRight className="h-3.5 w-3.5 opacity-50" />
-                                    <span className="font-mono bg-muted px-2 py-0.5 rounded text-[11px]">{activeQuestionObj.control.codigo}</span>
+            {
+                activeQuestionObj && (
+                    <Dialog open={!!activeQuestionId} onOpenChange={(open) => !open && setActiveQuestionId(null)}>
+                        <DialogContent className="max-w-5xl w-full h-full max-h-none rounded-none sm:w-[90vw] sm:h-[90vh] sm:max-h-[900px] flex flex-col p-0 gap-0 overflow-hidden sm:rounded-xl border-0 sm:border border-border/60 shadow-none sm:shadow-2xl">
+                            {/* Modal Header - Professional Style */}
+                            <div className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:justify-between shrink-0 sticky top-0 z-20 gap-2 sm:gap-0">
+                                <div className="space-y-1.5 sm:pr-8 flex-1 w-full">
+                                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium flex-wrap">
+                                        <span className="bg-primary/10 text-primary px-2 py-0.5 rounded border border-primary/10 transition-colors hover:bg-primary/20 cursor-default">
+                                            {activeQuestionObj.domain.nome}
+                                        </span>
+                                        <ChevronRight className="h-3 w-3 opacity-50" />
+                                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[10px]">{activeQuestionObj.control.codigo}</span>
+                                    </div>
+                                    <DialogTitle className="text-base sm:text-xl font-bold leading-snug tracking-tight text-foreground/90">
+                                        {activeQuestionObj.question.pergunta}
+                                    </DialogTitle>
                                 </div>
-                                <DialogTitle className="text-2xl sm:text-3xl font-bold leading-tight tracking-tight text-foreground/90">
-                                    {activeQuestionObj.question.pergunta}
-                                </DialogTitle>
+                                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-2 shrink-0 sm:ml-4 border-t sm:border-0 pt-2 sm:pt-0">
+                                    <Badge variant="outline" className={cn(
+                                        "px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm",
+                                        activeQuestionObj.control.criticidade === 'critica' ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-900/20 dark:border-red-800' :
+                                            activeQuestionObj.control.criticidade === 'alta' ? 'border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800' :
+                                                'border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800'
+                                    )}>
+                                        {activeQuestionObj.control.criticidade}
+                                    </Badge>
+                                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+                                        Peso {activeQuestionObj.question.peso}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex flex-col items-end gap-3 shrink-0 ml-4">
-                                <Badge variant="outline" className={cn(
-                                    "px-3 py-1 text-xs font-semibold uppercase tracking-wider shadow-sm",
-                                    activeQuestionObj.control.criticidade === 'critica' ? 'border-red-200 bg-red-50 text-red-700 dark:bg-red-900/20 dark:border-red-800' :
-                                        activeQuestionObj.control.criticidade === 'alta' ? 'border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:border-orange-800' :
-                                            'border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:border-blue-800'
-                                )}>
-                                    {activeQuestionObj.control.criticidade}
-                                </Badge>
-                                <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium border-t pt-1 mt-1">
-                                    Peso {activeQuestionObj.question.peso}
-                                </span>
-                            </div>
-                        </div>
 
-                        {/* Modal Scrollable Content */}
-                        <ScrollArea className="flex-1">
-                            <div className="p-6 md:p-10 space-y-10 max-w-4xl mx-auto">
+                            {/* Modal Scrollable Content */}
+                            <ScrollArea className="flex-1">
+                                <div className="p-3 sm:p-5 space-y-4 max-w-4xl mx-auto">
 
-                                <div className="space-y-8">
-                                    <div className="border rounded-xl p-8 shadow-sm bg-card/50">
-                                        <Label className="text-lg font-semibold mb-6 flex items-center gap-2">
-                                            <MessageSquare className="h-5 w-5 text-primary" /> Sua Resposta
-                                            {(!['sim_nao', 'escala_1_5', 'escala_1_10', 'texto_livre'].includes(activeQuestionObj.question.tipo_resposta) && activeQuestionObj.question.tipo_resposta) &&
-                                                <Badge variant="outline" className="ml-auto text-xs font-mono">{activeQuestionObj.question.tipo_resposta}</Badge>
-                                            }
-                                        </Label>
+                                    <div className="space-y-3">
+                                        <div className="border rounded-lg p-3 sm:p-5 shadow-sm bg-card/50">
+                                            <Label className="text-sm font-semibold mb-3 flex items-center gap-2">
+                                                <MessageSquare className="h-4 w-4 text-primary" /> Sua Resposta
+                                                {(!['sim_nao', 'escala_1_5', 'escala_1_10', 'texto_livre'].includes(activeQuestionObj.question.tipo_resposta) && activeQuestionObj.question.tipo_resposta) &&
+                                                    <Badge variant="outline" className="ml-auto text-xs font-mono">{activeQuestionObj.question.tipo_resposta}</Badge>
+                                                }
+                                            </Label>
 
-                                        <RadioGroup
-                                            value={responses[activeQuestionObj.question.id]?.resposta?.toString() || ''}
-                                            onValueChange={(val) => handleResponseChange(activeQuestionObj.question.id, val)}
-                                            className="grid gap-4 sm:grid-cols-1"
-                                        >
-                                            {/* Standard conformidade check (sim_nao) or default fallback if undefined */}
-                                            {(['sim_nao'].includes(activeQuestionObj.question.tipo_resposta) || !activeQuestionObj.question.tipo_resposta) && (
-                                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                                    <div className={cn("flex items-center space-x-3 border-2 p-4 rounded-xl cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === 'sim' ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md" : "border-muted")}>
-                                                        <RadioGroupItem value="sim" id="sim" className="data-[state=checked]:border-green-600 data-[state=checked]:text-green-600" />
-                                                        <Label htmlFor="sim" className="cursor-pointer flex-1 font-medium">Conforme (Sim)</Label>
+                                            <RadioGroup
+                                                value={responses[activeQuestionObj.question.id]?.resposta?.toString() || ''}
+                                                onValueChange={(val) => handleResponseChange(activeQuestionObj.question.id, val)}
+                                                className="grid gap-4 sm:grid-cols-1"
+                                            >
+                                                {/* Standard conformidade check (sim_nao) or default fallback if undefined */}
+                                                {(['sim_nao'].includes(activeQuestionObj.question.tipo_resposta) || !activeQuestionObj.question.tipo_resposta) && (
+                                                    <div className="grid gap-2">
+                                                        <div className={cn("flex items-center space-x-3 border-2 p-2.5 rounded-lg cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === 'sim' ? "border-green-500 bg-green-50 dark:bg-green-900/20 shadow-md" : "border-muted")}>
+                                                            <RadioGroupItem value="sim" id="sim" className="data-[state=checked]:border-green-600 data-[state=checked]:text-green-600" />
+                                                            <Label htmlFor="sim" className="cursor-pointer flex-1 font-medium text-sm">Conforme (Sim)</Label>
+                                                        </div>
+                                                        <div className={cn("flex items-center space-x-3 border-2 p-2.5 rounded-lg cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === 'nao' ? "border-red-500 bg-red-50 dark:bg-red-900/20 shadow-md" : "border-muted")}>
+                                                            <RadioGroupItem value="nao" id="nao" className="data-[state=checked]:border-red-600 data-[state=checked]:text-red-600" />
+                                                            <Label htmlFor="nao" className="cursor-pointer flex-1 font-medium text-sm">Não Conforme</Label>
+                                                        </div>
+                                                        <div className={cn("flex items-center space-x-3 border-2 p-2.5 rounded-lg cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === 'na' ? "border-gray-500 bg-gray-50 dark:bg-gray-800/20 shadow-md" : "border-muted")}>
+                                                            <RadioGroupItem value="na" id="na" />
+                                                            <Label htmlFor="na" className="cursor-pointer flex-1 font-medium text-sm">N/A</Label>
+                                                        </div>
                                                     </div>
-                                                    <div className={cn("flex items-center space-x-3 border-2 p-4 rounded-xl cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === 'nao' ? "border-red-500 bg-red-50 dark:bg-red-900/20 shadow-md" : "border-muted")}>
-                                                        <RadioGroupItem value="nao" id="nao" className="data-[state=checked]:border-red-600 data-[state=checked]:text-red-600" />
-                                                        <Label htmlFor="nao" className="cursor-pointer flex-1 font-medium">Não Conforme</Label>
-                                                    </div>
-                                                    <div className={cn("flex items-center space-x-3 border-2 p-4 rounded-xl cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === 'na' ? "border-gray-500 bg-gray-50 dark:bg-gray-800/20 shadow-md" : "border-muted")}>
-                                                        <RadioGroupItem value="na" id="na" />
-                                                        <Label htmlFor="na" className="cursor-pointer flex-1 font-medium">N/A</Label>
-                                                    </div>
-                                                </div>
-                                            )}
+                                                )}
 
-                                            {/* Maturity Scales */}
-                                            {['escala_1_5', 'escala_1_10'].includes(activeQuestionObj.question.tipo_resposta) && (
-                                                <div className={cn("grid gap-3", activeQuestionObj.question.tipo_resposta === 'escala_1_10' ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-1 sm:grid-cols-3")}>
-                                                    {Array.from({ length: activeQuestionObj.question.tipo_resposta === 'escala_1_10' ? 10 : 5 }, (_, i) => i + 1).map(n => (
-                                                        <div key={n} className={cn("flex items-center space-x-3 border-2 p-3 rounded-xl cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === n.toString() ? "border-primary bg-primary/5 shadow-md" : "border-muted")}>
-                                                            <RadioGroupItem value={n.toString()} id={`scale-${n}`} />
-                                                            <Label htmlFor={`scale-${n}`} className="cursor-pointer flex-1 font-medium text-center">
-                                                                {n}
-                                                            </Label>
+                                                {/* Maturity Scales */}
+                                                {['escala_1_5', 'escala_1_10'].includes(activeQuestionObj.question.tipo_resposta) && (
+                                                    <div className={cn("grid gap-3", activeQuestionObj.question.tipo_resposta === 'escala_1_10' ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-1 sm:grid-cols-3")}>
+                                                        {Array.from({ length: activeQuestionObj.question.tipo_resposta === 'escala_1_10' ? 10 : 5 }, (_, i) => i + 1).map(n => (
+                                                            <div key={n} className={cn("flex items-center space-x-3 border-2 p-3 rounded-xl cursor-pointer transition-all hover:bg-accent hover:border-primary/50", responses[activeQuestionObj.question.id]?.resposta === n.toString() ? "border-primary bg-primary/5 shadow-md" : "border-muted")}>
+                                                                <RadioGroupItem value={n.toString()} id={`scale-${n}`} />
+                                                                <Label htmlFor={`scale-${n}`} className="cursor-pointer flex-1 font-medium text-center">
+                                                                    {n}
+                                                                </Label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Free Text */}
+                                                {activeQuestionObj.question.tipo_resposta === 'texto_livre' && (
+                                                    <div className="col-span-full">
+                                                        <Textarea
+                                                            placeholder="Descreva sua resposta detalhadamente..."
+                                                            className="min-h-[150px] resize-y text-base p-4"
+                                                            value={responses[activeQuestionObj.question.id]?.resposta || ''}
+                                                            onChange={e => handleResponseChange(activeQuestionObj.question.id, e.target.value)}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Fallback for unknown types (safe default to text) */}
+                                                {(!['sim_nao', 'escala_1_5', 'escala_1_10', 'texto_livre'].includes(activeQuestionObj.question.tipo_resposta) && activeQuestionObj.question.tipo_resposta) && (
+                                                    <div className="space-y-3">
+                                                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md text-sm text-yellow-600 dark:text-yellow-400">
+                                                            Modo de resposta genérico (Tipo: {activeQuestionObj.question.tipo_resposta})
+                                                        </div>
+                                                        <Textarea
+                                                            placeholder="Insira sua resposta..."
+                                                            className="min-h-[100px]"
+                                                            value={responses[activeQuestionObj.question.id]?.resposta || ''}
+                                                            onChange={e => handleResponseChange(activeQuestionObj.question.id, e.target.value)}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </RadioGroup>
+                                        </div>
+
+                                        {/* Additional Comments / Evidence */}
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <Label className="text-sm font-semibold flex items-center gap-2">
+                                                    <Paperclip className="h-4 w-4 text-primary" /> Evidências &amp; Anexos
+                                                </Label>
+                                                <label className="cursor-pointer inline-flex">
+                                                    <Input type="file" className="hidden" onChange={(e) => handleFileUpload(e, activeQuestionObj.question.id)} />
+                                                    <span className="flex items-center text-xs font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20">
+                                                        <Upload className="h-3.5 w-3.5 mr-1.5" />
+                                                        Adicionar Evidência
+                                                    </span>
+                                                </label>
+                                            </div>
+
+                                            {responses[activeQuestionObj.question.id]?.evidencias?.length > 0 ? (
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    {responses[activeQuestionObj.question.id].evidencias.map((ev: any, idx: number) => (
+                                                        <div key={idx} className="flex items-center justify-between p-3 bg-muted/40 border rounded-lg text-sm group hover:border-primary/40 transition-colors">
+                                                            <div className="flex items-center truncate gap-3">
+                                                                <div className="h-10 w-10 rounded-lg bg-background border flex items-center justify-center shrink-0 shadow-sm">
+                                                                    <FileText className="h-5 w-5 text-muted-foreground" />
+                                                                </div>
+                                                                <div className="flex flex-col truncate">
+                                                                    <a href={ev.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline truncate max-w-[200px] text-foreground">{ev.name}</a>
+                                                                    <span className="text-[10px] text-muted-foreground uppercase font-bold">{ev.type?.split('/')[1] || 'FILE'}</span>
+                                                                </div>
+                                                            </div>
+                                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4 text-muted-foreground hover:text-destructive" /></Button>
                                                         </div>
                                                     ))}
                                                 </div>
-                                            )}
-
-                                            {/* Free Text */}
-                                            {activeQuestionObj.question.tipo_resposta === 'texto_livre' && (
-                                                <div className="col-span-full">
-                                                    <Textarea
-                                                        placeholder="Descreva sua resposta detalhadamente..."
-                                                        className="min-h-[150px] resize-y text-base p-4"
-                                                        value={responses[activeQuestionObj.question.id]?.resposta || ''}
-                                                        onChange={e => handleResponseChange(activeQuestionObj.question.id, e.target.value)}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {/* Fallback for unknown types (safe default to text) */}
-                                            {(!['sim_nao', 'escala_1_5', 'escala_1_10', 'texto_livre'].includes(activeQuestionObj.question.tipo_resposta) && activeQuestionObj.question.tipo_resposta) && (
-                                                <div className="space-y-3">
-                                                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md text-sm text-yellow-600 dark:text-yellow-400">
-                                                        Modo de resposta genérico (Tipo: {activeQuestionObj.question.tipo_resposta})
+                                            ) : (
+                                                <div className="border-2 border-dashed rounded-lg p-5 text-center text-sm text-muted-foreground/60 hover:bg-muted/30 transition-colors flex flex-col items-center gap-2">
+                                                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                                                        <Upload className="h-4 w-4 opacity-40" />
                                                     </div>
-                                                    <Textarea
-                                                        placeholder="Insira sua resposta..."
-                                                        className="min-h-[100px]"
-                                                        value={responses[activeQuestionObj.question.id]?.resposta || ''}
-                                                        onChange={e => handleResponseChange(activeQuestionObj.question.id, e.target.value)}
-                                                    />
+                                                    <div>
+                                                        <span className="font-medium text-foreground text-xs">Clique para adicionar arquivos</span>
+                                                        <p className="text-[10px]">Documentos, imagens ou comprovantes</p>
+                                                    </div>
                                                 </div>
                                             )}
-                                        </RadioGroup>
-                                    </div>
-
-                                    {/* Additional Comments / Evidence */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <Label className="text-lg font-semibold flex items-center gap-2">
-                                                <Paperclip className="h-5 w-5 text-primary" /> Evidências & Anexos
-                                            </Label>
-                                            <label className="cursor-pointer inline-flex">
-                                                <Input type="file" className="hidden" onChange={(e) => handleFileUpload(e, activeQuestionObj.question.id)} />
-                                                <span className="flex items-center text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 px-4 py-2 rounded-lg hover:bg-primary/20">
-                                                    <Upload className="h-4 w-4 mr-2" />
-                                                    Adicionar Evidência
-                                                </span>
-                                            </label>
                                         </div>
-
-                                        {responses[activeQuestionObj.question.id]?.evidencias?.length > 0 ? (
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                {responses[activeQuestionObj.question.id].evidencias.map((ev: any, idx: number) => (
-                                                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/40 border rounded-lg text-sm group hover:border-primary/40 transition-colors">
-                                                        <div className="flex items-center truncate gap-3">
-                                                            <div className="h-10 w-10 rounded-lg bg-background border flex items-center justify-center shrink-0 shadow-sm">
-                                                                <FileText className="h-5 w-5 text-muted-foreground" />
-                                                            </div>
-                                                            <div className="flex flex-col truncate">
-                                                                <a href={ev.url} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline truncate max-w-[200px] text-foreground">{ev.name}</a>
-                                                                <span className="text-[10px] text-muted-foreground uppercase font-bold">{ev.type?.split('/')[1] || 'FILE'}</span>
-                                                            </div>
-                                                        </div>
-                                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"><X className="h-4 w-4 text-muted-foreground hover:text-destructive" /></Button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="border-2 border-dashed rounded-xl p-10 text-center text-sm text-muted-foreground/60 hover:bg-muted/30 transition-colors flex flex-col items-center gap-3">
-                                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                                                    <Upload className="h-6 w-6 opacity-40" />
-                                                </div>
-                                                <div>
-                                                    <span className="font-medium text-foreground">Clique para adicionar arquivos</span>
-                                                    <p className="text-xs">Documentos, imagens ou comprovantes</p>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
-                            </div>
-                        </ScrollArea>
+                            </ScrollArea>
 
-                        {/* Modal Footer */}
-                        <div className="border-t p-4 bg-muted/30 flex items-center justify-between shrink-0">
-                            <div className="flex gap-2">
+                            {/* Modal Footer */}
+                            <div className="border-t p-3 sm:p-4 bg-muted/30 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 shrink-0">
                                 <Button
                                     variant="outline"
                                     onClick={() => handleNavigation('prev')}
                                     disabled={!hasPrev}
-                                    className="gap-2 pl-4 pr-6"
+                                    className="w-full sm:w-auto gap-2 pl-4 pr-6"
                                 >
                                     <ArrowLeft className="h-4 w-4" /> Anterior
                                 </Button>
-                            </div>
 
-                            <div className="flex gap-4">
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => setActiveQuestionId(null)}
-                                >
-                                    Cancelar
-                                </Button>
-                                <Button
-                                    onClick={() => handleNavigation('next')}
-                                    disabled={saving}
-                                    className="gap-2 pl-6 pr-4 min-w-[140px]"
-                                >
-                                    {saving ? 'Salvando...' : (hasNext ? 'Salvar e Próxima' : 'Finalizar Assessment')}
-                                    {!saving && <ArrowRight className="h-4 w-4" />}
-                                </Button>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => setActiveQuestionId(null)}
+                                        className="w-full sm:w-auto"
+                                    >
+                                        Cancelar
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleNavigation('next')}
+                                        disabled={saving}
+                                        className="w-full sm:w-auto gap-2 sm:pl-6 sm:pr-4 min-w-[140px]"
+                                    >
+                                        {saving ? 'Salvando...' : (hasNext ? 'Salvar e Próxima' : 'Finalizar Assessment')}
+                                        {!saving && <ArrowRight className="h-4 w-4" />}
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    </DialogContent>
-                </Dialog>
-            )}
-        </div>
+                        </DialogContent>
+                    </Dialog>
+                )
+            }
+        </div >
     );
 }

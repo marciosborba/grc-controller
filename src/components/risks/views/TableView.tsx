@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
+import {
   Table2,
   ArrowUpDown,
   ArrowUp,
@@ -90,9 +90,9 @@ export const TableView: React.FC<TableViewProps> = ({
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         if (!risk.name.toLowerCase().includes(term) &&
-            !risk.description?.toLowerCase().includes(term) &&
-            !risk.category.toLowerCase().includes(term) &&
-            !risk.assignedTo?.toLowerCase().includes(term)) {
+          !risk.description?.toLowerCase().includes(term) &&
+          !risk.category.toLowerCase().includes(term) &&
+          !risk.assignedTo?.toLowerCase().includes(term)) {
           return false;
         }
       }
@@ -154,18 +154,18 @@ export const TableView: React.FC<TableViewProps> = ({
   const riskLevelStats = useMemo(() => {
     const levels = getRiskLevels();
     const stats: Record<string, number> = {};
-    
+
     // Inicializar stats com os níveis corretos
     levels.forEach(level => {
       stats[level] = 0;
     });
-    
+
     processedRisks.forEach(risk => {
       if (stats.hasOwnProperty(risk.riskLevel)) {
         stats[risk.riskLevel]++;
       }
     });
-    
+
     return stats;
   }, [processedRisks, isMatrix4x4, isMatrix5x5]);
 
@@ -189,19 +189,19 @@ export const TableView: React.FC<TableViewProps> = ({
       case 'Muito Alto':
       case 'Crítico':
         return 'border-red-500 bg-red-100 text-red-900 dark:border-red-400 dark:bg-red-950/30 dark:text-red-300';
-      
+
       case 'Alto':
         return 'border-orange-500 bg-orange-100 text-orange-900 dark:border-orange-400 dark:bg-orange-950/30 dark:text-orange-300';
-      
+
       case 'Médio':
         return 'border-yellow-500 bg-yellow-100 text-yellow-900 dark:border-yellow-400 dark:bg-yellow-950/30 dark:text-yellow-300';
-      
+
       case 'Baixo':
         return 'border-green-500 bg-green-100 text-green-900 dark:border-green-400 dark:bg-green-950/30 dark:text-green-300';
-      
+
       case 'Muito Baixo':
         return 'border-blue-500 bg-blue-100 text-blue-900 dark:border-blue-400 dark:bg-blue-950/30 dark:text-blue-300';
-      
+
       default:
         return 'border-gray-500 bg-gray-100 text-gray-900 dark:border-gray-400 dark:bg-gray-950/30 dark:text-gray-300';
     }
@@ -212,22 +212,22 @@ export const TableView: React.FC<TableViewProps> = ({
     switch (status) {
       case 'Identificado':
         return 'bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-700';
-      
+
       case 'Avaliado':
         return 'bg-purple-500 text-white border-purple-600 dark:bg-purple-600 dark:border-purple-700';
-      
+
       case 'Em Tratamento':
         return 'bg-indigo-500 text-white border-indigo-600 dark:bg-indigo-600 dark:border-indigo-700';
-      
+
       case 'Monitorado':
         return 'bg-teal-500 text-white border-teal-600 dark:bg-teal-600 dark:border-teal-700';
-      
+
       case 'Fechado':
         return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:border-gray-700';
-      
+
       case 'Reaberto':
         return 'bg-orange-500 text-white border-orange-600 dark:bg-orange-600 dark:border-orange-700';
-      
+
       default:
         return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:border-gray-700';
     }
@@ -238,37 +238,37 @@ export const TableView: React.FC<TableViewProps> = ({
     switch (category.toLowerCase()) {
       case 'operacional':
         return 'bg-blue-500 text-white border-blue-600 dark:bg-blue-600 dark:border-blue-700';
-      
+
       case 'financeiro':
         return 'bg-green-500 text-white border-green-600 dark:bg-green-600 dark:border-green-700';
-      
+
       case 'tecnológico':
       case 'tecnologico':
         return 'bg-purple-500 text-white border-purple-600 dark:bg-purple-600 dark:border-purple-700';
-      
+
       case 'regulatório':
       case 'regulatorio':
         return 'bg-red-500 text-white border-red-600 dark:bg-red-600 dark:border-red-700';
-      
+
       case 'reputacional':
         return 'bg-orange-500 text-white border-orange-600 dark:bg-orange-600 dark:border-orange-700';
-      
+
       case 'estratégico':
       case 'estrategico':
         return 'bg-indigo-500 text-white border-indigo-600 dark:bg-indigo-600 dark:border-indigo-700';
-      
+
       case 'ambiental':
         return 'bg-emerald-500 text-white border-emerald-600 dark:bg-emerald-600 dark:border-emerald-700';
-      
+
       case 'compliance':
         return 'bg-yellow-500 text-white border-yellow-600 dark:bg-yellow-600 dark:border-yellow-700';
-      
+
       case 'mercado':
         return 'bg-cyan-500 text-white border-cyan-600 dark:bg-cyan-600 dark:border-cyan-700';
-      
+
       case 'legal':
         return 'bg-rose-500 text-white border-rose-600 dark:bg-rose-600 dark:border-rose-700';
-      
+
       default:
         return 'bg-gray-500 text-white border-gray-600 dark:bg-gray-600 dark:border-gray-700';
     }
@@ -462,15 +462,15 @@ export const TableView: React.FC<TableViewProps> = ({
                 {getMatrixInfo().description}
               </Badge>
             </CardTitle>
-            
+
             <div className="flex items-center space-x-2">
               {/* Estatísticas rápidas dos níveis de risco */}
               <div className="hidden md:flex items-center space-x-2">
                 {Object.entries(riskLevelStats).map(([level, count]) => {
                   if (count === 0) return null;
                   return (
-                    <Badge 
-                      key={level} 
+                    <Badge
+                      key={level}
                       className={`${getRiskLevelColor(level)} border text-xs`}
                       title={`${count} risco(s) de nível ${level}`}
                     >
@@ -480,7 +480,7 @@ export const TableView: React.FC<TableViewProps> = ({
                   );
                 })}
               </div>
-              
+
               <Button variant="outline" size="sm" onClick={exportToCSV}>
                 <Download className="h-4 w-4 mr-1" />
                 Exportar CSV
@@ -491,13 +491,13 @@ export const TableView: React.FC<TableViewProps> = ({
       </Card>
 
       {/* Tabela Principal */}
-      <Card>
+      <Card className="max-w-full overflow-hidden">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto w-full">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50 min-w-[200px]"
                     onClick={() => handleSort('name')}
                   >
@@ -506,8 +506,8 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('name')}
                     </div>
                   </TableHead>
-                  
-                  <TableHead 
+
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('category')}
                   >
@@ -516,8 +516,8 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('category')}
                     </div>
                   </TableHead>
-                  
-                  <TableHead 
+
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('riskLevel')}
                   >
@@ -526,8 +526,8 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('riskLevel')}
                     </div>
                   </TableHead>
-                  
-                  <TableHead 
+
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50 text-center"
                     onClick={() => handleSort('riskScore')}
                   >
@@ -536,8 +536,8 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('riskScore')}
                     </div>
                   </TableHead>
-                  
-                  <TableHead 
+
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('status')}
                   >
@@ -546,10 +546,10 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('status')}
                     </div>
                   </TableHead>
-                  
+
                   <TableHead>Responsável</TableHead>
-                  
-                  <TableHead 
+
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('dueDate')}
                   >
@@ -558,8 +558,8 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('dueDate')}
                     </div>
                   </TableHead>
-                  
-                  <TableHead 
+
+                  <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort('createdAt')}
                   >
@@ -568,15 +568,15 @@ export const TableView: React.FC<TableViewProps> = ({
                       {getSortIcon('createdAt')}
                     </div>
                   </TableHead>
-                  
+
                   <TableHead className="w-[100px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
-              
+
               <TableBody>
                 {processedRisks.map((risk) => (
-                  <TableRow 
-                    key={risk.id} 
+                  <TableRow
+                    key={risk.id}
                     className={`hover:bg-muted/50 ${isOverdue(risk) ? 'bg-red-50 border-l-4 border-l-red-500' : ''}`}
                   >
                     <TableCell>
@@ -594,21 +594,21 @@ export const TableView: React.FC<TableViewProps> = ({
                         )}
                       </div>
                     </TableCell>
-                    
+
                     <TableCell>
                       <Badge className={`${getCategoryColor(risk.category)} border text-xs font-medium`}>
                         <span className="mr-1">{getCategoryIcon(risk.category)}</span>
                         {risk.category}
                       </Badge>
                     </TableCell>
-                    
+
                     <TableCell>
                       <Badge className={`${getRiskLevelColor(risk.riskLevel)} border text-xs font-medium`}>
                         <span className="mr-1">{getRiskLevelIcon(risk.riskLevel)}</span>
                         {risk.riskLevel}
                       </Badge>
                     </TableCell>
-                    
+
                     <TableCell className="text-center">
                       <div className="flex flex-col items-center space-y-1">
                         <div className="flex items-center space-x-1">
@@ -620,14 +620,14 @@ export const TableView: React.FC<TableViewProps> = ({
                         </span>
                       </div>
                     </TableCell>
-                    
+
                     <TableCell>
                       <Badge className={`${getStatusColor(risk.status)} border text-xs font-medium px-2 py-1`}>
                         <span className="mr-1">{getStatusIcon(risk.status)}</span>
                         {risk.status}
                       </Badge>
                     </TableCell>
-                    
+
                     <TableCell>
                       {risk.assignedTo ? (
                         <div className="flex items-center space-x-1">
@@ -638,7 +638,7 @@ export const TableView: React.FC<TableViewProps> = ({
                         <span className="text-muted-foreground text-sm">Não atribuído</span>
                       )}
                     </TableCell>
-                    
+
                     <TableCell>
                       {risk.dueDate ? (
                         <div className={`flex items-center space-x-1 ${isOverdue(risk) ? 'text-red-600' : ''}`}>
@@ -649,13 +649,13 @@ export const TableView: React.FC<TableViewProps> = ({
                         <span className="text-muted-foreground text-sm">-</span>
                       )}
                     </TableCell>
-                    
+
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
                         {formatDate(risk.createdAt)}
                       </span>
                     </TableCell>
-                    
+
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -675,7 +675,7 @@ export const TableView: React.FC<TableViewProps> = ({
                             Visualizar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleDelete(risk)}
                             className="text-red-600"
                           >
@@ -690,7 +690,7 @@ export const TableView: React.FC<TableViewProps> = ({
               </TableBody>
             </Table>
           </div>
-          
+
           {/* Estado vazio */}
           {processedRisks.length === 0 && (
             <div className="text-center py-12">
@@ -699,20 +699,20 @@ export const TableView: React.FC<TableViewProps> = ({
                 Nenhum risco encontrado
               </h3>
               <p className="text-muted-foreground">
-                {searchTerm || Object.keys(filters).length > 0 
+                {searchTerm || Object.keys(filters).length > 0
                   ? 'Tente ajustar os filtros ou termo de busca'
                   : 'Nenhum risco foi identificado ainda'
                 }
               </p>
             </div>
           )}
-          
+
           {/* Legenda de Níveis de Risco */}
           {processedRisks.length > 0 && (
             <div className="p-4 border-t bg-muted/20">
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <span className="text-sm font-medium text-muted-foreground mr-2">Níveis de Risco:</span>
-                
+
                 {getRiskLevels().map((level) => (
                   <div key={level} className="flex items-center space-x-1">
                     <Badge className={`${getRiskLevelColor(level)} border text-xs`}>
@@ -721,7 +721,7 @@ export const TableView: React.FC<TableViewProps> = ({
                     </Badge>
                   </div>
                 ))}
-                
+
                 <div className="ml-4 text-xs text-muted-foreground">
                   Matriz: {getMatrixInfo().description}
                 </div>
@@ -740,7 +740,7 @@ export const TableView: React.FC<TableViewProps> = ({
               Faça as alterações necessárias no risco selecionado.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-name" className="text-right">
@@ -749,11 +749,11 @@ export const TableView: React.FC<TableViewProps> = ({
               <Input
                 id="edit-name"
                 value={editForm.name}
-                onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 className="col-span-3"
               />
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-description" className="text-right">
                 Descrição
@@ -761,12 +761,12 @@ export const TableView: React.FC<TableViewProps> = ({
               <Textarea
                 id="edit-description"
                 value={editForm.description}
-                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                 className="col-span-3"
                 rows={3}
               />
             </div>
-            
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="edit-assigned" className="text-right">
                 Responsável
@@ -774,12 +774,12 @@ export const TableView: React.FC<TableViewProps> = ({
               <Input
                 id="edit-assigned"
                 value={editForm.assignedTo}
-                onChange={(e) => setEditForm({...editForm, assignedTo: e.target.value})}
+                onChange={(e) => setEditForm({ ...editForm, assignedTo: e.target.value })}
                 className="col-span-3"
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancelar

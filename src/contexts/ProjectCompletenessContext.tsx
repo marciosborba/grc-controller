@@ -54,7 +54,7 @@ export function ProjectCompletenessProvider({ children }: { children: React.Reac
 
   // Atualizar completude de uma fase baseada no preenchimento da interface
   const updatePhaseCompleteness = useCallback((
-    phase: string, 
+    phase: string,
     interfaceData: { filledElements: number; totalElements: number }
   ) => {
     const { filledElements, totalElements } = interfaceData;
@@ -81,7 +81,7 @@ export function ProjectCompletenessProvider({ children }: { children: React.Reac
   const refreshFromDatabase = useCallback(async (projectId: string, tenantId: string) => {
     try {
       setLoading(true);
-      
+
       console.log('ProjectCompletenessContext - Loading from database:', { projectId, tenantId });
 
       const { data, error } = await supabase
@@ -94,8 +94,7 @@ export function ProjectCompletenessProvider({ children }: { children: React.Reac
           completude_followup
         `)
         .eq('id', projectId)
-        .eq('tenant_id', tenantId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -135,9 +134,9 @@ export function ProjectCompletenessProvider({ children }: { children: React.Reac
 
   // Salvar completude no banco de dados
   const saveToDatabase = useCallback(async (
-    projectId: string, 
-    tenantId: string, 
-    phase: string, 
+    projectId: string,
+    tenantId: string,
+    phase: string,
     value: number
   ) => {
     try {
@@ -196,9 +195,9 @@ export function useProjectCompleteness() {
 // Hook para uma fase específica
 export function usePhaseCompleteness(phase: string) {
   const { completeness, updatePhaseCompleteness, saveToDatabase } = useProjectCompleteness();
-  
+
   const phaseData = completeness[phase as keyof ProjectCompletenessState];
-  
+
   return {
     // Para exibição nas abas (baseado no preenchimento da interface)
     interfaceCompleteness: phaseData.interfaceCompleteness,
@@ -208,7 +207,7 @@ export function usePhaseCompleteness(phase: string) {
     filledElements: phaseData.filledElements,
     totalElements: phaseData.totalElements,
     // Funções
-    updateInterface: (filledElements: number, totalElements: number) => 
+    updateInterface: (filledElements: number, totalElements: number) =>
       updatePhaseCompleteness(phase, { filledElements, totalElements }),
     saveToDatabase: (projectId: string, tenantId: string, value: number) =>
       saveToDatabase(projectId, tenantId, phase, value)

@@ -103,28 +103,8 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
     }
   }, [project.id, effectiveTenantId, refreshFromDatabase]);
 
-  // Forçar refresh se os dados do projeto mudaram
-  useEffect(() => {
-    if (project.id && effectiveTenantId && !completenessLoading) {
-      // Se temos dados de completude no projeto mas não no contexto, forçar refresh
-      const hasProjectData = project.completude_planejamento > 0 ||
-        project.completude_execucao > 0 ||
-        project.completude_achados > 0 ||
-        project.completude_relatorio > 0 ||
-        project.completude_followup > 0;
-
-      const hasContextData = completeness.planejamento?.databaseCompleteness > 0 ||
-        completeness.execucao?.databaseCompleteness > 0 ||
-        completeness.achados?.databaseCompleteness > 0 ||
-        completeness.relatorio?.databaseCompleteness > 0 ||
-        completeness.followup?.databaseCompleteness > 0;
-
-      if (hasProjectData && !hasContextData) {
-        console.log('AuditWorkflowContent - Project has data but context is empty, refreshing...');
-        refreshFromDatabase(project.id, effectiveTenantId);
-      }
-    }
-  }, [project, completeness, completenessLoading, refreshFromDatabase, effectiveTenantId]);
+  // O useEffect problemático foi removido para evitar loop infinito
+  // A carga inicial já acontece no useEffect acima
 
   // Usar dados centralizados de completude
   console.log('AuditWorkflowFixed - Centralized completeness data:', {
@@ -430,7 +410,7 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
   return (
     <div className="space-y-6">
       {/* Breadcrumb de Navegação */}
-      <div className="flex flex-wrap items-center gap-1 p-4 bg-muted/30 rounded-lg overflow-x-auto">
+      <div className="flex flex-wrap items-center gap-1 sm:gap-2 p-2 sm:p-3 bg-muted/30 rounded-lg">
         {phases.map((phase, index) => {
           const IconComponent = phase.icon;
           const status = getPhaseStatus(index);
@@ -450,14 +430,14 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
                     }
                   }}
                   disabled={!status.isAccessible || isTransitioning}
-                  className={`flex items-center gap-1 px-2 py-1.5 rounded-md border-2 transition-all cursor-pointer text-xs ${getPhaseColor(phase.color, status)
+                  className={`flex items-center gap-1 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-md border-2 transition-all cursor-pointer text-[10px] sm:text-xs ${getPhaseColor(phase.color, status)
                     } ${isTransitioning ? 'opacity-50 cursor-wait' : ''}`}
                   title={status.accessibilityReason}
                   type="button"
                 >
-                  <IconComponent className="h-3 w-3" />
-                  <span className="text-xs font-medium">{phase.name}</span>
-                  <span className="text-xs">({Math.round(phase.completeness || 0)}%)</span>
+                  <IconComponent className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="text-[10px] sm:text-xs font-medium">{phase.name}</span>
+                  <span className="text-[10px] sm:text-xs">({Math.round(phase.completeness || 0)}%)</span>
 
                   {/* Ícones de status */}
                   {isTransitioning && status.isActive ? (
@@ -473,7 +453,7 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
                 </button>
 
                 {/* Tooltip com informações */}
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-black text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 sm:px-3 py-1.5 sm:py-2 bg-black text-white text-[10px] sm:text-xs rounded-md sm:rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 w-max max-w-[200px] sm:max-w-xs text-center break-words pointer-events-none">
                   {status.accessibilityReason}
                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-black"></div>
                 </div>
@@ -489,14 +469,14 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
 
       {/* Alertas e Validações MELHORADOS */}
       {currentPhase && currentPhase.completeness < 50 && (
-        <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/50 shadow-none">
+          <CardContent className="p-2 sm:p-3">
+            <div className="flex items-start sm:items-center gap-2">
+              <Info className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400 mt-0.5 sm:mt-0" />
               <div>
-                <p className="font-medium text-blue-900 dark:text-blue-100">Dica de Navegação</p>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Complete pelo menos 50% desta fase para facilitar o acesso às próximas fases.
+                <p className="font-semibold text-[10px] sm:text-xs text-blue-900 dark:text-blue-100 uppercase tracking-wide">Dica de Navegação</p>
+                <p className="text-[9px] sm:text-[10px] text-blue-800 dark:text-blue-200 leading-tight">
+                  Complete pelo menos 50% desta fase para acesso às próximas fases.<br className="hidden sm:block" />
                   Você pode navegar livremente entre fases já visitadas.
                 </p>
               </div>
@@ -513,30 +493,32 @@ function AuditWorkflowContent({ project, activePhase, onPhaseChange }: AuditWork
       {/* Ações da Fase MELHORADAS */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              <span className="text-sm text-muted-foreground">
-                Última atualização: {new Date().toLocaleString('pt-BR')}
-              </span>
-              <Badge variant="outline" className="ml-2">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <Save className="h-3.5 w-3.5" />
+                <span className="text-[10px] sm:text-xs">
+                  Última atualização: {new Date().toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <Badge variant="outline" className="text-[10px] px-2 py-0 h-5">
                 Navegação Livre Ativada
               </Badge>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-1" />
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                <Download className="h-3.5 w-3.5 mr-1" />
                 Exportar
               </Button>
 
-              <Button variant="outline" size="sm">
-                <Upload className="h-4 w-4 mr-1" />
+              <Button variant="outline" size="sm" className="h-8 text-xs">
+                <Upload className="h-3.5 w-3.5 mr-1" />
                 Importar
               </Button>
 
-              <Button size="sm" onClick={savePhaseProgress} disabled={saving}>
-                <Save className="h-4 w-4 mr-1" />
+              <Button size="sm" className="h-8 text-xs" onClick={savePhaseProgress} disabled={saving}>
+                <Save className="h-3.5 w-3.5 mr-1" />
                 {saving ? 'Salvando...' : 'Salvar Progresso'}
               </Button>
             </div>

@@ -1,0 +1,1484 @@
+// File manager for updating static colors directly in the CSS file
+import type { ColorPalette } from '@/types/colors';
+
+const STATIC_COLORS_FILE_PATH = '/src/styles/static-colors.css';
+
+// Generate complete CSS content for BOTH files (static-colors.css + index.css fallbacks)
+export const generateCompleteStaticCSS = (palette: ColorPalette): { staticColorsCSS: string; indexCSSFallbacks: string } => {
+  const lightColors = Object.entries(palette.light)
+    .map(([key, value]) => `    --${key}: ${value.hsl};`)
+    .join('\n');
+    
+  const darkColors = Object.entries(palette.dark)
+    .map(([key, value]) => `    --${key}: ${value.hsl};`)
+    .join('\n');
+
+  const staticColorsCSS = `/* ============================================================================ */
+/* SISTEMA DE CORES ESTÁTICO - GRC CONTROLLER */
+/* ============================================================================ */
+/* Arquivo gerado automaticamente pelo Static Color Controller */
+/* Última atualização: ${new Date().toLocaleString('pt-BR')} */
+
+/* CORES ESTÁTICAS - SEM @layer utilities para evitar conflitos com Tailwind */
+  /* ========================================================================== */
+  /* LIGHT MODE - CORES PRINCIPAIS */
+  /* ========================================================================== */
+  :root {
+${lightColors}
+    /* Additional system variables */
+    --input: var(--border);
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --success-light: var(--success);
+    --warning-light: var(--warning);
+    --danger-light: var(--danger);
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+
+  /* ========================================================================== */
+  /* DARK MODE - CORES PRINCIPAIS */  
+  /* ========================================================================== */
+  .dark {
+${darkColors}
+    /* Additional system variables */
+    --input: var(--border);
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --success-light: var(--success);
+    --warning-light: var(--warning);
+    --danger-light: var(--danger);
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* ========================================================================== */
+  /* TAILWIND UTILITY CLASSES */
+  /* ========================================================================== */
+  
+  /* Background utilities */
+  .bg-background { background-color: hsl(var(--background)) !important; }
+  .bg-foreground { background-color: hsl(var(--foreground)) !important; }
+  .bg-card { background-color: hsl(var(--card)) !important; }
+  .bg-card-foreground { background-color: hsl(var(--card-foreground)) !important; }
+  .bg-popover { background-color: hsl(var(--popover)) !important; }
+  .bg-popover-foreground { background-color: hsl(var(--popover-foreground)) !important; }
+  .bg-primary { background-color: hsl(var(--primary)) !important; }
+  .bg-primary-foreground { background-color: hsl(var(--primary-foreground)) !important; }
+  .bg-secondary { background-color: hsl(var(--secondary)) !important; }
+  .bg-secondary-foreground { background-color: hsl(var(--secondary-foreground)) !important; }
+  .bg-muted { background-color: hsl(var(--muted)) !important; }
+  .bg-muted-foreground { background-color: hsl(var(--muted-foreground)) !important; }
+  .bg-accent { background-color: hsl(var(--accent)) !important; }
+  .bg-accent-foreground { background-color: hsl(var(--accent-foreground)) !important; }
+  .bg-destructive { background-color: hsl(var(--destructive)) !important; }
+  .bg-destructive-foreground { background-color: hsl(var(--destructive-foreground)) !important; }
+  .bg-border { background-color: hsl(var(--border)) !important; }
+  .bg-input { background-color: hsl(var(--input)) !important; }
+  .bg-ring { background-color: hsl(var(--ring)) !important; }
+
+  /* Text color utilities */
+  .text-background { color: hsl(var(--background)) !important; }
+  .text-foreground { color: hsl(var(--foreground)) !important; }
+  .text-card { color: hsl(var(--card)) !important; }
+  .text-card-foreground { color: hsl(var(--card-foreground)) !important; }
+  .text-popover { color: hsl(var(--popover)) !important; }
+  .text-popover-foreground { color: hsl(var(--popover-foreground)) !important; }
+  .text-primary { color: hsl(var(--primary)) !important; }
+  .text-primary-foreground { color: hsl(var(--primary-foreground)) !important; }
+  .text-primary-text { color: hsl(var(--primary-text)) !important; }
+  .text-secondary { color: hsl(var(--secondary)) !important; }
+  .text-secondary-foreground { color: hsl(var(--secondary-foreground)) !important; }
+  .text-muted { color: hsl(var(--muted)) !important; }
+  .text-muted-foreground { color: hsl(var(--muted-foreground)) !important; }
+  .text-accent { color: hsl(var(--accent)) !important; }
+  .text-accent-foreground { color: hsl(var(--accent-foreground)) !important; }
+  .text-destructive { color: hsl(var(--destructive)) !important; }
+  .text-destructive-foreground { color: hsl(var(--destructive-foreground)) !important; }
+
+  /* Border utilities */
+  .border { border-color: hsl(var(--border)) !important; }
+  .border-background { border-color: hsl(var(--background)) !important; }
+  .border-foreground { border-color: hsl(var(--foreground)) !important; }
+  .border-card { border-color: hsl(var(--card)) !important; }
+  .border-card-foreground { border-color: hsl(var(--card-foreground)) !important; }
+  .border-popover { border-color: hsl(var(--popover)) !important; }
+  .border-popover-foreground { border-color: hsl(var(--popover-foreground)) !important; }
+  .border-primary { border-color: hsl(var(--primary)) !important; }
+  .border-primary-foreground { border-color: hsl(var(--primary-foreground)) !important; }
+  .border-secondary { border-color: hsl(var(--secondary)) !important; }
+  .border-secondary-foreground { border-color: hsl(var(--secondary-foreground)) !important; }
+  .border-muted { border-color: hsl(var(--muted)) !important; }
+  .border-muted-foreground { border-color: hsl(var(--muted-foreground)) !important; }
+  .border-accent { border-color: hsl(var(--accent)) !important; }
+  .border-accent-foreground { border-color: hsl(var(--accent-foreground)) !important; }
+  .border-destructive { border-color: hsl(var(--destructive)) !important; }
+  .border-destructive-foreground { border-color: hsl(var(--destructive-foreground)) !important; }
+  .border-input { border-color: hsl(var(--input)) !important; }
+
+  /* ========================================================================== */
+  /* COMPONENT SPECIFIC STYLES */
+  /* ========================================================================== */
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões */
+  button {
+    border-color: hsl(var(--border));
+  }
+
+  /* Botões primários com hover */
+  button[class*="bg-primary"]:hover,
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover)) !important;
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Estados de risco GRC */
+  .risk-critical, [data-risk="critical"] {
+    background-color: hsl(var(--risk-critical));
+    color: hsl(var(--danger-foreground));
+  }
+
+  .risk-high, [data-risk="high"] {
+    background-color: hsl(var(--risk-high));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-medium, [data-risk="medium"] {
+    background-color: hsl(var(--risk-medium));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .risk-low, [data-risk="low"] {
+    background-color: hsl(var(--risk-low));
+    color: hsl(var(--success-foreground));
+  }
+
+  /* Estados funcionais */
+  .status-success, [data-status="success"] {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+
+  .status-warning, [data-status="warning"] {
+    background-color: hsl(var(--warning));
+    color: hsl(var(--warning-foreground));
+  }
+
+  .status-danger, [data-status="danger"] {
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+  /* Popover and dropdowns */
+  .popover, [data-radix-popper-content-wrapper] {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+
+  /* ========================================================================== */
+  /* APLICAÇÃO DAS CORES NOS COMPONENTES */
+  /* ========================================================================== */
+  
+  /* Base styles - aplicados globalmente */
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Cards e containers */
+  .card {
+    background-color: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Botões primários com hover */
+  button[class*="bg-primary"]:hover,
+  .bg-primary:hover {
+    background-color: hsl(var(--primary-hover)) !important;
+  }
+
+  /* Sidebar específico */
+  [data-sidebar="main"] {
+    background-color: hsl(var(--sidebar-background));
+    color: hsl(var(--sidebar-foreground));
+    border-right: 1px solid hsl(var(--border));
+  }
+
+  /* Inputs e form controls */
+  input, textarea, select {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 2px hsl(var(--primary-glow) / 0.2);
+  }
+
+/* ========================================================================== */
+/* RESPONSIVE ADJUSTMENTS */
+/* ========================================================================== */
+@media (max-width: 768px) {
+  /* Mobile specific color adjustments if needed */
+}
+
+/* ========================================================================== */
+/* HIGH CONTRAST MODE SUPPORT */
+/* ========================================================================== */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 20%;
+  }
+  
+  .dark {
+    --border: 0 0% 80%;
+  }
+}`;
+
+  // Gerar arquivo index.css COMPLETO com fallbacks atualizados
+  const primaryColor = palette.light.primary?.hsl || '173 88% 58%';
+  const primaryHover = palette.light['primary-hover']?.hsl || '173 88% 54%';
+  const primaryGlow = palette.light['primary-glow']?.hsl || '173 95% 78%';
+  
+  const indexCSSComplete = `/* Controller GRC - Static Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap&subset=latin');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Cores de fallback ANTES do import para menor prioridade */
+@layer base {
+  :root {
+    /* FALLBACKS - Menor prioridade que static-colors.css */
+    --primary: ${primaryColor};
+    --primary-hover: ${primaryHover};
+    --primary-glow: ${primaryGlow};
+    --primary-foreground: 0 0% 100%;
+    --primary-text: 225 71% 12%;
+    --secondary: 210 40% 98%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --danger: 0 84% 60%;
+    --danger-foreground: 0 0% 100%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --border: 214 32% 91%;
+    --risk-critical: 0 84% 60%;
+    --risk-high: 24 95% 53%;
+    --risk-medium: 38 92% 50%;
+    --risk-low: 142 76% 36%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+  }
+  
+  .dark {
+    /* FALLBACKS DARK - Menor prioridade que static-colors.css */
+    --primary: ${primaryColor};
+    --primary-hover: ${primaryHover};
+    --primary-glow: ${primaryGlow};
+    --primary-foreground: 0 0% 0%;
+    --primary-text: 0 0% 100%;
+    --secondary: 215 8% 12%;
+    --secondary-foreground: 0 0% 100%;
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 0%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 0%;
+    --danger: 0 84% 70%;
+    --danger-foreground: 0 0% 0%;
+    --muted: 215 12% 16%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --border: 215 10% 22%;
+    --risk-critical: 0 84% 70%;
+    --risk-high: 24 95% 63%;
+    --risk-medium: 38 92% 60%;
+    --risk-low: 142 76% 46%;
+    --sidebar-background: 215 8% 12%;
+    --sidebar-foreground: 0 0% 100%;
+  }
+}
+
+/* Import static colors AFTER fallbacks for higher priority */
+@import './styles/static-colors.css';
+
+@layer base {
+  :root {
+    /* 
+     * CORES PRINCIPAIS DEFINIDAS EM static-colors.css
+     * Este arquivo apenas define variáveis derivadas
+     * As cores primárias são carregadas de src/styles/static-colors.css
+     */
+    
+    /* Fallback colors básicos - apenas se static-colors.css não carregar */
+    --background: 0 0% 100%;
+    --foreground: 225 71% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 71% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 225 71% 12%;
+    
+    /* Variáveis derivadas que referenciam as cores principais */
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --input: var(--border);
+    
+    /* Variáveis de sidebar que referenciam as cores principais */
+    --sidebar-primary: var(--sidebar-foreground);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+    
+    /* Gradients */
+    --gradient-brand: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
+    --gradient-success: linear-gradient(135deg, hsl(var(--success)), hsl(142 76% 50%));
+    --gradient-danger: linear-gradient(135deg, hsl(var(--danger)), hsl(0 84% 70%));
+    --gradient-hero: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Border radius */
+    --radius: 0.4375rem;
+  }
+
+  .dark {
+    /* 
+     * DARK MODE: Cores principais definidas em static-colors.css
+     * Este arquivo apenas define variáveis derivadas
+     */
+    
+    /* Fallback colors básicos - apenas se static-colors.css não carregar */
+    --background: 222 18% 4%;
+    --foreground: 0 0% 100%;
+    --card: 215 8% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 222 13% 11%;
+    --popover-foreground: 0 0% 100%;
+    
+    /* Variáveis derivadas que referenciam as cores principais */
+    --ring: var(--primary);
+    --accent: var(--secondary);
+    --destructive: var(--danger);
+    --destructive-foreground: var(--danger-foreground);
+    --input: var(--border);
+    
+    /* Variáveis de sidebar que referenciam as cores principais */
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--sidebar-background);
+    --sidebar-accent: var(--muted);
+    --sidebar-accent-foreground: var(--sidebar-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--primary);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    /* Improve text rendering and sharpness */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern" 1;
+    font-kerning: normal;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-display: swap;
+    font-variant-ligatures: normal;
+    font-variant-numeric: tabular-nums;
+    /* Additional sharpness improvements */
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    /* Ensure dark mode colors are applied */
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Improve rendering for all elements */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    -webkit-font-smoothing: inherit;
+    -moz-osx-font-smoothing: inherit;
+  }
+
+  /* Improve SVG and icon rendering */
+  svg {
+    shape-rendering: geometricPrecision;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Improve button and interactive element rendering */
+  button,
+  input,
+  select,
+  textarea {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* High DPI display optimizations */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    html {
+      -webkit-font-smoothing: subpixel-antialiased;
+    }
+  }
+
+  /* Improve text contrast and readability */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+  }
+
+  p, span, div {
+    line-height: 1.5;
+  }
+
+  /* Improve card rendering for all cards */
+  .card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  /* Risk level indicators */
+  .risk-critical {
+    @apply text-[hsl(var(--risk-critical))] bg-[hsl(var(--risk-critical)/0.1)] border-[hsl(var(--risk-critical)/0.3)];
+  }
+
+  .risk-high {
+    @apply text-[hsl(var(--risk-high))] bg-[hsl(var(--risk-high)/0.1)] border-[hsl(var(--risk-high)/0.3)];
+  }
+
+  .risk-medium {
+    @apply text-[hsl(var(--risk-medium))] bg-[hsl(var(--risk-medium)/0.1)] border-[hsl(var(--risk-medium)/0.3)];
+  }
+
+  .risk-low {
+    @apply text-[hsl(var(--risk-low))] bg-[hsl(var(--risk-low)/0.1)] border-[hsl(var(--risk-low)/0.3)];
+  }
+
+  /* Animation classes */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+
+  /* Improve card hover effects */
+  .card:hover {
+    transform: translateY(-1px);
+  }
+
+  /* Smooth transitions - only for interactive elements */
+  button,
+  .card,
+  [role="button"],
+  input,
+  textarea,
+  select {
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  }
+
+  /* Focus states */
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Dark mode specific border fixes */
+  .dark .card,
+  .dark [data-ui="card"],
+  .dark div[class*="border"] {
+    border-color: hsl(215 10% 22%) !important;
+  }
+  
+  .dark .border,
+  .dark .border-border {
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  /* Shadcn/UI specific dark mode borders */
+  .dark [class*="border-"],
+  .dark [class*="card"],
+  .dark [data-state],
+  .dark [data-radix-collection-item] {
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  /* More aggressive dark mode border override */
+  html.dark *,
+  .dark * {
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  /* Specific overrides for light elements in dark mode */
+  html.dark [style*="border"],
+  .dark [style*="border"] {
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  /* Sidebar consistency with cards in dark mode */
+  .dark [data-sidebar="sidebar"] {
+    background-color: hsl(215 8% 12%) !important;
+  }
+  
+  .dark [data-sidebar="sidebar"] [data-sidebar="content"] {
+    background-color: hsl(215 8% 12%) !important;
+  }
+
+  /* Sidebar text improvements - make it brighter */
+  .dark [data-sidebar="sidebar"] * {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark [data-sidebar="sidebar"] .text-muted-foreground {
+    color: hsl(0 0% 85%) !important;
+  }
+
+  .dark [data-sidebar="sidebar"] span,
+  .dark [data-sidebar="sidebar"] p,
+  .dark [data-sidebar="sidebar"] h1,
+  .dark [data-sidebar="sidebar"] h2,
+  .dark [data-sidebar="sidebar"] h3 {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Sidebar navigation items */
+  .dark [data-sidebar="sidebar"] a {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark [data-sidebar="sidebar"] a:hover {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Force bright text on all sidebar elements */
+  .dark [data-sidebar="sidebar"] .font-medium,
+  .dark [data-sidebar="sidebar"] .font-semibold,
+  .dark [data-sidebar="sidebar"] .font-bold {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Sidebar group labels */
+  .dark [data-sidebar="sidebar"] [data-sidebar-group-label] {
+    color: hsl(0 0% 90%) !important;
+  }
+
+  /* NavLink active states - use primary color */
+  .dark [data-sidebar="sidebar"] .text-primary,
+  .dark [data-sidebar="sidebar"] [class*="text-primary"] {
+    color: hsl(var(--primary)) !important;
+  }
+
+  /* Active navigation item - all text elements */
+  .dark [data-sidebar="sidebar"] [class*="text-primary"] span,
+  .dark [data-sidebar="sidebar"] [class*="text-primary"] p {
+    color: hsl(var(--primary)) !important;
+  }
+
+  /* Icons in active navigation items */
+  .dark [data-sidebar="sidebar"] [class*="text-primary"] svg {
+    color: hsl(var(--primary)) !important;
+  }
+
+  /* Remove background from active navigation items - force sidebar background */
+  [data-sidebar="sidebar"] [class*="text-primary"] {
+    background-color: hsl(var(--sidebar-background)) !important;
+  }
+
+  .dark [data-sidebar="sidebar"] [class*="text-primary"] {
+    background-color: hsl(var(--sidebar-background)) !important;
+  }
+
+  /* Force sidebar background for all navigation items */
+  [data-sidebar="sidebar"] a,
+  [data-sidebar="sidebar"] [data-sidebar-menu-button],
+  [data-sidebar="sidebar"] [data-sidebar-menu-item] > *,
+  [data-sidebar="sidebar"] .group {
+    background-color: hsl(var(--sidebar-background)) !important;
+  }
+
+  .dark [data-sidebar="sidebar"] a,
+  .dark [data-sidebar="sidebar"] [data-sidebar-menu-button],
+  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item] > *,
+  .dark [data-sidebar="sidebar"] .group {
+    background-color: hsl(var(--sidebar-background)) !important;
+  }
+
+  /* Override any specific NavLink backgrounds */
+  .dark [data-sidebar="sidebar"] .active,
+  .dark [data-sidebar="sidebar"] [aria-current="page"] {
+    background-color: hsl(var(--sidebar-background)) !important;
+  }
+
+  /* Force transparent background for sidebar menu buttons */
+  [data-sidebar="menu-button"],
+  [data-sidebar="sidebar"] [data-sidebar="menu-button"] {
+    background-color: transparent !important;
+  }
+
+  .dark [data-sidebar="menu-button"],
+  .dark [data-sidebar="sidebar"] [data-sidebar="menu-button"] {
+    background-color: transparent !important;
+  }
+
+  /* Override all possible sidebar accent backgrounds */
+  [data-sidebar="menu-button"]:not(:hover) {
+    background-color: transparent !important;
+  }
+
+  .dark [data-sidebar="menu-button"]:not(:hover) {
+    background-color: transparent !important;
+  }
+
+  /* Remove data-active and other state backgrounds */
+  [data-sidebar="menu-button"][data-active="true"],
+  [data-sidebar="menu-button"][data-active="false"] {
+    background-color: transparent !important;
+  }
+
+  .dark [data-sidebar="menu-button"][data-active="true"],
+  .dark [data-sidebar="menu-button"][data-active="false"] {
+    background-color: transparent !important;
+  }
+
+  /* Override shadcn/ui sidebar accent colors */
+  [data-sidebar="menu-button"].hover\\:bg-sidebar-accent,
+  [data-sidebar="menu-button"]:not(:hover).active\\:bg-sidebar-accent,
+  [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
+    background-color: transparent !important;
+  }
+
+  .dark [data-sidebar="menu-button"].hover\\:bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"]:not(:hover).active\\:bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"]:not(:hover)[class*="bg-sidebar-accent"] {
+    background-color: transparent !important;
+  }
+
+  /* Very specific override for any background on menu buttons */
+  [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\\:bg-) {
+    background-color: transparent !important;
+  }
+
+  .dark [data-sidebar="menu-button"][class*="bg-"]:not(:hover):not(.hover\\:bg-) {
+    background-color: transparent !important;
+  }
+
+  /* Ultra specific overrides - targeting exact element */
+  a[data-sidebar="menu-button"][data-size="default"][data-active="false"],
+  a[data-sidebar="menu-button"][data-size="default"][data-active="true"] {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .dark a[data-sidebar="menu-button"][data-size="default"][data-active="false"],
+  .dark a[data-sidebar="menu-button"][data-size="default"][data-active="true"] {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  /* Force override all Tailwind bg classes */
+  [data-sidebar="menu-button"].bg-sidebar-accent,
+  [data-sidebar="menu-button"].hover\\:bg-sidebar-accent:not(:hover),
+  [data-sidebar="menu-button"].active\\:bg-sidebar-accent:not(:active),
+  [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
+  [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  .dark [data-sidebar="menu-button"].bg-sidebar-accent,
+  .dark [data-sidebar="menu-button"].hover\\:bg-sidebar-accent:not(:hover),
+  .dark [data-sidebar="menu-button"].active\\:bg-sidebar-accent:not(:active),
+  .dark [data-sidebar="menu-button"][class*="data-[active=true]:bg-"],
+  .dark [data-sidebar="menu-button"][class*="data-[state=open]:hover:bg-"]:not(:hover) {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  /* Nuclear option - force all menu buttons to be transparent */
+  html [data-sidebar="menu-button"] {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  html.dark [data-sidebar="menu-button"] {
+    background-color: transparent !important;
+    background: transparent !important;
+  }
+
+  /* Override any inline styles or computed styles */
+  [data-sidebar="menu-button"] {
+    background-color: transparent !important;
+    background-image: none !important;
+    background: transparent !important;
+  }
+
+  /* Dialog overlay - match main page background */
+  .dark [data-state="open"].fixed.inset-0[class*="bg-black"] {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  /* Dialog/Modal Beautiful UI for Dark Mode - Card-like appearance */
+  .dark [role="dialog"] {
+    background-color: hsl(var(--card)) !important;
+    border: 1px solid hsl(215 15% 18%) !important;
+    box-shadow: 
+      0 0 0 1px hsl(215 15% 18%),
+      0 20px 25px -5px hsl(0 0% 0% / 0.4),
+      0 10px 10px -5px hsl(0 0% 0% / 0.2) !important;
+    color: hsl(var(--card-foreground)) !important;
+    backdrop-filter: blur(8px) !important;
+  }
+
+  /* Dialog header and title */
+  .dark [role="dialog"] h2 {
+    color: hsl(0 0% 98%) !important;
+    font-weight: 600 !important;
+  }
+
+  .dark [role="dialog"] h3,
+  .dark [role="dialog"] h4,
+  .dark [role="dialog"] h5 {
+    color: hsl(0 0% 95%) !important;
+  }
+
+  .dark [role="dialog"] p {
+    color: hsl(0 0% 85%) !important;
+  }
+
+  .dark [role="dialog"] span {
+    color: hsl(0 0% 90%) !important;
+  }
+
+  .dark [role="dialog"] label {
+    color: hsl(0 0% 92%) !important;
+    font-weight: 500 !important;
+  }
+
+  .dark [role="dialog"] .text-muted-foreground {
+    color: hsl(215 15% 65%) !important;
+  }
+
+  /* Dialog form sections - elevated appearance */
+  .dark [role="dialog"] .space-y-4,
+  .dark [role="dialog"] .space-y-6 {
+    background-color: transparent !important;
+  }
+
+  /* Redução do espaçamento entre cards - diminui 10px (de 24px para 14px) */
+  
+  /* space-y-6: de 24px para 14px */
+  .space-y-6 > * + * {
+    margin-top: 0.875rem !important; /* 14px ao invés de 24px (redução de 10px) */
+  }
+  
+  /* gap-6: de 24px para 14px */
+  .gap-6 {
+    gap: 0.875rem !important; /* 14px ao invés de 24px (redução de 10px) */
+  }
+  
+  /* Para grids que usam gap-6 */
+  .grid.gap-6 {
+    gap: 0.875rem !important; /* 14px ao invés de 24px */
+  }
+  
+  /* space-y-8: de 32px para 22px (redução de 10px) */
+  .space-y-8 > * + * {
+    margin-top: 1.375rem !important; /* 22px ao invés de 32px */
+  }
+  
+  /* gap-8: de 32px para 22px (redução de 10px) */
+  .gap-8, .grid.gap-8 {
+    gap: 1.375rem !important; /* 22px ao invés de 32px */
+  }
+
+  /* Redução do espaçamento entre sidebar e conteúdo - diminui 10px */
+  main.flex-1 {
+    padding-left: calc(1.5rem - 10px) !important; /* Mobile: 24px → 14px */
+  }
+  
+  @media (min-width: 640px) {
+    main.flex-1 {
+      padding-left: calc(2rem - 10px) !important; /* SM: 32px → 22px */
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    main.flex-1 {
+      padding-left: calc(2.5rem - 10px) !important; /* LG: 40px → 30px */
+    }
+  }
+
+  /* Redução da margem superior do conteúdo (abaixo do cabeçalho) - diminui 10px */
+  main.flex-1 {
+    padding-top: calc(1rem - 10px) !important; /* Mobile: 16px → 6px */
+  }
+  
+  @media (min-width: 640px) {
+    main.flex-1 {
+      padding-top: calc(1.5rem - 10px) !important; /* SM: 24px → 14px */
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    main.flex-1 {
+      padding-top: calc(2rem - 10px) !important; /* LG: 32px → 22px */
+    }
+  }
+
+  /* Dialog inputs - modern elevated style */
+  .dark [role="dialog"] input,
+  .dark [role="dialog"] textarea,
+  .dark [role="dialog"] select,
+  .dark [role="dialog"] [role="combobox"],
+  .dark [role="dialog"] [data-radix-select-trigger] {
+    background-color: hsl(215 18% 12%) !important;
+    border: 1px solid hsl(215 15% 25%) !important;
+    color: hsl(0 0% 95%) !important;
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.1) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dark [role="dialog"] input:focus,
+  .dark [role="dialog"] textarea:focus,
+  .dark [role="dialog"] select:focus,
+  .dark [role="dialog"] [role="combobox"]:focus,
+  .dark [role="dialog"] [data-radix-select-trigger]:focus {
+    background-color: hsl(215 18% 14%) !important;
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 
+      inset 0 1px 2px hsl(0 0% 0% / 0.1),
+      0 0 0 3px hsl(var(--primary) / 0.1) !important;
+  }
+
+  .dark [role="dialog"] input::placeholder,
+  .dark [role="dialog"] textarea::placeholder {
+    color: hsl(215 15% 55%) !important;
+  }
+
+  /* Dialog buttons - elevated and modern */
+  .dark [role="dialog"] button {
+    color: hsl(0 0% 95%) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dark [role="dialog"] button[class*="border"],
+  .dark [role="dialog"] button[class*="outline"] {
+    background-color: hsl(215 18% 14%) !important;
+    border: 1px solid hsl(215 15% 25%) !important;
+    color: hsl(0 0% 95%) !important;
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.1) !important;
+  }
+
+  .dark [role="dialog"] button[class*="border"]:hover,
+  .dark [role="dialog"] button[class*="outline"]:hover {
+    background-color: hsl(215 18% 18%) !important;
+    border-color: hsl(215 15% 30%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px hsl(0 0% 0% / 0.2) !important;
+  }
+
+  .dark [role="dialog"] button[class*="bg-primary"] {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.9)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+    box-shadow: 
+      0 2px 4px hsl(var(--primary) / 0.2),
+      0 1px 2px hsl(0 0% 0% / 0.1) !important;
+  }
+
+  .dark [role="dialog"] button[class*="bg-primary"]:hover {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.9), hsl(var(--primary) / 0.8)) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 
+      0 4px 8px hsl(var(--primary) / 0.3),
+      0 2px 4px hsl(0 0% 0% / 0.1) !important;
+  }
+
+  /* Dialog checkboxes - modern style */
+  .dark [role="dialog"] [role="checkbox"] {
+    background-color: hsl(215 18% 12%) !important;
+    border: 1px solid hsl(215 15% 25%) !important;
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.1) !important;
+  }
+
+  .dark [role="dialog"] [role="checkbox"][data-state="checked"] {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.9)) !important;
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 0 1px 3px hsl(var(--primary) / 0.3) !important;
+  }
+
+  /* Dialog color preview boxes - elevated */
+  .dark [role="dialog"] [title*="Clique para abrir"] {
+    border: 2px solid hsl(215 15% 25%) !important;
+    box-shadow: 
+      0 2px 4px hsl(0 0% 0% / 0.1),
+      inset 0 1px 2px hsl(255 255% 255% / 0.1) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dark [role="dialog"] [title*="Clique para abrir"]:hover {
+    border-color: hsl(var(--primary)) !important;
+    transform: scale(1.05) !important;
+    box-shadow: 
+      0 4px 8px hsl(0 0% 0% / 0.15),
+      0 0 0 2px hsl(var(--primary) / 0.2) !important;
+  }
+
+  /* Dialog badges and tags - premium look */
+  .dark [role="dialog"] .inline-flex[class*="rounded-full"] {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--primary) / 0.1)) !important;
+    border: 1px solid hsl(var(--primary) / 0.3) !important;
+    color: hsl(var(--primary)) !important;
+    box-shadow: 0 1px 3px hsl(var(--primary) / 0.1) !important;
+  }
+
+  /* Dialog preview sections - card-like */
+  .dark [role="dialog"] .bg-gray-50,
+  .dark [role="dialog"] [class*="bg-gray-50"] {
+    background: linear-gradient(135deg, hsl(215 15% 16%), hsl(215 15% 14%)) !important;
+    border: 1px solid hsl(215 15% 22%) !important;
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.1) !important;
+  }
+
+  .dark [role="dialog"] .bg-gray-900,
+  .dark [role="dialog"] [class*="bg-gray-900"] {
+    background: linear-gradient(135deg, hsl(215 20% 8%), hsl(215 20% 6%)) !important;
+    border: 1px solid hsl(215 15% 15%) !important;
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.2) !important;
+  }
+
+  .dark [role="dialog"] .border-gray-700,
+  .dark [role="dialog"] [class*="border-gray-700"] {
+    border-color: hsl(215 15% 18%) !important;
+  }
+
+  .dark [role="dialog"] .bg-gray-800,
+  .dark [role="dialog"] [class*="bg-gray-800"] {
+    background: linear-gradient(135deg, hsl(215 20% 10%), hsl(215 20% 8%)) !important;
+    border: 1px solid hsl(215 15% 18%) !important;
+  }
+
+  /* Dialog sections with beautiful backgrounds */
+  .dark [role="dialog"] .p-4[class*="bg-gradient"] {
+    background: linear-gradient(135deg, 
+      hsl(220 20% 10%) 0%, 
+      hsl(220 25% 8%) 50%, 
+      hsl(215 30% 6%) 100%) !important;
+    border: 1px solid hsl(215 15% 20%) !important;
+    box-shadow: inset 0 1px 0 hsl(255 255% 255% / 0.05) !important;
+  }
+
+  /* Dialog dropdown content - elevated */
+  .dark [role="dialog"] [data-radix-select-content] {
+    background: linear-gradient(135deg, hsl(215 20% 12%), hsl(215 20% 10%)) !important;
+    border: 1px solid hsl(215 15% 25%) !important;
+    color: hsl(0 0% 95%) !important;
+    box-shadow: 
+      0 10px 25px hsl(0 0% 0% / 0.3),
+      0 4px 10px hsl(0 0% 0% / 0.1) !important;
+  }
+
+  /* Remove white borders completely */
+  .dark [role="dialog"] * {
+    border-color: hsl(215 15% 25%) !important;
+  }
+
+  /* Override any remaining light backgrounds */
+  .dark [role="dialog"] [class*="bg-background"] {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark [role="dialog"] [class*="text-foreground"] {
+    color: hsl(0 0% 95%) !important;
+  }
+
+  /* Beautiful close button */
+  .dark [role="dialog"] button[class*="absolute"][class*="right-4"] {
+    background-color: hsl(215 18% 14%) !important;
+    border: 1px solid hsl(215 15% 25%) !important;
+    color: hsl(0 0% 70%) !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dark [role="dialog"] button[class*="absolute"][class*="right-4"]:hover {
+    background-color: hsl(0 60% 50%) !important;
+    border-color: hsl(0 60% 40%) !important;
+    color: white !important;
+    transform: scale(1.05) !important;
+  }
+
+  /* Remove - will be replaced by more specific selectors below */
+
+  /* Specific navigation item hover - only for module links */
+  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item]:hover,
+  .dark [data-sidebar="sidebar"] [data-sidebar-menu-button]:hover {
+    background-color: hsl(215 15% 25%) !important;
+  }
+
+  /* NavLink hover - the actual navigation items */
+  .dark [data-sidebar="sidebar"] a[class*="hover"]:hover,
+  .dark [data-sidebar="sidebar"] .group:hover {
+    background-color: hsl(215 15% 18%) !important;
+  }
+
+  /* Ensure hover works properly on light mode too */
+  [data-sidebar="sidebar"] a[class*="hover"]:hover,
+  [data-sidebar="sidebar"] .group:hover {
+    background-color: hsl(var(--muted) / 0.5) !important;
+  }
+
+  /* Ensure text and icons stay bright on hover */
+  .dark [data-sidebar="sidebar"] .group:hover *,
+  .dark [data-sidebar="sidebar"] [data-sidebar-menu-item]:hover * {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Button improvements in dark mode */
+  .dark button[class*="outline"],
+  .dark button[data-variant="outline"],
+  .dark [role="button"][class*="outline"] {
+    background-color: hsl(215 12% 18%) !important;
+    border-color: hsl(215 8% 22%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark button[class*="outline"]:hover,
+  .dark button[data-variant="outline"]:hover {
+    background-color: hsl(215 12% 22%) !important;
+    border-color: hsl(215 8% 25%) !important;
+  }
+
+  .dark button[class*="secondary"],
+  .dark button[data-variant="secondary"] {
+    background-color: hsl(215 12% 20%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Input improvements in dark mode */
+  .dark input[type="text"],
+  .dark input[type="email"],
+  .dark input[type="password"],
+  .dark input[type="search"],
+  .dark input[class*="flex"],
+  .dark textarea,
+  .dark select {
+    background-color: hsl(215 12% 16%) !important;
+    border-color: hsl(215 10% 22%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark input[class*="bg-muted"] {
+    background-color: hsl(215 12% 16%) !important;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: hsl(215 20% 55%) !important;
+  }
+
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    background-color: hsl(215 12% 18%) !important;
+    border-color: hsl(var(--primary)) !important;
+    ring-color: hsl(var(--primary)) !important;
+  }
+
+  /* Search input specific */
+  .dark input[placeholder*="Buscar"] {
+    background-color: hsl(215 12% 16%) !important;
+    border-color: transparent !important;
+  }
+
+  /* Form controls and dropdowns */
+  .dark [role="combobox"],
+  .dark [data-radix-select-trigger],
+  .dark [data-state="closed"],
+  .dark [data-state="open"] {
+    background-color: hsl(215 12% 16%) !important;
+    border-color: hsl(215 10% 22%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Dropdown content */
+  .dark [data-radix-select-content],
+  .dark [role="listbox"] {
+    background-color: hsl(215 12% 14%) !important;
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  /* More comprehensive input selector */
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: hsl(215 12% 16%) !important;
+    border-color: hsl(215 10% 22%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Specific header search input */
+  .dark input[class*="bg-muted"],
+  .dark input[class*="border-0"] {
+    background-color: hsl(215 12% 16%) !important;
+    border: 1px solid hsl(215 10% 22%) !important;
+  }
+
+  /* Icon colors in dark mode */
+  .dark .text-muted-foreground {
+    color: hsl(215 20% 55%) !important;
+  }
+
+  /* Tabs component fixes for dark mode */
+  .dark [role="tablist"] {
+    background-color: hsl(215 12% 16%) !important;
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  .dark [role="tab"] {
+    color: hsl(215 20% 65%) !important;
+  }
+
+  .dark [role="tab"]:hover {
+    color: hsl(0 0% 100%) !important;
+    background-color: hsl(215 12% 20%) !important;
+  }
+
+  /* Active tab styling in dark mode */
+  .dark [role="tab"][data-state="active"] {
+    background-color: hsl(215 8% 12%) !important;
+    color: hsl(0 0% 100%) !important;
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  /* Radix UI specific tab overrides */
+  .dark [data-radix-collection-item] {
+    color: hsl(215 20% 65%) !important;
+  }
+
+  .dark [data-radix-collection-item]:hover {
+    color: hsl(0 0% 100%) !important;
+    background-color: hsl(215 12% 20%) !important;
+  }
+
+  .dark [data-radix-collection-item][data-state="active"] {
+    background-color: hsl(215 8% 12%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  /* Elementos de preview e configuração em dark mode */
+  .dark [class*="bg-muted"] {
+    background-color: hsl(215 12% 16%) !important;
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark [class*="bg-muted"] span,
+  .dark [class*="bg-muted"] p {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark [class*="bg-muted"] .text-muted-foreground {
+    color: hsl(215 20% 65%) !important;
+  }
+
+  /* Containers específicos de preview usando seletores de atributo mais seguros */
+  .dark [class*="bg-muted"][class*="50"] {
+    background-color: hsl(215 12% 16%) !important;
+    border-color: hsl(215 10% 22%) !important;
+  }
+
+  .dark [class*="bg-muted"][class*="50"] * {
+    color: hsl(0 0% 100%) !important;
+  }
+
+  .dark [class*="bg-muted"][class*="50"] .text-muted-foreground,
+  .dark [class*="bg-muted"][class*="50"] [class*="text-muted-foreground"] {
+    color: hsl(215 20% 65%) !important;
+  }
+
+  /* Elementos de preview de border radius e font size usando seletores seguros */
+  .dark [class*="bg-primary"][class*="20"] {
+    background-color: hsl(var(--primary) / 0.2) !important;
+  }
+
+  .dark [class*="border-primary"][class*="50"] {
+    border-color: hsl(var(--primary) / 0.5) !important;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px hsl(var(--primary-glow) / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px hsl(var(--primary-glow) / 0.6);
+  }
+}`;
+
+  return {
+    staticColorsCSS,
+    indexCSSFallbacks: indexCSSComplete
+  };
+};
+
+// Create a mock API endpoint simulation for development
+// In a real implementation, this would call a backend API
+export const writeStaticColorsFile = async (palette: ColorPalette): Promise<boolean> => {
+  try {
+    const cssContent = generateCompleteStaticCSS(palette);
+    
+    // For development: Use localStorage to persist the changes temporarily
+    // and provide instructions for manual file update
+    localStorage.setItem('grc-pending-colors', JSON.stringify({
+      palette,
+      cssContent,
+      timestamp: new Date().toISOString()
+    }));
+
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // In production, this would be replaced with:
+    // const response = await fetch('/api/update-colors', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({ cssContent, filePath: STATIC_COLORS_FILE_PATH })
+    // });
+    // return response.ok;
+
+    return true;
+  } catch (error) {
+    console.error('Failed to write colors file:', error);
+    return false;
+  }
+};
+
+// Load pending colors from localStorage and apply them
+export const loadPendingColors = (): { palette: ColorPalette; cssContent: string } | null => {
+  try {
+    const pending = localStorage.getItem('grc-pending-colors');
+    if (pending) {
+      return JSON.parse(pending);
+    }
+  } catch (error) {
+    console.error('Failed to load pending colors:', error);
+  }
+  return null;
+};
+
+// Apply CSS content to a <style> element for immediate effect
+export const injectCSS = (cssContent: string, id = 'dynamic-colors') => {
+  // Remove existing dynamic styles
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
+  }
+
+  // Create and inject new style element with highest priority
+  const style = document.createElement('style');
+  style.id = id;
+  style.textContent = cssContent;
+  
+  // Insert at the beginning of head for highest priority
+  document.head.insertBefore(style, document.head.firstChild);
+};
+
+// Remove injected CSS
+export const removeInjectedCSS = (id = 'dynamic-colors') => {
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
+  }
+};
+
+// Check if there are pending color changes
+export const hasPendingColors = (): boolean => {
+  return !!localStorage.getItem('grc-pending-colors');
+};
+
+// Clear pending colors
+export const clearPendingColors = () => {
+  localStorage.removeItem('grc-pending-colors');
+};
+
+// Download file with instructions
+export const downloadWithInstructions = (palette: ColorPalette) => {
+  const cssContent = generateCompleteStaticCSS(palette);
+  
+  const instructionsContent = `# INSTRUÇÕES PARA APLICAR AS CORES
+
+## Arquivo Gerado
+- static-colors.css - Substitua o arquivo em src/styles/static-colors.css
+
+## Como aplicar:
+1. Faça backup do arquivo atual src/styles/static-colors.css
+2. Substitua o arquivo pela versão baixada
+3. Reinicie o servidor de desenvolvimento (npm run dev)
+4. As cores serão aplicadas automaticamente
+
+## Verificação:
+- ✅ Recarregue a página para confirmar as mudanças
+- ✅ Teste tanto light mode quanto dark mode
+- ✅ Verifique se todos os componentes estão usando as novas cores
+
+Última atualização: ${new Date().toLocaleString('pt-BR')}
+`;
+
+  // Create zip-like download with both files
+  const blob1 = new Blob([cssContent], { type: 'text/css' });
+  const blob2 = new Blob([instructionsContent], { type: 'text/plain' });
+  
+  // Download CSS file
+  const url1 = URL.createObjectURL(blob1);
+  const a1 = document.createElement('a');
+  a1.href = url1;
+  a1.download = 'static-colors.css';
+  document.body.appendChild(a1);
+  a1.click();
+  document.body.removeChild(a1);
+  URL.revokeObjectURL(url1);
+
+  // Download instructions
+  setTimeout(() => {
+    const url2 = URL.createObjectURL(blob2);
+    const a2 = document.createElement('a');
+    a2.href = url2;
+    a2.download = 'INSTRUÇÕES.txt';
+    document.body.appendChild(a2);
+    a2.click();
+    document.body.removeChild(a2);
+    URL.revokeObjectURL(url2);
+  }, 500);
+};

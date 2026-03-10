@@ -282,12 +282,12 @@ const PolicyManagementHub: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header principal */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
+      <div className="flex flex-col space-y-2 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold truncate">
+          <h1 className="text-xl sm:text-3xl font-bold truncate">
             Gestão de Políticas e Normas
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Ciclo completo de gestão de políticas com assistência de IA
           </p>
         </div>
@@ -302,47 +302,47 @@ const PolicyManagementHub: React.FC = () => {
 
 
       {/* Métricas Cards - Premium Storytelling (Movidos para o topo) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {/* Card 1: Panorama Geral */}
         <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 p-3 opacity-10">
-            <FileText className="h-24 w-24" />
+            <FileText className="h-16 w-16 sm:h-24 sm:w-24" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
+          <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-lg font-bold flex items-center gap-1 sm:gap-2 text-primary leading-tight">
               Panorama Geral
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl font-bold text-foreground">{stats.total}</span>
-              <span className="text-sm text-muted-foreground">políticas totais</span>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-0 sm:gap-2 mb-1 sm:mb-2">
+              <span className="text-xl sm:text-3xl font-bold text-foreground">{stats.total}</span>
+              <span className="text-[10px] sm:text-sm text-muted-foreground leading-tight">políticas totais</span>
             </div>
-            <p className="text-muted-foreground font-medium text-sm leading-relaxed mb-4">
+            <p className="text-muted-foreground font-medium text-[10px] sm:text-sm leading-tight sm:leading-relaxed mb-2 sm:mb-4">
               <span className="text-green-600 font-bold flex items-center gap-1">
-                <TrendingUp className="h-3 w-3" /> +{stats.recentCount}
+                <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> +{stats.recentCount}
               </span>
-              novas políticas nesta semana.
+              <span className="block mt-0.5 sm:mt-1">novas (7 dias)</span>
             </p>
-            <Progress value={stats.total > 0 ? (stats.published / stats.total) * 100 : 0} className="h-2" />
+            <Progress value={stats.total > 0 ? (stats.published / stats.total) * 100 : 0} className="h-1.5 sm:h-2 opacity-50" />
           </CardContent>
         </Card>
 
         {/* Card 2: Em Elaboração/Revisão */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <FileEdit className="h-24 w-24 text-blue-500" />
+            <FileEdit className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-2xl">
-              <FileEdit className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-3 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <div className="p-1.5 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg sm:rounded-2xl shrink-0">
+              <FileEdit className="h-4 w-4 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Em Processo</p>
-              <h3 className="text-3xl font-bold text-foreground">
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight sm:leading-normal">Em Processo</p>
+              <h3 className="text-xl sm:text-3xl font-bold text-foreground">
                 {stats.draft + stats.review}
               </h3>
-              <p className="text-xs text-muted-foreground mt-1 flex items-center">
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 flex items-center leading-tight sm:leading-normal">
                 <span className="font-medium text-blue-600 mr-1">{stats.review}</span> em revisão
               </p>
             </div>
@@ -352,19 +352,19 @@ const PolicyManagementHub: React.FC = () => {
         {/* Card 3: Atenção Necessária */}
         <Card className={`relative overflow-hidden shadow-sm hover:shadow-md transition-all group ${stats.needsAttentionCount > 0 ? 'border-l-4 border-l-orange-500/50' : ''}`}>
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <AlertTriangle className="h-24 w-24 text-orange-500" />
+            <AlertTriangle className="h-16 w-16 sm:h-24 sm:w-24 text-orange-500" />
           </div>
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-2xl">
-              <AlertTriangle className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+          <CardContent className="p-3 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+            <div className="p-1.5 sm:p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg sm:rounded-2xl shrink-0">
+              <AlertTriangle className="h-4 w-4 sm:h-8 sm:w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Revisões Pendentes</p>
-              <h3 className={`text-3xl font-bold ${stats.needsAttentionCount > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-foreground'}`}>
+              <p className="text-[10px] sm:text-sm font-medium text-muted-foreground leading-tight sm:leading-normal">Revisões Pendentes</p>
+              <h3 className={`text-xl sm:text-3xl font-bold ${stats.needsAttentionCount > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-foreground'}`}>
                 {stats.needsAttentionCount}
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                políticas expirando ou vencidas
+              <p className="text-[9px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 leading-tight sm:leading-normal">
+                expirando ou vencidas
               </p>
             </div>
           </CardContent>
@@ -373,22 +373,22 @@ const PolicyManagementHub: React.FC = () => {
         {/* Card 4: Vigentes */}
         <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
           <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-            <CheckCircle className="h-24 w-24 text-green-500" />
+            <CheckCircle className="h-16 w-16 sm:h-24 sm:w-24 text-green-500" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold text-foreground">
+          <CardHeader className="pb-1 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-lg font-bold text-foreground leading-tight">
               Vigentes
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-green-600">
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-0 sm:gap-2 mb-1 sm:mb-2">
+              <span className="text-xl sm:text-3xl font-bold text-green-600">
                 {stats.published}
               </span>
-              <span className="text-sm text-muted-foreground">publicadas</span>
+              <span className="text-[10px] sm:text-sm text-muted-foreground leading-tight">publicadas</span>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              <span className="font-medium text-foreground">{stats.approved}</span> aprovadas aguardando.
+            <p className="text-[9px] sm:text-sm text-muted-foreground mt-1 sm:mt-2 leading-tight">
+              <span className="font-medium text-foreground">{stats.approved}</span> aprovadas agr.
             </p>
             <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-green-500" style={{ width: `${stats.total > 0 ? (stats.published / stats.total) * 100 : 0}%` }}></div>
@@ -398,26 +398,24 @@ const PolicyManagementHub: React.FC = () => {
       </div>
 
       {/* Filtros globais */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-3 w-3 mb-0.5 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar políticas..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+      <Card className="border-none shadow-sm bg-gray-50/50 dark:bg-gray-900/20">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col lg:flex-row gap-3 lg:items-center justify-between">
+            <div className="relative w-full lg:max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar políticas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-800 h-10 text-sm"
+              />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap flex-row gap-2 w-full lg:w-auto items-center overflow-x-auto pb-1 lg:pb-0">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-input rounded-md text-sm"
+                className="h-10 px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-md text-xs sm:text-sm bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary w-[140px] sm:w-[160px]"
               >
                 <option value="all">Todos os Status</option>
                 {statuses.map(status => (
@@ -433,7 +431,7 @@ const PolicyManagementHub: React.FC = () => {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-input rounded-md text-sm"
+                className="h-10 px-3 py-2 border border-gray-200 dark:border-gray-800 rounded-md text-xs sm:text-sm bg-white dark:bg-gray-950 focus:outline-none focus:ring-2 focus:ring-primary w-[140px] sm:w-[160px]"
               >
                 <option value="all">Todas as Categorias</option>
                 {categories.map(category => (
@@ -441,13 +439,12 @@ const PolicyManagementHub: React.FC = () => {
                 ))}
               </select>
 
-              <Button variant="outline" size="sm">
-                <Filter className="h-3 w-3 mb-0.5 mr-2" />
-                Filtros
+              <Button variant="outline" size="sm" className="h-10">
+                <Filter className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Filtros</span>
               </Button>
             </div>
           </div>
-
         </CardContent>
       </Card>
 

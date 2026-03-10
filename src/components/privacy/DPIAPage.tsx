@@ -170,10 +170,10 @@ export function DPIAPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">
               DPIA - Data Protection Impact Assessment
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Avaliação de impacto à proteção de dados pessoais
             </p>
           </div>
@@ -181,7 +181,7 @@ export function DPIAPage() {
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="w-full md:w-auto flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Nova DPIA
             </Button>
@@ -193,7 +193,7 @@ export function DPIAPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total DPIAs</CardTitle>
@@ -263,12 +263,12 @@ export function DPIAPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <Select
                 value={filters.status || ''}
                 onValueChange={(value) => handleFilterChange('status', value || undefined)}
               >
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -285,7 +285,7 @@ export function DPIAPage() {
                 value={filters.riskLevel || ''}
                 onValueChange={(value) => handleFilterChange('riskLevel', value || undefined)}
               >
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Nível de Risco" />
                 </SelectTrigger>
                 <SelectContent>

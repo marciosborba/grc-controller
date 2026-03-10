@@ -1,9 +1,9 @@
-import React, { useMemo, memo } from 'react';
+import React, { useMemo, memo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
+import {
   BarChart,
   Bar,
   XAxis,
@@ -15,7 +15,9 @@ import {
   Pie,
   Cell,
   LineChart,
-  Line
+  Line,
+  Legend,
+  LabelList
 } from 'recharts';
 import {
   AlertTriangle,
@@ -31,6 +33,8 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import type { Risk, RiskMetrics, RiskFilters } from '@/types/risk-management';
+import { cn } from '@/lib/utils';
+import { useTenantSettings } from '@/hooks/useTenantSettings';
 
 interface DashboardViewProps {
   risks: Risk[];
@@ -45,6 +49,11 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
   searchTerm,
   filters = {}
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const { getRiskLevels } = useTenantSettings();
+  const riskLevels = getRiskLevels();
+
   // Filtrar riscos baseado nos filtros e busca
   const filteredRisks = useMemo(() => {
     return risks.filter(risk => {
@@ -52,8 +61,8 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         if (!risk.name.toLowerCase().includes(term) &&
-            !risk.description?.toLowerCase().includes(term) &&
-            !risk.category.toLowerCase().includes(term)) {
+          !risk.description?.toLowerCase().includes(term) &&
+          !risk.category.toLowerCase().includes(term)) {
           return false;
         }
       }
@@ -77,6 +86,10 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
     });
   }, [risks, searchTerm, filters]);
 
+  const totalItems = filteredRisks.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const currentItems = filteredRisks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Funções utilitárias
   const getRiskLevelColor = (level: string) => {
     switch (level) {
@@ -93,42 +106,42 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
   const getRiskLevelBadgeStyle = (level: string) => {
     switch (level) {
       case 'Crítico':
-      case 'Muito Alto': 
+      case 'Muito Alto':
         return {
           backgroundColor: '#dc2626',
           color: '#ffffff',
           borderColor: '#dc2626',
           borderWidth: '1px'
         };
-      case 'Alto': 
+      case 'Alto':
         return {
           backgroundColor: '#ea580c',
           color: '#ffffff',
           borderColor: '#ea580c',
           borderWidth: '1px'
         };
-      case 'Médio': 
+      case 'Médio':
         return {
           backgroundColor: '#ca8a04',
           color: '#ffffff',
           borderColor: '#ca8a04',
           borderWidth: '1px'
         };
-      case 'Baixo': 
+      case 'Baixo':
         return {
           backgroundColor: '#16a34a',
           color: '#ffffff',
           borderColor: '#16a34a',
           borderWidth: '1px'
         };
-      case 'Muito Baixo': 
+      case 'Muito Baixo':
         return {
           backgroundColor: '#64748b',
           color: '#ffffff',
           borderColor: '#64748b',
           borderWidth: '1px'
         };
-      default: 
+      default:
         return {
           backgroundColor: '#6b7280',
           color: '#ffffff',
@@ -201,7 +214,8 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
       return acc;
     }, {} as Record<string, number>);
 
-    const levelChartData = ['Muito Alto', 'Alto', 'Médio', 'Baixo', 'Muito Baixo'].map(level => ({
+    // Criamos a lista baseada exatamente na matriz da tenant atualizada
+    const levelChartData = riskLevels.map(level => ({
       name: level,
       value: levelData[level] || 0,
       color: getRiskLevelColor(level)
@@ -228,64 +242,86 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
     <div className="space-y-6">
       {/* Resumo Executivo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Gráfico de Distribuição por Nível */}
+        {/* Gráfico de Distribuição por Categoria (Movido para cima) */}
         <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart className="h-5 w-5" />
-              <span>Distribuição por Nível de Risco</span>
+          <CardHeader className="p-3 sm:p-6 pb-2">
+            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
+              <Target className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Distribuição por Categoria</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={chartData.levelChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="value" fill="#8884d8">
-                  {chartData.levelChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <CardContent className="p-1 sm:p-6 sm:pt-0">
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="w-full">
+                <ResponsiveContainer width="100%" height={Math.max(250, chartData.categoryChartData.length * 35 + 40)}>
+                  <BarChart
+                    data={[...chartData.categoryChartData].sort((a: any, b: any) => b.value - a.value)}
+                    layout="vertical"
+                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                  >
+                    <XAxis type="number" hide />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: 'currentColor' }}
+                      width={90}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
+                      formatter={(value: any, name: any, props: any) => {
+                        const item = chartData.categoryChartData.find((c: any) => c.name === props.payload.name) as any;
+                        return [`${value} (${item?.percentage || 0}%)`, 'Quantidade'];
+                      }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
+                      {chartData.categoryChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${index * 40}, 70%, 60%)`} />
+                      ))}
+                      <LabelList dataKey="value" position="right" fill="currentColor" fontSize={10} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Top 5 Riscos Críticos */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-red-500 dark:text-red-400" />
+          <CardHeader className="p-3 sm:p-6 pb-2">
+            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 dark:text-red-400" />
               <span>Top 5 Riscos</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-6 pt-0">
             <div className="space-y-3">
               {topRisks.map((risk, index) => (
-                <div key={risk.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                <div key={risk.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 gap-2 overflow-hidden">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="text-xs font-bold text-muted-foreground">#{index + 1}</span>
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs"
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-bold text-muted-foreground">#{index + 1}</span>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] px-1.5 py-0 h-4 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis"
                         style={getRiskLevelBadgeStyle(risk.riskLevel)}
                       >
                         {risk.riskLevel}
                       </Badge>
                     </div>
-                    <p className="text-sm font-medium truncate">{risk.name}</p>
-                    <p className="text-xs text-muted-foreground">{risk.category}</p>
+                    <p className="text-xs sm:text-sm font-medium truncate" title={risk.name}>{risk.name}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate" title={risk.category}>{risk.category}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">{risk.riskScore}</p>
-                    <p className="text-xs text-muted-foreground">Score</p>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm sm:text-base font-bold">{risk.riskScore}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Score</p>
                   </div>
                 </div>
               ))}
-              
+
               {topRisks.length === 0 && (
                 <div className="text-center py-4">
                   <Shield className="mx-auto h-8 w-8 text-green-500 mb-2" />
@@ -300,136 +336,175 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
 
       {/* Análises Detalhadas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Distribuição por Categoria */}
+        {/* Distribuição por Nível de Risco (Movido para baixo) */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Target className="h-5 w-5" />
-              <span>Distribuição por Categoria</span>
+          <CardHeader className="p-3 sm:p-6 pb-2">
+            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
+              <BarChart className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Distribuição por Nível de Risco</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={chartData.categoryChartData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                >
-                  {chartData.categoryChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(${index * 40}, 70%, 60%)`} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          <CardContent className="p-1 sm:p-6 sm:pt-0">
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="w-full">
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={chartData.levelChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      fontSize={10}
+                      tick={{ fill: 'currentColor' }}
+                      tickMargin={5}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      fontSize={10}
+                      tick={{ fill: 'currentColor' }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickCount={5}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      cursor={{ fill: 'var(--muted)' }}
+                    />
+                    <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} maxBarSize={40}>
+                      {chartData.levelChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         {/* Tendência Temporal */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5" />
+          <CardHeader className="p-3 sm:p-6 pb-2">
+            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Evolução de Riscos</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={chartData.trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  name="Total"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="alto" 
-                  stroke="#ef4444" 
-                  strokeWidth={2}
-                  name="Alto Risco"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <CardContent className="p-1 sm:p-6 sm:pt-0">
+            <div className="w-full overflow-x-auto min-w-0">
+              <div className="w-full">
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={chartData.trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="month"
+                      fontSize={10}
+                      tickMargin={5}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      fontSize={10}
+                      axisLine={false}
+                      tickLine={false}
+                      tickCount={5}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="total"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      name="Total"
+                      dot={{ r: 4, strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="alto"
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      name="Alto Risco"
+                      dot={{ r: 4, strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Lista de Riscos Recentes */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Activity className="h-5 w-5" />
+        <CardHeader className="p-3 sm:p-6 pb-2">
+          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2 text-sm sm:text-lg">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>Riscos Recentes</span>
-              <Badge variant="secondary">{filteredRisks.length}</Badge>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs">{filteredRisks.length}</Badge>
             </div>
-            <div className="flex items-center space-x-2">
-              <Button variant="outline" size="sm">
-                <Eye className="h-4 w-4 mr-1" />
+            <div className="flex items-center">
+              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm">
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Ver Todos
               </Button>
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredRisks.slice(0, 10).map((risk) => (
-              <div key={risk.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                <div className="flex items-center space-x-4 flex-1 min-w-0">
-                  <div className={`p-2 rounded-lg ${getRiskLevelIconBg(risk.riskLevel)}`}>
-                    <AlertTriangle className={`h-4 w-4 ${getRiskLevelIconColor(risk.riskLevel)}`} />
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="space-y-3 sm:space-y-4">
+            {currentItems.map((risk) => (
+              <div key={risk.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3 sm:gap-0">
+                <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                  <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 mt-1 sm:mt-0 ${getRiskLevelIconBg(risk.riskLevel)}`}>
+                    <AlertTriangle className={`h-3 w-3 sm:h-4 sm:w-4 ${getRiskLevelIconColor(risk.riskLevel)}`} />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <h4 className="font-medium truncate">{risk.name}</h4>
-                      <Badge 
-                        variant="outline" 
-                        className="text-xs"
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                      <h4 className="font-medium text-sm sm:text-base leading-tight w-full sm:w-auto break-words line-clamp-2">{risk.name}</h4>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] sm:text-xs whitespace-nowrap"
                         style={getRiskLevelBadgeStyle(risk.riskLevel)}
                       >
                         {risk.riskLevel}
                       </Badge>
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] sm:text-sm text-muted-foreground">
                       <span>{risk.category}</span>
-                      <span>•</span>
-                      <span>Score: {risk.riskScore}</span>
-                      <span>•</span>
-                      <span>Criado em {formatDate(risk.createdAt)}</span>
+                      <span className="hidden sm:inline">•</span>
+                      <span>Score <strong className="text-foreground">{risk.riskScore}</strong></span>
+                      <span className="hidden sm:inline">•</span>
+                      <span>{formatDate(risk.createdAt)}</span>
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge className={getStatusColor(risk.status)}>
-                    {risk.status}
-                  </Badge>
-                  
-                  {risk.assignedTo && (
-                    <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                      <Users className="h-3 w-3" />
-                      <span>{risk.assignedTo}</span>
-                    </div>
-                  )}
-                  
-                  <Button variant="ghost" size="sm">
+
+                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto mt-2 sm:mt-0 space-x-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
+                  <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+                    <Badge className={cn("text-[10px] sm:text-xs whitespace-nowrap", getStatusColor(risk.status))}>
+                      {risk.status}
+                    </Badge>
+
+                    {risk.assignedTo && (
+                      <div className="flex items-center space-x-1 text-[11px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                        <Users className="h-3 w-3" />
+                        <span className="truncate max-w-[100px] sm:max-w-none">{risk.assignedTo}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0 flex-shrink-0 ml-auto">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             ))}
-            
+
             {filteredRisks.length === 0 && (
               <div className="text-center py-12">
                 <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
@@ -437,7 +512,7 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
                   Nenhum risco encontrado
                 </h3>
                 <p className="text-muted-foreground">
-                  {searchTerm || Object.keys(filters || {}).length > 0 
+                  {searchTerm || Object.keys(filters || {}).length > 0
                     ? 'Tente ajustar os filtros ou termo de busca'
                     : 'Nenhum risco foi identificado ainda'
                   }
@@ -445,6 +520,38 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
               </div>
             )}
           </div>
+
+          {/* Controles de Paginação */}
+          {totalItems > itemsPerPage && (
+            <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t gap-2">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} riscos
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="h-7 px-2 text-xs"
+                >
+                  Anterior
+                </Button>
+                <span className="text-xs font-medium px-2 py-1 bg-muted rounded">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-7 px-2 text-xs"
+                >
+                  Próxima
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -119,6 +119,9 @@ export interface Incident {
   time_to_response?: number; // minutos
   time_to_containment?: number; // minutos
   time_to_resolution?: number; // minutos
+
+  // Suporte a metadados flexivel (campos customizados, integrações)
+  metadata?: Record<string, any>;
 }
 
 // ============================================================================

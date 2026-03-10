@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-import { 
+import {
   Server,
   Save,
   ArrowLeft,
@@ -28,7 +28,10 @@ import {
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAssetCustomFields } from './hooks/useAssetCustomFields';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
+import { supabase } from '@/integrations/supabase/client';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 
 interface Asset {
   id: string;
@@ -70,32 +73,37 @@ interface Asset {
   next_audit_date?: string;
   tags: string[];
   notes?: string;
+  edr_enabled: boolean;
+}
+
+export interface AssetFormProps {
+  assetId?: string;
+  initialData?: Partial<Asset>;
+  isEmbedded?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 const ASSET_TYPE_OPTIONS = [
-  { value: 'Server', label: 'Servidor', icon: Server },
-  { value: 'Workstation', label: 'Workstation', icon: Monitor },
-  { value: 'Network Device', label: 'Dispositivo de Rede', icon: Network },
-  { value: 'Mobile Device', label: 'Dispositivo Móvel', icon: Smartphone },
-  { value: 'Storage', label: 'Armazenamento', icon: HardDrive },
-  { value: 'Infrastructure', label: 'Infraestrutura', icon: Building },
-  { value: 'Cloud Service', label: 'Serviço em Nuvem', icon: Globe },
-  { value: 'Virtual Machine', label: 'Máquina Virtual', icon: Cpu }
+  { value: 'On-Premise', label: 'On-Premise', icon: Server },
+  { value: 'SaaS', label: 'SaaS', icon: Globe },
+  { value: 'PaaS', label: 'PaaS', icon: Globe },
+  { value: 'IaaS', label: 'IaaS', icon: Server },
+  { value: 'Legacy', label: 'Legacy', icon: HardDrive },
+  { value: 'Outro', label: 'Outro', icon: Monitor }
 ];
 
 const STATUS_OPTIONS = [
   { value: 'Ativo', label: 'Ativo' },
-  { value: 'Inativo', label: 'Inativo' },
-  { value: 'Manutenção', label: 'Manutenção' },
-  { value: 'Descomissionado', label: 'Descomissionado' },
-  { value: 'Em Teste', label: 'Em Teste' }
+  { value: 'Em Implementação', label: 'Em Implementação' },
+  { value: 'Descontinuado', label: 'Descontinuado' }
 ];
 
 const CRITICALITY_OPTIONS = [
-  { value: 'Critical', label: 'Crítico', color: 'bg-red-100 text-red-800' },
-  { value: 'High', label: 'Alto', color: 'bg-orange-100 text-orange-800' },
-  { value: 'Medium', label: 'Médio', color: 'bg-yellow-100 text-yellow-800' },
-  { value: 'Low', label: 'Baixo', color: 'bg-green-100 text-green-800' }
+  { value: 'Crítica', label: 'Crítico', color: 'bg-red-100 text-red-800' },
+  { value: 'Alta', label: 'Alta', color: 'bg-orange-100 text-orange-800' },
+  { value: 'Média', label: 'Média', color: 'bg-yellow-100 text-yellow-800' },
+  { value: 'Baixa', label: 'Baixa', color: 'bg-green-100 text-green-800' }
 ];
 
 const SECURITY_CLASSIFICATION_OPTIONS = [
@@ -116,23 +124,31 @@ const NETWORK_ZONES = [
 
 
 
-export default function AssetForm() {
+export default function AssetForm({
+  assetId,
+  initialData,
+  isEmbedded = false,
+  onSuccess,
+  onCancel
+}: AssetFormProps = {}) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { customFields, getFieldValues, saveFieldValues } = useAssetCustomFields();
-  const isEditing = Boolean(id);
-  
+  const actualId = assetId || id;
+  const isEditing = Boolean(actualId);
+  const tenantId = useCurrentTenantId();
 
-  
+  // Custom Fields hook
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('asset');
+
+  const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, any>>({});
   const [formData, setFormData] = useState<Partial<Asset>>({
     id: '',
     name: '',
     type: '',
     description: '',
     status: 'Ativo',
-    criticality: 'Medium',
+    criticality: 'Média',
     ip_address: '',
     mac_address: '',
     hostname: '',
@@ -165,137 +181,199 @@ export default function AssetForm() {
     last_audit_date: '',
     next_audit_date: '',
     tags: [],
-    notes: ''
+    notes: '',
+    edr_enabled: false
   });
 
   const [newTag, setNewTag] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (isEditing && id) {
-      loadAsset(id);
-      loadCustomFieldValues(id);
+    if (initialData) {
+      setFormData(prev => ({ ...prev, ...initialData }));
+      setLoading(false);
+    } else if (isEditing && actualId) {
+      loadAsset(actualId);
     }
-  }, [id, isEditing]);
-
-  const loadCustomFieldValues = async (assetId: string) => {
-    try {
-      const values = await getFieldValues(assetId);
-      setCustomFieldValues(values);
-    } catch (error) {
-      console.error('Error loading custom field values:', error);
-    }
-  };
+  }, [actualId, isEditing, initialData]);
 
   const loadAsset = async (assetId: string) => {
     setLoading(true);
     try {
-      // Em uma aplicação real, isso buscaria os dados do ativo
-      setTimeout(() => {
-        // Dados simulados para edição
+      if (!tenantId) return;
+
+      const { data, error } = await supabase
+        .from('sistemas')
+        .select('*')
+        .eq('id', assetId)
+        .eq('tenant_id', tenantId)
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
         setFormData({
-          id: id,
-          name: 'Web Server 01',
-          type: 'Server',
-          description: 'Servidor web principal da aplicação',
-          status: 'Ativo',
-          criticality: 'High',
-          ip_address: '192.168.1.10',
-          mac_address: '00:1B:44:11:3A:B7',
-          hostname: 'srv-web-01',
-          domain: 'empresa.local',
-          network_zone: 'DMZ',
-          location: 'Datacenter SP',
-          building: 'Prédio A',
-          floor: '2º andar',
-          room: 'Sala 201',
-          rack: 'Rack A-01',
-          os: 'Ubuntu 22.04 LTS',
-          os_version: '22.04.3',
-          manufacturer: 'Dell',
-          model: 'PowerEdge R740',
-          serial_number: 'ABC123456',
-          asset_tag: 'AST-001',
-          owner: 'João Silva',
-          department: 'TI',
-          cost_center: 'CC-001-TI',
-          business_unit: 'Operações',
-          technical_contact: 'admin@empresa.com',
-          compliance_frameworks: [],
-          security_classification: 'Confidential',
-          encryption_required: true,
-          backup_required: true,
-          monitoring_enabled: true,
-          purchase_date: '2023-01-15',
-          warranty_expiry: '2026-01-15',
-          eol_date: '2028-01-15',
-          tags: ['servidor', 'web', 'produção'],
-          notes: 'Servidor crítico para operação'
+          id: data.id,
+          name: data.nome || '',
+          type: data.tipo || 'Outro',
+          description: data.descricao || '',
+          status: data.status || 'Ativo',
+          criticality: data.criticidade || 'Média',
+          ip_address: data.ip_address || '',
+          mac_address: data.mac_address || '',
+          hostname: data.hostname || '',
+          domain: data.domain || '',
+          network_zone: data.network_zone || '',
+          location: data.location || '',
+          building: data.building || '',
+          floor: data.floor || '',
+          room: data.room || '',
+          rack: data.rack || '',
+          os: data.os || '',
+          os_version: data.os_version || '',
+          manufacturer: data.manufacturer || '',
+          model: data.model || '',
+          serial_number: data.serial_number || '',
+          asset_tag: data.asset_tag || '',
+          owner: data.responsavel_tecnico || '',
+          department: data.department || '',
+          cost_center: data.cost_center || '',
+          business_unit: data.business_unit || '',
+          technical_contact: data.technical_contact || '',
+          security_classification: data.security_classification || 'Internal',
+          encryption_required: data.encryption_required || false,
+          backup_required: data.backup_required || false,
+          monitoring_enabled: data.monitoring_enabled || false,
+          purchase_date: data.purchase_date || '',
+          warranty_expiry: data.warranty_expiry || '',
+          eol_date: data.eol_date || '',
+          edr_enabled: data.edr_enabled || false,
+          tags: [],
+          notes: ''
         });
-        setLoading(false);
-      }, 1000);
+      }
     } catch (error) {
       console.error('Error loading asset:', error);
       toast.error('Erro ao carregar ativo');
+    } finally {
       setLoading(false);
     }
   };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
+    let firstErrorTab = '';
 
     if (!formData.name?.trim()) {
       newErrors.name = 'Nome do ativo é obrigatório';
+      if (!firstErrorTab) firstErrorTab = 'basic';
     }
 
     if (!formData.type) {
       newErrors.type = 'Tipo do ativo é obrigatório';
+      if (!firstErrorTab) firstErrorTab = 'basic';
     }
 
-    if (!formData.ip_address?.trim()) {
-      newErrors.ip_address = 'Endereço IP é obrigatório';
-    } else {
+    if (formData.ip_address && formData.ip_address.trim() !== '' && formData.ip_address !== 'N/A') {
       // Basic IP validation
       const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
       if (!ipRegex.test(formData.ip_address)) {
         newErrors.ip_address = 'Formato de IP inválido';
+        if (!firstErrorTab) firstErrorTab = 'network';
       }
     }
 
     if (!formData.owner?.trim()) {
       newErrors.owner = 'Responsável é obrigatório';
+      if (!firstErrorTab) firstErrorTab = 'management';
     }
 
     setErrors(newErrors);
+
+    if (firstErrorTab) {
+      setActiveTab(firstErrorTab);
+    }
+
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
-      toast.error('Por favor, corrija os erros no formulário');
+      toast.error('Por favor, veja a aba destacada e corrija os erros no formulário');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Simular chamada da API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!tenantId) throw new Error('Tenant ID não encontrado');
 
-      // Save custom field values
-      const assetId = id || 'new-' + Date.now();
-      await saveFieldValues(assetId, customFieldValues);
+      const updateData = {
+        nome: formData.name,
+        tipo: formData.type,
+        descricao: formData.description,
+        ip_address: formData.ip_address !== 'N/A' ? formData.ip_address : null,
+        mac_address: formData.mac_address || null,
+        hostname: formData.hostname || null,
+        domain: formData.domain || null,
+        network_zone: formData.network_zone || null,
+        location: formData.location || null,
+        building: formData.building || null,
+        floor: formData.floor || null,
+        room: formData.room || null,
+        rack: formData.rack || null,
+        os: formData.os || null,
+        os_version: formData.os_version || null,
+        manufacturer: formData.manufacturer || null,
+        model: formData.model || null,
+        serial_number: formData.serial_number || null,
+        asset_tag: formData.asset_tag || null,
+        department: formData.department || null,
+        cost_center: formData.cost_center || null,
+        business_unit: formData.business_unit || null,
+        technical_contact: formData.technical_contact || null,
+        purchase_date: formData.purchase_date || null,
+        warranty_expiry: formData.warranty_expiry || null,
+        security_classification: formData.security_classification || 'Internal',
+        encryption_required: formData.encryption_required || false,
+        backup_required: formData.backup_required || false,
+        monitoring_enabled: formData.monitoring_enabled || false,
+        responsavel_tecnico: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(formData.owner)) ? formData.owner : null,
+        criticidade: formData.criticality,
+        eol_date: formData.eol_date || null,
+        edr_enabled: formData.edr_enabled || false,
+        status: formData.status
+      };
 
       if (isEditing) {
+        const { error } = await supabase
+          .from('sistemas')
+          .update(updateData)
+          .eq('id', actualId)
+          .eq('tenant_id', tenantId);
+
+        if (error) throw error;
         toast.success('Ativo atualizado com sucesso');
       } else {
+        const { error } = await supabase
+          .from('sistemas')
+          .insert({ ...updateData, tenant_id: tenantId });
+
+        if (error) throw error;
         toast.success('Ativo criado com sucesso');
       }
 
-      navigate('/vulnerabilities/cmdb');
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/vulnerabilities/cmdb');
+      }
     } catch (error) {
+      console.error('Error saving asset:', error);
       toast.error('Erro ao salvar ativo');
     } finally {
       setLoading(false);
@@ -304,7 +382,7 @@ export default function AssetForm() {
 
   const handleInputChange = (field: keyof Asset, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Limpar erro quando o usuário começar a digitar
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -334,228 +412,69 @@ export default function AssetForm() {
 
 
 
+  // Funções helper para icones
   const getTypeIcon = (type: string) => {
     const assetType = ASSET_TYPE_OPTIONS.find(t => t.value === type);
     const IconComponent = assetType?.icon || Server;
     return <IconComponent className="h-4 w-4" />;
   };
 
-  const renderCustomField = (field: any) => {
-    const value = customFieldValues[field.name] || field.defaultValue || '';
-    
-    const updateCustomFieldValue = (fieldName: string, newValue: any) => {
-      setCustomFieldValues(prev => ({
-        ...prev,
-        [fieldName]: newValue
-      }));
-    };
+  const calculateBestPracticeRisk = () => {
+    let riskScore = 0;
 
-    switch (field.type) {
-      case 'select':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Select 
-              value={value} 
-              onValueChange={(newValue) => updateCustomFieldValue(field.name, newValue)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={field.placeholder || `Selecione ${field.label}`} />
-              </SelectTrigger>
-              <SelectContent>
-                {field.options?.map((option: string) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'textarea':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Textarea
-              id={field.name}
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-              rows={3}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'boolean':
-        return (
-          <div key={field.id} className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={Boolean(value)}
-                onCheckedChange={(checked) => updateCustomFieldValue(field.name, checked)}
-                className="data-[state=checked]:!bg-[hsl(198_87%_50%)] data-[state=unchecked]:bg-input"
-                style={{
-                  backgroundColor: Boolean(value) ? 'hsl(198 87% 50%)' : undefined
-                }}
-              />
-              <Label htmlFor={field.name}>
-                {field.label}
-                {field.required && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-            </div>
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'number':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="number"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-              min={field.validation?.min}
-              max={field.validation?.max}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'date':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="date"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'email':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="email"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      case 'url':
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type="url"
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-      
-      default: // text, phone
-        return (
-          <div key={field.id} className="space-y-2">
-            <Label htmlFor={field.name}>
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
-            </Label>
-            <Input
-              id={field.name}
-              type={field.type === 'phone' ? 'tel' : 'text'}
-              value={value}
-              onChange={(e) => updateCustomFieldValue(field.name, e.target.value)}
-              placeholder={field.placeholder}
-            />
-            {field.description && (
-              <p className="text-xs text-muted-foreground">{field.description}</p>
-            )}
-          </div>
-        );
-    }
+    if (formData.criticality === 'Alta' || formData.criticality === 'Crítica') riskScore += 2;
+    if (formData.criticality === 'Média') riskScore += 1;
+    if (formData.network_zone === 'DMZ' || formData.network_zone === 'Guest') riskScore += 2;
+
+    const isEolPast = !formData.eol_date || (new Date(formData.eol_date) < new Date());
+    if (isEolPast) riskScore += 3;
+
+    if (!formData.edr_enabled) riskScore += 2;
+    if (formData.encryption_required && formData.security_classification === 'Confidential') riskScore -= 1;
+    if (!formData.backup_required) riskScore += 1;
+    if (!formData.monitoring_enabled) riskScore += 1;
+
+    if (riskScore >= 6) return { level: 'Crítico', color: 'text-red-600', bgColor: 'bg-red-50' };
+    if (riskScore >= 4) return { level: 'Alto', color: 'text-orange-600', bgColor: 'bg-orange-50' };
+    if (riskScore >= 2) return { level: 'Médio', color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    return { level: 'Baixo', color: 'text-green-600', bgColor: 'bg-green-50' };
   };
+
+  const recommendedRisk = calculateBestPracticeRisk();
 
   if (loading && isEditing) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-2 border-border border-t-primary"></div>
+      <div className={isEmbedded ? "p-8 flex items-center justify-center" : "min-h-screen flex items-center justify-center"}>
+        <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-2 border-border border-t-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className={isEmbedded ? "space-y-4 p-4" : "space-y-6"}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/vulnerabilities/cmdb')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Server className="h-8 w-8 text-primary" />
-              {isEditing ? 'Editar Ativo' : 'Novo Ativo'}
-            </h1>
-            <p className="text-muted-foreground">
-              {isEditing ? 'Atualizar informações do ativo' : 'Adicionar um novo ativo ao inventário CMDB'}
-            </p>
+      {!isEmbedded && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => navigate('/vulnerabilities/cmdb')}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold flex items-center gap-2">
+                <Server className="h-8 w-8 text-primary" />
+                {isEditing ? 'Editar Ativo' : 'Novo Ativo'}
+              </h1>
+              <p className="text-muted-foreground">
+                {isEditing ? 'Atualizar informações do ativo' : 'Adicionar um novo ativo ao inventário CMDB'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <form onSubmit={handleSubmit}>
-        <Tabs defaultValue="basic" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList>
             <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
             <TabsTrigger value="network">Detalhes de Rede</TabsTrigger>
@@ -639,7 +558,7 @@ export default function AssetForm() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="criticality">Criticidade</Label>
+                    <Label htmlFor="criticality">Criticidade do Negócio</Label>
                     <Select value={formData.criticality || ''} onValueChange={(value) => handleInputChange('criticality', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a criticidade" />
@@ -654,6 +573,15 @@ export default function AssetForm() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Visual indicator of true risk */}
+                <div className={`p-3 rounded-md border ${recommendedRisk.bgColor} border-${recommendedRisk.color.replace('text-', '')}/20 flex items-start gap-3`}>
+                  <Shield className={`h-5 w-5 mt-0.5 ${recommendedRisk.color}`} />
+                  <div>
+                    <h4 className={`text-sm font-semibold ${recommendedRisk.color}`}>Risco Real Estimado: {recommendedRisk.level}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">Este risco é calculado automaticamente com base nas melhores práticas do mercado, considerando a criticidade do negócio, exposição, EOL e presença de controles como EDR.</p>
                   </div>
                 </div>
 
@@ -713,30 +641,15 @@ export default function AssetForm() {
                 </div>
 
                 {/* Custom Fields for Basic Tab */}
-                {customFields.filter(field => field.tab === 'basic').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'basic' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'basic')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
+                {customFields.length > 0 && (
+                  <div className="pt-4 border-t mt-6">
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Informações Adicionais</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <CustomFieldInputs
+                        fields={customFields}
+                        values={customFieldValues}
+                        onChange={setCustomFieldValues}
+                      />
                     </div>
                   </div>
                 )}
@@ -839,34 +752,7 @@ export default function AssetForm() {
                   />
                 </div>
 
-                {/* Custom Fields for Network Tab */}
-                {customFields.filter(field => field.tab === 'network').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'network' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'network')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
-                    </div>
-                  </div>
-                )}
+                {/* Custom Fields for Network Tab removed due to type incompatibility */}
               </CardContent>
             </Card>
           </TabsContent>
@@ -934,34 +820,6 @@ export default function AssetForm() {
                   </div>
                 </div>
 
-                {/* Custom Fields for Location Tab */}
-                {customFields.filter(field => field.tab === 'location').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'location' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'location')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1065,34 +923,6 @@ export default function AssetForm() {
                   </div>
                 </div>
 
-                {/* Custom Fields for Management Tab */}
-                {customFields.filter(field => field.tab === 'management').length > 0 && (
-                  <div className="space-y-4">
-                    {/* Render section title/subtitle if available */}
-                    {(() => {
-                      const firstField = customFields.find(field => field.tab === 'management' && (field.sectionTitle || field.sectionSubtitle));
-                      if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                        return (
-                          <div>
-                            {firstField.sectionTitle && (
-                              <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                            )}
-                            {firstField.sectionSubtitle && (
-                              <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {customFields
-                        .filter(field => field.tab === 'management')
-                        .sort((a, b) => a.order - b.order)
-                        .map(field => renderCustomField(field))}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1128,7 +958,7 @@ export default function AssetForm() {
                     <Label className="text-base font-semibold">Configurações de Segurança</Label>
                     <p className="text-sm text-muted-foreground">Configure as políticas de segurança para este ativo</p>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="space-y-1">
@@ -1139,10 +969,6 @@ export default function AssetForm() {
                         id="encryption_required"
                         checked={formData.encryption_required || false}
                         onCheckedChange={(checked) => handleToggleChange('encryption_required', checked)}
-                        className="data-[state=checked]:!bg-[hsl(198_87%_50%)] data-[state=unchecked]:bg-input"
-                        style={{
-                          backgroundColor: formData.encryption_required ? 'hsl(198 87% 50%)' : undefined
-                        }}
                       />
                     </div>
 
@@ -1155,10 +981,6 @@ export default function AssetForm() {
                         id="backup_required"
                         checked={formData.backup_required || false}
                         onCheckedChange={(checked) => handleToggleChange('backup_required', checked)}
-                        className="data-[state=checked]:!bg-[hsl(198_87%_50%)] data-[state=unchecked]:bg-input"
-                        style={{
-                          backgroundColor: formData.backup_required ? 'hsl(198 87% 50%)' : undefined
-                        }}
                       />
                     </div>
 
@@ -1171,10 +993,18 @@ export default function AssetForm() {
                         id="monitoring_enabled"
                         checked={formData.monitoring_enabled || false}
                         onCheckedChange={(checked) => handleToggleChange('monitoring_enabled', checked)}
-                        className="data-[state=checked]:!bg-[hsl(198_87%_50%)] data-[state=unchecked]:bg-input"
-                        style={{
-                          backgroundColor: formData.monitoring_enabled ? 'hsl(198 87% 50%)' : undefined
-                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <Label htmlFor="edr_enabled" className="font-medium">EDR Configurado</Label>
+                        <p className="text-xs text-muted-foreground">Endpoint Detection and Response</p>
+                      </div>
+                      <Switch
+                        id="edr_enabled"
+                        checked={formData.edr_enabled || false}
+                        onCheckedChange={(checked) => handleToggleChange('edr_enabled', checked)}
                       />
                     </div>
                   </div>
@@ -1187,8 +1017,8 @@ export default function AssetForm() {
                     {formData.tags?.map((tag, index) => (
                       <Badge key={index} variant="secondary" className="flex items-center gap-1">
                         {tag}
-                        <X 
-                          className="h-3 w-3 cursor-pointer" 
+                        <X
+                          className="h-3 w-3 cursor-pointer"
                           onClick={() => handleRemoveTag(tag)}
                         />
                       </Badge>
@@ -1218,43 +1048,15 @@ export default function AssetForm() {
                   />
                 </div>
 
-              {/* Custom Fields for Security Tab */}
-              {customFields.filter(field => field.tab === 'security').length > 0 && (
-                <div className="space-y-4">
-                  {/* Render section title/subtitle if available */}
-                  {(() => {
-                    const firstField = customFields.find(field => field.tab === 'security' && (field.sectionTitle || field.sectionSubtitle));
-                    if (firstField && (firstField.sectionTitle || firstField.sectionSubtitle)) {
-                      return (
-                        <div>
-                          {firstField.sectionTitle && (
-                            <Label className="text-base font-semibold">{firstField.sectionTitle}</Label>
-                          )}
-                          {firstField.sectionSubtitle && (
-                            <p className="text-sm text-muted-foreground">{firstField.sectionSubtitle}</p>
-                          )}
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {customFields
-                      .filter(field => field.tab === 'security')
-                      .sort((a, b) => a.order - b.order)
-                      .map(field => renderCustomField(field))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
         {/* Form Actions */}
         <div className="flex justify-end gap-4 mt-6">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => navigate('/vulnerabilities/cmdb')}
             disabled={loading}
           >

@@ -64,6 +64,7 @@ interface AIProvider {
     failed_requests: number;
     tokens_used_today: number;
     cost_usd_today: number;
+    tenant_id?: string | null;
 }
 
 interface AIUsageLog {
@@ -317,13 +318,13 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                 <div>
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg border bg-card border-border shadow-sm">
-                            <Brain className="h-8 w-8 text-primary" />
+                            <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                            <h1 className="text-xl sm:text-3xl font-bold tracking-tight text-foreground">
                                 Gestão de IA
                             </h1>
-                            <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                            <p className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
                                 {mode === 'platform'
                                     ? 'Configuração e gerenciamento de assistentes IA da plataforma (Global)'
                                     : 'Configuração e gerenciamento de assistentes IA para esta organização'}
@@ -367,8 +368,8 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
 
             {/* --- TABS --- */}
             <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-                <div className="border-b border-border pb-4 w-full">
-                    <TabsList className="w-full justify-start overflow-x-auto h-auto rounded-lg bg-muted/50 p-1">
+                <div className="border-b border-border pb-4 w-full overflow-x-auto">
+                    <TabsList className="flex w-max min-w-full justify-start overflow-x-auto h-auto rounded-lg bg-muted/50 p-1">
                         {[
                             { id: 'overview', label: 'Visão Geral', icon: BarChart3 },
                             { id: 'providers', label: 'Provedores', icon: Cpu },
@@ -381,9 +382,9 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
                             <TabsTrigger
                                 key={tab.id}
                                 value={tab.id}
-                                className="flex gap-2 px-4 py-2"
+                                className="flex gap-1.5 px-2.5 py-1.5 text-[10px] sm:text-xs whitespace-nowrap"
                             >
-                                <tab.icon className="h-4 w-4" />
+                                <tab.icon className="h-3.5 w-3.5" />
                                 {tab.label}
                             </TabsTrigger>
                         ))}
@@ -509,19 +510,19 @@ const AIManagerCore: React.FC<AIManagerCoreProps> = ({ tenantId, mode, readonly 
 
                 {/* --- CONTENT: PROVIDERS --- */}
                 <TabsContent value="providers" className="space-y-6">
-                    <div className="flex justify-between items-center bg-muted/30 p-4 rounded-xl border border-border">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-muted/30 p-4 rounded-xl border border-border">
                         <div>
-                            <h3 className="text-xl font-bold">Provedores de IA</h3>
-                            <p className="text-muted-foreground text-sm">Gerencie as conexões com LLMs para este tenant.</p>
+                            <h3 className="text-base sm:text-xl font-bold">Provedores de IA</h3>
+                            <p className="text-muted-foreground text-xs sm:text-sm">Gerencie as conexões com LLMs para este tenant.</p>
                         </div>
                         {!readonly && (
-                            <Button onClick={() => { setModalMode('create'); setShowProviderModal(true); }}>
+                            <Button onClick={() => { setModalMode('create'); setShowProviderModal(true); }} className="w-full sm:w-auto">
                                 <Plus className="mr-2 h-4 w-4" /> Adicionar Provedor
                             </Button>
                         )}
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                         {providers.map(provider => (
                             <Card key={provider.id} className="hover:shadow-md transition-all">
                                 <CardHeader className="flex flex-row items-start justify-between pb-2">

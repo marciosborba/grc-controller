@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { 
+import {
   DndContext,
   closestCenter,
   KeyboardSensor,
@@ -24,12 +24,12 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { 
-  Shield, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
+import {
+  Shield,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
   Eye,
   EyeOff,
   AlertTriangle,
@@ -48,7 +48,7 @@ import {
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import EthicsReportCard from './EthicsReportCard';
 import SortableEthicsReportCard from './SortableEthicsReportCard';
@@ -89,7 +89,7 @@ const EthicsChannelPage = () => {
   const [selectedReport, setSelectedReport] = useState<EthicsReport | null>(null);
   const [activeTab, setActiveTab] = useState('reports');
   const [isCardView, setIsCardView] = useState(true);
-  
+
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -134,23 +134,23 @@ const EthicsChannelPage = () => {
 
   useEffect(() => {
     let filtered = [...reports];
-    
+
     if (filters.search_term) {
-      filtered = filtered.filter(report => 
+      filtered = filtered.filter(report =>
         report.title.toLowerCase().includes(filters.search_term.toLowerCase()) ||
         report.description.toLowerCase().includes(filters.search_term.toLowerCase()) ||
         report.category.toLowerCase().includes(filters.search_term.toLowerCase())
       );
     }
-    
+
     if (filters.categories.length > 0) {
       filtered = filtered.filter(report => filters.categories.includes(report.category));
     }
-    
+
     if (filters.statuses.length > 0) {
       filtered = filtered.filter(report => filters.statuses.includes(report.status));
     }
-    
+
     if (filters.severities.length > 0) {
       filtered = filtered.filter(report => filters.severities.includes(report.severity));
     }
@@ -162,7 +162,7 @@ const EthicsChannelPage = () => {
     if (!filters.show_resolved) {
       filtered = filtered.filter(report => report.status !== 'resolved');
     }
-    
+
     setSortedReports(filtered);
   }, [reports, filters]);
 
@@ -172,7 +172,7 @@ const EthicsChannelPage = () => {
         .from('ethics_reports')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       setReports(data || []);
     } catch (error: any) {
@@ -186,7 +186,7 @@ const EthicsChannelPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       const reportData = {
         ...formData,
@@ -198,9 +198,9 @@ const EthicsChannelPage = () => {
           .from('ethics_reports')
           .update(reportData)
           .eq('id', editingReport.id);
-        
+
         if (error) throw error;
-        
+
         toast({
           title: 'Sucesso',
           description: 'Relatório atualizado com sucesso',
@@ -209,17 +209,17 @@ const EthicsChannelPage = () => {
         const { error } = await supabase
           .from('ethics_reports')
           .insert([reportData]);
-        
+
         if (error) throw error;
-        
+
         toast({
           title: 'Sucesso',
-          description: formData.is_anonymous 
-            ? 'Denúncia anônima enviada com sucesso' 
+          description: formData.is_anonymous
+            ? 'Denúncia anônima enviada com sucesso'
             : 'Relatório criado com sucesso',
         });
       }
-      
+
       setIsDialogOpen(false);
       resetForm();
       fetchReports();
@@ -234,7 +234,7 @@ const EthicsChannelPage = () => {
 
   const handleResolution = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedReport) return;
 
     try {
@@ -295,20 +295,20 @@ const EthicsChannelPage = () => {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja excluir este relatório?')) return;
-    
+
     try {
       const { error } = await supabase
         .from('ethics_reports')
         .delete()
         .eq('id', id);
-      
+
       if (error) throw error;
-      
+
       toast({
         title: 'Sucesso',
         description: 'Relatório excluído com sucesso',
       });
-      
+
       fetchReports();
     } catch (error: any) {
       toast({
@@ -409,8 +409,8 @@ const EthicsChannelPage = () => {
             Sistema de denúncias anônimas e identificadas para promoção da ética corporativa
           </p>
         </div>
-        
-        <div className="flex gap-2">
+
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -419,7 +419,7 @@ const EthicsChannelPage = () => {
             {isCardView ? <BarChart3 className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
             {isCardView ? 'Visão Lista' : 'Visão Cards'}
           </Button>
-          
+
           <button
             onClick={() => {
               resetForm();
@@ -449,15 +449,15 @@ const EthicsChannelPage = () => {
             <Plus className="w-4 h-4" />
             Nova Denúncia
           </button>
-          
+
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:w-auto sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingReport ? 'Editar Relatório' : 'Nova Denúncia'}
                 </DialogTitle>
               </DialogHeader>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
                   <div>
@@ -465,30 +465,30 @@ const EthicsChannelPage = () => {
                     <Input
                       id="title"
                       value={formData.title}
-                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       required
                       placeholder="Título da denúncia"
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="description">Descrição Detalhada *</Label>
                     <Textarea
                       id="description"
                       value={formData.description}
-                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       required
                       rows={4}
                       placeholder="Descreva detalhadamente o ocorrido, incluindo datas, locais e pessoas envolvidas..."
                     />
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="category">Categoria *</Label>
                       <Select
                         value={formData.category}
-                        onValueChange={(value) => setFormData({...formData, category: value})}
+                        onValueChange={(value) => setFormData({ ...formData, category: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione..." />
@@ -506,12 +506,12 @@ const EthicsChannelPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="severity">Gravidade *</Label>
                       <Select
                         value={formData.severity}
-                        onValueChange={(value) => setFormData({...formData, severity: value})}
+                        onValueChange={(value) => setFormData({ ...formData, severity: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -525,13 +525,13 @@ const EthicsChannelPage = () => {
                       </Select>
                     </div>
                   </div>
-                  
+
                   <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-950/30">
                     <div className="flex items-center space-x-2">
                       <Switch
                         id="anonymous"
                         checked={formData.is_anonymous}
-                        onCheckedChange={(checked) => setFormData({...formData, is_anonymous: checked})}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_anonymous: checked })}
                       />
                       <Label htmlFor="anonymous" className="flex items-center space-x-2">
                         {formData.is_anonymous ? (
@@ -548,55 +548,55 @@ const EthicsChannelPage = () => {
                       </Label>
                     </div>
                     <p className="text-sm text-muted-foreground mt-2">
-                      {formData.is_anonymous 
-                        ? 'Sua identidade será mantida em sigilo absoluto.' 
+                      {formData.is_anonymous
+                        ? 'Sua identidade será mantida em sigilo absoluto.'
                         : 'Suas informações de contato serão utilizadas para acompanhamento do caso.'}
                     </p>
                   </div>
-                  
+
                   {!formData.is_anonymous && (
                     <div className="space-y-4 border rounded-lg p-4">
                       <h4 className="font-medium">Informações do Denunciante</h4>
-                      
+
                       <div>
                         <Label htmlFor="reporter_name">Nome Completo</Label>
                         <Input
                           id="reporter_name"
                           value={formData.reporter_name}
-                          onChange={(e) => setFormData({...formData, reporter_name: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, reporter_name: e.target.value })}
                           placeholder="Seu nome completo"
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="reporter_email">Email</Label>
                         <Input
                           id="reporter_email"
                           type="email"
                           value={formData.reporter_email}
-                          onChange={(e) => setFormData({...formData, reporter_email: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, reporter_email: e.target.value })}
                           placeholder="seu.email@empresa.com"
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="reporter_phone">Telefone</Label>
                         <Input
                           id="reporter_phone"
                           value={formData.reporter_phone}
-                          onChange={(e) => setFormData({...formData, reporter_phone: e.target.value})}
+                          onChange={(e) => setFormData({ ...formData, reporter_phone: e.target.value })}
                           placeholder="(11) 99999-9999"
                         />
                       </div>
                     </div>
                   )}
                 </div>
-                
-                <div className="flex justify-end space-x-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" className="w-full sm:w-auto">
                     {editingReport ? 'Atualizar' : 'Enviar Denúncia'}
                   </Button>
                 </div>
@@ -611,58 +611,58 @@ const EthicsChannelPage = () => {
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center">
-              <Shield className="h-6 w-6 text-blue-500" />
-              <div className="ml-3">
+              <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-blue-500" />
+              <div className="ml-2 sm:ml-3">
                 <p className="text-xs font-medium text-muted-foreground">Total</p>
-                <p className="text-lg font-bold">{metrics.total_reports}</p>
+                <p className="text-base sm:text-lg font-bold">{metrics.total_reports}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center">
-              <UserX className="h-6 w-6 text-purple-500" />
-              <div className="ml-3">
+              <UserX className="h-5 w-5 sm:h-6 sm:w-6 text-purple-500" />
+              <div className="ml-2 sm:ml-3">
                 <p className="text-xs font-medium text-muted-foreground">Anônimas</p>
-                <p className="text-lg font-bold">{metrics.anonymous_reports}</p>
+                <p className="text-base sm:text-lg font-bold">{metrics.anonymous_reports}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center">
-              <Clock className="h-6 w-6 text-yellow-500" />
-              <div className="ml-3">
+              <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
+              <div className="ml-2 sm:ml-3">
                 <p className="text-xs font-medium text-muted-foreground">Em Andamento</p>
-                <p className="text-lg font-bold">{metrics.pending_reports}</p>
+                <p className="text-base sm:text-lg font-bold">{metrics.pending_reports}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <div className="ml-3">
+              <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-500" />
+              <div className="ml-2 sm:ml-3">
                 <p className="text-xs font-medium text-muted-foreground">Resolvidas</p>
-                <p className="text-lg font-bold">{metrics.resolved_reports}</p>
+                <p className="text-base sm:text-lg font-bold">{metrics.resolved_reports}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center">
-              <AlertTriangle className="h-6 w-6 text-red-500" />
-              <div className="ml-3">
+              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-500" />
+              <div className="ml-2 sm:ml-3">
                 <p className="text-xs font-medium text-muted-foreground">Críticas</p>
-                <p className="text-lg font-bold">{metrics.critical_reports}</p>
+                <p className="text-base sm:text-lg font-bold">{metrics.critical_reports}</p>
               </div>
             </div>
           </CardContent>
@@ -685,7 +685,7 @@ const EthicsChannelPage = () => {
                 </Button>
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -696,9 +696,9 @@ const EthicsChannelPage = () => {
                   className="pl-10"
                 />
               </div>
-              
-              <Select 
-                value={filters.categories[0] || undefined} 
+
+              <Select
+                value={filters.categories[0] || undefined}
                 onValueChange={(value) => updateFilter('categories', value ? [value] : [])}
               >
                 <SelectTrigger>
@@ -714,9 +714,9 @@ const EthicsChannelPage = () => {
                   <SelectItem value="other">Outros</SelectItem>
                 </SelectContent>
               </Select>
-              
-              <Select 
-                value={filters.statuses[0] || undefined} 
+
+              <Select
+                value={filters.statuses[0] || undefined}
                 onValueChange={(value) => updateFilter('statuses', value ? [value] : [])}
               >
                 <SelectTrigger>
@@ -730,9 +730,9 @@ const EthicsChannelPage = () => {
                   <SelectItem value="closed">Fechado</SelectItem>
                 </SelectContent>
               </Select>
-              
-              <Select 
-                value={filters.severities[0] || undefined} 
+
+              <Select
+                value={filters.severities[0] || undefined}
                 onValueChange={(value) => updateFilter('severities', value ? [value] : [])}
               >
                 <SelectTrigger>
@@ -756,7 +756,7 @@ const EthicsChannelPage = () => {
                 />
                 <span className="text-sm">Apenas anônimas</span>
               </label>
-              
+
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -816,21 +816,21 @@ const EthicsChannelPage = () => {
 
       {/* Resolution Dialog */}
       <Dialog open={isResolutionDialogOpen} onOpenChange={setIsResolutionDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] sm:w-auto sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gerenciar Resolução</DialogTitle>
           </DialogHeader>
-          
+
           <form onSubmit={handleResolution} className="space-y-4">
             <div>
               <Label>Relatório: {selectedReport?.title}</Label>
             </div>
-            
+
             <div>
               <Label htmlFor="resolution_status">Status *</Label>
               <Select
                 value={resolutionData.status}
-                onValueChange={(value) => setResolutionData({...resolutionData, status: value})}
+                onValueChange={(value) => setResolutionData({ ...resolutionData, status: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -844,23 +844,23 @@ const EthicsChannelPage = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="resolution">Resolução / Comentários</Label>
               <Textarea
                 id="resolution"
                 value={resolutionData.resolution}
-                onChange={(e) => setResolutionData({...resolutionData, resolution: e.target.value})}
+                onChange={(e) => setResolutionData({ ...resolutionData, resolution: e.target.value })}
                 rows={4}
                 placeholder="Descreva as ações tomadas e a resolução do caso..."
               />
             </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setIsResolutionDialogOpen(false)}>
+
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setIsResolutionDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" className="w-full sm:w-auto">
                 Atualizar Status
               </Button>
             </div>

@@ -210,15 +210,15 @@ export function ActionPlansManagement() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Planos de Ação e Correção</h2>
-          <p className="text-muted-foreground">Gerencie planos de ação para conformidade e tratamento de não conformidades.</p>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight">Planos de Ação e Correção</h2>
+          <p className="text-muted-foreground text-[10px] sm:text-sm">Gerencie planos de ação para conformidade e tratamento de não conformidades.</p>
         </div>
         <Dialog open={showNewPlanDialog} onOpenChange={setShowNewPlanDialog}>
           <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" /> Novo Plano</Button>
+            <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> Novo Plano</Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -254,7 +254,7 @@ export function ActionPlansManagement() {
                 <Textarea value={newPlanForm.causa_raiz} onChange={e => setNewPlanForm({ ...newPlanForm, causa_raiz: e.target.value })} placeholder="Qual a causa raiz identificada?" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label>Responsável</Label>
                   <Select value={newPlanForm.responsavel_id} onValueChange={val => setNewPlanForm({ ...newPlanForm, responsavel_id: val })}>
@@ -340,36 +340,36 @@ export function ActionPlansManagement() {
               <CardHeader className="border-b pb-4">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-xl flex items-center gap-2">{selectedPlan.title}</CardTitle>
-                    <CardDescription className="mt-1">{selectedPlan.description || "Sem descrição"}</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl flex items-center gap-1 sm:gap-2 pr-2">{selectedPlan.title}</CardTitle>
+                    <CardDescription className="mt-1 text-xs sm:text-sm">{selectedPlan.description || "Sem descrição"}</CardDescription>
                     {(selectedPlan.causa_raiz || selectedPlan.objetivo || selectedPlan.responsavel_nome) && (
-                      <div className="mt-2 text-sm text-muted-foreground space-y-1">
+                      <div className="mt-2 text-xs sm:text-sm text-muted-foreground space-y-1">
                         {selectedPlan.responsavel_nome && <p><span className="font-medium">Responsável:</span> {selectedPlan.responsavel_nome}</p>}
                         {selectedPlan.objetivo && <p><span className="font-medium">Objetivo:</span> {selectedPlan.objetivo}</p>}
                         {selectedPlan.causa_raiz && <p><span className="font-medium">Causa Raiz:</span> {selectedPlan.causa_raiz}</p>}
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => setShowNewActivityDialog(true)}>
-                      <Plus className="h-4 w-4 mr-1" /> Nova Atividade
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                    <Button size="sm" onClick={() => setShowNewActivityDialog(true)} className="h-8 text-xs px-2 sm:px-3">
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> <span className="hidden sm:inline">Nova Atividade</span><span className="sm:hidden">Nova Ativ.</span>
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => openEditPlanDialog(selectedPlan)}>
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEditPlanDialog(selectedPlan)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-4 text-sm">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="text-muted-foreground h-4 w-4" />
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-4 text-[10px] sm:text-sm">
+                  <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-0 bg-muted/30 sm:bg-transparent rounded">
+                    <Clock className="text-muted-foreground h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Prazo: <span className="font-medium">{selectedPlan.due_date ? format(new Date(selectedPlan.due_date), 'dd/MM/yyyy') : 'N/A'}</span></span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <AlertTriangle className="text-muted-foreground h-4 w-4" />
+                  <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-0 bg-muted/30 sm:bg-transparent rounded">
+                    <AlertTriangle className="text-muted-foreground h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Prioridade: <span className="capitalize">{selectedPlan.priority}</span></span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <CheckCircle className="text-muted-foreground h-4 w-4" />
+                  <div className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:p-0 bg-muted/30 sm:bg-transparent rounded">
+                    <CheckCircle className="text-muted-foreground h-3 w-3 sm:h-4 sm:w-4" />
                     <span>Conclusão: <span className="font-medium">{selectedPlan.progress}%</span></span>
                   </div>
                 </div>
@@ -384,46 +384,48 @@ export function ActionPlansManagement() {
                 <div className="divide-y">
                   {selectedPlan.activities && selectedPlan.activities.length > 0 ? (
                     selectedPlan.activities.map(activity => (
-                      <div key={activity.id} className="p-4 hover:bg-muted/30 group">
-                        <div className="flex justify-between items-start">
-                          <div className="flex gap-3">
+                      <div key={activity.id} className="p-3 sm:p-4 hover:bg-muted/30 group">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
+                          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto overflow-hidden">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className={`h-5 w-5 rounded-full border ${activity.status === 'completed' ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground'}`}
+                              className={`h-5 w-5 rounded-full border shrink-0 ${activity.status === 'completed' ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground'}`}
                               onClick={e => { e.stopPropagation(); updateActivityStatus(activity.id, activity.status === 'completed' ? 'open' : 'completed'); }}
                             >
                               {activity.status === 'completed' && <CheckCircle className="h-3 w-3" />}
                             </Button>
-                            <div className={activity.status === 'completed' ? 'opacity-60 line-through' : ''}>
-                              <h4 className="text-sm font-medium">{activity.title}</h4>
-                              <p className="text-xs text-muted-foreground mt-0.5">{activity.description}</p>
+                            <div className={`min-w-0 flex-1 ${activity.status === 'completed' ? 'opacity-60 line-through' : ''}`}>
+                              <h4 className="text-xs sm:text-sm font-medium pr-2 break-words">{activity.title}</h4>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-2">{activity.description}</p>
                               {activity.responsible_name && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
                                   <User className="h-3 w-3" /> {activity.responsible_name}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className={`text-[10px] ${getPriorityColor(activity.priority)}`}>{activity.priority}</Badge>
-                            <span className="text-xs text-muted-foreground">{activity.due_date ? format(new Date(activity.due_date), 'dd/MM') : '-'}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => { e.stopPropagation(); openEditActivityDialog(activity); }}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => { e.stopPropagation(); deleteActivity(activity.id); }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          <div className="flex items-center gap-1.5 sm:gap-2 self-start sm:self-auto pl-7 sm:pl-0 mt-1 sm:mt-0 shrink-0">
+                            <Badge variant="outline" className={`text-[9px] sm:text-[10px] px-1.5 py-0 whitespace-nowrap ${getPriorityColor(activity.priority)}`}>{activity.priority}</Badge>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">{activity.due_date ? format(new Date(activity.due_date), 'dd/MM') : '-'}</span>
+                            <div className="flex sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                onClick={(e) => { e.stopPropagation(); openEditActivityDialog(activity); }}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={(e) => { e.stopPropagation(); deleteActivity(activity.id); }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -611,8 +613,8 @@ export function ActionPlansManagement() {
               <Label>Descrição</Label>
               <Textarea value={newActivityForm.description} onChange={e => setNewActivityForm({ ...newActivityForm, description: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-2 col-span-1 sm:col-span-2">
                 <Label>Responsável</Label>
                 <Select value={newActivityForm.responsibleId} onValueChange={val => setNewActivityForm({ ...newActivityForm, responsibleId: val })}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -663,8 +665,8 @@ export function ActionPlansManagement() {
               <Label>Descrição</Label>
               <Textarea value={editActivityForm.description} onChange={e => setEditActivityForm({ ...editActivityForm, description: e.target.value })} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid gap-2 col-span-1 sm:col-span-2">
                 <Label>Responsável</Label>
                 <Select value={editActivityForm.responsibleId} onValueChange={val => setEditActivityForm({ ...editActivityForm, responsibleId: val })}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -691,7 +693,7 @@ export function ActionPlansManagement() {
                 <Label>Prazo</Label>
                 <Input type="date" value={editActivityForm.dueDate} onChange={e => setEditActivityForm({ ...editActivityForm, dueDate: e.target.value })} />
               </div>
-              <div className="grid gap-2">
+              <div className="grid gap-2 col-span-1 sm:col-span-2">
                 <Label>Status</Label>
                 <Select value={editActivityForm.status} onValueChange={val => setEditActivityForm({ ...editActivityForm, status: val })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>

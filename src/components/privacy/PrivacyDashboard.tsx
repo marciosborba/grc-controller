@@ -237,22 +237,27 @@ export function PrivacyDashboard() {
   return (
     <div className="space-y-6">
       {/* Header - Responsivo */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
-        <div className="flex-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Privacidade e LGPD</h1>
-          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Privacidade e LGPD</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm lg:text-base mt-0.5 sm:mt-0">
             Gestão completa de privacidade e proteção de dados pessoais (LGPD)
           </p>
-          <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
-            <span className="font-semibold text-primary">Encarregado (DPO):</span>
-            <span>dpo@example.com (Configurar em Ajustes)</span>
+
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-4 text-xs sm:text-sm">
+            <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+              <span className="text-green-600 dark:text-green-400 font-medium">Sistema Operacional</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+              <span className="font-semibold text-primary">Score: {complianceScore}%</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">DPO: dpo@example.com</span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
-          <Badge variant="secondary" className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 py-1">
-            <Shield className="w-3 h-3" />
-            Score: {complianceScore}%
-          </Badge>
         </div>
       </div>
 
@@ -261,177 +266,169 @@ export function PrivacyDashboard() {
         <DevAuthHelper />
       )}
 
-      {/* Key Metrics - Premium Storytelling */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1: Governança de Dados */}
-        <Card className="relative overflow-hidden border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all group">
+      {/* Quick Metrics (Risks style) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        {/* Card 1: Panorama / Score */}
+        <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
           <div className="absolute top-0 right-0 p-3 opacity-10">
-            <Database className="h-32 w-32 text-blue-500" />
+            <Shield className="h-16 w-16 sm:h-24 sm:w-24" />
           </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-blue-700 dark:text-blue-400">
-              <Database className="h-5 w-5" />
-              Governança de Dados
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-sm sm:text-lg font-bold flex items-center gap-2 text-primary">
+              Panorama LGPD
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{metrics?.data_inventory?.total_inventories || 0}</span>
-                <span className="text-sm text-muted-foreground">sistemas no inventário</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Total de ativos de dados mapeados.
-              </p>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="flex items-baseline gap-2 mb-1 sm:mb-2">
+              <span className="text-xl sm:text-3xl font-bold text-foreground">{complianceScore}%</span>
+              <span className="text-xs sm:text-sm text-muted-foreground">de compliance</span>
             </div>
-
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Activity className="h-4 w-4" /> Atividades (RAT)
-                </span>
-                <span className="font-medium">{metrics?.processing_activities?.total_activities || 0}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <AlertCircle className="h-4 w-4" /> Revisão Pendente
-                </span>
-                <Badge variant={metrics?.data_inventory?.needs_review > 0 ? "destructive" : "secondary"} className="text-xs">
-                  {metrics?.data_inventory?.needs_review || 0}
-                </Badge>
-              </div>
+            <p className="text-muted-foreground font-medium text-xs sm:text-sm leading-relaxed truncate">
+              {complianceScore >= 80 ? 'Ambiente em conformidade e monitorado adeq...' : complianceScore >= 50 ? 'Nível parcial de adequação LGPD ident...' : 'Nível crítico de adequação LGPD. Ações ...'}
+            </p>
+            <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${complianceScore >= 80 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+              {complianceScore >= 80 ? 'Sob Controle' : 'Ação Necessária'}
             </div>
           </CardContent>
         </Card>
 
-        {/* Card 2: Riscos & Impacto */}
-        <Card className="relative overflow-hidden border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-all group">
-          <div className="absolute top-0 right-0 p-3 opacity-10">
-            <Shield className="h-32 w-32 text-orange-500" />
-          </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-orange-700 dark:text-orange-400">
-              <Shield className="h-5 w-5" />
-              Riscos & Impacto
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{metrics?.privacy_incidents?.total_incidents || 0}</span>
-                <span className="text-sm text-muted-foreground">incidentes registrados</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Eventos de segurança e privacidade.
+        {/* Card 2: Governança de Dados */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-blue-500">
+          <CardContent className="p-3 sm:p-5 flex flex-col gap-2 h-full relative z-10 w-full overflow-hidden">
+            <div className="w-full">
+              <p className="text-sm sm:text-base font-bold text-blue-600 dark:text-blue-500 whitespace-nowrap overflow-visible">
+                Governança
               </p>
             </div>
-
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <AlertTriangle className="h-4 w-4 text-red-500" /> Abertos
-                </span>
-                <span className="font-bold text-red-600">{metrics?.privacy_incidents?.open_incidents || 0}</span>
+            <div className="flex w-full items-center gap-3">
+              <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/50 rounded-xl sm:rounded-2xl shrink-0">
+                <Database className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <FileText className="h-4 w-4" /> DPIAs Pendentes
-                </span>
-                <Badge variant={metrics?.dpia_assessments?.pending_dpias > 0 ? "destructive" : "secondary"} className="text-xs">
-                  {metrics?.dpia_assessments?.pending_dpias || 0}
-                </Badge>
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <h3 className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-500 leading-none">
+                  {metrics?.data_inventory?.total_inventories || 0}
+                </h3>
               </div>
             </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium truncate w-full">
+              {(metrics?.data_inventory?.needs_review || 0) > 0 ? `+ ${metrics.data_inventory.needs_review} pendentes de revisão` : 'Todos revisados'}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Card 3: Titulares de Dados */}
-        <Card className="relative overflow-hidden border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-all group">
-          <div className="absolute top-0 right-0 p-3 opacity-10">
-            <Users className="h-32 w-32 text-purple-500" />
-          </div>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-purple-700 dark:text-purple-400">
-              <Users className="h-5 w-5" />
-              Titulares de Dados
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-foreground">{metrics?.data_subject_requests?.total_requests || 0}</span>
-                <span className="text-sm text-muted-foreground">solicitações (DSR)</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Exercícios de direitos dos titulares.
+        {/* Card 3: Riscos & Impacto */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500">
+          <CardContent className="p-3 sm:p-5 flex flex-col gap-2 h-full relative z-10 w-full overflow-hidden">
+            <div className="w-full">
+              <p className="text-sm sm:text-base font-bold text-red-600 dark:text-red-500 whitespace-nowrap overflow-visible">
+                Incidentes
               </p>
             </div>
+            <div className="flex w-full items-center gap-3">
+              <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/50 rounded-xl sm:rounded-2xl shrink-0">
+                <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <h3 className="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-500 leading-none">
+                  {metrics?.privacy_incidents?.total_incidents || 0}
+                </h3>
+              </div>
+            </div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium truncate w-full">
+              {(metrics?.privacy_incidents?.open_incidents || 0) > 0 ? `${metrics.privacy_incidents.open_incidents} abertos / pendentes` : 'Nenhum incidente aberto'}
+            </p>
+          </CardContent>
+        </Card>
 
-            <div className="space-y-3 pt-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Clock className="h-4 w-4 text-orange-500" /> Em Atraso
-                </span>
-                <span className="font-bold text-orange-600">{metrics?.data_subject_requests?.overdue_requests || 0}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <CheckCircle className="h-4 w-4" /> Consentimentos
-                </span>
-                <span className="font-medium">
-                  {metrics?.consents?.total_active || 0}
-                </span>
-              </div>
+        {/* Card 4: Titulares */}
+        <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-orange-500">
+          <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Users className="h-16 w-16 sm:h-24 sm:w-24 text-orange-500" />
+          </div>
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
+              Solicitações
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+            <div className="flex items-baseline gap-2">
+              <span className={`text-xl sm:text-3xl font-bold ${(metrics?.data_subject_requests?.overdue_requests || 0) > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                {metrics?.data_subject_requests?.overdue_requests || 0}
+              </span>
+              <span className="text-xs sm:text-sm text-muted-foreground">atrasadas</span>
+            </div>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2 truncate">
+              {(metrics?.data_subject_requests?.overdue_requests || 0) > 0 ? 'Existem solicitações fora do prazo.' : 'Todas solicitações em dia.'}
+            </p>
+            <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${(metrics?.data_subject_requests?.overdue_requests || 0) > 0 ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: (metrics?.data_subject_requests?.overdue_requests || 0) > 0 ? '70%' : '100%' }}></div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Quick Actions Grid - Premium Navigation */}
-      <div>
-        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-          <Zap className="h-5 w-5 text-primary" />
-          Funcionalidades
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quickActions.map((action, index) => (
-            <div
-              key={index}
-              onClick={action.action}
-              className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-            >
-              {/* Gradient Border Overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-r from-${action.color}-500/0 via-${action.color}-500/0 to-${action.color}-500/0 opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Zap className="h-5 w-5 text-primary" />
+            <span>Funcionalidades Integradas</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+            {quickActions.map((action, index) => {
+              const colorMap: Record<string, any> = {
+                blue: { border: 'border-t-blue-500', iconBg: 'bg-blue-100 dark:bg-blue-900/20', iconBgHover: 'group-hover:bg-blue-200 dark:group-hover:bg-blue-900/40', iconText: 'text-blue-600 dark:text-blue-400', bgIcon: 'text-blue-500', linkText: 'text-blue-600', badge: 'bg-blue-50 text-blue-700' },
+                green: { border: 'border-t-green-500', iconBg: 'bg-green-100 dark:bg-green-900/20', iconBgHover: 'group-hover:bg-green-200 dark:group-hover:bg-green-900/40', iconText: 'text-green-600 dark:text-green-400', bgIcon: 'text-green-500', linkText: 'text-green-600', badge: 'bg-green-50 text-green-700' },
+                purple: { border: 'border-t-purple-500', iconBg: 'bg-purple-100 dark:bg-purple-900/20', iconBgHover: 'group-hover:bg-purple-200 dark:group-hover:bg-purple-900/40', iconText: 'text-purple-600 dark:text-purple-400', bgIcon: 'text-purple-500', linkText: 'text-purple-600', badge: 'bg-purple-50 text-purple-700' },
+                red: { border: 'border-t-red-500', iconBg: 'bg-red-100 dark:bg-red-900/20', iconBgHover: 'group-hover:bg-red-200 dark:group-hover:bg-red-900/40', iconText: 'text-red-600 dark:text-red-400', bgIcon: 'text-red-500', linkText: 'text-red-600', badge: 'bg-red-50 text-red-700' },
+                orange: { border: 'border-t-orange-500', iconBg: 'bg-orange-100 dark:bg-orange-900/20', iconBgHover: 'group-hover:bg-orange-200 dark:group-hover:bg-orange-900/40', iconText: 'text-orange-600 dark:text-orange-400', bgIcon: 'text-orange-500', linkText: 'text-orange-600', badge: 'bg-orange-50 text-orange-700' },
+                teal: { border: 'border-t-teal-500', iconBg: 'bg-teal-100 dark:bg-teal-900/20', iconBgHover: 'group-hover:bg-teal-200 dark:group-hover:bg-teal-900/40', iconText: 'text-teal-600 dark:text-teal-400', bgIcon: 'text-teal-500', linkText: 'text-teal-600', badge: 'bg-teal-50 text-teal-700' },
+                indigo: { border: 'border-t-indigo-500', iconBg: 'bg-indigo-100 dark:bg-indigo-900/20', iconBgHover: 'group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/40', iconText: 'text-indigo-600 dark:text-indigo-400', bgIcon: 'text-indigo-500', linkText: 'text-indigo-600', badge: 'bg-indigo-50 text-indigo-700' },
+                cyan: { border: 'border-t-cyan-500', iconBg: 'bg-cyan-100 dark:bg-cyan-900/20', iconBgHover: 'group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/40', iconText: 'text-cyan-600 dark:text-cyan-400', bgIcon: 'text-cyan-500', linkText: 'text-cyan-600', badge: 'bg-cyan-50 text-cyan-700' },
+                slate: { border: 'border-t-slate-500', iconBg: 'bg-slate-100 dark:bg-slate-900/20', iconBgHover: 'group-hover:bg-slate-200 dark:group-hover:bg-slate-900/40', iconText: 'text-slate-600 dark:text-slate-400', bgIcon: 'text-slate-500', linkText: 'text-slate-600', badge: 'bg-slate-50 text-slate-700' },
+              };
+              const colors = colorMap[action.color] || colorMap.slate;
 
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`p-3 rounded-xl bg-${action.color}-100 dark:bg-${action.color}-900/30 text-${action.color}-600 dark:text-${action.color}-400 group-hover:scale-110 transition-transform duration-300`}>
-                    <action.icon className="w-6 h-6" />
+              return (
+                <Card
+                  key={index}
+                  onClick={action.action}
+                  className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 ${colors.border}`}
+                >
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <action.icon className={`h-24 w-24 ${colors.bgIcon}`} />
                   </div>
-                  {action.count > 0 && (
-                    <Badge variant="secondary" className="font-mono text-xs">
-                      {action.count}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 group-hover:text-primary transition-colors">
-                    {action.title}
-                    <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-primary" />
-                  </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {action.description}
-                  </p>
-                </div>
-              </div>
-
-              {/* Bottom decorative line */}
-              <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-${action.color}-500 to-${action.color}-300 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`} />
-            </div>
-          ))}
-        </div>
-      </div>
+                  <CardHeader className="p-3 sm:p-6 pb-2 sm:pb-4">
+                    <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-sm sm:text-lg">
+                      <div className={`p-1.5 sm:p-2 rounded-lg ${colors.iconBg} ${colors.iconBgHover} transition-colors shrink-0`}>
+                        <action.icon className={`h-4 w-4 sm:h-6 sm:w-6 ${colors.iconText}`} />
+                      </div>
+                      <span className="line-clamp-2 leading-tight">{action.title}</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0 flex flex-col justify-between h-[calc(100%-4rem)] sm:h-[calc(100%-5rem)]">
+                    <p className="text-muted-foreground mb-3 sm:mb-4 text-xs sm:text-sm line-clamp-2">
+                      {action.description}
+                    </p>
+                    <div className="flex items-center justify-between mt-auto">
+                      <div className={`flex items-center text-xs sm:text-sm font-medium ${colors.linkText} group-hover:translate-x-1 transition-transform`}>
+                        Acessar <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 ml-0.5 sm:ml-1" />
+                      </div>
+                      {action.count > 0 && (
+                        <Badge variant="secondary" className={`${colors.badge} text-[10px] sm:text-xs px-1.5 sm:px-2.5`}>
+                          {action.count}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Compliance Overview - Responsivo */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

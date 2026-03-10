@@ -1,0 +1,14 @@
+--- COLUMNS IN risk_action_plans ---
+id (uuid)
+tenant_id (uuid)
+risk_id (uuid)
+treatment_type (character varying)
+description (text)
+target_date (timestamp with time zone)
+budget (numeric)
+approved_by (uuid)
+approval_date (timestamp with time zone)
+created_by (uuid)
+created_at (timestamp with time zone)
+updated_at (timestamp with time zone)
+

@@ -45,7 +45,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
     // Políticas criadas nos últimos 30 dias
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentPolicies = allPolicies.filter(p => 
+    const recentPolicies = allPolicies.filter(p =>
       new Date(p.created_at) >= thirtyDaysAgo
     ).length;
 
@@ -89,7 +89,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
 
   const getTopCategories = () => {
     return Object.entries(analytics.categoryCounts)
-      .sort(([,a], [,b]) => b - a)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
   };
 
@@ -105,15 +105,15 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Analytics de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Analytics de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             Métricas e insights sobre o processo de gestão de políticas
           </p>
         </div>
-        
-        <div className="flex items-center space-x-2">
+
+        <div className="flex items-center">
           <Badge variant="outline" className="flex items-center gap-1">
             <Activity className="h-3 w-3" />
             Atualizado agora
@@ -122,7 +122,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
       </div>
 
       {/* Métricas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -172,7 +172,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Distribuição por Status */}
         <Card>
           <CardHeader>
@@ -181,7 +181,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
               Distribuição por Status
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <div className="space-y-4">
               {getStatusDistribution().map((item, index) => (
@@ -193,7 +193,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">{item.count}</span>
                     <div className="w-20 bg-muted rounded-full h-2">
-                      <div 
+                      <div
                         className={`h-2 rounded-full ${item.color}`}
                         style={{ width: `${(item.count / analytics.total) * 100}%` }}
                       ></div>
@@ -213,7 +213,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
               Políticas por Categoria
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <div className="space-y-3">
               {getTopCategories().map(([category, count], index) => (
@@ -239,28 +239,28 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
               Performance do Processo
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Tempo Médio de Aprovação</span>
                 <span className="text-sm text-muted-foreground">{analytics.avgApprovalTime} dias</span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Políticas em Processo</span>
                 <span className="text-sm text-muted-foreground">
                   {analytics.draft + analytics.inReview + analytics.approved}
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Taxa de Conclusão</span>
                 <span className="text-sm text-muted-foreground">
                   {analytics.total > 0 ? ((analytics.published / analytics.total) * 100).toFixed(1) : 0}%
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Eficiência do Processo</span>
                 <div className="flex items-center space-x-1">
@@ -280,7 +280,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
               Alertas e Riscos
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <div className="space-y-3">
               {analytics.expired > 0 && (
@@ -292,7 +292,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
                   <Badge variant="destructive">{analytics.expired}</Badge>
                 </div>
               )}
-              
+
               {analytics.expiringSoon > 0 && (
                 <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg border border-yellow-200 dark:bg-yellow-950/20 dark:border-yellow-800">
                   <div className="flex items-center space-x-2">
@@ -302,7 +302,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
                   <Badge variant="outline" className="border-yellow-300 text-yellow-800 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-950/20">{analytics.expiringSoon}</Badge>
                 </div>
               )}
-              
+
               {analytics.inReview > 5 && (
                 <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
                   <div className="flex items-center space-x-2">
@@ -312,7 +312,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
                   <Badge variant="outline" className="border-blue-300 text-blue-800 bg-blue-50 dark:border-blue-600 dark:text-blue-200 dark:bg-blue-950/20">{analytics.inReview}</Badge>
                 </div>
               )}
-              
+
               {analytics.expired === 0 && analytics.expiringSoon === 0 && analytics.inReview <= 5 && (
                 <div className="text-center py-4">
                   <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
@@ -333,7 +333,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
             Insights e Recomendações
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-3">
@@ -353,7 +353,7 @@ const PolicyAnalytics: React.FC<PolicyAnalyticsProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <h4 className="font-medium">Oportunidades de Melhoria</h4>
               <div className="space-y-2 text-sm">

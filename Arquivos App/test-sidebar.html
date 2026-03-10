@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Sidebar Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Sidebar Debug Test</h1>
+    
+    <div class="debug">
+        <h3>Navigation Items Test</h3>
+        <div id="navigation-test"></div>
+    </div>
+
+    <script>
+        // Simular exatamente a estrutura do AppSidebar
+        const navigationItems = [{
+            label: 'Módulos',
+            items: [
+                {
+                    title: 'Auditoria',
+                    url: '/auditorias',
+                    permissions: ['all'],
+                    description: 'Motor de assurance dinâmico e conectado'
+                },
+                {
+                    title: 'Dashboard',
+                    url: '/dashboard',
+                    permissions: ['all'],
+                    description: 'Visão geral e métricas principais'
+                },
+                {
+                    title: 'Ética',
+                    url: '/ethics',
+                    permissions: ['all'],
+                    description: 'Denúncias e questões éticas'
+                }
+            ]
+        }];
+
+        // Simular usuário Platform Admin
+        const user = {
+            isPlatformAdmin: true,
+            permissions: ['platform_admin', 'all', '*', 'audit.read'],
+            roles: ['platform_admin']
+        };
+
+        // Simular função hasPermission
+        function hasPermission(permissions) {
+            console.log('Checking permissions:', permissions);
+            
+            // Platform Admin sempre tem acesso
+            if (user.isPlatformAdmin) {
+                console.log('Platform Admin - access granted');
+                return true;
+            }
+            
+            // Verificar permissão 'all'
+            if (permissions.includes('all')) {
+                console.log('Public access - granted');
+                return true;
+            }
+            
+            return false;
+        }
+
+        // Testar filtro de items
+        const testDiv = document.getElementById('navigation-test');
+        
+        navigationItems.forEach((group, groupIndex) => {
+            testDiv.innerHTML += `<h4>Group: ${group.label}</h4>`;
+            
+            const filteredItems = group.items.filter(item => {
+                const hasAccess = hasPermission(item.permissions);
+                console.log(`${item.title}: ${hasAccess ? 'VISIBLE' : 'HIDDEN'}`);
+                return hasAccess;
+            });
+            
+            testDiv.innerHTML += `<p>Total items: ${group.items.length}</p>`;
+            testDiv.innerHTML += `<p>Filtered items: ${filteredItems.length}</p>`;
+            
+            filteredItems.forEach(item => {
+                testDiv.innerHTML += `<div>✅ ${item.title} - ${item.url}</div>`;
+            });
+            
+            testDiv.innerHTML += '<hr>';
+        });
+    </script>
+</body>
+</html>

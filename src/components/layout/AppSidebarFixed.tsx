@@ -43,42 +43,42 @@ const navigationItems = [{
       title: 'Auditoria',
       url: '/auditorias',
       icon: Search,
-      permissions: ['all'],
+      permissions: ['audit.read'],
       description: 'Motor de assurance dinâmico e conectado'
     },
     {
       title: 'Assessments',
       url: '/assessments',
       icon: Target,
-      permissions: ['all'],
+      permissions: ['assessment.read'],
       description: 'Avaliações de maturidade e compliance'
     },
     {
       title: 'Conformidade',
       url: '/compliance',
       icon: FileCheck,
-      permissions: ['compliance.read', 'all'],
+      permissions: ['compliance.read'],
       description: 'Gestão de conformidade e frameworks regulatórios'
     },
     {
       title: 'Ética',
       url: '/ethics',
       icon: Shield,
-      permissions: ['all'],
+      permissions: ['ethics.read'],
       description: 'Denúncias e questões éticas'
     },
     {
       title: 'Vulnerabilidades',
       url: '/vulnerabilities',
       icon: Bug,
-      permissions: ['security.read', 'vulnerability.read', 'all'],
+      permissions: ['vulnerability.read'],
       description: 'Gestão de vulnerabilidades de segurança'
     },
     {
       title: 'Configurações',
       url: '/tenant-settings',
       icon: Settings,
-      permissions: ['tenant_admin', 'admin', 'platform_admin'],
+      permissions: ['admin'],
       description: 'Configurações da organização'
     },
     // Módulo de Compliance removido
@@ -86,14 +86,14 @@ const navigationItems = [{
       title: 'Dashboard',
       url: '/dashboard',
       icon: LayoutDashboard,
-      permissions: ['all'],
+      permissions: ['dashboard.read'],
       description: 'Visão geral e métricas principais'
     },
     {
       title: 'Notificações',
       url: '/notifications',
       icon: Bell,
-      permissions: ['all'],
+      permissions: ['common.read'],
       description: 'Central de notificações e alertas'
     },
     {
@@ -107,7 +107,7 @@ const navigationItems = [{
       title: 'Planos de Ação',
       url: '/action-plans',
       icon: Target,
-      permissions: ['all'],
+      permissions: ['action_plan.read'],
       description: 'Gestão centralizada de planos de ação'
     },
     {
@@ -149,7 +149,7 @@ const navigationItems = [{
       title: 'Ajuda',
       url: '/help',
       icon: HelpCircle,
-      permissions: ['all'],
+      permissions: ['common.read'],
       description: 'Centro de ajuda e documentação'
     }
   ]
@@ -162,13 +162,6 @@ const navigationItems = [{
       icon: Activity,
       permissions: ['platform_admin'],
       description: 'Diagnóstico e monitoramento do sistema'
-    },
-    {
-      title: 'Migração Platform Admin',
-      url: '/admin/platform-migration',
-      icon: Shield,
-      permissions: ['platform_admin'],
-      description: 'Migração de segurança para tabela platform_admins'
     },
     {
       title: 'Tenants',
@@ -245,7 +238,8 @@ const TEST_ROLES = [
 
 export function AppSidebarFixed() {
   // AppSidebarFixed carregado - Versão otimizada
-  const { state } = useSidebar();
+  // AppSidebarFixed carregado - Versão otimizada
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, checkModuleAccess } = useAuth();
@@ -276,7 +270,7 @@ export function AppSidebarFixed() {
       // Carregando roles do banco de dados
 
       // Timeout para evitar travamento
-      const timeoutPromise = new Promise((_, reject) =>
+      const timeoutPromise = new Promise<{ data: any[] | null, error: any }>((_, reject) =>
         setTimeout(() => reject(new Error('Timeout ao carregar roles')), 5000)
       );
 
@@ -287,7 +281,7 @@ export function AppSidebarFixed() {
         .order('is_system', { ascending: false })
         .order('created_at', { ascending: true });
 
-      const { data: roles, error } = await Promise.race([queryPromise, timeoutPromise]);
+      const { data: roles, error } = await Promise.race([queryPromise, timeoutPromise]) as { data: DatabaseRole[] | null, error: any };
 
       if (error) {
         console.warn('⚠️ Erro ao carregar roles do banco:', error.message);
@@ -471,10 +465,7 @@ export function AppSidebarFixed() {
       return true;
     }
 
-    // Verificar permissão 'all' (acesso público)
-    if (permissions.includes('all')) {
-      return true;
-    }
+    // MODO NORMAL (role original do usuário)
 
     // Verificar permissões específicas do usuário
     const userPermissions = user.permissions || [];
@@ -498,7 +489,7 @@ export function AppSidebarFixed() {
   }, [currentPath]);
 
   const getNavCls = useCallback((isActiveItem: boolean) =>
-    isActiveItem ? "text-primary font-medium" : "hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+    isActiveItem ? "text-primary font-medium bg-sidebar-accent" : "hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-accent-foreground"
     , []);
 
   const handleProfileClick = useCallback(() => {
@@ -508,12 +499,12 @@ export function AppSidebarFixed() {
   return (
     <Sidebar className="border-r border-border" collapsible="icon">
       {/* Header - Responsivo */}
-      <div className={`${collapsed ? "h-14 px-2" : "h-14 sm:h-16 px-3 sm:px-4"} flex items-center justify-between border-b border-border transition-all duration-300`}>
-        {!collapsed && (
-          <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+      <div className={`${collapsed ? "h-14 px-2 justify-center" : "h-14 sm:h-16 px-3 sm:px-4 justify-between"} flex items-center border-b border-border transition-all duration-300`}>
+        <div className={`flex items-center space-x-2 min-w-0 flex-1 ${collapsed ? 'justify-center ml-2' : ''}`}>
+          <img src="/logo.png?v=2" alt="GEPRIV Logo" className="h-6 w-6 sm:h-8 sm:w-8 object-contain flex-shrink-0" />
+          {!collapsed && (
             <div className="min-w-0 flex-1">
-              <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GRC Controller</h1>
+              <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">GEPRIV</h1>
               <div className="flex items-center gap-1">
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{getTenantDisplayName(user?.tenant)}</p>
                 {isTestingRole && currentTestRole && (
@@ -523,9 +514,8 @@ export function AppSidebarFixed() {
                 )}
               </div>
             </div>
-          </div>
-        )}
-        <SidebarTrigger className="hover:bg-muted/50 p-1.5 sm:p-2 rounded-md" />
+          )}
+        </div>
       </div>
 
       <SidebarContent className={`${collapsed ? "px-1 py-2" : "px-1 sm:px-2 py-2 sm:py-3"} transition-all duration-300`}>
@@ -546,8 +536,8 @@ export function AppSidebarFixed() {
               'TPRM': 'tprm',
               'Relatórios': 'reports',
               'Vulnerabilidades': 'vulnerabilities',
-              'Configurações': 'admin', // Settings usually enabled or controlled by role
-              'Usuários': 'admin',
+              'Configurações': 'settings', // Fixed mapping
+              'Usuários': 'users', // Fixed mapping
               'Dashboard': 'dashboard',
               'Notificações': 'notifications',
               'Ajuda': 'help',
@@ -561,14 +551,22 @@ export function AppSidebarFixed() {
             return map[title] || '';
           };
 
+          // Check if user has functional roles
+          const userHasFunctionalRole = user?.isPlatformAdmin ||
+            user?.customRoleId ||
+            user?.roles?.some((r: string) =>
+              ['admin', 'super_admin', 'ciso', 'risk_manager', 'compliance_officer', 'auditor', 'tenant_admin'].includes(r)
+            );
+
           const filteredItems = group.items.filter(item => {
+            // Se o usuário não tem função funcional (está pendente de acesso), esconde TUDO do painel
+            if (!userHasFunctionalRole) return false;
+
             // 1. Check Permissions (User Role)
             const hasPerm = hasPermission(item.permissions);
 
             // 2. Check Module Enablement (Tenant Config)
             const moduleKey = getModuleKey(item.title);
-            // If key is mapped, check access. If not mapped or mapped to empty, assume enabled (or strictly disable?)
-            // Assuming enabled for unmapped items to avoid hiding system things inadvertently
             const isModuleEnabled = moduleKey ? checkModuleAccess(moduleKey) : true;
 
             return hasPerm && isModuleEnabled;
@@ -580,7 +578,7 @@ export function AppSidebarFixed() {
           return (
             <SidebarGroup key={groupIndex} className="mb-4 sm:mb-6">
               {!collapsed && group.label !== 'Módulos' && (
-                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${group.label === 'Plataform Adm'
+                <SidebarGroupLabel className={`mb-2 sm:mb-3 text-[10px] sm:text-xs font-semibold uppercase tracking-wider px-1 sm:px-0 ${group.label === 'Área Administrativa'
                   ? 'text-orange-600 dark:text-orange-400'
                   : 'text-muted-foreground'
                   }`}>
@@ -603,6 +601,11 @@ export function AppSidebarFixed() {
                               url: item.url,
                               timestamp: new Date().toISOString()
                             });
+
+                            // Auto-close na versão mobile
+                            if (isMobile) {
+                              setOpenMobile(false);
+                            }
 
                             if (item.title === 'IA Manager') {
                               console.log('🤖 [IA MANAGER CLICK] Clique no IA Manager detectado!');

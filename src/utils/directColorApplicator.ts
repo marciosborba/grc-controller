@@ -6,7 +6,7 @@ export const generateUserColorCSS = (palette: ColorPalette): string => {
   const lightColors = Object.entries(palette.light)
     .map(([key, value]) => `    --${key}: ${value.hsl} !important;`)
     .join('\n');
-    
+
   const darkColors = Object.entries(palette.dark)
     .map(([key, value]) => `    --${key}: ${value.hsl} !important;`)
     .join('\n');
@@ -34,8 +34,6 @@ ${lightColors}
     --danger-light: var(--danger);
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -56,8 +54,6 @@ ${darkColors}
     --danger-light: var(--danger);
     --sidebar-primary: var(--sidebar-foreground);
     --sidebar-primary-foreground: var(--sidebar-background);
-    --sidebar-accent: var(--muted);
-    --sidebar-accent-foreground: var(--sidebar-foreground);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--primary);
   }
@@ -194,11 +190,11 @@ ${darkColors}
 };
 
 // Apply colors immediately and persistently
-export const applyColorsDirectly = (palette: ColorPalette): Promise<{success: boolean, method: string, message: string}> => {
+export const applyColorsDirectly = (palette: ColorPalette): Promise<{ success: boolean, method: string, message: string }> => {
   return new Promise(async (resolve) => {
     try {
       const cssContent = generateUserColorCSS(palette);
-      
+
       // Method 1: Try to update via API (if available)
       try {
         const response = await fetch('/api/update-colors', {
@@ -210,7 +206,7 @@ export const applyColorsDirectly = (palette: ColorPalette): Promise<{success: bo
         if (response.ok) {
           // Apply immediately to DOM as well
           applyToDOMDirectly(cssContent, palette);
-          
+
           resolve({
             success: true,
             method: 'api',
@@ -224,7 +220,7 @@ export const applyColorsDirectly = (palette: ColorPalette): Promise<{success: bo
 
       // Method 2: Apply to DOM and provide clear instructions
       const applied = applyToDOMDirectly(cssContent, palette);
-      
+
       if (applied) {
         // Store for persistence across reloads
         localStorage.setItem('grc-user-colors', JSON.stringify({
@@ -236,7 +232,7 @@ export const applyColorsDirectly = (palette: ColorPalette): Promise<{success: bo
 
         // Generate command for permanent application
         const command = `node scripts/update-colors.js '${JSON.stringify(palette).replace(/'/g, "\\'")}'`;
-        
+
         resolve({
           success: true,
           method: 'dom+instruction',
@@ -267,7 +263,7 @@ export const applyToDOMDirectly = (cssContent: string, palette: ColorPalette): b
     const style = document.createElement('style');
     style.id = 'grc-user-colors';
     style.textContent = cssContent;
-    
+
     // Insert at the beginning of head for high priority
     document.head.insertBefore(style, document.head.firstChild);
 
@@ -301,12 +297,12 @@ export const loadUserColorsOnStartup = (): boolean => {
 
     // Apply the stored CSS
     const success = applyToDOMDirectly(data.cssContent, data.palette);
-    
+
     if (success) {
       // User colors loaded and applied from localStorage
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('Error loading user colors:', error);

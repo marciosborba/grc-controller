@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
   Target,
   Plus,
   Edit,
@@ -119,24 +119,24 @@ export function ProjetosAuditoria() {
   const { user } = useAuth();
   const selectedTenantId = useCurrentTenantId();
   const navigate = useNavigate();
-  
+
   // Determinar o tenant ID efetivo
   const effectiveTenantId = user?.isPlatformAdmin ? selectedTenantId : user?.tenantId;
-  
+
   const [projetos, setProjetos] = useState<ProjetoAuditoria[]>([]);
   const [universos, setUniversos] = useState<UniversoAuditavel[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Estados para formulário
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<ProjetoAuditoria | null>(null);
   const [formData, setFormData] = useState<ProjetoFormData>(initialFormData);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Estados para visualização detalhada
   const [viewingItem, setViewingItem] = useState<ProjetoAuditoria | null>(null);
-  
+
   // Estados para filtros e busca
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -148,7 +148,7 @@ export function ProjetosAuditoria() {
   // Estados para ordenação
   const [sortBy, setSortBy] = useState('data_inicio');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  
+
   // Estados para paginação
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -160,8 +160,8 @@ export function ProjetosAuditoria() {
       loadUniversos();
       loadProfiles();
     } else {
-      secureLog('info', 'Aguardando tenant ser carregado', { 
-        userEmail: user?.email, 
+      secureLog('info', 'Aguardando tenant ser carregado', {
+        userEmail: user?.email,
         isPlatformAdmin: user?.isPlatformAdmin,
         selectedTenantId,
         userTenantId: user?.tenantId
@@ -172,21 +172,21 @@ export function ProjetosAuditoria() {
   const loadProjectsData = async () => {
     try {
       setLoading(true);
-      
+
       secureLog('info', 'Carregando projetos de auditoria para tenant', { tenantId: effectiveTenantId });
-      
+
       if (!effectiveTenantId) {
         toast.error('Tenant não identificado. Por favor, faça login novamente.');
         setLoading(false);
         return;
       }
-      
+
       // Primeiro, obter contagem total para paginação
       const { count } = await supabase
         .from('projetos_auditoria')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', effectiveTenantId);
-      
+
       setTotalItems(count || 0);
 
       // Carregar dados com paginação
@@ -212,9 +212,9 @@ export function ProjetosAuditoria() {
         .range(from, to);
 
       secureLog('info', 'Projetos retornados', { hasData: !!data, hasError: !!error, count: data?.length });
-      
+
       if (data && data.length > 0) {
-        secureLog('info', 'Projetos carregados com sucesso', { 
+        secureLog('info', 'Projetos carregados com sucesso', {
           count: data.length,
           sample: data.slice(0, 3).map(item => ({
             codigo: item.codigo,
@@ -242,14 +242,14 @@ export function ProjetosAuditoria() {
   const loadUniversos = async () => {
     try {
       if (!effectiveTenantId) return;
-      
+
       const { data, error } = await supabase
         .from('universo_auditavel')
         .select('id, codigo, nome, tipo, criticidade')
         .eq('tenant_id', effectiveTenantId)
         .eq('status', 'ativo')
         .order('nome');
-        
+
       if (error) {
         secureLog('error', 'Erro ao carregar universos auditáveis', error);
       } else {
@@ -263,13 +263,13 @@ export function ProjetosAuditoria() {
   const loadProfiles = async () => {
     try {
       if (!effectiveTenantId) return;
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, email')
         .eq('tenant_id', effectiveTenantId)
         .order('full_name');
-        
+
       if (error) {
         secureLog('error', 'Erro ao carregar profiles', error);
       } else {
@@ -284,7 +284,7 @@ export function ProjetosAuditoria() {
   const sortItems = (items: ProjetoAuditoria[]): ProjetoAuditoria[] => {
     return [...items].sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'codigo':
           comparison = a.codigo.localeCompare(b.codigo);
@@ -307,7 +307,7 @@ export function ProjetosAuditoria() {
         default:
           comparison = new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime();
       }
-      
+
       return sortOrder === 'desc' ? -comparison : comparison;
     });
   };
@@ -315,7 +315,7 @@ export function ProjetosAuditoria() {
   const filteredItems = useMemo(() => {
     // Primeiro filtrar
     const filtered = projetos.filter(item => {
-      const matchSearch = !searchTerm || 
+      const matchSearch = !searchTerm ||
         item.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.universo_auditavel?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -327,7 +327,7 @@ export function ProjetosAuditoria() {
 
       return matchSearch && matchStatus && matchTipo && matchFase;
     });
-    
+
     // Depois ordenar
     return sortItems(filtered);
   }, [projetos, searchTerm, filters, sortBy, sortOrder]);
@@ -365,33 +365,33 @@ export function ProjetosAuditoria() {
       codigo: item.codigo,
       status: item.status
     });
-    
+
     if (!effectiveTenantId) {
       toast.error('Tenant não identificado');
       return;
     }
-    
+
     try {
       secureLog('info', 'Buscando projeto no banco', {
         itemId: item.id,
         tenantId: effectiveTenantId
       });
-      
+
       const { data: freshData, error } = await supabase
         .from('projetos_auditoria')
         .select('*')
         .eq('id', item.id)
         .eq('tenant_id', effectiveTenantId)
         .single();
-        
+
       if (error) {
         secureLog('error', 'Erro ao carregar dados para edição', error);
         toast.error('Erro ao carregar dados para edição');
         return;
       }
-      
+
       secureLog('info', 'Projeto carregado para edição', { codigo: freshData.codigo });
-      
+
       setEditingItem(freshData);
       setFormData({
         codigo: freshData.codigo,
@@ -408,7 +408,7 @@ export function ProjetosAuditoria() {
         status: freshData.status,
         fase_atual: freshData.fase_atual
       });
-      
+
       setShowForm(true);
     } catch (error) {
       secureLog('error', 'Erro inesperado ao abrir modal de edição', error);
@@ -421,7 +421,7 @@ export function ProjetosAuditoria() {
       toast.error('Tenant não identificado');
       return;
     }
-    
+
     try {
       const { data: freshData, error } = await supabase
         .from('projetos_auditoria')
@@ -440,13 +440,13 @@ export function ProjetosAuditoria() {
         .eq('id', item.id)
         .eq('tenant_id', effectiveTenantId)
         .single();
-        
+
       if (error) {
         secureLog('error', 'Erro ao carregar dados para visualização', error);
         toast.error('Erro ao carregar dados para visualização');
         return;
       }
-      
+
       setViewingItem(freshData);
     } catch (error) {
       secureLog('error', 'Erro inesperado ao abrir modal de visualização', error);
@@ -466,11 +466,11 @@ export function ProjetosAuditoria() {
 
     try {
       secureLog('info', 'Iniciando salvamento de projeto', { isEditing: !!editingItem });
-      
+
       if (!effectiveTenantId) {
         throw new Error('Tenant ID não encontrado. Não é possível salvar o projeto.');
       }
-      
+
       // Validações básicas
       if (!formData.codigo || !formData.titulo || !formData.universo_auditavel_id || !formData.tipo_auditoria) {
         throw new Error('Campos obrigatórios não preenchidos (código, título, universo auditável, tipo).');
@@ -485,7 +485,7 @@ export function ProjetosAuditoria() {
       }
 
       // Processar objetivos
-      const objetivos = formData.objetivos.trim() 
+      const objetivos = formData.objetivos.trim()
         ? formData.objetivos.split('\n').map(obj => obj.trim()).filter(obj => obj.length > 0)
         : [];
 
@@ -512,7 +512,7 @@ export function ProjetosAuditoria() {
         apontamentos_baixos: editingItem?.apontamentos_baixos || 0,
         metadados: editingItem?.metadados || {}
       };
-      
+
       secureLog('info', 'Enviando projeto para salvamento', {
         codigo: itemData.codigo,
         status: itemData.status
@@ -550,16 +550,16 @@ export function ProjetosAuditoria() {
       }
 
       toast.success(editingItem ? 'Projeto atualizado com sucesso!' : 'Projeto criado com sucesso!');
-      
+
       handleCancelForm();
       await loadProjectsData();
       await new Promise(resolve => setTimeout(resolve, 100));
 
     } catch (error: any) {
       secureLog('error', 'Erro completo no salvamento', error);
-      
+
       let errorMessage = 'Erro ao salvar projeto';
-      
+
       if (error.code === '23505') {
         errorMessage = 'Código já existe. Use um código único.';
       } else if (error.code === '42501') {
@@ -571,7 +571,7 @@ export function ProjetosAuditoria() {
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
-      
+
       toast.error(`${errorMessage} (Código: ${error.code || 'N/A'})`);
     } finally {
       setSubmitting(false);
@@ -607,7 +607,7 @@ export function ProjetosAuditoria() {
     const totalHoras = projetos.reduce((sum, p) => sum + (p.horas_orcadas || 0), 0);
     const totalApontamentos = projetos.reduce((sum, p) => sum + (p.total_apontamentos || 0), 0);
     const apontamentosCriticos = projetos.reduce((sum, p) => sum + (p.apontamentos_criticos || 0), 0);
-    
+
     return {
       total,
       planejamento,
@@ -636,9 +636,9 @@ export function ProjetosAuditoria() {
       {/* Cabeçalho com Botão Voltar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => navigate('/auditorias')}
             className="flex items-center gap-2 hover:bg-muted"
           >
@@ -750,7 +750,7 @@ export function ProjetosAuditoria() {
                   <option value="especial">Especial</option>
                 </select>
               </div>
-              
+
               {/* Controles de Ordenação */}
               <div className="flex gap-2 border-l pl-2">
                 <select
@@ -793,7 +793,7 @@ export function ProjetosAuditoria() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium text-lg">{projeto.titulo}</h4>
+                      <h4 className="font-medium text-sm sm:text-base">{projeto.titulo}</h4>
                       <Badge variant="outline" className="text-xs">
                         {projeto.codigo}
                       </Badge>
@@ -807,11 +807,11 @@ export function ProjetosAuditoria() {
                         {projeto.tipo_auditoria}
                       </Badge>
                     </div>
-                    
+
                     {projeto.descricao && (
                       <p className="text-sm text-muted-foreground">{projeto.descricao}</p>
                     )}
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div>
                         <p className="text-muted-foreground">Universo Auditável:</p>
@@ -858,26 +858,26 @@ export function ProjetosAuditoria() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-1 ml-4">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleView(projeto)}
                       title="Ver detalhes"
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleEdit(projeto)}
                       title="Editar"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleDelete(projeto)}
                       title="Excluir"
@@ -889,7 +889,7 @@ export function ProjetosAuditoria() {
                 </div>
               </div>
             ))}
-            
+
             {filteredItems.length === 0 && (
               <div className="text-center py-12">
                 <Target className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -909,30 +909,32 @@ export function ProjetosAuditoria() {
               </div>
             )}
           </div>
-          
+
           {/* Controles de Paginação */}
           {totalItems > itemsPerPage && (
-            <div className="flex items-center justify-between px-6 py-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} projetos
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 border-t gap-2">
+              <div className="text-xs text-muted-foreground">
+                Mostrando {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} projetos
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className="h-7 px-2 text-xs"
                 >
                   Anterior
                 </Button>
-                <span className="text-sm">
-                  Página {currentPage} de {Math.ceil(totalItems / itemsPerPage)}
+                <span className="text-xs font-medium px-2 py-1 bg-muted rounded">
+                  {currentPage} / {Math.ceil(totalItems / itemsPerPage)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalItems / itemsPerPage), prev + 1))}
                   disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
+                  className="h-7 px-2 text-xs"
                 >
                   Próxima
                 </Button>
@@ -950,22 +952,22 @@ export function ProjetosAuditoria() {
               <h3 className="text-xl font-semibold">
                 {editingItem ? 'Editar Projeto' : 'Novo Projeto de Auditoria'}
               </h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleCancelForm}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Código *</label>
                   <Input
                     value={formData.codigo}
-                    onChange={(e) => setFormData(prev => ({...prev, codigo: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, codigo: e.target.value }))}
                     placeholder="ex: AUD-2025-001"
                     required
                   />
@@ -974,7 +976,7 @@ export function ProjetosAuditoria() {
                   <label className="block text-sm font-medium mb-1">Tipo de Auditoria *</label>
                   <select
                     value={formData.tipo_auditoria}
-                    onChange={(e) => setFormData(prev => ({...prev, tipo_auditoria: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tipo_auditoria: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md"
                     required
                   >
@@ -991,7 +993,7 @@ export function ProjetosAuditoria() {
                 <label className="block text-sm font-medium mb-1">Título *</label>
                 <Input
                   value={formData.titulo}
-                  onChange={(e) => setFormData(prev => ({...prev, titulo: e.target.value}))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, titulo: e.target.value }))}
                   placeholder="Título do projeto de auditoria"
                   required
                 />
@@ -1001,7 +1003,7 @@ export function ProjetosAuditoria() {
                 <label className="block text-sm font-medium mb-1">Descrição</label>
                 <textarea
                   value={formData.descricao}
-                  onChange={(e) => setFormData(prev => ({...prev, descricao: e.target.value}))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
                   placeholder="Descrição detalhada do projeto"
                   className="w-full px-3 py-2 border rounded-md h-20 resize-none"
                 />
@@ -1012,7 +1014,7 @@ export function ProjetosAuditoria() {
                   <label className="block text-sm font-medium mb-1">Universo Auditável *</label>
                   <select
                     value={formData.universo_auditavel_id}
-                    onChange={(e) => setFormData(prev => ({...prev, universo_auditavel_id: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, universo_auditavel_id: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md"
                     required
                   >
@@ -1028,7 +1030,7 @@ export function ProjetosAuditoria() {
                   <label className="block text-sm font-medium mb-1">Chefe de Auditoria *</label>
                   <select
                     value={formData.chefe_auditoria}
-                    onChange={(e) => setFormData(prev => ({...prev, chefe_auditoria: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, chefe_auditoria: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md"
                     required
                   >
@@ -1046,7 +1048,7 @@ export function ProjetosAuditoria() {
                 <label className="block text-sm font-medium mb-1">Escopo</label>
                 <textarea
                   value={formData.escopo}
-                  onChange={(e) => setFormData(prev => ({...prev, escopo: e.target.value}))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, escopo: e.target.value }))}
                   placeholder="Escopo da auditoria"
                   className="w-full px-3 py-2 border rounded-md h-20 resize-none"
                 />
@@ -1056,7 +1058,7 @@ export function ProjetosAuditoria() {
                 <label className="block text-sm font-medium mb-1">Objetivos (um por linha)</label>
                 <textarea
                   value={formData.objetivos}
-                  onChange={(e) => setFormData(prev => ({...prev, objetivos: e.target.value}))}
+                  onChange={(e) => setFormData(prev => ({ ...prev, objetivos: e.target.value }))}
                   placeholder="Digite um objetivo por linha"
                   className="w-full px-3 py-2 border rounded-md h-24 resize-none"
                 />
@@ -1068,7 +1070,7 @@ export function ProjetosAuditoria() {
                   <Input
                     type="date"
                     value={formData.data_inicio}
-                    onChange={(e) => setFormData(prev => ({...prev, data_inicio: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, data_inicio: e.target.value }))}
                     required
                   />
                 </div>
@@ -1077,7 +1079,7 @@ export function ProjetosAuditoria() {
                   <Input
                     type="date"
                     value={formData.data_fim_planejada}
-                    onChange={(e) => setFormData(prev => ({...prev, data_fim_planejada: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, data_fim_planejada: e.target.value }))}
                     required
                   />
                 </div>
@@ -1088,7 +1090,7 @@ export function ProjetosAuditoria() {
                     min="0"
                     step="0.5"
                     value={formData.horas_orcadas}
-                    onChange={(e) => setFormData(prev => ({...prev, horas_orcadas: parseFloat(e.target.value) || 0}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, horas_orcadas: parseFloat(e.target.value) || 0 }))}
                     placeholder="40"
                   />
                 </div>
@@ -1099,7 +1101,7 @@ export function ProjetosAuditoria() {
                   <label className="block text-sm font-medium mb-1">Status *</label>
                   <select
                     value={formData.status}
-                    onChange={(e) => setFormData(prev => ({...prev, status: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md"
                     required
                   >
@@ -1114,7 +1116,7 @@ export function ProjetosAuditoria() {
                   <label className="block text-sm font-medium mb-1">Fase Atual *</label>
                   <select
                     value={formData.fase_atual}
-                    onChange={(e) => setFormData(prev => ({...prev, fase_atual: e.target.value}))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, fase_atual: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-md"
                     required
                   >
@@ -1127,8 +1129,8 @@ export function ProjetosAuditoria() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={handleCancelForm}
                 >
@@ -1149,15 +1151,15 @@ export function ProjetosAuditoria() {
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-semibold">Detalhes do Projeto</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setViewingItem(null)}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1259,7 +1261,7 @@ export function ProjetosAuditoria() {
               )}
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => {
                     setViewingItem(null);

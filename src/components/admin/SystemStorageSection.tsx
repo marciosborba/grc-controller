@@ -531,98 +531,98 @@ export const SystemStorageSection = () => {
   return (
     <div className="space-y-6">
       {/* Storage Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Armazenamento Total</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Armazenamento Total</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatBytes(storageMetrics.totalSize)}</div>
             <Progress value={storageMetrics.usagePercentage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               {formatBytes(storageMetrics.usedSize)} usado
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Base de Dados</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Base de Dados</CardTitle>
             <Database className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{formatBytes(storageMetrics.databaseSize)}</div>
-            <p className="text-xs text-muted-foreground">{databaseStats.totalRecords.toLocaleString()} registros</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{databaseStats.totalRecords.toLocaleString()} registros</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Anexos</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Anexos</CardTitle>
             <FileText className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatBytes(storageMetrics.attachmentsSize)}</div>
-            <p className="text-xs text-muted-foreground">arquivos e evidências</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">arquivos e evidências</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Backups</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Backups</CardTitle>
             <Archive className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">{formatBytes(storageMetrics.backupSize)}</div>
-            <p className="text-xs text-muted-foreground">{backupHistory.length} backups</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">{backupHistory.length} backups</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Database Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conexões Ativas</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Conexões Ativas</CardTitle>
             <Activity className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{databaseStats.activeConnections}</div>
-            <p className="text-xs text-muted-foreground">conexões simultâneas</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">conexões simultâneas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Queries/Segundo</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Queries/Segundo</CardTitle>
             <Zap className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">{databaseStats.queriesPerSecond}</div>
-            <p className="text-xs text-muted-foreground">consultas por segundo</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">consultas por segundo</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo de Resposta</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Tempo de Resposta</CardTitle>
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{databaseStats.avgResponseTime}ms</div>
-            <p className="text-xs text-muted-foreground">tempo médio</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">tempo médio</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cache Hit Ratio</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs sm:text-sm font-medium leading-tight">Cache Hit Ratio</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{databaseStats.cacheHitRatio}%</div>
-            <p className="text-xs text-muted-foreground">eficiência do cache</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">eficiência do cache</p>
           </CardContent>
         </Card>
       </div>

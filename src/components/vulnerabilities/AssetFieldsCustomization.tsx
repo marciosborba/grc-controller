@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Settings,
   ArrowLeft,
   Plus,
@@ -104,7 +104,7 @@ export default function AssetFieldsCustomization() {
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Acesso Restrito:</strong> Apenas administradores da tenant podem customizar campos de ativos. 
+            <strong>Acesso Restrito:</strong> Apenas administradores da tenant podem customizar campos de ativos.
             Entre em contato com seu administrador para solicitar acesso.
           </AlertDescription>
         </Alert>
@@ -114,7 +114,7 @@ export default function AssetFieldsCustomization() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.label) {
       return;
     }
@@ -123,12 +123,12 @@ export default function AssetFieldsCustomization() {
       ...formData,
       order: customFields.length + 1,
       options: formData.type === 'select' ? formData.options : undefined,
-      validation: formData.validation.pattern || formData.validation.min || formData.validation.max 
-        ? formData.validation 
+      validation: formData.validation.pattern || formData.validation.min || formData.validation.max
+        ? formData.validation
         : undefined
     };
 
-    let success = false;
+    let success: any = false;
     if (editingField) {
       success = await updateCustomField(editingField.id, fieldData);
     } else {
@@ -341,9 +341,9 @@ export default function AssetFieldsCustomization() {
                   <div className="space-y-4">
                     <div>
                       <Label className="text-base font-semibold">Seção Personalizada</Label>
-                      <p className="text-sm text-muted-foreground">Configure um título e subtítulo para agrupar os campos customizados</p>
+                      <p className="text-sm text-muted-foreground">Configure um título e subtítulo para agrupar as informações adicionais</p>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label htmlFor="sectionTitle">Título da Seção</Label>
                       <Input
@@ -360,7 +360,7 @@ export default function AssetFieldsCustomization() {
                         id="sectionSubtitle"
                         value={formData.sectionSubtitle}
                         onChange={(e) => setFormData(prev => ({ ...prev, sectionSubtitle: e.target.value }))}
-                        placeholder="ex: Campos customizados configurados para sua organização"
+                        placeholder="ex: Informações adicionais configuradas para sua organização"
                         rows={2}
                       />
                     </div>

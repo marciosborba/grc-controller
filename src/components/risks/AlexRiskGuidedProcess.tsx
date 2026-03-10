@@ -1,159 +1,68 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle, 
-  Brain,
-  FileText,
-  Target,
-  BarChart3,
-  Shield,
-  ClipboardList,
-  Users,
-  Eye,
-  Sparkles,
-  Lightbulb,
-  Zap,
-  RefreshCw,
-  MessageCircle,
-  CheckSquare,
-  AlertTriangle,
-  TrendingUp,
-  Library,
-  Copy
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  FileText, BarChart3, History, Shield, ClipboardList, Users, Eye,
+  RefreshCw, CheckCircle, ChevronLeft, ChevronRight, Plus, Trash2, Library,
+  MessageCircle, CheckSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { RiskRegistrationData } from './wizard/RiskRegistrationWizard';
 import { RiskLibraryFixed } from './shared/RiskLibraryFixed';
 import type { RiskTemplate as DBRiskTemplate } from '@/types/riskTemplate';
 
-interface AlexRiskSuggestion {
-  type: 'improvement' | 'warning' | 'suggestion' | 'validation';
-  title: string;
-  content: string;
-  field?: string;
-  action?: () => void;
-  severity?: 'low' | 'medium' | 'high';
-}
-
-interface AlexRiskGuidedProcessProps {
-  onComplete: (riskData: RiskRegistrationData) => void;
+export interface AlexRiskGuidedProcessProps {
+  onComplete: (data: Partial<RiskRegistrationData> & Record<string, any>) => void;
   onCancel: () => void;
 }
 
-interface AIAnalysisResult {
-  suggestions: AlexRiskSuggestion[];
-  improvedText?: string;
-  score?: number;
-  analysis?: string;
-}
-
-interface MatrixConfiguration {
-  type: '4x4' | '5x5';
-  impactLabels: string[];
-  probabilityLabels: string[];
-  riskLevels: { [key: string]: string };
-}
-
-type RiskTemplate = DBRiskTemplate;
-
 export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
   onComplete,
-  onCancel
+  onCancel,
 }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   const [currentStep, setCurrentStep] = useState(1);
-  const [registrationData, setRegistrationData] = useState<RiskRegistrationData>({});
-  const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [alexSuggestions, setAlexSuggestions] = useState<AlexRiskSuggestion[]>([]);
-  const [matrixConfig, setMatrixConfig] = useState<MatrixConfiguration>({
-    type: '5x5',
-    impactLabels: ['Muito Baixo', 'Baixo', 'Médio', 'Alto', 'Muito Alto'],
-    probabilityLabels: ['Raro', 'Improvável', 'Possível', 'Provável', 'Quase Certo'],
-    riskLevels: {}
-  });
-  
-  // Estados específicos para etapas
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [registrationData, setRegistrationData] = useState<Partial<RiskRegistrationData> & Record<string, any>>({});
+  const [showRiskLibrary, setShowRiskLibrary] = useState(false);
+
+  // States from previous version
   const [actionPlanItems, setActionPlanItems] = useState<any[]>([]);
   const [stakeholders, setStakeholders] = useState<any[]>([]);
-  
-  // Estados para biblioteca de riscos
-  const [showRiskLibrary, setShowRiskLibrary] = useState(false);
-  
-  const { toast } = useToast();
-  const { user } = useAuth();
+
+  const [matrixConfig, setMatrixConfig] = useState({
+    type: '5x5',
+    impactLabels: ['Muito Baixo', 'Baixo', 'Moderado', 'Alto', 'Extremo'],
+    probabilityLabels: ['Muito Raro', 'Raro', 'Possível', 'Provável', 'Quase Certo'],
+    riskLevels: {}
+  });
 
   const steps = [
-    {
-      id: 1,
-      title: 'Identificação',
-      description: 'Alex Risk te ajuda a identificar e descrever o risco',
-      icon: FileText,
-      alexPrompt: 'Vamos começar identificando seu risco. Descreva brevemente a situação e eu te ajudarei a refiná-la.'
-    },
-    {
-      id: 2,
-      title: 'Análise',
-      description: 'Avaliação inteligente de impacto e probabilidade',
-      icon: BarChart3,
-      alexPrompt: 'Agora vou analisar o impacto e probabilidade do seu risco com base nas informações fornecidas.'
-    },
-    {
-      id: 3,
-      title: 'Classificação GUT',
-      description: 'Priorização usando metodologia GUT',
-      icon: Target,
-      alexPrompt: 'Vamos classificar a Gravidade, Urgência e Tendência deste risco.'
-    },
-    {
-      id: 4,
-      title: 'Estratégia',
-      description: 'Recomendação da melhor estratégia de tratamento',
-      icon: Shield,
-      alexPrompt: 'Com base na análise, vou recomendar a melhor estratégia para este risco.'
-    },
-    {
-      id: 5,
-      title: 'Plano de Ação',
-      description: 'Criação de atividades e cronograma',
-      icon: ClipboardList,
-      alexPrompt: 'Agora vamos criar um plano de ação detalhado para tratar este risco.'
-    },
-    {
-      id: 6,
-      title: 'Comunicação',
-      description: 'Definição de stakeholders e aprovações',
-      icon: Users,
-      alexPrompt: 'Vamos identificar quem precisa ser comunicado sobre este risco.'
-    },
-    {
-      id: 7,
-      title: 'Monitoramento',
-      description: 'Configuração de acompanhamento e KPIs',
-      icon: Eye,
-      alexPrompt: 'Por fim, vamos definir como monitorar e acompanhar este risco.'
-    }
+    { id: 1, title: 'Identificação', icon: FileText },
+    { id: 2, title: 'Análise', icon: BarChart3 },
+    { id: 3, title: 'Avaliação', icon: CheckSquare },
+    { id: 4, title: 'Contexto', icon: History },
+    { id: 5, title: 'Controles', icon: Shield },
+    { id: 6, title: 'Planos de Ação', icon: ClipboardList },
+    { id: 7, title: 'Comunicação', icon: Users },
+    { id: 8, title: 'Monitoramento', icon: Eye }
   ];
 
-  const currentStepData = steps.find(step => step.id === currentStep);
-  const progress = (currentStep / steps.length) * 100;
-
-  // Carregar configuração da matriz de risco do tenant
   useEffect(() => {
     const loadMatrixConfiguration = async () => {
       if (!user?.tenantId) return;
-      
+
       try {
         const { data, error } = await supabase
           .from('tenants')
@@ -162,7 +71,7 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
           .single();
 
         if (error) throw error;
-        
+
         const riskMatrixConfig = data?.settings?.risk_matrix;
         if (riskMatrixConfig) {
           setMatrixConfig({
@@ -173,558 +82,70 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
           });
         }
       } catch (error) {
-        console.error('Erro ao carregar configuração da matriz:', error);
+        console.error('Erro ao carregar matriz:', error);
       }
     };
-
     loadMatrixConfiguration();
   }, [user?.tenantId]);
 
-  // Criar registro inicial
-  useEffect(() => {
-    if (!registrationId && user?.id && user?.tenantId) {
-      createNewRiskRegistration();
-    }
-  }, [user?.id, user?.tenantId, registrationId]);
-
-  const createNewRiskRegistration = async () => {
-    if (!user?.tenantId || !user?.id || registrationId) return;
-    
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('risk_registrations')
-        .insert({
-          tenant_id: user.tenantId,
-          created_by: user.id,
-          status: 'draft',
-          current_step: 1,
-          completion_percentage: 0
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      setRegistrationId(data.id);
-      toast({
-        title: '✨ Alex Risk Ativado',
-        description: 'Vamos começar o processo guiado de registro de risco.',
-      });
-      
-      // Gerar sugestões iniciais
-      await generateAlexSuggestions(1, {});
-      
-    } catch (error) {
-      console.error('Erro ao criar registro:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível iniciar o processo. Tente novamente.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Função para aplicar template da biblioteca
-  const handleSelectTemplate = async (template: RiskTemplate) => {
-    try {
-      // Aplicar dados do template
-      const templateData: Partial<RiskRegistrationData> = {
-        risk_name: template.name,
-        risk_description: template.description,
-        risk_category: template.category,
-        risk_subcategory: template.industry, // Mapear industry para subcategory
-        impact_description: template.description, // Usar descrição como impacto
-        control_measures: template.controls?.map(c => c.controlDescription).join('\n') || '',
-        kpis: template.kris?.map(k => k.kriDescription).join('\n') || ''
-      };
-
-      setRegistrationData(prev => ({ ...prev, ...templateData }));
-      setShowRiskLibrary(false);
-      
-      // Gerar sugestões baseadas no template aplicado
-      await generateAlexSuggestions(currentStep, templateData);
-      
-      toast({
-        title: 'Template Aplicado',
-        description: `Template "${template.name}" carregado com sucesso`,
-      });
-    } catch (error) {
-      console.error('Erro ao aplicar template:', error);
-      toast({
-        title: 'Erro',
-        description: 'Falha ao aplicar template',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Função auxiliar para fornecer conselhos sobre metodologias
-  const getMethodologyAdvice = (methodologyId: string) => {
-    const methodologies = {
-      'qualitative': {
-        name: 'Análise Qualitativa',
-        advice: 'Use escalas descritivas para impacto e probabilidade. Ideal para riscos operacionais e processos gerais.'
-      },
-      'quantitative': {
-        name: 'Análise Quantitativa',
-        advice: 'Defina valores monetários específicos e percentuais de probabilidade. Ideal para riscos financeiros e investimentos.'
-      },
-      'semi_quantitative': {
-        name: 'Análise Semi-Quantitativa',
-        advice: 'Combina escalas qualitativas com valores numéricos. Ideal para riscos estratégicos e projetos.'
-      },
-      'nist': {
-        name: 'NIST Cybersecurity Framework',
-        advice: 'Configure as funções do NIST (Identificar, Proteger, Detectar, Responder, Recuperar). Ideal para riscos de cibersegurança.'
-      },
-      'iso31000': {
-        name: 'ISO 31000',
-        advice: 'Siga os princípios e diretrizes do padrão internacional. Ideal para todos os tipos de riscos e governança.'
-      },
-      'risco_si_simplificado': {
-        name: 'Risco SI Simplificado',
-        advice: 'Use questionário estruturado com 8 perguntas para probabilidade e 8 para impacto. Ideal para avaliação rápida.'
-      },
-      'risco_fornecedor': {
-        name: 'Risco de Fornecedor',
-        advice: 'Avalie riscos específicos da cadeia de suprimentos. Ideal para fornecedores e terceirização.'
+  const handleSelectTemplate = async (template: DBRiskTemplate) => {
+    const templateData: Partial<RiskRegistrationData> = {
+      risk_title: template.name,
+      risk_description: template.description,
+      risk_category: template.category,
+      risk_subcategory: template.industry,
+      kpi_definition: template.kris?.map(k => k.kriDescription).join('\n') || '',
+      metadata: {
+        control_measures: template.controls?.map(c => c.controlDescription).join('\n') || ''
       }
     };
-    
-    return methodologies[methodologyId] || { name: 'Desconhecida', advice: 'Metodologia não reconhecida.' };
+    setRegistrationData(prev => ({ ...prev, ...templateData }));
+    setShowRiskLibrary(false);
   };
 
-  const generateAlexSuggestions = async (step: number, data: Partial<RiskRegistrationData>): Promise<void> => {
-    setIsAnalyzing(true);
-    
-    try {
-      // Simular análise de IA (em produção seria uma chamada real para IA)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const suggestions = await getStepSuggestions(step, data);
-      setAlexSuggestions(suggestions);
-      
-    } catch (error) {
-      console.error('Erro ao gerar sugestões:', error);
-      setAlexSuggestions([{
-        type: 'warning',
-        title: 'Alex Temporariamente Indisponível',
-        content: 'Não consegui gerar sugestões no momento. Continue preenchendo e eu tentarei ajudar mais tarde.',
-        severity: 'medium'
-      }]);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const getStepSuggestions = async (step: number, data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
-    switch (step) {
-      case 1: // Identificação
-        return [
-          {
-            type: 'suggestion',
-            title: 'Biblioteca de Riscos Disponível',
-            content: 'Você pode carregar um risco pré-definido da nossa biblioteca para acelerar o processo. Clique no botão "Carregar da Biblioteca" abaixo.',
-            severity: 'low',
-            action: () => {
-              setShowRiskLibrary(true);
-            }
-          },
-          {
-            type: 'suggestion',
-            title: 'Dica de Identificação',
-            content: 'Para uma identificação completa, descreva: O QUE pode acontecer, ONDE pode ocorrer, QUANDO é mais provável e QUAIS são as causas potenciais.',
-            severity: 'low'
-          },
-          {
-            type: 'improvement',
-            title: 'Categorização Inteligente',
-            content: 'Com base no texto que você inserir, vou sugerir automaticamente a categoria mais apropriada para este risco.',
-            severity: 'medium'
-          }
-        ];
-      
-      case 2: // Análise
-        const suggestions: AlexRiskSuggestion[] = [
-          {
-            type: 'suggestion',
-            title: 'Seleção de Metodologia',
-            content: 'Primeiro, selecione a metodologia de análise mais adequada ao tipo de risco identificado. Cada metodologia tem suas próprias variáveis e critérios.',
-            severity: 'high'
-          }
-        ];
-
-        if (data.methodology_id) {
-          const methodologyAdvice = getMethodologyAdvice(data.methodology_id);
-          suggestions.push({
-            type: 'improvement',
-            title: `Metodologia ${methodologyAdvice.name} Selecionada`,
-            content: methodologyAdvice.advice,
-            severity: 'medium'
-          });
-
-          suggestions.push({
-            type: 'suggestion',
-            title: 'Configuração de Variáveis',
-            content: `Configure as variáveis específicas da metodologia ${methodologyAdvice.name} para obter uma análise precisa.`,
-            severity: 'medium'
-          });
-        }
-
-        return suggestions;
-      
-      case 3: // GUT
-        return [
-          {
-            type: 'suggestion',
-            title: 'Classificação GUT Inteligente',
-            content: 'Baseado na análise anterior, sugiro os seguintes valores GUT para otimizar a priorização.',
-            severity: 'high'
-          }
-        ];
-      
-      case 4: // Estratégia
-        const strategy = determineOptimalStrategy(data);
-        return [
-          {
-            type: 'suggestion',
-            title: 'Estratégia Recomendada',
-            content: `Com base no nível de risco (${data.risk_level || 'analisado'}), recomendo a estratégia: ${strategy}`,
-            severity: 'high'
-          }
-        ];
-      
-      case 5: // Plano de Ação
-        if (data.treatment_strategy === 'accept') {
-          return [{
-            type: 'suggestion',
-            title: 'Estratégia de Aceitação',
-            content: 'Como você escolheu aceitar este risco, um plano de ação detalhado não é necessário. Prossiga para a comunicação.',
-            severity: 'low'
-          }];
-        }
-        return await generateActionPlanSuggestions(data);
-      
-      case 6: // Comunicação
-        return await generateStakeholderSuggestions(data);
-      
-      case 7: // Monitoramento
-        return await generateMonitoringSuggestions(data);
-      
-      default:
-        return [];
-    }
-  };
-
-  const analyzeRiskImpact = async (description: string): Promise<string> => {
-    // Análise simplificada baseada em palavras-chave
-    const keywords = description.toLowerCase();
-    
-    if (keywords.includes('financeiro') || keywords.includes('monetário') || keywords.includes('custo')) {
-      return 'Detectei impacto financeiro. Considere valores específicos de perdas potenciais.';
-    }
-    if (keywords.includes('operação') || keywords.includes('processo') || keywords.includes('produção')) {
-      return 'Identifico impacto operacional. Avalie a interrupção nos processos de negócio.';
-    }
-    if (keywords.includes('imagem') || keywords.includes('reputação') || keywords.includes('marca')) {
-      return 'Há impacto reputacional. Consider o efeito na confiança de clientes e parceiros.';
-    }
-    if (keywords.includes('legal') || keywords.includes('regulatório') || keywords.includes('compliance')) {
-      return 'Impacto regulatório identificado. Verifique multas e sanções aplicáveis.';
-    }
-    
-    return 'Analise o impacto considerando aspectos financeiros, operacionais, reputacionais e de conformidade.';
-  };
-
-  const determineOptimalStrategy = (data: Partial<RiskRegistrationData>): string => {
-    const riskScore = data.risk_score || 0;
-    
-    if (riskScore >= 20) return 'EVITAR - Risco muito alto';
-    if (riskScore >= 15) return 'MITIGAR - Implementar controles';
-    if (riskScore >= 10) return 'TRANSFERIR - Considerar seguros';
-    return 'ACEITAR - Monitorar regularmente';
-  };
-
-  const generateActionPlanSuggestions = async (data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
-    const suggestions: AlexRiskSuggestion[] = [];
-    
-    if (data.treatment_strategy === 'mitigate') {
-      suggestions.push({
-        type: 'suggestion',
-        title: 'Plano de Mitigação',
-        content: 'Sugiro criar atividades para: 1) Implementar controles preventivos, 2) Estabelecer monitoramento, 3) Treinar equipe responsável.',
-        severity: 'high'
-      });
-    }
-    
-    suggestions.push({
-      type: 'improvement',
-      title: 'Cronograma Inteligente',
-      content: 'Vou sugerir prazos realistas baseados na complexidade das atividades e recursos disponíveis.',
-      severity: 'medium'
-    });
-    
-    return suggestions;
-  };
-
-  const generateStakeholderSuggestions = async (data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
-    return [
-      {
-        type: 'suggestion',
-        title: 'Stakeholders Essenciais',
-        content: 'Para este tipo de risco, recomendo comunicar: Gestor da área afetada, Responsável pelo controle interno e Comitê de riscos.',
-        severity: 'high'
-      },
-      {
-        type: 'improvement',
-        title: 'Níveis de Comunicação',
-        content: 'Definirei automaticamente quem precisa apenas ser informado versus quem deve aprovar as ações.',
-        severity: 'medium'
-      }
-    ];
-  };
-
-  const generateMonitoringSuggestions = async (data: Partial<RiskRegistrationData>): Promise<AlexRiskSuggestion[]> => {
-    const frequency = data.risk_level === 'Alto' || data.risk_level === 'Muito Alto' ? 'mensal' : 'trimestral';
-    
-    return [
-      {
-        type: 'suggestion',
-        title: 'Frequência de Monitoramento',
-        content: `Para um risco de nível ${data.risk_level}, recomendo monitoramento ${frequency}.`,
-        severity: 'high'
-      },
-      {
-        type: 'improvement',
-        title: 'KPIs Automáticos',
-        content: 'Vou sugerir indicadores específicos para acompanhar a efetividade dos controles implementados.',
-        severity: 'medium'
-      }
-    ];
-  };
-
-  const updateRegistrationData = useCallback((newData: Partial<RiskRegistrationData>) => {
-    const updatedData = { ...registrationData, ...newData };
-    setRegistrationData(updatedData);
-    
-    // Salvar automaticamente
-    if (registrationId) {
-      saveToSupabase(updatedData);
-    }
-    
-    // Gerar novas sugestões se houve mudança significativa
-    const significantFields = ['risk_description', 'risk_category', 'treatment_strategy'];
-    const hasSignificantChange = significantFields.some(field => newData[field as keyof RiskRegistrationData]);
-    
-    if (hasSignificantChange) {
-      generateAlexSuggestions(currentStep, updatedData);
-    }
-  }, [registrationData, registrationId, currentStep]);
-
-  const saveToSupabase = async (data: RiskRegistrationData) => {
-    if (!registrationId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('risk_registrations')
-        .update({
-          ...data,
-          current_step: currentStep,
-          completion_percentage: (currentStep / steps.length) * 100
-        })
-        .eq('id', registrationId);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Erro ao salvar dados:', error);
-    }
-  };
+  const updateRegistrationData = useCallback((newData: Partial<RiskRegistrationData> & Record<string, any>) => {
+    setRegistrationData(prev => ({ ...prev, ...newData }));
+  }, []);
 
   const handleNext = async () => {
-    if (!validateCurrentStep()) return;
-
-    // Lógica especial para pular Step 5 se estratégia for aceitar
-    if (currentStep === 4 && registrationData.treatment_strategy === 'accept') {
-      setCurrentStep(6);
-    } else if (currentStep < steps.length) {
-      setCurrentStep(currentStep + 1);
+    // Basic validations
+    if (currentStep === 1 && (!registrationData.risk_title || !registrationData.risk_category)) {
+      toast({
+        title: 'Campos Obrigatórios',
+        description: 'Preencha o título e a categoria do risco.',
+        variant: 'destructive'
+      });
+      return;
     }
 
-    // Gerar sugestões para a próxima etapa
-    const nextStep = currentStep === 4 && registrationData.treatment_strategy === 'accept' ? 6 : currentStep + 1;
-    if (nextStep <= steps.length) {
-      await generateAlexSuggestions(nextStep, registrationData);
+    if (currentStep === 2 && !registrationData.methodology_id) {
+      toast({
+        title: 'Campos Obrigatórios',
+        description: 'Selecione uma metodologia de análise.',
+        variant: 'destructive'
+      });
+      return;
     }
 
-    toast({
-      title: '✅ Etapa Concluída',
-      description: `Avançando com Alex Risk...`,
-    });
+    setCurrentStep(prev => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePrevious = () => {
-    if (currentStep > 1) {
-      // Lógica especial para Step 6 se veio do Step 4 (Accept strategy)
-      if (currentStep === 6 && registrationData.treatment_strategy === 'accept') {
-        setCurrentStep(4);
-      } else {
-        setCurrentStep(currentStep - 1);
-      }
-    }
-  };
-
-  const validateCurrentStep = (): boolean => {
-    // Validações com feedback do Alex Risk
-    switch (currentStep) {
-      case 1: // Identificação
-        if (!registrationData.risk_title?.trim()) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Título Necessário',
-            content: 'Para prosseguir, preciso que você dê um título ao risco. Algo como "Falha no sistema X" ou "Perda de dados cliente".',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        if (!registrationData.risk_category) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Categoria Obrigatória',
-            content: 'Selecione uma categoria para eu poder oferecer sugestões mais precisas nas próximas etapas.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        if (!registrationData.risk_description?.trim()) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Descrição Necessária',
-            content: 'Uma descrição detalhada me ajudará a analisar melhor o risco e sugerir controles adequados.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        break;
-
-      case 2: // Análise
-        if (!registrationData.impact_score || !registrationData.likelihood_score) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Análise Incompleta',
-            content: 'Preciso que você avalie tanto o impacto quanto a probabilidade para calcular o risco corretamente.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        break;
-
-      case 3: // GUT
-        if (!registrationData.gut_gravity || !registrationData.gut_urgency || !registrationData.gut_tendency) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Classificação GUT Incompleta',
-            content: 'Complete a análise GUT (Gravidade, Urgência e Tendência) para priorizar corretamente este risco.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        break;
-
-      case 4: // Estratégia
-        if (!registrationData.treatment_strategy) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Estratégia Necessária',
-            content: 'Selecione uma estratégia de tratamento. Se não tiver certeza, posso sugerir baseado na análise.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        if (!registrationData.treatment_rationale?.trim()) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Justificativa Obrigatória',
-            content: 'Explique por que escolheu esta estratégia. Isso é importante para auditoria e governança.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        break;
-
-      case 5: // Plano de Ação
-        // Se estratégia for aceitar, pular validação
-        if (registrationData.treatment_strategy === 'accept') {
-          return true;
-        }
-        // Para outras estratégias, validar se há pelo menos uma atividade planejada
-        break;
-
-      case 6: // Comunicação
-        // Validação flexível - pelo menos um stakeholder sugerido deve ser considerado
-        if (stakeholders.length === 0) {
-          setAlexSuggestions([{
-            type: 'warning',
-            title: 'Comunicação Importante',
-            content: 'Adicione pelo menos um stakeholder da lista sugerida. A comunicação é essencial para o sucesso.',
-            severity: 'high'
-          }]);
-          return false;
-        }
-        break;
-
-      case 7: // Monitoramento
-        // Validação flexível - alguns campos opcionais, mas sugerir preenchimento
-        if (!registrationData.monitoring_frequency && !registrationData.monitoring_responsible) {
-          setAlexSuggestions([{
-            type: 'suggestion',
-            title: 'Monitoramento Recomendado',
-            content: 'Embora opcional, recomendo definir pelo menos a frequência ou o responsável pelo monitoramento.',
-            severity: 'medium'
-          }]);
-          // Não bloquear a finalização, apenas sugerir
-        }
-        break;
-    }
-    return true;
+    setCurrentStep(prev => Math.max(1, prev - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleComplete = async () => {
-    if (!validateCurrentStep() || !registrationId) return;
-
     setIsLoading(true);
     try {
-      // Finalizar registro
-      const finalData = {
-        ...registrationData,
-        status: 'completed',
-        completion_percentage: 100,
-        current_step: 7,
-        completed_at: new Date().toISOString()
-      };
+      const finalData = { ...registrationData };
 
-      const { error } = await supabase
-        .from('risk_registrations')
-        .update(finalData)
-        .eq('id', registrationId);
-
-      if (error) throw error;
-
-      toast({
-        title: '🎉 Processo Concluído com Alex Risk',
-        description: `Risco "${registrationData.risk_title}" foi registrado com sucesso.`,
+      onComplete({
+        ...finalData,
+        action_plans: actionPlanItems,
+        stakeholders: stakeholders
       });
-
-      setTimeout(() => {
-        onComplete({
-          ...finalData,
-          action_plans: actionPlanItems,
-          stakeholders: stakeholders
-        });
-      }, 1500);
-
     } catch (error) {
       console.error('Erro ao finalizar:', error);
       toast({
@@ -737,135 +158,28 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
     }
   };
 
-  const applyAlexSuggestion = (suggestion: AlexRiskSuggestion) => {
-    if (suggestion.action) {
-      suggestion.action();
-    }
-    
-    // Remover sugestão aplicada
-    setAlexSuggestions(prev => prev.filter(s => s !== suggestion));
-    
-    toast({
-      title: '✨ Sugestão Aplicada',
-      description: 'Alex Risk otimizou sua entrada.',
-    });
-  };
-
-  const renderStepContent = () => {
-    if (isLoading && !registrationId) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Alex Risk está se preparando...</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6">
-        {/* Alex Risk Prompt */}
-        <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-3">
-              <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/50">
-                <Brain className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium text-purple-900 dark:text-purple-100 mb-2">Alex Risk</h4>
-                <p className="text-purple-700 dark:text-purple-200">{currentStepData?.alexPrompt}</p>
-              </div>
-              {isAnalyzing && (
-                <RefreshCw className="h-4 w-4 text-purple-600 animate-spin" />
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Sugestões do Alex */}
-        {alexSuggestions.length > 0 && (
-          <div className="space-y-3">
-            {alexSuggestions.map((suggestion, index) => (
-              <Card key={index} className={`border-l-4 ${
-                suggestion.severity === 'high' ? 'border-l-red-500' :
-                suggestion.severity === 'medium' ? 'border-l-yellow-500' :
-                'border-l-blue-500'
-              }`}>
-                <CardContent className="pt-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1">
-                      <div className="p-1 rounded-full bg-purple-100 dark:bg-purple-900/50">
-                        {suggestion.type === 'warning' ? (
-                          <AlertTriangle className="h-4 w-4 text-orange-600" />
-                        ) : suggestion.type === 'improvement' ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Lightbulb className="h-4 w-4 text-purple-600" />
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <h5 className="font-medium text-sm mb-1">{suggestion.title}</h5>
-                        <p className="text-sm text-muted-foreground">{suggestion.content}</p>
-                      </div>
-                    </div>
-                    {suggestion.action && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => applyAlexSuggestion(suggestion)}
-                        className="ml-2"
-                      >
-                        <Zap className="h-3 w-3 mr-1" />
-                        Aplicar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Conteúdo da Etapa */}
-        {renderStepForm()}
-      </div>
-    );
-  };
-
   const renderStepForm = () => {
     switch (currentStep) {
-      case 1: // Identificação
+      case 1:
         return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <FileText className="h-5 w-5" />
-                <span>Identificação do Risco</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 overflow-hidden p-4">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Identificação do Risco</h3>
+            <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Título do Risco <span className="text-red-500">*</span>
-                </label>
+                <label className="block text-sm font-medium mb-1">Título do Risco *</label>
                 <Input
                   value={registrationData.risk_title || ''}
                   onChange={(e) => updateRegistrationData({ risk_title: e.target.value })}
-                  placeholder="Ex: Falha no sistema de backup..."
-                  className="w-full max-w-full"
+                  placeholder="Ex: Falha no sistema de backup principal"
                 />
               </div>
-              
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Categoria do Risco <span className="text-red-500">*</span>
-                </label>
-                <Select 
-                  value={registrationData.risk_category || ''} 
+                <label className="block text-sm font-medium mb-1">Categoria *</label>
+                <Select
+                  value={registrationData.risk_category || ''}
                   onValueChange={(value) => updateRegistrationData({ risk_category: value })}
                 >
-                  <SelectTrigger className="w-full max-w-full text-xs h-8">
+                  <SelectTrigger>
                     <SelectValue placeholder="Selecione uma categoria..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -878,1132 +192,925 @@ export const AlexRiskGuidedProcess: React.FC<AlexRiskGuidedProcessProps> = ({
                   </SelectContent>
                 </Select>
               </div>
-
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium">
-                    Descrição Detalhada <span className="text-red-500">*</span>
-                  </label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowRiskLibrary(true)}
-                    className="text-xs h-7"
-                  >
-                    <Library className="h-3 w-3 mr-1" />
-                    Carregar da Biblioteca
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-sm font-medium">Descrição Detalhada *</label>
+                  <Button variant="outline" size="sm" onClick={() => setShowRiskLibrary(true)}>
+                    <Library className="h-4 w-4 mr-2" />
+                    Biblioteca de Riscos
                   </Button>
                 </div>
                 <Textarea
                   value={registrationData.risk_description || ''}
                   onChange={(e) => updateRegistrationData({ risk_description: e.target.value })}
-                  placeholder="Descreva o risco em detalhes: o que pode acontecer, onde, quando e por quê..."
+                  placeholder="Descreva o risco em detalhes..."
                   rows={4}
-                  className="w-full max-w-full"
                 />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         );
 
-      case 2: // Análise
+      case 2:
         return (
           <div className="space-y-4">
-            {/* Seleção de Metodologia */}
-            <Card className="w-full max-w-full overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <BarChart3 className="h-5 w-5" />
-                  <span>Metodologia de Análise</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 overflow-hidden p-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Selecione a Metodologia <span className="text-red-500">*</span>
-                  </label>
-                  <Select 
-                    value={registrationData.methodology_id || ''} 
-                    onValueChange={(value) => updateRegistrationData({ methodology_id: value })}
-                  >
-                    <SelectTrigger className="w-full max-w-full text-xs h-8">
-                      <SelectValue placeholder="Selecione uma metodologia..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="qualitative">📊 Análise Qualitativa</SelectItem>
-                      <SelectItem value="quantitative">💰 Análise Quantitativa</SelectItem>
-                      <SelectItem value="semi_quantitative">⚖️ Análise Semi-Quantitativa</SelectItem>
-                      <SelectItem value="nist">🛡️ NIST Cybersecurity Framework</SelectItem>
-                      <SelectItem value="iso31000">🌐 ISO 31000</SelectItem>
-                      <SelectItem value="risco_si_simplificado">📋 Risco SI Simplificado</SelectItem>
-                      <SelectItem value="risco_fornecedor">🏭 Risco de Fornecedor</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+            <h3 className="text-lg font-semibold">Metodologia e Análise</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              {[
+                { id: 'qualitative', title: 'Qualitativo', desc: 'Matriz PxI' },
+                { id: 'quantitative', title: 'Quantitativo', desc: 'Financeiro' },
+                { id: 'simplificado', title: 'Simplificado', desc: 'Avaliação Rápida' },
+                { id: 'iso31000', title: 'ISO 31000', desc: 'Prática Global' },
+                { id: 'cis', title: 'CIS Controls', desc: 'Controles Críticos' },
+                { id: 'nist', title: 'NIST', desc: 'Cyber Framework' },
+                { id: 'fair', title: 'FAIR', desc: 'Quantificação TI' },
+                { id: 'coso', title: 'COSO ERM', desc: 'Gestão Corp' }
+              ].map(m => (
+                <Card
+                  key={m.id}
+                  className={`cursor-pointer transition-all ${registrationData.methodology_id === m.id ? 'border-primary bg-primary/5' : 'hover:border-primary/50'}`}
+                  onClick={() => updateRegistrationData({ methodology_id: m.id })}
+                >
+                  <CardContent className="p-3 text-center">
+                    <p className="font-semibold text-sm">{m.title}</p>
+                    <p className="text-xs text-muted-foreground">{m.desc}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
 
-            {/* Configuração de Variáveis por Metodologia */}
-            {registrationData.methodology_id && (
-              <Card className="w-full max-w-full overflow-hidden">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Target className="h-5 w-5" />
-                    <span>Configuração de Variáveis</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 overflow-hidden p-4">
-                  {/* Metodologia Qualitativa */}
-                  {registrationData.methodology_id === 'qualitative' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full max-w-full overflow-hidden">
-                      <div className="min-w-0 w-full">
-                        <label className="block text-xs font-medium mb-1">
-                          Impacto <span className="text-red-500">*</span>
-                        </label>
-                        <Select 
-                          value={registrationData.impact_score?.toString() || ''} 
-                          onValueChange={(value) => {
-                            const score = parseInt(value);
-                            updateRegistrationData({ 
-                              impact_score: score,
-                              risk_score: score * (registrationData.likelihood_score || 1)
-                            });
-                          }}
-                        >
-                          <SelectTrigger className="w-full max-w-full text-xs h-8">
-                            <SelectValue placeholder="Selecione o impacto..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {matrixConfig.impactLabels.map((label, index) => (
-                              <SelectItem key={index} value={(index + 1).toString()}>
-                                {index + 1} - {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="min-w-0 w-full">
-                        <label className="block text-xs font-medium mb-1">
-                          Probabilidade <span className="text-red-500">*</span>
-                        </label>
-                        <Select 
-                          value={registrationData.likelihood_score?.toString() || ''} 
-                          onValueChange={(value) => {
-                            const score = parseInt(value);
-                            updateRegistrationData({ 
-                              likelihood_score: score,
-                              probability_score: score,
-                              risk_score: (registrationData.impact_score || 1) * score
-                            });
-                          }}
-                        >
-                          <SelectTrigger className="w-full max-w-full text-xs h-8">
-                            <SelectValue placeholder="Selecione a probabilidade..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {matrixConfig.probabilityLabels.map((label, index) => (
-                              <SelectItem key={index} value={(index + 1).toString()}>
-                                {index + 1} - {label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+            <div className="p-4 bg-muted/30 rounded-lg">
+              <h4 className="font-medium mb-4 flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Variáveis da Metodologia
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(!registrationData.methodology_id || registrationData.methodology_id === 'qualitative' || registrationData.methodology_id === 'iso31000') && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Impacto / Consequência</label>
+                      <Select
+                        value={registrationData.impact?.toString() || ''}
+                        onValueChange={(value) => updateRegistrationData({ impact: parseInt(value) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o impacto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {matrixConfig.impactLabels.map((lbl, i) => (
+                            <SelectItem key={i} value={(i + 1).toString()}>{i + 1} - {lbl}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
-
-                  {/* Metodologia Quantitativa */}
-                  {registrationData.methodology_id === 'quantitative' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full max-w-full overflow-hidden">
-                      <div className="min-w-0 w-full">
-                        <label className="block text-xs font-medium mb-1">
-                          Valor do Impacto (R$) <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="number"
-                          value={registrationData.impact_value || ''}
-                          onChange={(e) => updateRegistrationData({ impact_value: parseFloat(e.target.value) })}
-                          placeholder="0.00"
-                          className="w-full max-w-full text-xs h-8"
-                        />
-                      </div>
-
-                      <div className="min-w-0 w-full">
-                        <label className="block text-xs font-medium mb-1">
-                          Probabilidade (%) <span className="text-red-500">*</span>
-                        </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={registrationData.probability_percentage || ''}
-                          onChange={(e) => updateRegistrationData({ probability_percentage: parseFloat(e.target.value) })}
-                          placeholder="0-100%"
-                          className="w-full max-w-full text-xs h-8"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Probabilidade / Verossimilhança</label>
+                      <Select
+                        value={registrationData.probability?.toString() || ''}
+                        onValueChange={(value) => updateRegistrationData({ probability: parseInt(value) })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a probabilidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {matrixConfig.probabilityLabels.map((lbl, i) => (
+                            <SelectItem key={i} value={(i + 1).toString()}>{i + 1} - {lbl}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
+                  </>
+                )}
 
-                  {/* Metodologia NIST */}
-                  {registrationData.methodology_id === 'nist' && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-xs font-medium mb-1">
-                          Função NIST Afetada <span className="text-red-500">*</span>
-                        </label>
-                        <Select 
-                          value={registrationData.nist_function || ''} 
-                          onValueChange={(value) => updateRegistrationData({ nist_function: value })}
-                        >
-                          <SelectTrigger className="w-full max-w-full text-xs h-8">
-                            <SelectValue placeholder="Selecione a função..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="identify">Identificar</SelectItem>
-                            <SelectItem value="protect">Proteger</SelectItem>
-                            <SelectItem value="detect">Detectar</SelectItem>
-                            <SelectItem value="respond">Responder</SelectItem>
-                            <SelectItem value="recover">Recuperar</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-xs font-medium mb-1">
-                            Nível de Impacto Cibernético <span className="text-red-500">*</span>
-                          </label>
-                          <Select 
-                            value={registrationData.cyber_impact?.toString() || ''} 
-                            onValueChange={(value) => updateRegistrationData({ cyber_impact: parseInt(value) })}
+                {registrationData.methodology_id === 'quantitative' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Impacto Financeiro (R$)</label>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 50000"
+                        value={registrationData.impact_financial || ''}
+                        onChange={(e) => updateRegistrationData({ impact_financial: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Probabilidade (%)</label>
+                      <Input
+                        type="number"
+                        placeholder="Ex: 15"
+                        max="100"
+                        value={registrationData.probability_percentage || ''}
+                        onChange={(e) => updateRegistrationData({ probability_percentage: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {registrationData.methodology_id === 'simplificado' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Impacto</label>
+                      <Select
+                        value={registrationData.simplified_impact || ''}
+                        onValueChange={(val) => updateRegistrationData({ simplified_impact: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Baixo">Baixo</SelectItem>
+                          <SelectItem value="Médio">Médio</SelectItem>
+                          <SelectItem value="Alto">Alto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Probabilidade</label>
+                      <Select
+                        value={registrationData.simplified_probability || ''}
+                        onValueChange={(val) => updateRegistrationData({ simplified_probability: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Baixa">Baixa</SelectItem>
+                          <SelectItem value="Média">Média</SelectItem>
+                          <SelectItem value="Alta">Alta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {registrationData.methodology_id === 'cis' && (
+                  <>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Grupo de Implementação (IG)</label>
+                      <Select
+                        value={registrationData.cis_ig || ''}
+                        onValueChange={(val) => updateRegistrationData({ cis_ig: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione o IG" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="IG1">IG1 - Higiene Cibernética Básica</SelectItem>
+                          <SelectItem value="IG2">IG2 - Complexidade Moderada</SelectItem>
+                          <SelectItem value="IG3">IG3 - Complexidade Alta / Maturidade</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Deficiência do Controle</label>
+                      <Select
+                        value={registrationData.cis_control_deficiency || ''}
+                        onValueChange={(val) => updateRegistrationData({ cis_control_deficiency: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Alto">Alto</SelectItem>
+                          <SelectItem value="Médio">Médio</SelectItem>
+                          <SelectItem value="Baixo">Baixo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Impacto da Ameaça</label>
+                      <Select
+                        value={registrationData.cis_threat_impact || ''}
+                        onValueChange={(val) => updateRegistrationData({ cis_threat_impact: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Crítico">Crítico</SelectItem>
+                          <SelectItem value="Significativo">Significativo</SelectItem>
+                          <SelectItem value="Moderado">Moderado</SelectItem>
+                          <SelectItem value="Menor">Menor</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {registrationData.methodology_id === 'nist' && (
+                  <>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Função Afetada (NIST Core)</label>
+                      <Select
+                        value={registrationData.nist_function || ''}
+                        onValueChange={(val) => updateRegistrationData({ nist_function: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione a Função" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Identify">Identify (Identificar)</SelectItem>
+                          <SelectItem value="Protect">Protect (Proteger)</SelectItem>
+                          <SelectItem value="Detect">Detect (Detectar)</SelectItem>
+                          <SelectItem value="Respond">Respond (Responder)</SelectItem>
+                          <SelectItem value="Recover">Recover (Recuperar)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Nível de Impacto Cibernético</label>
+                      <Select
+                        value={registrationData.nist_impact || ''}
+                        onValueChange={(val) => updateRegistrationData({ nist_impact: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Alto">Alto</SelectItem>
+                          <SelectItem value="Moderado">Moderado</SelectItem>
+                          <SelectItem value="Baixo">Baixo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Probabilidade da Ameaça</label>
+                      <Select
+                        value={registrationData.nist_probability || ''}
+                        onValueChange={(val) => updateRegistrationData({ nist_probability: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Alta">Alta</SelectItem>
+                          <SelectItem value="Moderada">Moderada</SelectItem>
+                          <SelectItem value="Baixa">Baixa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+
+                {registrationData.methodology_id === 'fair' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Loss Event Frequency (LEF)</label>
+                      <Input
+                        placeholder="Ex: 2 vezes ao ano (0.5 a 2.0)"
+                        value={registrationData.fair_lef || ''}
+                        onChange={(e) => updateRegistrationData({ fair_lef: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Probable Loss Magnitude (PLM)</label>
+                      <Input
+                        placeholder="Ex: R$ 50.000 a R$ 100.000"
+                        value={registrationData.fair_plm || ''}
+                        onChange={(e) => updateRegistrationData({ fair_plm: e.target.value })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {registrationData.methodology_id === 'coso' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Impacto Estratégico</label>
+                      <Select
+                        value={registrationData.coso_strategic_impact || ''}
+                        onValueChange={(val) => updateRegistrationData({ coso_strategic_impact: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Crítico">Crítico</SelectItem>
+                          <SelectItem value="Alto">Alto</SelectItem>
+                          <SelectItem value="Médio">Médio</SelectItem>
+                          <SelectItem value="Baixo">Baixo</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Probabilidade Operacional</label>
+                      <Select
+                        value={registrationData.coso_operational_probability || ''}
+                        onValueChange={(val) => updateRegistrationData({ coso_operational_probability: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Frequente">Frequente</SelectItem>
+                          <SelectItem value="Provável">Provável</SelectItem>
+                          <SelectItem value="Possível">Possível</SelectItem>
+                          <SelectItem value="Improvável">Improvável</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-sm font-medium mb-1">Risk Velocity (Velocidade do Risco)</label>
+                      <Select
+                        value={registrationData.coso_risk_velocity || ''}
+                        onValueChange={(val) => updateRegistrationData({ coso_risk_velocity: val })}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Qual a rapidez com que o risco pode se materializar?" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Muito Rápido">Muito Rápido (Imediato a dias)</SelectItem>
+                          <SelectItem value="Rápido">Rápido (Semanas a um mês)</SelectItem>
+                          <SelectItem value="Moderado">Moderado (Meses)</SelectItem>
+                          <SelectItem value="Lento">Lento (Anos)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Avaliação (Matriz GUT)</h3>
+            <p className="text-sm text-muted-foreground mb-4">Selecione as variáveis para calcular a prioridade do risco com base na metodologia de Gravidade, Urgência e Tendência.</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Gravidade (G)</label>
+                <Select
+                  value={registrationData.gut_gravity?.toString() || ''}
+                  onValueChange={(val) => updateRegistrationData({ gut_gravity: parseInt(val) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 - Extremamente Grave</SelectItem>
+                    <SelectItem value="4">4 - Muito Grave</SelectItem>
+                    <SelectItem value="3">3 - Grave</SelectItem>
+                    <SelectItem value="2">2 - Pouco Grave</SelectItem>
+                    <SelectItem value="1">1 - Sem Gravidade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Urgência (U)</label>
+                <Select
+                  value={registrationData.gut_urgency?.toString() || ''}
+                  onValueChange={(val) => updateRegistrationData({ gut_urgency: parseInt(val) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 - Ação Imediata</SelectItem>
+                    <SelectItem value="4">4 - Com Alguma Urgência</SelectItem>
+                    <SelectItem value="3">3 - Normal</SelectItem>
+                    <SelectItem value="2">2 - Pode Esperar</SelectItem>
+                    <SelectItem value="1">1 - Não Tem Pressa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Tendência (T)</label>
+                <Select
+                  value={registrationData.gut_tendency?.toString() || ''}
+                  onValueChange={(val) => updateRegistrationData({ gut_tendency: parseInt(val) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 - Piorar Rapidamente</SelectItem>
+                    <SelectItem value="4">4 - Piorar a Médio Prazo</SelectItem>
+                    <SelectItem value="3">3 - Piorar a Longo Prazo</SelectItem>
+                    <SelectItem value="2">2 - Permanecer Estável</SelectItem>
+                    <SelectItem value="1">1 - Melhorar</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Histórico e Contexto</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Eventos Anteriores</label>
+                <Textarea
+                  value={registrationData.historical_events || ''}
+                  onChange={(e) => updateRegistrationData({ historical_events: e.target.value })}
+                  placeholder="Houve incidentes anteriores relacionados a este risco?"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Causas Raiz (Root Cause)</label>
+                <Textarea
+                  value={registrationData.root_causes || ''}
+                  onChange={(e) => updateRegistrationData({ root_causes: e.target.value })}
+                  placeholder="Quais as origens deste risco?"
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 5:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Avaliação de Controles Existentes</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Efetividade Geral dos Controles Mapeados</label>
+                <Select
+                  value={registrationData.controls_effectiveness || ''}
+                  onValueChange={(value) => updateRegistrationData({ controls_effectiveness: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a efetividade atual..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ineffective">Inefetivo (Ausente ou falho)</SelectItem>
+                    <SelectItem value="partially_effective">Parcialmente Efetivo</SelectItem>
+                    <SelectItem value="effective">Efetivo</SelectItem>
+                    <SelectItem value="highly_effective">Altamente Efetivo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Descrição dos Controles Atuais</label>
+                <Textarea
+                  value={registrationData.existing_controls || ''}
+                  onChange={(e) => updateRegistrationData({ existing_controls: e.target.value })}
+                  placeholder="Descreva as defesas atuais para este risco..."
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case 6:
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Planos de Ação e Sub-atividades</h3>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setActionPlanItems([...actionPlanItems, { id: Date.now(), title: '', responsible: '', deadline: '', priority: 'medium', status: 'pending', subActivities: [] }]);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Novo Plano
+              </Button>
+            </div>
+
+            {actionPlanItems.length === 0 ? (
+              <div className="text-center py-8 bg-muted/50 rounded-lg border border-dashed">
+                <ClipboardList className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">Nenhum plano de ação adicionado</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {actionPlanItems.map((plan, pIdx) => (
+                  <Card key={plan.id} className="overflow-hidden">
+                    <CardHeader className="p-3 bg-muted/40 border-b flex flex-row items-center justify-between space-y-0">
+                      <div className="font-medium text-sm">Plano de Ação {pIdx + 1}</div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
+                        setActionPlanItems(actionPlanItems.filter(p => p.id !== plan.id));
+                      }}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                        <div className="md:col-span-12">
+                          <label className="block text-xs font-semibold mb-1">Descrição do Plano</label>
+                          <Input
+                            className="h-8 text-sm"
+                            value={plan.title}
+                            onChange={(e) => {
+                              const newPlans = [...actionPlanItems];
+                              newPlans[pIdx].title = e.target.value;
+                              setActionPlanItems(newPlans);
+                            }}
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-semibold mb-1">Responsável Geral</label>
+                          <Input
+                            className="h-8 text-sm"
+                            placeholder="Usuário ou E-mail"
+                            value={plan.responsible || ''}
+                            onChange={(e) => {
+                              const newPlans = [...actionPlanItems];
+                              newPlans[pIdx].responsible = e.target.value;
+                              setActionPlanItems(newPlans);
+                            }}
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-semibold mb-1">Prazo (Data limite)</label>
+                          <Input
+                            type="date"
+                            className="h-8 text-sm"
+                            value={plan.deadline || ''}
+                            onChange={(e) => {
+                              const newPlans = [...actionPlanItems];
+                              newPlans[pIdx].deadline = e.target.value;
+                              setActionPlanItems(newPlans);
+                            }}
+                          />
+                        </div>
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-semibold mb-1">Prioridade</label>
+                          <Select
+                            value={plan.priority}
+                            onValueChange={(val) => {
+                              const newPlans = [...actionPlanItems];
+                              newPlans[pIdx].priority = val;
+                              setActionPlanItems(newPlans);
+                            }}
                           >
-                            <SelectTrigger className="w-full text-xs h-8">
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
+                            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="1">1 - Baixo</SelectItem>
-                              <SelectItem value="2">2 - Médio</SelectItem>
-                              <SelectItem value="3">3 - Alto</SelectItem>
-                              <SelectItem value="4">4 - Crítico</SelectItem>
+                              <SelectItem value="low">Baixa</SelectItem>
+                              <SelectItem value="medium">Média</SelectItem>
+                              <SelectItem value="high">Alta</SelectItem>
+                              <SelectItem value="critical">Crítica</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-
-                        <div>
-                          <label className="block text-xs font-medium mb-1">
-                            Probabilidade de Ameaça <span className="text-red-500">*</span>
-                          </label>
-                          <Select 
-                            value={registrationData.threat_likelihood?.toString() || ''} 
-                            onValueChange={(value) => updateRegistrationData({ threat_likelihood: parseInt(value) })}
+                        <div className="md:col-span-3">
+                          <label className="block text-xs font-semibold mb-1">Status Base</label>
+                          <Select
+                            value={plan.status}
+                            onValueChange={(val) => {
+                              const newPlans = [...actionPlanItems];
+                              newPlans[pIdx].status = val;
+                              setActionPlanItems(newPlans);
+                            }}
                           >
-                            <SelectTrigger className="w-full text-xs h-8">
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
+                            <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="1">1 - Muito Baixa</SelectItem>
-                              <SelectItem value="2">2 - Baixa</SelectItem>
-                              <SelectItem value="3">3 - Moderada</SelectItem>
-                              <SelectItem value="4">4 - Alta</SelectItem>
-                              <SelectItem value="5">5 - Muito Alta</SelectItem>
+                              <SelectItem value="pending">Pendente</SelectItem>
+                              <SelectItem value="in_progress">Andamento</SelectItem>
+                              <SelectItem value="completed">Concluído</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
-                    </div>
-                  )}
 
-                  {/* Outras metodologias - placeholder para expansão futura */}
-                  {['semi_quantitative', 'iso31000', 'risco_si_simplificado', 'risco_fornecedor'].includes(registrationData.methodology_id) && (
-                    <div className="p-4 bg-muted rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Lightbulb className="h-4 w-4 text-yellow-500" />
-                        <span className="font-medium">Metodologia Selecionada</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        A configuração completa para esta metodologia será implementada em breve. 
-                        Por enquanto, use a análise qualitativa padrão.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Score de Risco Calculado */}
-                  {registrationData.risk_score && (
-                    <div className="p-3 bg-muted rounded-lg">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm">Score de Risco Calculado</p>
-                          <p className="text-xs text-muted-foreground">
-                            Baseado na metodologia selecionada
-                          </p>
+                      <div className="pl-4 border-l-2 border-primary/20 space-y-3 mt-4">
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase">Tarefas do Plano</span>
+                          <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => {
+                            const newPlans = [...actionPlanItems];
+                            newPlans[pIdx].subActivities.push({ id: Date.now(), title: '', responsible: '', deadline: '', status: 'pending', priority: 'medium' });
+                            setActionPlanItems(newPlans);
+                          }}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Adicionar Tarefa
+                          </Button>
                         </div>
-                        <div className="flex-shrink-0">
-                          <Badge variant="outline" className="text-base font-bold px-3 py-1">
-                            {registrationData.risk_score}
-                          </Badge>
-                        </div>
+                        {plan.subActivities.map((sub: any, sIdx: number) => (
+                          <div key={sub.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 bg-muted/20 p-2 rounded items-end">
+                            <div className="md:col-span-3">
+                              <label className="block text-[10px] uppercase text-muted-foreground mb-1">Atividade</label>
+                              <Input
+                                className="h-7 text-xs"
+                                value={sub.title}
+                                onChange={(e) => {
+                                  const newPlans = [...actionPlanItems];
+                                  newPlans[pIdx].subActivities[sIdx].title = e.target.value;
+                                  setActionPlanItems(newPlans);
+                                }}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[10px] uppercase text-muted-foreground mb-1">Responsável</label>
+                              <Input
+                                className="h-7 text-xs"
+                                placeholder="E-mail/Nome"
+                                value={sub.responsible}
+                                onChange={(e) => {
+                                  const newPlans = [...actionPlanItems];
+                                  newPlans[pIdx].subActivities[sIdx].responsible = e.target.value;
+                                  setActionPlanItems(newPlans);
+                                }}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[10px] uppercase text-muted-foreground mb-1">Prazo</label>
+                              <Input
+                                type="date"
+                                className="h-7 text-xs"
+                                value={sub.deadline || ''}
+                                onChange={(e) => {
+                                  const newPlans = [...actionPlanItems];
+                                  newPlans[pIdx].subActivities[sIdx].deadline = e.target.value;
+                                  setActionPlanItems(newPlans);
+                                }}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[10px] uppercase text-muted-foreground mb-1">Prioridade</label>
+                              <Select
+                                value={sub.priority}
+                                onValueChange={(val) => {
+                                  const newPlans = [...actionPlanItems];
+                                  newPlans[pIdx].subActivities[sIdx].priority = val;
+                                  setActionPlanItems(newPlans);
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="low">Baixa</SelectItem>
+                                  <SelectItem value="medium">Média</SelectItem>
+                                  <SelectItem value="high">Alta</SelectItem>
+                                  <SelectItem value="critical">Crítica</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[10px] uppercase text-muted-foreground mb-1">Status</label>
+                              <Select
+                                value={sub.status}
+                                onValueChange={(val) => {
+                                  const newPlans = [...actionPlanItems];
+                                  newPlans[pIdx].subActivities[sIdx].status = val;
+                                  setActionPlanItems(newPlans);
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pendente</SelectItem>
+                                  <SelectItem value="in_progress">Andamento</SelectItem>
+                                  <SelectItem value="completed">Concluído</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="md:col-span-1 flex justify-end">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => {
+                                const newPlans = [...actionPlanItems];
+                                newPlans[pIdx].subActivities = newPlans[pIdx].subActivities.filter((_: any, i: number) => i !== sIdx);
+                                setActionPlanItems(newPlans);
+                              }}>
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
         );
 
-      case 3: // Classificação GUT
+      case 7:
         return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Target className="h-5 w-5" />
-                <span>Classificação GUT (Gravidade, Urgência, Tendência)</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 overflow-hidden p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 w-full max-w-full overflow-hidden">
-                <div className="min-w-0 w-full">
-                  <label className="block text-xs font-medium mb-1">
-                    Gravidade <span className="text-red-500">*</span>
-                  </label>
-                  <Select 
-                    value={registrationData.gut_gravity?.toString() || ''} 
-                    onValueChange={(value) => updateRegistrationData({ gut_gravity: parseInt(value) })}
-                  >
-                    <SelectTrigger className="w-full max-w-full text-xs h-8">
-                      <SelectValue placeholder="Avalie a gravidade..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Sem gravidade</SelectItem>
-                      <SelectItem value="2">2 - Pouco grave</SelectItem>
-                      <SelectItem value="3">3 - Grave</SelectItem>
-                      <SelectItem value="4">4 - Muito grave</SelectItem>
-                      <SelectItem value="5">5 - Extremamente grave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">Comunicação e Stakeholders</h3>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setStakeholders([...stakeholders, { id: Date.now(), name: '', role: '', email: '', notifyEmail: true, notifyPlatform: true }]);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar Stakeholder
+              </Button>
+            </div>
 
-                <div className="min-w-0 w-full">
-                  <label className="block text-xs font-medium mb-1">
-                    Urgência <span className="text-red-500">*</span>
-                  </label>
-                  <Select 
-                    value={registrationData.gut_urgency?.toString() || ''} 
-                    onValueChange={(value) => updateRegistrationData({ gut_urgency: parseInt(value) })}
-                  >
-                    <SelectTrigger className="w-full max-w-full text-xs h-8">
-                      <SelectValue placeholder="Avalie a urgência..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Pode esperar</SelectItem>
-                      <SelectItem value="2">2 - Pouco urgente</SelectItem>
-                      <SelectItem value="3">3 - Urgente</SelectItem>
-                      <SelectItem value="4">4 - Muito urgente</SelectItem>
-                      <SelectItem value="5">5 - Extremamente urgente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="min-w-0 w-full">
-                  <label className="block text-xs font-medium mb-1">
-                    Tendência <span className="text-red-500">*</span>
-                  </label>
-                  <Select 
-                    value={registrationData.gut_tendency?.toString() || ''} 
-                    onValueChange={(value) => updateRegistrationData({ gut_tendency: parseInt(value) })}
-                  >
-                    <SelectTrigger className="w-full max-w-full text-xs h-8">
-                      <SelectValue placeholder="Avalie a tendência..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Vai diminuir</SelectItem>
-                      <SelectItem value="2">2 - Vai diminuir um pouco</SelectItem>
-                      <SelectItem value="3">3 - Vai permanecer</SelectItem>
-                      <SelectItem value="4">4 - Vai piorar</SelectItem>
-                      <SelectItem value="5">5 - Vai piorar muito</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            {stakeholders.length === 0 ? (
+              <div className="text-center py-8 bg-muted/50 rounded-lg border border-dashed">
+                <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">Nenhum stakeholder cadastrado</p>
               </div>
-
-              {registrationData.gut_gravity && registrationData.gut_urgency && registrationData.gut_tendency && (
-                <div className="p-3 bg-muted rounded-lg">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm">Score GUT Calculado</p>
-                      <p className="text-xs text-muted-foreground">
-                        G({registrationData.gut_gravity}) × U({registrationData.gut_urgency}) × T({registrationData.gut_tendency})
-                      </p>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <Badge variant="outline" className="text-base font-bold px-3 py-1">
-                        {registrationData.gut_gravity * registrationData.gut_urgency * registrationData.gut_tendency}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-
-      case 4: // Estratégia
-        return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5" />
-                <span>Estratégia de Tratamento</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 overflow-hidden p-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Estratégia Recomendada <span className="text-red-500">*</span>
-                </label>
-                <Select 
-                  value={registrationData.treatment_strategy || ''} 
-                  onValueChange={(value) => updateRegistrationData({ treatment_strategy: value })}
-                >
-                  <SelectTrigger className="w-full max-w-full text-xs h-8">
-                    <SelectValue placeholder="Selecione a estratégia..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mitigate">Mitigar - Reduzir o risco</SelectItem>
-                    <SelectItem value="transfer">Transferir - Passar para terceiros</SelectItem>
-                    <SelectItem value="avoid">Evitar - Eliminar a causa</SelectItem>
-                    <SelectItem value="accept">Aceitar - Monitorar o risco</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Justificativa da Estratégia <span className="text-red-500">*</span>
-                </label>
-                <Textarea
-                  value={registrationData.treatment_rationale || ''}
-                  onChange={(e) => updateRegistrationData({ treatment_rationale: e.target.value })}
-                  placeholder="Explique por que esta é a melhor estratégia para este risco..."
-                  rows={3}
-                  className="w-full max-w-full"
-                />
-              </div>
-
-              {registrationData.treatment_strategy !== 'accept' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full max-w-full overflow-hidden">
-                  <div className="min-w-0 w-full">
-                    <label className="block text-xs font-medium mb-1">
-                      Custo Estimado (R$)
-                    </label>
-                    <Input
-                      type="number"
-                      value={registrationData.treatment_cost || ''}
-                      onChange={(e) => updateRegistrationData({ treatment_cost: parseFloat(e.target.value) })}
-                      placeholder="0,00"
-                      className="w-full max-w-full text-xs p-2"
-                    />
-                  </div>
-                  
-                  <div className="min-w-0 w-full">
-                    <label className="block text-xs font-medium mb-1">
-                      Prazo para Implementação
-                    </label>
-                    <Input
-                      type="date"
-                      value={registrationData.treatment_timeline || ''}
-                      onChange={(e) => updateRegistrationData({ treatment_timeline: e.target.value })}
-                      className="w-full max-w-full text-xs p-2"
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-
-      case 5: // Plano de Ação
-        return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <ClipboardList className="h-5 w-5" />
-                <span>Plano de Ação</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 overflow-hidden p-4">
-              {registrationData.treatment_strategy === 'accept' ? (
-                <div className="text-center py-8">
-                  <CheckSquare className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Como você optou por aceitar este risco, um plano de ação detalhado não é necessário.
-                    Prossiga para definir a comunicação.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-3">
-                      Alex Risk sugere as seguintes atividades baseadas na sua estratégia:
-                    </p>
-                    
-                    <div className="space-y-3">
-                      {/* Atividades sugeridas */}
-                      <div className="p-3 border border-dashed rounded-lg bg-purple-50">
-                        <div className="flex items-center space-x-2 text-purple-700 mb-2">
-                          <Brain className="h-4 w-4" />
-                          <span className="text-sm font-medium">Atividade Sugerida 1</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Implementar controles preventivos conforme estratégia selecionada
-                        </p>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
-                          <span className="text-xs text-muted-foreground">Prazo sugerido: 30 dias</span>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              const newAction = {
-                                id: Date.now(),
-                                title: 'Implementar controles preventivos',
-                                description: 'Implementar controles preventivos conforme estratégia selecionada',
-                                deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                                responsible: '',
-                                status: 'pending'
-                              };
-                              setActionPlanItems([...actionPlanItems, newAction]);
-                              toast({
-                                title: 'Atividade Adicionada',
-                                description: 'Atividade adicionada ao plano de ação'
-                              });
-                            }}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Adicionar
-                          </Button>
-                        </div>
+            ) : (
+              <div className="space-y-3">
+                {stakeholders.map((stakeholder: any, index: number) => (
+                  <div key={stakeholder.id || index} className="p-3 bg-muted/40 border rounded-lg relative overflow-hidden flex flex-col md:flex-row items-center gap-3">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-primary/60"></div>
+                    <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-2 pl-2">
+                      <div>
+                        <Input
+                          placeholder="Nome..."
+                          value={stakeholder.name || ''}
+                          onChange={(e) => {
+                            const updated = [...stakeholders];
+                            updated[index].name = e.target.value;
+                            setStakeholders(updated);
+                          }}
+                          className="h-8 text-sm"
+                        />
                       </div>
-                      
-                      <div className="p-3 border border-dashed rounded-lg bg-purple-50">
-                        <div className="flex items-center space-x-2 text-purple-700 mb-2">
-                          <Brain className="h-4 w-4" />
-                          <span className="text-sm font-medium">Atividade Sugerida 2</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Estabelecer monitoramento contínuo dos indicadores
-                        </p>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
-                          <span className="text-xs text-muted-foreground">Prazo sugerido: 15 dias</span>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              const newAction = {
-                                id: Date.now(),
-                                title: 'Estabelecer monitoramento',
-                                description: 'Estabelecer monitoramento contínuo dos indicadores',
-                                deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                                responsible: '',
-                                status: 'pending'
-                              };
-                              setActionPlanItems([...actionPlanItems, newAction]);
-                              toast({
-                                title: 'Atividade Adicionada',
-                                description: 'Atividade adicionada ao plano de ação'
-                              });
-                            }}
-                          >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Adicionar
-                          </Button>
-                        </div>
+                      <div>
+                        <Input
+                          placeholder="Cargo/Área..."
+                          value={stakeholder.role || ''}
+                          onChange={(e) => {
+                            const updated = [...stakeholders];
+                            updated[index].role = e.target.value;
+                            setStakeholders(updated);
+                          }}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Input
+                          type="email"
+                          placeholder="E-mail"
+                          value={stakeholder.email || ''}
+                          onChange={(e) => {
+                            const updated = [...stakeholders];
+                            updated[index].email = e.target.value;
+                            setStakeholders(updated);
+                          }}
+                          className="h-8 text-sm"
+                        />
                       </div>
                     </div>
-                  </div>
-
-                  {/* Ações adicionadas */}
-                  {actionPlanItems.length > 0 && (
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-sm font-medium">Ações do Plano ({actionPlanItems.length})</h4>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                    <div className="w-full md:w-auto flex items-center justify-between gap-2 pl-2 md:pl-0 border-t md:border-t-0 pt-2 md:pt-0">
+                      <div className="flex items-center gap-1.5">
+                        <Badge
+                          variant={stakeholder.notifyEmail ? 'default' : 'outline'}
+                          className="cursor-pointer text-xs px-2 shadow-sm"
                           onClick={() => {
-                            const newAction = {
-                              id: Date.now(),
-                              title: '',
-                              description: '',
-                              deadline: '',
-                              responsible: '',
-                              status: 'pending'
-                            };
-                            setActionPlanItems([...actionPlanItems, newAction]);
+                            const updated = [...stakeholders];
+                            updated[index].notifyEmail = !updated[index].notifyEmail;
+                            setStakeholders(updated);
                           }}
                         >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Nova Ação
-                        </Button>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        {actionPlanItems.map((action, index) => (
-                          <div key={action.id} className="p-3 border rounded-lg bg-white">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="text-xs font-medium text-muted-foreground">Ação {index + 1}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setActionPlanItems(actionPlanItems.filter(item => item.id !== action.id));
-                                  }}
-                                >
-                                  <RefreshCw className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              
-                              <Input
-                                placeholder="Título da ação..."
-                                value={action.title}
-                                onChange={(e) => {
-                                  const updated = actionPlanItems.map(item =>
-                                    item.id === action.id ? { ...item, title: e.target.value } : item
-                                  );
-                                  setActionPlanItems(updated);
-                                }}
-                                className="text-xs h-7"
-                              />
-                              
-                              <Textarea
-                                placeholder="Descrição da ação..."
-                                value={action.description}
-                                onChange={(e) => {
-                                  const updated = actionPlanItems.map(item =>
-                                    item.id === action.id ? { ...item, description: e.target.value } : item
-                                  );
-                                  setActionPlanItems(updated);
-                                }}
-                                rows={2}
-                                className="text-xs"
-                              />
-                              
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <div>
-                                  <label className="text-xs text-muted-foreground">Prazo</label>
-                                  <Input
-                                    type="date"
-                                    value={action.deadline}
-                                    onChange={(e) => {
-                                      const updated = actionPlanItems.map(item =>
-                                        item.id === action.id ? { ...item, deadline: e.target.value } : item
-                                      );
-                                      setActionPlanItems(updated);
-                                    }}
-                                    className="text-xs h-7"
-                                  />
-                                </div>
-                                
-                                <div>
-                                  <label className="text-xs text-muted-foreground">Responsável</label>
-                                  <Input
-                                    placeholder="Nome do responsável..."
-                                    value={action.responsible}
-                                    onChange={(e) => {
-                                      const updated = actionPlanItems.map(item =>
-                                        item.id === action.id ? { ...item, responsible: e.target.value } : item
-                                      );
-                                      setActionPlanItems(updated);
-                                    }}
-                                    className="text-xs h-7"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-
-      case 6: // Comunicação
-        return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <span>Comunicação e Stakeholders</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 overflow-hidden p-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Alex Risk identificou os seguintes stakeholders que devem ser comunicados:
-                </p>
-                
-                <div className="space-y-3">
-                  <div className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 w-full">
-                        <p className="font-medium">Gestor da Área</p>
-                        <p className="text-sm text-muted-foreground">Responsável pela área afetada</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="outline">Aprovação</Badge>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
+                          <MessageCircle className="h-3 w-3 mr-1" /> Email
+                        </Badge>
+                        <Badge
+                          variant={stakeholder.notifyPlatform ? 'default' : 'outline'}
+                          className="cursor-pointer text-xs px-2 shadow-sm"
                           onClick={() => {
-                            const newStakeholder = {
-                              id: Date.now(),
-                              name: 'Gestor da Área',
-                              role: 'Responsável pela área afetada',
-                              notification_type: 'Aprovação',
-                              email: ''
-                            };
-                            setStakeholders([...stakeholders, newStakeholder]);
-                            toast({
-                              title: 'Stakeholder Adicionado',
-                              description: 'Gestor da Área foi adicionado à comunicação'
-                            });
+                            const updated = [...stakeholders];
+                            updated[index].notifyPlatform = !updated[index].notifyPlatform;
+                            setStakeholders(updated);
                           }}
                         >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 w-full">
-                        <p className="font-medium">Comitê de Riscos</p>
-                        <p className="text-sm text-muted-foreground">Para conhecimento e orientações</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">Informação</Badge>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            const newStakeholder = {
-                              id: Date.now(),
-                              name: 'Comitê de Riscos',
-                              role: 'Para conhecimento e orientações',
-                              notification_type: 'Informação',
-                              email: ''
-                            };
-                            setStakeholders([...stakeholders, newStakeholder]);
-                            toast({
-                              title: 'Stakeholder Adicionado',
-                              description: 'Comitê de Riscos foi adicionado à comunicação'
-                            });
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="p-3 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 w-full">
-                        <p className="font-medium">Controles Internos</p>
-                        <p className="text-sm text-muted-foreground">Monitoramento e compliance</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant="secondary">Informação</Badge>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            const newStakeholder = {
-                              id: Date.now(),
-                              name: 'Controles Internos',
-                              role: 'Monitoramento e compliance',
-                              notification_type: 'Informação',
-                              email: ''
-                            };
-                            setStakeholders([...stakeholders, newStakeholder]);
-                            toast({
-                              title: 'Stakeholder Adicionado',
-                              description: 'Controles Internos foi adicionado à comunicação'
-                            });
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {stakeholders.length > 0 && (
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm font-medium">Stakeholders Adicionados ({stakeholders.length})</p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          const newStakeholder = {
-                            id: Date.now(),
-                            name: '',
-                            role: '',
-                            notification_type: 'Informação',
-                            email: ''
-                          };
-                          setStakeholders([...stakeholders, newStakeholder]);
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Novo Stakeholder
-                      </Button>
-                    </div>
-                    <div className="space-y-2">
-                      {stakeholders.map((stakeholder, index) => (
-                        <div key={stakeholder.id || index} className="p-3 bg-muted rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-muted-foreground">Stakeholder {index + 1}</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setStakeholders(stakeholders.filter((_, i) => i !== index));
-                              }}
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div className="space-y-2">
-                            <Input
-                              placeholder="Nome do stakeholder..."
-                              value={stakeholder.name}
-                              onChange={(e) => {
-                                const updated = stakeholders.map((item, i) =>
-                                  i === index ? { ...item, name: e.target.value } : item
-                                );
-                                setStakeholders(updated);
-                              }}
-                              className="text-xs h-7"
-                            />
-                            <div className="flex items-center space-x-2">
-                              <Badge variant="outline" className="text-xs">{stakeholder.notification_type}</Badge>
-                              <span className="text-xs text-muted-foreground">{stakeholder.role}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-
-      case 7: // Monitoramento
-        return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Eye className="h-5 w-5" />
-                <span>Monitoramento e KPIs</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 overflow-hidden p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 w-full max-w-full overflow-hidden">
-                <div className="min-w-0 w-full">
-                  <label className="block text-xs font-medium mb-1">
-                    Frequência de Monitoramento
-                  </label>
-                  <Select 
-                    value={registrationData.monitoring_frequency || ''} 
-                    onValueChange={(value) => updateRegistrationData({ monitoring_frequency: value })}
-                  >
-                    <SelectTrigger className="w-full max-w-full text-xs h-8">
-                      <SelectValue placeholder="Selecione a frequência..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="daily">Diário</SelectItem>
-                      <SelectItem value="weekly">Semanal</SelectItem>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                      <SelectItem value="quarterly">Trimestral</SelectItem>
-                      <SelectItem value="annually">Anual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="min-w-0 w-full">
-                  <label className="block text-xs font-medium mb-1">
-                    Responsável pelo Monitoramento
-                  </label>
-                  <Input
-                    value={registrationData.monitoring_responsible || ''}
-                    onChange={(e) => updateRegistrationData({ monitoring_responsible: e.target.value })}
-                    placeholder="Nome do responsável..."
-                    className="w-full max-w-full text-xs p-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Critérios de Encerramento
-                </label>
-                <Textarea
-                  value={registrationData.closure_criteria || ''}
-                  onChange={(e) => updateRegistrationData({ closure_criteria: e.target.value })}
-                  placeholder="Defina quando este risco pode ser considerado encerrado..."
-                  rows={3}
-                  className="w-full max-w-full"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  KPIs e Indicadores
-                </label>
-                <Textarea
-                  value={registrationData.kpi_definition || ''}
-                  onChange={(e) => updateRegistrationData({ kpi_definition: e.target.value })}
-                  placeholder="Liste os indicadores que serão monitorados (Alex Risk pode sugerir alguns)..."
-                  rows={3}
-                  className="w-full max-w-full"
-                />
-              </div>
-
-              {/* Análise de Risco Residual */}
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-medium mb-3">Risco Residual (Após Tratamento)</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 w-full max-w-full overflow-hidden">
-                  <div className="min-w-0 w-full">
-                    <label className="block text-xs font-medium mb-1">Impacto Residual</label>
-                    <Select 
-                      value={registrationData.residual_impact?.toString() || ''} 
-                      onValueChange={(value) => updateRegistrationData({ residual_impact: parseInt(value) })}
-                    >
-                      <SelectTrigger className="w-full max-w-full text-xs h-8">
-                        <SelectValue placeholder="Impacto após controles..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {matrixConfig.impactLabels.map((label, index) => (
-                          <SelectItem key={index} value={(index + 1).toString()}>
-                            {index + 1} - {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="min-w-0 w-full">
-                    <label className="block text-xs font-medium mb-1">Probabilidade Residual</label>
-                    <Select 
-                      value={registrationData.residual_probability?.toString() || ''} 
-                      onValueChange={(value) => updateRegistrationData({ residual_probability: parseInt(value) })}
-                    >
-                      <SelectTrigger className="w-full max-w-full text-xs h-8">
-                        <SelectValue placeholder="Probabilidade após controles..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {matrixConfig.probabilityLabels.map((label, index) => (
-                          <SelectItem key={index} value={(index + 1).toString()}>
-                            {index + 1} - {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-end">
-                    {registrationData.residual_impact && registrationData.residual_probability && (
-                      <div className="text-center w-full space-y-1">
-                        <p className="text-xs font-medium">Score Residual</p>
-                        <Badge variant="outline" className="text-sm font-bold px-2 py-1">
-                          {registrationData.residual_impact * registrationData.residual_probability}
+                          <CheckSquare className="h-3 w-3 mr-1" /> Plataforma
                         </Badge>
                       </div>
-                    )}
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive shrink-0" onClick={() => setStakeholders(stakeholders.filter((_, i) => i !== index))}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 8:
+        return (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Encerramento e Monitoramento</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Responsável pelo Encerramento/Monitoramento</label>
+                <Input
+                  value={registrationData.monitoring_responsible || ''}
+                  onChange={(e) => updateRegistrationData({ monitoring_responsible: e.target.value })}
+                  placeholder="Nome do responsável..."
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Critérios de Encerramento</label>
+              <Textarea
+                value={registrationData.closure_criteria || ''}
+                onChange={(e) => updateRegistrationData({ closure_criteria: e.target.value })}
+                placeholder="Defina quando este risco pode ser considerado mitigado ou encerrado..."
+                rows={3}
+              />
+            </div>
+
+            <Card className="bg-muted/30 border shadow-sm">
+              <CardHeader className="py-3 px-4">
+                <CardTitle className="text-sm font-medium">Risco Residual Esperado (Após Planos de Ação)</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 pb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Impacto Residual</label>
+                    <Select
+                      value={registrationData.residual_impact?.toString() || ''}
+                      onValueChange={(val) => updateRegistrationData({ residual_impact: parseInt(val) })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Impacto..." /></SelectTrigger>
+                      <SelectContent>
+                        {matrixConfig.impactLabels.map((lbl, i) => (
+                          <SelectItem key={i} value={(i + 1).toString()}>{i + 1} - {lbl}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Probabilidade Residual</label>
+                    <Select
+                      value={registrationData.residual_probability?.toString() || ''}
+                      onValueChange={(val) => updateRegistrationData({ residual_probability: parseInt(val) })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Probabilidade..." /></SelectTrigger>
+                      <SelectContent>
+                        {matrixConfig.probabilityLabels.map((lbl, i) => (
+                          <SelectItem key={i} value={(i + 1).toString()}>{i + 1} - {lbl}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         );
 
       default:
-        return (
-          <Card className="w-full max-w-full overflow-hidden">
-            <CardContent className="py-8">
-              <div className="text-center">
-                <Sparkles className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  Alex Risk está preparando esta etapa...
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        );
+        return <div>Etapa não suportada.</div>;
     }
   };
 
   return (
-    <div 
-      className="space-y-3 lg:space-y-4 w-full max-w-full overflow-hidden box-border px-2"
-      style={{ 
-        maxWidth: '100%', 
-        overflowX: 'hidden',
-        wordBreak: 'break-word',
-        fontSize: '14px'
-      }}
-    >
-      {/* Header com Alex Risk Branding */}
-      <div className="space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-          <div>
-            <h2 className="text-lg lg:text-xl font-bold flex items-center space-x-2">
-              <div className="p-2 rounded-full bg-gradient-to-r from-purple-500 to-blue-500">
-                <Brain className="h-6 w-6 text-white" />
-              </div>
-              <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Análise Alex Risk
-              </span>
-            </h2>
-            <p className="text-xs lg:text-sm text-muted-foreground">
-              Processo inteligente e assistido por IA para registro completo de riscos
-            </p>
-          </div>
-          <Badge variant="secondary" className="text-sm bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 self-start lg:self-auto">
-            <Sparkles className="h-3 w-3 mr-1" />
-            Etapa {currentStep} de {steps.length}
-          </Badge>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Progresso com Alex Risk</span>
-            <span>{Math.round(progress)}% concluído</span>
-          </div>
-          <Progress value={progress} className="h-3" />
-        </div>
-
-        {/* Steps Navigation - Visual similar ao wizard original */}
-        <div className="flex items-center justify-start space-x-1 overflow-x-auto pb-2 w-full" style={{ maxWidth: 'calc(100vw - 40px)' }}>
-          {steps.map((step, index) => {
+    <div className="w-full flex flex-col md:flex-row gap-6 p-2 md:p-6 pb-24">
+      {/* Sidebar Wizard Steps */}
+      <div className="w-full md:w-64 shrink-0 space-y-2">
+        <h2 className="text-xl font-bold mb-4 px-2 hidden md:block">Processo de Registro</h2>
+        <div className="flex overflow-x-auto md:flex-col md:overflow-visible gap-2 pb-2 scrollbar-hide">
+          {steps.map((step) => {
             const Icon = step.icon;
             const isActive = step.id === currentStep;
             const isCompleted = step.id < currentStep;
-            
             return (
-              <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-1 p-2 rounded-lg transition-all whitespace-nowrap text-xs ${
-                  isActive 
-                    ? 'bg-gradient-to-r from-purple-500 to-blue-500 text-white shadow-lg' 
-                    : isCompleted 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                      : 'bg-muted text-muted-foreground'
-                }`}>
-                  {isCompleted ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <Icon className="h-4 w-4" />
-                  )}
-                  <div className="hidden lg:block">
-                    <p className="font-medium text-xs">{step.title}</p>
-                  </div>
+              <div
+                key={step.id}
+                className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors cursor-pointer shrink-0 md:shrink border
+                  ${isActive ? 'bg-primary/10 border-primary text-primary shadow-sm font-medium' :
+                    isCompleted ? 'bg-muted/50 border-transparent text-muted-foreground' :
+                      'border-transparent text-muted-foreground/60 hover:bg-muted/30'}
+                `}
+                onClick={() => setCurrentStep(step.id)}
+              >
+                <div className={`p-1.5 rounded-md ${isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground/60'}`}>
+                  {isCompleted && !isActive ? <CheckCircle className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                 </div>
-                {index < steps.length - 1 && (
-                  <ChevronRight className="h-3 w-3 text-muted-foreground mx-1 flex-shrink-0" />
-                )}
+                <span className="text-sm whitespace-nowrap">{step.title}</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Conteúdo da Etapa Atual */}
-      {renderStepContent()}
+      {/* Main Form Content */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 bg-card border rounded-xl shadow-sm p-4 md:p-6">
+          {renderStepForm()}
+        </div>
 
-      {/* Navegação */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-4 sm:space-y-0">
-        <Button
-          variant="outline"
-          onClick={currentStep === 1 ? onCancel : handlePrevious}
-          className="flex items-center space-x-2 w-full sm:w-auto"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>{currentStep === 1 ? 'Cancelar' : 'Anterior'}</span>
-        </Button>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
-          {/* Botão de chat com Alex */}
+        {/* Footer Navigation Sticky */}
+        <div className="sticky bottom-0 md:static md:mt-6 mt-4 bg-background/95 backdrop-blur-sm border-t md:border-none p-4 md:p-0 z-40 flex flex-wrap md:flex-nowrap items-center justify-between gap-3 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] md:shadow-none">
           <Button
             variant="outline"
-            className="flex items-center space-x-2 border-purple-200 text-purple-700 hover:bg-purple-50"
-            onClick={() => generateAlexSuggestions(currentStep, registrationData)}
-            disabled={isAnalyzing}
+            className="flex-1 md:flex-none"
+            onClick={onCancel}
           >
-            {isAnalyzing ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <MessageCircle className="h-4 w-4" />
-            )}
-            <span>Consultar Alex</span>
+            <span className="hidden sm:inline">Cancelar</span>
+            <span className="sm:hidden">Sair</span>
           </Button>
 
-          {currentStep === steps.length ? (
+          <div className="flex flex-1 md:flex-none gap-2">
             <Button
+              variant="outline"
               onClick={handleComplete}
-              className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 w-full sm:w-auto"
               disabled={isLoading}
-              size="lg"
             >
-              {isLoading ? (
-                <RefreshCw className="h-5 w-5 animate-spin" />
-              ) : (
-                <CheckCircle className="h-5 w-5" />
-              )}
-              <span>{isLoading ? 'Finalizando...' : 'Concluir com Alex'}</span>
+              <CheckSquare className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Salvar e Continuar Depois</span>
+              <span className="sm:hidden">Rascunho</span>
             </Button>
-          ) : (
-            <Button
-              onClick={handleNext}
-              className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white w-full sm:w-auto"
-            >
-              <span>Próximo</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          )}
+
+            {currentStep === steps.length ? (
+              <Button
+                onClick={handleComplete}
+                disabled={isLoading}
+                className="flex-1 md:flex-none bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md"
+              >
+                {isLoading ? <RefreshCw className="h-4 w-4 sm:mr-2 animate-spin" /> : <CheckCircle className="h-4 w-4 sm:mr-2" />}
+                <span className="hidden sm:inline">Concluir Registro</span>
+                <span className="sm:hidden">Concluir</span>
+              </Button>
+            ) : (
+              <Button onClick={handleNext} className="shadow-sm flex-1 md:flex-none">
+                Próximo <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Modal da Biblioteca de Riscos */}
       <Dialog open={showRiskLibrary} onOpenChange={setShowRiskLibrary}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
-              <Library className="h-6 w-6 text-green-600" />
-              <span>Biblioteca de Riscos - Templates e Modelos</span>
+              <Library className="h-6 w-6 text-primary" />
+              <span>Biblioteca de Riscos</span>
             </DialogTitle>
           </DialogHeader>
-          
           <div className="py-4">
-            <RiskLibraryFixed 
-              onSelectTemplate={handleSelectTemplate}
-            />
+            <RiskLibraryFixed onSelectTemplate={handleSelectTemplate} />
           </div>
         </DialogContent>
       </Dialog>

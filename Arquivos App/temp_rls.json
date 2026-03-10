@@ -1,0 +1,26 @@
+[
+  {
+    "policyname": "Only admins can delete profiles",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "has_role(( SELECT auth.uid() AS uid), 'admin'::app_role)",
+    "with_check": null
+  },
+  {
+    "policyname": "Users can insert profiles",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(has_role(( SELECT auth.uid() AS uid), 'admin'::app_role) OR (( SELECT auth.uid() AS uid) = user_id))"
+  },
+  {
+    "policyname": "Users can update profiles based on permissions",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "can_manage_user(( SELECT auth.uid() AS uid), user_id)",
+    "with_check": "can_manage_user(( SELECT auth.uid() AS uid), user_id)"
+  }
+]

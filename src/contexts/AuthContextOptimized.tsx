@@ -35,6 +35,7 @@ export interface AuthUser {
   email: string;
   name: string;
   jobTitle?: string;
+  avatar_url?: string; // Added field
   tenantId: string;
   tenant?: Tenant;
   roles: string[];
@@ -45,7 +46,15 @@ export interface AuthUser {
     enable_global_ai?: boolean;
     [key: string]: any;
   };
+  mfaEnabled?: boolean;
+  isVendorOnly?: boolean; // Added field to identify vendor users
+  system_role?: string; // Identifies guest users natively
+  customRoleId?: string;
 }
+
+// ... (existing code)
+
+
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -57,6 +66,7 @@ interface AuthContextType {
   refreshUserData: () => Promise<void>;
   refreshUser: () => Promise<void>;
   checkModuleAccess: (moduleKey: string) => boolean;
+  needsMFA: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,12 +109,19 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
 
   // Mapeamento básico de permissões para roles do sistema
   const permissionMap: Record<string, string[]> = {
-    admin: ['read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete', 'assessment.read', 'all'],
+    admin: [
+      'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete',
+      'common.read', 'settings.read', 'settings.write'
+    ],
+    tenant_admin: [
+      'read', 'write', 'delete', 'admin', 'users.create', 'users.read', 'users.update', 'users.delete',
+      'common.read', 'settings.read', 'settings.write'
+    ],
     ciso: ['read', 'write', 'admin', 'users.read', 'users.update', 'security.read', 'incidents.read', 'vulnerabilities.read', 'assessment.read'],
     risk_manager: ['read', 'write', 'risk.read', 'risk.write', 'vendor.read', 'assessment.read'],
     compliance_officer: ['read', 'write', 'compliance.read', 'compliance.write', 'privacy.read', 'audit.read', 'assessment.read'],
     auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
-    user: ['read', 'all']
+    user: ['read', 'common.read']
   };
 
   const allPermissions = new Set<string>();
@@ -116,6 +133,29 @@ const getPermissionsForRoles = (roles: string[], isPlatformAdmin: boolean = fals
   });
 
   return Array.from(allPermissions);
+};
+
+const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
+  risk_management: ['risk.read', 'risk.write'],
+  compliance: ['compliance.read', 'compliance.write'],
+  audit: ['audit.read', 'audit.write'],
+  incidents: ['incident.read', 'incident.write'],
+  assets: ['asset.read', 'asset.write'],
+  vulnerabilities: ['vulnerability.read', 'security.read'],
+  vendor_portal: ['vendor.read', 'vendor.write'],
+  policies: ['compliance.read'],
+  privacy: ['privacy.read', 'privacy.write'],
+  reports: ['report.read'],
+  ethics: ['ethics.read'],
+  assessments: ['assessment.read'],
+  action_plans: ['action_plan.read'],
+  strategic_planning: ['strategic.read'],
+  tprm: ['vendor.read', 'vendor.write'],
+  policy_management: ['compliance.read'],
+  ai_manager: ['admin'],
+  dashboard: ['dashboard.read'],
+  settings: ['admin'],
+  users: ['users.read']
 };
 
 export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -149,7 +189,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       roles: ['user'],
       permissions: getPermissionsForRoles(['user'], false),
       isPlatformAdmin: false,
-      enabledModules: []
+      enabledModules: [],
+      mfaEnabled: false,
+      isVendorOnly: false
     };
 
     try {
@@ -187,8 +229,10 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         const rolesList = fullProfile.roles || [];
         const platformAdminData = fullProfile.platform_admin;
 
-        // Fetch Tenant Modules from RPC result
-        let enabledModules: string[] = modulesList.map((m: any) => m.module_key);
+        // Fetch Tenant Modules from RPC result (filtering only enabled ones)
+        let enabledModules: string[] = modulesList
+          .filter((m: any) => m.is_enabled === true)
+          .map((m: any) => m.module_key);
         console.log('📦 [AUTH] Enabled Modules for Tenant:', enabledModules);
 
         console.log('📊 [AUTH] Profile loaded via RPC:', {
@@ -204,13 +248,6 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         if (platformAdminData) {
           isPlatformAdmin = true;
           adminSource = 'platform_admins_table';
-        } else {
-          // Fallback para roles apenas se platform_admins não existir (compatibilidade)
-          const hasAdminRole = rolesList.some((r: any) => ['admin', 'super_admin', 'platform_admin'].includes(r.role));
-          if (hasAdminRole) {
-            isPlatformAdmin = true;
-            adminSource = 'user_roles_fallback';
-          }
         }
 
         console.log('🔐 [AUTH] Platform Admin verification (SECURE):', {
@@ -220,38 +257,103 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
         // Atualizar com dados completos
         const userRoles = rolesList.length > 0 ? rolesList.map((r: any) => r.role) : ['user'];
-        const userPermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
+        const basePermissions = getPermissionsForRoles(userRoles, isPlatformAdmin);
+        const customModuleKeys = fullProfile.custom_permissions || [];
+
+        // Mapear as chaves de módulo para as permissões reais esperadas pelo Sidebar/UI
+        const mappedPermissions = customModuleKeys.flatMap((key: string) =>
+          CUSTOM_MODULE_MAPPING[key] || [key]
+        );
+
+        const finalPermissions = [...new Set([...basePermissions, ...mappedPermissions])];
+
+        let isVendorOnly = false;
+
+        // 🚀 VERIFICAÇÃO SEGURA DE FORNECEDOR (Ignora RLS clientside, usa RPC)
+        try {
+          const { data: isVendorRpc, error: rpcVendorError } = await supabase
+            .rpc('check_is_vendor', {
+              check_uid: supabaseUser.id,
+              check_email: supabaseUser.email || ''
+            });
+
+          if (rpcVendorError) {
+            console.warn('⚠️ [AUTH] Erro ao chamar check_is_vendor RPC, fazendo fallback manual:', rpcVendorError);
+          } else if (isVendorRpc === true) {
+            console.log('✅ [AUTH] Usuário identificado como fornecedor seguro via RPC');
+            isVendorOnly = true;
+          }
+        } catch (vendorCheckError) {
+          console.error('❌ [AUTH] Erro ao verificar fornecedor no fluxo principal via RPC:', vendorCheckError);
+        }
 
         const userData: AuthUser = {
           id: supabaseUser.id,
           email: supabaseUser.email || '',
           name: profile?.full_name || supabaseUser.email?.split('@')[0] || 'Usuário',
           jobTitle: profile?.job_title,
+          avatar_url: profile?.avatar_url,
           tenantId: profile?.tenant_id || 'default',
-          roles: userRoles,
-          permissions: userPermissions,
+          roles: isVendorOnly ? ['vendor'] : userRoles,
+          permissions: finalPermissions,
           isPlatformAdmin,
           enabledModules,
           settings: tenantSettings,
           tenant: tenantData ? {
-            id: profile?.tenant_id, // Add ID to satisfy Tenant interface if mostly compatible, or expect errors? AuthUser tenant is Tenant interface.
+            id: profile?.tenant_id,
             name: tenantData.name,
             slug: tenantData.slug,
-            // MOCK missing required fields to avoid typescript errors since we only need name/settings mostly
             contact_email: '',
             max_users: 0,
             current_users_count: 0,
             subscription_plan: 'free',
             is_active: true
-          } : undefined
+          } : undefined,
+          mfaEnabled: false,
+          isVendorOnly: isVendorOnly,
+          system_role: profile?.system_role,
+          customRoleId: profile?.custom_role_id
         };
+
+        // Check MFA Status
+        try {
+          const { data: factors } = await supabase.auth.mfa.listFactors();
+          if (factors && factors.totp && factors.totp.length > 0) {
+            const hasVerifiedFactor = factors.totp.some(f => f.status === 'verified');
+            if (hasVerifiedFactor) {
+              userData.mfaEnabled = true;
+            }
+          }
+        } catch (mfaError) {
+          console.warn('⚠️ [AUTH] Erro ao verificar MFA:', mfaError);
+        }
 
         // Cache o resultado
         setCachedUser(supabaseUser.id, userData);
         return userData;
 
       } catch (dbError) {
-        console.warn('⚠️ [AUTH] Erro ao carregar dados do banco, usando dados básicos:', dbError);
+        console.warn('⚠️ [AUTH] Erro ao carregar perfil, verificando se é fornecedor...', dbError);
+
+        try {
+          // 🚀 FALLBACK SEGURA DE FORNECEDOR
+          const { data: isVendorRpc, error: rpcVendorError } = await supabase
+            .rpc('check_is_vendor', {
+              check_uid: supabaseUser.id,
+              check_email: supabaseUser.email || ''
+            });
+
+          if (isVendorRpc === true) {
+            console.log('✅ [AUTH] Usuário fallback identificado como fornecedor via RPC');
+            const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
+            setCachedUser(supabaseUser.id, vendorData);
+            return vendorData;
+          }
+        } catch (vendorCheckError) {
+          console.error('❌ [AUTH] Erro ao verificar fornecedor no block catch:', vendorCheckError);
+        }
+
+        console.warn('⚠️ [AUTH] Usuário não é fornecedor, usando dados básicos padrão');
         return basicUser;
       }
 
@@ -280,12 +382,12 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         setIsLoading(true);
 
         // Timeout para carregamento de dados do usuário
-        const timeoutPromise = new Promise((_, reject) => {
+        const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Timeout ao carregar dados do usuário')), USER_DATA_TIMEOUT);
         });
 
         const userDataPromise = loadUserData(session.user);
-        const userData = await Promise.race([userDataPromise, timeoutPromise]);
+        const userData = await Promise.race([userDataPromise, timeoutPromise]) as AuthUser;
 
         console.log('👤 [AUTH] User data loaded:', { id: userData?.id, name: userData?.name });
         setUser(userData);
@@ -300,7 +402,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           roles: ['user'],
           permissions: getPermissionsForRoles(['user'], false),
           isPlatformAdmin: false,
-          enabledModules: []
+          enabledModules: [],
+          mfaEnabled: false,
+          isVendorOnly: false
         };
         setUser(basicUser);
       } finally {
@@ -328,12 +432,14 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         }, STARTUP_TIMEOUT);
 
         const sessionPromise = supabase.auth.getSession();
-        const { data: { session: currentSession }, error } = await Promise.race([
+        const result = await Promise.race([
           sessionPromise,
-          new Promise((_, reject) =>
+          new Promise<never>((_, reject) =>
             setTimeout(() => reject(new Error('Timeout')), STARTUP_TIMEOUT - 1000)
           )
-        ]);
+        ]) as { data: { session: any }, error: any };
+
+        const { data: { session: currentSession }, error } = result;
 
         if (timeoutId) clearTimeout(timeoutId);
 
@@ -399,6 +505,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     return () => clearInterval(heartbeatInterval);
   }, [user]);
 
+
+
   // Login otimizado
   const login = useCallback(async (email: string, password: string) => {
     console.log('🔐 [AUTH] Iniciando login para:', email);
@@ -429,6 +537,44 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     try {
       console.log('🔐 [AUTH] Chamando supabase.auth.signInWithPassword...');
 
+      // 0. IP Enforcement (Dynamic from Tenant Settings)
+      const domain = cleanEmail.split('@')[1];
+      if (domain) {
+        // Fetch security settings for the domain
+        const { data: securitySettings } = await supabase.rpc('get_tenant_security_settings', {
+          domain_name: domain
+        });
+
+        // Check if IP whitelisting is enabled
+        if (securitySettings?.accessControl?.ipWhitelisting) {
+          const allowedIPs = securitySettings.accessControl.allowedIPs || [];
+
+          console.log('🛡️ [SECURITY] IP Whitelist checking enabled for domain:', domain);
+          console.log('Allowed IPs:', allowedIPs);
+
+          // Note: In a real production scenario, IP enforcement should be done:
+          // 1. Via Supabase Edge Functions (server-side)
+          // 2. Or by checking a reliable external service for the client's public IP
+          // We are currently logging the check to demonstrate the integration.
+          // 
+          // Example blocking logic if IP was available:
+          // const clientIP = await fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => d.ip);
+          // if (!allowedIPs.includes(clientIP)) throw new Error('Acesso negado: Seu endereço IP não está autorizado.');
+        }
+      }
+
+      // 1. Check for Account Lockout (Brute Force Protection)
+      const { data: lockoutStatus, error: lockoutError } = await supabase.rpc('check_account_lockout', {
+        user_email: cleanEmail
+      });
+
+      if (lockoutStatus && lockoutStatus.locked) {
+        console.error('🚫 [AUTH] Conta bloqueada temporariamente:', lockoutStatus.until);
+        const until = new Date(lockoutStatus.until).toLocaleTimeString();
+        await logAuthEvent('account_locked', { email: cleanEmail, until, severity: 'warning' });
+        throw new Error(`Sua conta está bloqueada temporariamente até às ${until} devido a múltiplas tentativas falhas.`);
+      }
+
       // Timeout para autenticação
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Timeout na autenticação. Verifique sua conexão.')), AUTH_TIMEOUT);
@@ -446,11 +592,20 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
       if (error) {
         console.error('❌ [AUTH] Erro do Supabase:', error);
+
+        // 2. Increment Failed Attempts on Error
+        if (error.message === 'Invalid login credentials') {
+          await supabase.rpc('increment_failed_login', { user_email: cleanEmail });
+        }
+
         // O log será feito no bloco catch quando o erro for lançado para evitar duplicidade
         throw new Error(error.message);
       }
 
       console.log('✅ [AUTH] Login bem-sucedido!');
+
+      // 3. Clear Failures on Success
+      await supabase.rpc('clear_login_failures', { user_email: cleanEmail });
 
       // Log sucesso de login
       if (data.user) {
@@ -480,6 +635,11 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   const logout = useCallback(async () => {
     // Limpar cache
     authCache.clear();
+
+    // Clear MFA Bypass Flag
+    try {
+      sessionStorage.removeItem('grc_mfa_completed');
+    } catch (e) { }
 
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -547,23 +707,46 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   // Check module access
   const checkModuleAccess = useCallback((moduleKey: string) => {
     if (!user) return false;
-    // Platform Admin has all permissions, but should still respect ENABLED MODULES for the tenant
-    // if (user.isPlatformAdmin) return true; 
 
-    // AI Modules Check - Enforce Global AI Setting
-    // Exceção: Platform Admin sempre pode acessar o AI Manager (configuração do sistema)
-    if (['ai_manager'].includes(moduleKey) && user.isPlatformAdmin) {
-      return true;
+    // Platform Admin has all permissions, but should still respect ENABLED MODULES for the tenant
+    // unless they are accessing an admin-only area.
+    if (user.isPlatformAdmin) {
+      if (['ai_manager', 'settings', 'admin', 'dashboard', 'help', 'notifications'].includes(moduleKey)) return true;
+      return user.enabledModules?.includes(moduleKey) || false;
     }
 
+    // AI Modules Check - Enforce Global AI Setting
     if (['ai_manager', 'policy_auditor'].includes(moduleKey)) {
       if (!user.settings?.enable_global_ai) return false;
     }
 
-    // Public modules or basic ones
-    if (['dashboard', 'help', 'notifications', 'settings', 'admin'].includes(moduleKey)) return true; // Ensure 'admin' module is always accessible for admins
+    // Public modules or basic ones - Ensure common.read is checked for these
+    if (['help', 'notifications'].includes(moduleKey)) {
+      return user.permissions?.includes('common.read') || user.permissions?.includes('all') || user.permissions?.includes('*');
+    }
 
-    return user.enabledModules?.includes(moduleKey) || false;
+    // Core platform modules that skip the tenant-level "enabledModules" check
+    const isCoreModule = ['dashboard', 'settings', 'users', 'admin', 'help', 'notifications'].includes(moduleKey);
+
+    // 1. Is it enabled for the tenant? (Skip check for core platform features)
+    if (!isCoreModule && !user.enabledModules?.includes(moduleKey)) return false;
+
+    // 2. Map moduleKey to required permissions
+    const requiredPermissions = CUSTOM_MODULE_MAPPING[moduleKey] || [];
+
+    // 3. If no specific mapping, we default to strict (false) unless it's a known non-RBAC module
+    if (requiredPermissions.length === 0) {
+      // Fallback for modules not in mapping but enabled for tenant
+      // If it's a valid system module key, it might not need RBAC (unlikely given request)
+      return false;
+    }
+
+    // 4. Does the user HAVE any of these permissions?
+    return requiredPermissions.some(p =>
+      user.permissions?.includes(p) ||
+      user.permissions?.includes('all') ||
+      user.permissions?.includes('*')
+    );
   }, [user]);
 
   // Listen for security events (Kick User) - REALTIME KILL SWITCH
@@ -586,6 +769,43 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     };
   }, [user, logout]);
 
+  // IDLE TIMEOUT LOGIC (Moved here to be after logout definition)
+  useEffect(() => {
+    if (!user) return;
+
+    const securitySettings = user.settings?.security?.sessionSecurity;
+    const timeoutMinutes = securitySettings?.timeoutMinutes || 30;
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+
+    let idleTimer: NodeJS.Timeout;
+
+    const resetTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        console.warn(`⚠️ [AUTH] Sessão expirou por inatividade (${timeoutMinutes} min)`);
+        logout(); // Now logout is defined
+      }, timeoutMs);
+    };
+
+    // Events to track activity
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keypress', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('scroll', resetTimer);
+    window.addEventListener('touchstart', resetTimer);
+
+    resetTimer(); // Initialize
+
+    return () => {
+      clearTimeout(idleTimer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keypress', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('scroll', resetTimer);
+      window.removeEventListener('touchstart', resetTimer);
+    };
+  }, [user, logout]);
+
   const contextValue: AuthContextType = {
     user,
     session,
@@ -595,7 +815,77 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
     signup,
     refreshUserData,
     refreshUser,
-    checkModuleAccess
+    checkModuleAccess,
+    needsMFA: (() => {
+      // 1. O Platform Admin obriga a Tenant a usar MFA? (Admin -> Gestão de Tenants)
+      const platformForcedMFA = user?.settings?.security?.mfa_required;
+      // 2. O Admin da própria Tenant obriga o uso de MFA? (Configurações da Empresa -> Segurança)
+      const tenantRequiresMFA = user?.settings?.security?.sessionSecurity?.requireMFA;
+
+      // Se NENHUM dos dois exige MFA, o MFA não é necessário (mesmo que o usuário tenha um registered).
+      // Regra de negócio: o usuário comum só usa MFA se o ADM da empresa ou o Platform Admin habilitarem.
+      if (!platformForcedMFA && !tenantRequiresMFA) return false;
+
+      // Se chegamos aqui, o MFA é exigido por PELO MENOS um dos administradores.
+      // Vamos checar os bypasses válidos (AAL2, Dispositivo Confiável, Sessão Recente).
+
+      const currentAal = session?.user?.app_metadata?.aal;
+      if (currentAal === 'aal2') return false;
+
+      const allowTrusted = user?.settings?.security?.accessControl?.allowTrustedDevices;
+      const ipWhitelist = user?.settings?.security?.accessControl?.ipWhitelist;
+
+      if (ipWhitelist && ipWhitelist.length > 0) {
+        // Placeholder IP check
+      }
+
+      // Bypass 1: Dispositivo confiável (por 90 dias)
+      try {
+        if (allowTrusted && user?.id) {
+          const trustedToken = localStorage.getItem(`grc_trusted_device_${user.id}`);
+          const expiryStr = localStorage.getItem(`grc_trusted_device_${user.id}_expiry`);
+          if (trustedToken && expiryStr) {
+            const expiryDate = new Date(expiryStr);
+            if (expiryDate > new Date()) {
+              return false; // Dispositivo ainda é confiável
+            } else {
+              // Expirou, limpar
+              localStorage.removeItem(`grc_trusted_device_${user.id}`);
+              localStorage.removeItem(`grc_trusted_device_${user.id}_expiry`);
+            }
+          }
+        }
+      } catch (e) { }
+
+      // Bypass 2: MFA já confirmado recentemente nesta sessão (2 minutos)
+      try {
+        const mfaCompletedAt = sessionStorage.getItem('grc_mfa_completed');
+        if (mfaCompletedAt) {
+          const timeSince = Date.now() - parseInt(mfaCompletedAt);
+          if (timeSince < 120000) {
+            return false;
+          }
+        }
+      } catch (e) { }
+
+      // Se exige MFA e não caiu em nenhum bypass aprovado, então precisa de MFA.
+      return true;
+    })()
+  };
+
+  // Wrap logAuthEvent to respect settings
+  const secureLogAuthEvent = async (event: string, details: any) => {
+    // Always log failures or critical events
+    if (details.severity === 'error' || details.severity === 'warning') {
+      await logAuthEvent(event, details);
+      return;
+    }
+
+    // For info events, check settings
+    const logAll = user?.settings?.security?.monitoring?.logAllActivities !== false; // Default to true
+    if (logAll) {
+      await logAuthEvent(event, details);
+    }
   };
 
   return (

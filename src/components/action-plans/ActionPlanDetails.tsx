@@ -5,8 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, Edit, Trash2, Calendar, Users, DollarSign, 
+import {
+  ArrowLeft, Edit, Trash2, Calendar, Users, DollarSign,
   Target, CheckCircle, AlertTriangle, Clock, Activity,
   FileText, MessageSquare, History, Settings, Download
 } from 'lucide-react';
@@ -51,6 +51,7 @@ interface Activity {
   data_fim_planejada: string;
   responsavel_nome: string;
   prioridade: string;
+  metadados?: any;
 }
 
 export const ActionPlanDetails: React.FC = () => {
@@ -102,7 +103,6 @@ export const ActionPlanDetails: React.FC = () => {
           profiles!action_plan_activities_responsavel_execucao_fkey(full_name)
         `)
         .eq('action_plan_id', id)
-        .eq('tenant_id', user.tenant_id)
         .order('ordem_execucao', { ascending: true });
 
       if (activitiesError) throw activitiesError;
@@ -154,6 +154,27 @@ export const ActionPlanDetails: React.FC = () => {
     }
   };
 
+  const getActivityStatusLabel = (status: string) => {
+    switch (status) {
+      case 'concluido': return 'Concluído';
+      case 'em_andamento': return 'Em Andamento';
+      case 'planejado': return 'Planejado';
+      case 'nao_iniciado': return 'Não Iniciado';
+      case 'aguardando_validacao': return 'Aguardando Validação';
+      default: return status;
+    }
+  };
+
+  const getActivityStatusColor = (status: string) => {
+    switch (status) {
+      case 'concluido': return 'bg-green-100 text-green-800 border-green-200';
+      case 'em_andamento': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'planejado': return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'nao_iniciado': return 'bg-gray-100 text-gray-600 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 p-6">
@@ -196,8 +217,8 @@ export const ActionPlanDetails: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center space-x-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => navigate('/action-plans')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -209,7 +230,7 @@ export const ActionPlanDetails: React.FC = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
+          <Button
             onClick={() => navigate(`/action-plans/edit/${actionPlan.id}`)}
           >
             <Edit className="h-4 w-4 mr-2" />
@@ -254,7 +275,7 @@ export const ActionPlanDetails: React.FC = () => {
               <div>
                 <p className="text-gray-600 text-sm">Prioridade</p>
                 <div className="flex items-center space-x-2">
-                  <div 
+                  <div
                     className={`w-3 h-3 rounded-full ${getPriorityColor(actionPlan.prioridade)}`}
                   />
                   <span className="font-medium capitalize">{actionPlan.prioridade}</span>
@@ -299,7 +320,7 @@ export const ActionPlanDetails: React.FC = () => {
                   <label className="text-sm font-medium text-gray-600">Descrição</label>
                   <p className="mt-1">{actionPlan.descricao}</p>
                 </div>
-                
+
                 {actionPlan.objetivo && (
                   <div>
                     <label className="text-sm font-medium text-gray-600">Objetivo</label>
@@ -315,8 +336,8 @@ export const ActionPlanDetails: React.FC = () => {
                 <div>
                   <label className="text-sm font-medium text-gray-600">Categoria</label>
                   <div className="flex items-center space-x-2 mt-1">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: actionPlan.cor_categoria }}
                     />
                     <span>{actionPlan.categoria_nome}</span>
@@ -383,9 +404,9 @@ export const ActionPlanDetails: React.FC = () => {
                       <label className="text-sm font-medium text-gray-600">Orçamento Planejado</label>
                       <p className="mt-1 flex items-center text-lg font-bold">
                         <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
-                        {new Intl.NumberFormat('pt-BR', { 
-                          style: 'currency', 
-                          currency: 'BRL' 
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
                         }).format(actionPlan.orcamento_planejado)}
                       </p>
                     </div>
@@ -396,9 +417,9 @@ export const ActionPlanDetails: React.FC = () => {
                       <label className="text-sm font-medium text-gray-600">Orçamento Realizado</label>
                       <p className="mt-1 flex items-center text-lg font-bold">
                         <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
-                        {new Intl.NumberFormat('pt-BR', { 
-                          style: 'currency', 
-                          currency: 'BRL' 
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
                         }).format(actionPlan.orcamento_realizado)}
                       </p>
                     </div>
@@ -408,8 +429,8 @@ export const ActionPlanDetails: React.FC = () => {
                     <div>
                       <label className="text-sm font-medium text-gray-600">Variação Orçamentária</label>
                       <div className="mt-1">
-                        <Progress 
-                          value={(actionPlan.orcamento_realizado / actionPlan.orcamento_planejado) * 100} 
+                        <Progress
+                          value={(actionPlan.orcamento_realizado / actionPlan.orcamento_planejado) * 100}
                           className="h-3"
                         />
                         <p className="text-sm text-gray-600 mt-1">
@@ -465,45 +486,56 @@ export const ActionPlanDetails: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   {activities.map((activity, index) => (
-                    <div key={activity.id} className="flex items-center space-x-4 p-4 border rounded-lg">
+                    <div key={activity.id} className={`flex items-center space-x-4 p-4 border rounded-lg transition-colors ${activity.status === 'concluido' ? 'bg-green-50/50 border-green-200' :
+                      activity.status === 'em_andamento' ? 'bg-blue-50/30 border-blue-200' :
+                        ''
+                      }`}>
                       <div className="flex-shrink-0">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                          activity.status === 'concluido' ? 'bg-green-100' : 'bg-gray-100'
-                        }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${activity.status === 'concluido' ? 'bg-green-100' :
+                          activity.status === 'em_andamento' ? 'bg-blue-100' :
+                            'bg-gray-100'
+                          }`}>
                           {activity.status === 'concluido' ? (
                             <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : activity.status === 'em_andamento' ? (
+                            <Clock className="h-5 w-5 text-blue-600 animate-pulse" />
                           ) : (
                             <span className="text-sm font-medium">{index + 1}</span>
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h4 className="font-medium">{activity.titulo}</h4>
-                          <Badge className={getStatusColor(activity.status)}>
-                            {activity.status}
+                          <h4 className={`font-medium ${activity.status === 'concluido' ? 'line-through text-muted-foreground' : ''}`}>{activity.titulo}</h4>
+                          <Badge className={getActivityStatusColor(activity.status)}>
+                            {getActivityStatusLabel(activity.status)}
                           </Badge>
                         </div>
-                        
+
                         {activity.descricao && (
                           <p className="text-sm text-gray-600 mt-1">{activity.descricao}</p>
                         )}
-                        
+
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center space-x-4 text-sm text-gray-500">
-                            <span>{activity.responsavel_nome}</span>
+                            <span>{activity.metadados?.responsavel_nome || activity.responsavel_nome}</span>
                             {activity.data_fim_planejada && (
                               <span>
                                 Prazo: {format(new Date(activity.data_fim_planejada), 'dd/MM/yyyy', { locale: ptBR })}
                               </span>
+                            )}
+                            {activity.metadados?.created_by_vendor && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                Criado pelo Fornecedor
+                              </Badge>
                             )}
                           </div>
                           <div className="text-sm font-medium">
                             {activity.percentual_conclusao}%
                           </div>
                         </div>
-                        
+
                         <Progress value={activity.percentual_conclusao} className="h-2 mt-2" />
                       </div>
                     </div>

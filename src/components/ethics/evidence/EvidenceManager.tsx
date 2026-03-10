@@ -281,10 +281,10 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Gestão de Evidências</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Gestão de Evidências</h3>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -293,7 +293,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
               Nova Evidência
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingEvidence ? 'Editar Evidência' : 'Registrar Nova Evidência'}
@@ -301,15 +301,15 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
             </DialogHeader>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="preservation">Preservação</TabsTrigger>
-                <TabsTrigger value="legal">Legal</TabsTrigger>
-                <TabsTrigger value="custody">Custódia</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                <TabsTrigger value="preservation" className="text-xs sm:text-sm">Preservação</TabsTrigger>
+                <TabsTrigger value="legal" className="text-xs sm:text-sm">Legal</TabsTrigger>
+                <TabsTrigger value="custody" className="text-xs sm:text-sm">Custódia</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="evidence_type">Tipo de Evidência</Label>
                     <Select
@@ -382,7 +382,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="file_hash">Hash do Arquivo</Label>
                     <Input
@@ -406,7 +406,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
               </TabsContent>
 
               <TabsContent value="preservation" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="preservation_status">Status de Preservação</Label>
                     <Select
@@ -556,12 +556,12 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button className="w-full sm:w-auto" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar Evidência
               </Button>
@@ -582,12 +582,15 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
         <div className="grid gap-4">
           {evidence.map((item) => (
             <Card key={item.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="p-4 sm:p-6 pb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
                   <div className="flex items-center gap-3">
-                    {getEvidenceTypeIcon(item.evidence_type)}
+                    <div className="hidden sm:block">
+                      {getEvidenceTypeIcon(item.evidence_type)}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        <span className="sm:hidden">{getEvidenceTypeIcon(item.evidence_type)}</span>
                         {item.evidence_type === 'document' ? 'Documento' :
                           item.evidence_type === 'digital' ? 'Evidência Digital' :
                             item.evidence_type === 'physical' ? 'Evidência Física' :
@@ -596,12 +599,12 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                                   item.evidence_type === 'financial' ? 'Financeiro' :
                                     item.evidence_type}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         Coletado em {format(new Date(item.collected_date), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {item.legal_hold && (
                       <Badge className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-300">
                         <Lock className="h-3 w-3 mr-1" />
@@ -630,16 +633,16 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Descrição:</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <h4 className="font-semibold text-xs sm:text-sm mb-1">Descrição:</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                       {item.evidence_description}
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm bg-muted/30 p-3 rounded-md">
                     <div>
                       <span className="font-medium">Fonte:</span>
                       <p className="text-gray-600 dark:text-gray-400 capitalize">
@@ -677,11 +680,12 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                     </div>
                   )}
 
-                  <div className="flex gap-2 pt-2 border-t">
+                  <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => updateChainOfCustody(item.id, 'Acessado', 'Visualização de evidência')}
+                      className="w-full sm:w-auto"
                     >
                       <Eye className="h-4 w-4 mr-1" />
                       Registrar Acesso
@@ -694,6 +698,7 @@ const EvidenceManager: React.FC<EvidenceManagerProps> = ({
                           const lastEntry = item.chain_of_custody[item.chain_of_custody.length - 1];
                           toast.info(`Última ação: ${lastEntry.action} por ${lastEntry.user_name}`);
                         }}
+                        className="w-full sm:w-auto"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Ver Custódia ({item.chain_of_custody.length})

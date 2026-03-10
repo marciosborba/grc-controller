@@ -317,10 +317,10 @@ export function FrameworkRequirements({
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b bg-muted/20">
                     <div>
-                        <DialogTitle className="text-xl flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-primary" />
-                            {frameworkName}
-                            {isStandard && <Badge variant="secondary" className="ml-2">Padrão do Sistema</Badge>}
+                        <DialogTitle className="text-xl flex flex-wrap items-center gap-2">
+                            <FileText className="h-5 w-5 text-primary shrink-0" />
+                            <span className="truncate max-w-[200px] sm:max-w-none">{frameworkName}</span>
+                            {isStandard && <Badge variant="secondary" className="whitespace-nowrap">Padrão do Sistema</Badge>}
                         </DialogTitle>
                         <DialogDescription className="mt-1">
                             {isStandard
@@ -339,20 +339,23 @@ export function FrameworkRequirements({
                 </div>
 
                 {isStandard && (
-                    <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900 px-6 py-2 flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
-                        <Shield className="h-4 w-4" />
-                        <span>
-                            <strong>Modo Somente Leitura:</strong> Este é um framework oficial do sistema.
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900 px-4 sm:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-xs sm:text-sm text-blue-700 dark:text-blue-300">
+                        <div className="flex items-center gap-2 font-semibold">
+                            <Shield className="h-4 w-4 shrink-0" />
+                            <span>Modo Somente Leitura:</span>
+                        </div>
+                        <span className="leading-relaxed">
+                            Este é um framework oficial do sistema.
                             Você não pode alterar sua estrutura original para garantir a integridade das referências cruzadas.
                         </span>
                     </div>
                 )}
 
                 {/* Main Content: Two Columns */}
-                <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
 
                     {/* Left: Tree View (Searchable) */}
-                    <div className="w-[450px] border-r flex flex-col bg-card/30">
+                    <div className="w-full md:w-[400px] border-b md:border-b-0 md:border-r flex flex-col bg-card/30 h-1/2 md:h-full shrink-0">
                         <div className="p-4 border-b">
                             <div className="relative">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -372,11 +375,11 @@ export function FrameworkRequirements({
                     {/* Right: Editor Form */}
                     <div className="flex-1 flex flex-col overflow-y-auto bg-background/50">
                         {(editingId || isCreating) ? (
-                            <div className="p-8 max-w-3xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <div className="p-4 sm:p-8 max-w-3xl mx-auto w-full space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300 pb-20 sm:pb-8">
                                 <div className="flex justify-between items-start border-b pb-4">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h2 className="text-2xl font-semibold">
+                                    <div className="w-full">
+                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                                            <h2 className="text-lg sm:text-2xl font-semibold">
                                                 {isStandard ? 'Detalhes do Requisito' : (isCreating ? 'Novo Requisito' : 'Editar Requisito')}
                                             </h2>
                                             {(() => {
@@ -402,7 +405,7 @@ export function FrameworkRequirements({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-4 gap-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6">
                                     <div className="col-span-1 space-y-2">
                                         <Label>Código</Label>
                                         <Input
@@ -492,16 +495,18 @@ export function FrameworkRequirements({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t bg-muted/20 flex justify-between items-center text-xs text-muted-foreground">
-                    <span className="flex items-center gap-2">
-                        <div className={`h-2 w-2 rounded-full ${isStandard ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`}></div>
-                        {isStandard ? 'Modo Visualização' : 'Editando em tempo real'}: {frameworkName}
+                <div className="p-4 border-t bg-muted/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-2 w-full sm:w-auto">
+                        <div className={`h-2 w-2 rounded-full shrink-0 ${isStandard ? 'bg-blue-500' : 'bg-green-500 animate-pulse'}`}></div>
+                        <span className="truncate max-w-[250px] sm:max-w-[400px]">
+                            {isStandard ? 'Modo Visualização' : 'Editando em tempo real'}: {frameworkName}
+                        </span>
                     </span>
-                    <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={onClose}>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <Button variant="ghost" size="sm" onClick={onClose} className="flex-1 sm:flex-none">
                             Fechar Editor
                         </Button>
-                        <Button size="sm" onClick={onClose}>
+                        <Button size="sm" onClick={onClose} className="flex-1 sm:flex-none">
                             Concluir Edição
                         </Button>
                     </div>

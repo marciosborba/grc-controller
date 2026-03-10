@@ -1,0 +1,29 @@
+[
+  {
+    "id": "497aadf4-015e-43e0-9eb0-0ba3fb4ac69e",
+    "assessment_name": "Assessment - GePriv",
+    "status": "approved",
+    "overall_score": null,
+    "risk_level": null,
+    "submission_summary": "{\"submitted_at\":\"2026-03-04T12:32:24.329Z\",\"total_questions\":16,\"answered_questions\":16,\"completion_percentage\":100,\"vendor_contact\":\"Marcio Borba\",\"vendor_name\":\"GePriv\",\"maturity_score\":53,\"maturity_level\":\"Básico\",\"generated_plans_count\":6}...",
+    "metadata": "{\"validation\":{\"validatedAt\":\"2026-03-04T13:44:40.073Z\",\"overallScore\":53,\"maturityLevel\":\"Básico\",\"controlValidations\":{},\"overallObservation\":\"\",\"finalScoreAdjustment\":0,\"finalScoreJustification\":\"\"}}..."
+  },
+  {
+    "id": "60b14cf8-bf89-4749-8381-aee4fb31f8ce",
+    "assessment_name": "Segurança da Informação",
+    "status": "approved",
+    "overall_score": null,
+    "risk_level": null,
+    "submission_summary": "{\"submitted_at\":\"2026-03-04T12:15:55.569Z\",\"total_questions\":6,\"answered_questions\":6,\"completion_percentage\":100,\"vendor_contact\":\"Marcio Borba\",\"vendor_name\":\"GePriv\",\"maturity_score\":100,\"maturity_level\":\"Otimizado\",\"generated_plans_count\":0}...",
+    "metadata": "{\"questions\":[{\"id\":\"1\",\"text\":\"A organização possui um Encarregado de Proteção de Dados (DPO) nomeado e acessível?\",\"type\":\"yes_no_na\",\"category\":\"Governança de Privacidade\"},{\"id\":\"2\",\"text\":\"Existe um registro de operações de tratamento de dados pessoais (RoPA) atualizado?\",\"type\":\"yes_no_na\",\"ca..."
+  },
+  {
+    "id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+    "assessment_name": "Teste 5",
+    "status": "approved",
+    "overall_score": null,
+    "risk_level": null,
+    "submission_summary": "{\"submitted_at\":\"2026-03-04T18:39:14.409Z\",\"total_questions\":16,\"answered_questions\":16,\"completion_percentage\":100,\"vendor_contact\":\"Marcio Borba\",\"vendor_name\":\"GePriv\",\"maturity_score\":36,\"maturity_level\":\"Inicial\",\"generated_plans_count\":4}...",
+    "metadata": "{\"questions\":[{\"id\":\"gov_1\",\"text\":\"A organização possui uma Política de Segurança da Informação (PSI) formalmente documentada e aprovada?\",\"type\":\"multiple_choice\",\"weight\":10,\"options\":\"Inexistente,Inicial,Básico,Gerenciado,Otimizado\",\"category\":\"Governança e Políticas\",\"question\":\"A organização p..."
+  }
+]

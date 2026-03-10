@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Audit Permissions</title>
+</head>
+<body>
+    <h1>Debug Audit Permissions</h1>
+    <script>
+        // Simular a verificação de permissões do módulo Auditoria
+        const testAuditPermissions = () => {
+            console.log('=== TESTING AUDIT PERMISSIONS ===');
+            
+            // Simular um usuário Platform Admin
+            const user = {
+                isPlatformAdmin: true,
+                permissions: ['platform_admin', 'all', '*', 'audit.read', 'audit.write'],
+                roles: ['platform_admin']
+            };
+            
+            const auditModule = {
+                title: 'Auditoria',
+                permissions: ['audit.read']
+            };
+            
+            console.log('User:', user);
+            console.log('Audit Module:', auditModule);
+            
+            // Teste 1: Platform Admin check
+            if (user.isPlatformAdmin) {
+                console.log('✅ Platform Admin has access');
+                return true;
+            }
+            
+            // Teste 2: Specific permission check
+            const hasAuditRead = user.permissions.includes('audit.read');
+            console.log('Has audit.read:', hasAuditRead);
+            
+            // Teste 3: Wildcard permission check
+            const hasWildcard = user.permissions.includes('*') || user.permissions.includes('all');
+            console.log('Has wildcard:', hasWildcard);
+            
+            const hasAccess = hasAuditRead || hasWildcard;
+            console.log('Final result:', hasAccess ? '✅ ACCESS GRANTED' : '❌ ACCESS DENIED');
+            
+            return hasAccess;
+        };
+        
+        testAuditPermissions();
+    </script>
+</body>
+</html>

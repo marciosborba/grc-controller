@@ -226,23 +226,23 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden gap-0">
+            <DialogContent className="max-w-6xl w-[95vw] sm:w-full h-[95vh] sm:h-[90vh] flex flex-col p-0 overflow-hidden gap-0 rounded-xl sm:rounded-lg">
                 {/* Header */}
-                <div className="bg-muted/10 p-6 border-b flex-shrink-0 flex items-center justify-between">
+                <div className="bg-muted/10 p-4 sm:p-6 border-b flex-shrink-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
                     <div>
-                        <DialogTitle className="text-xl">Nova Avaliação de Conformidade</DialogTitle>
-                        <DialogDescription className="mt-1">
+                        <DialogTitle className="text-lg sm:text-xl">Nova Avaliação de Conformidade</DialogTitle>
+                        <DialogDescription className="mt-1 text-xs sm:text-sm">
                             {step === 1 ? 'Selecione o framework alvo' : step === 2 ? 'Defina o escopo e detalhes' : 'Revise e confirme'}
                         </DialogDescription>
                     </div>
 
                     {/* Compact Stepper */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 self-center sm:self-auto w-full sm:w-auto justify-center sm:justify-start pt-2 sm:pt-0 border-t sm:border-0 border-dashed border-muted/50">
                         {[1, 2, 3].map((s) => (
                             <div key={s} className="flex items-center">
                                 <div className="flex flex-col items-center gap-1">
                                     <div className={cn(
-                                        "w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-2",
+                                        "w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-all duration-300 border-2",
                                         step >= s ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-transparent"
                                     )}>
                                         {s}
@@ -250,7 +250,7 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                 </div>
                                 {s < 3 && (
                                     <div className={cn(
-                                        "w-12 h-0.5 mx-2 transition-colors duration-300",
+                                        "w-4 sm:w-12 h-[1px] sm:h-0.5 mx-1 sm:mx-2 transition-colors duration-300",
                                         step > s ? "bg-primary" : "bg-muted"
                                     )} />
                                 )}
@@ -260,7 +260,7 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                 </div>
 
                 {/* Content Area */}
-                <div className="flex-1 p-8 overflow-y-auto bg-slate-50 dark:bg-slate-900/20">
+                <div className="flex-1 p-4 sm:p-8 overflow-y-auto bg-slate-50 dark:bg-slate-900/20">
                     <AnimatePresence mode="wait">
 
                         {/* STEP 1: FRAMEWORK SELECTION */}
@@ -270,26 +270,26 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -20 }}
-                                className="space-y-6"
+                                className="space-y-4 sm:space-y-6"
                             >
                                 <div className="space-y-4">
-                                    <div className="flex justify-between items-center bg-card p-3 rounded-lg border shadow-sm">
-                                        <h3 className="text-lg font-semibold flex items-center gap-2">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-card p-3 sm:p-4 rounded-lg border shadow-sm gap-3 sm:gap-0">
+                                        <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
                                             <Shield className="h-5 w-5 text-primary" />
                                             Meus Frameworks
                                         </h3>
-                                        <div className="relative w-64">
+                                        <div className="relative w-full sm:w-64">
                                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                             <Input
                                                 placeholder="Buscar..."
-                                                className="pl-8 h-9 bg-background"
+                                                className="pl-8 h-9 bg-background w-full"
                                                 value={searchTerm}
                                                 onChange={e => setSearchTerm(e.target.value)}
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
                                         {customFrameworks.length === 0 && (
                                             <div className="col-span-2 text-center py-12 border-2 border-dashed rounded-lg bg-muted/20">
                                                 <p className="text-muted-foreground mb-4 font-medium">Você ainda não tem frameworks personalizados.</p>
@@ -418,12 +418,12 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                 exit={{ opacity: 0, x: -20 }}
                                 className="h-full flex flex-col space-y-4"
                             >
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 h-full">
                                     {/* Left: Project Details */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 pb-2 border-b">
                                             <Target className="h-5 w-5 text-primary" />
-                                            <h3 className="font-semibold">Configuração da Avaliação</h3>
+                                            <h3 className="font-semibold text-sm sm:text-base">Configuração da Avaliação</h3>
                                         </div>
 
                                         <div className="space-y-3">
@@ -472,7 +472,7 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                                 </Select>
                                             </div>
 
-                                            <div className="grid grid-cols-2 gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                                 <div className="space-y-1">
                                                     <Label>Data Planejada</Label>
                                                     <Input
@@ -601,36 +601,36 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                 <div className="bg-card border rounded-lg p-6 space-y-4 shadow-sm">
                                     <h3 className="font-semibold text-lg border-b pb-2 mb-4">Resumo da Criação em Lote</h3>
 
-                                    <div className="grid grid-cols-2 gap-4 text-sm">
-                                        <div className="col-span-2 p-3 bg-muted/40 rounded-lg flex items-center justify-between">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                        <div className="col-span-1 sm:col-span-2 p-3 bg-muted/40 rounded-lg flex items-center justify-between">
                                             <div>
-                                                <p className="text-muted-foreground text-xs uppercase font-bold">Framework</p>
-                                                <p className="font-medium text-lg">{getSelectedFrameworkName()}</p>
+                                                <p className="text-muted-foreground text-[10px] sm:text-xs uppercase font-bold">Framework</p>
+                                                <p className="font-medium text-base sm:text-lg">{getSelectedFrameworkName()}</p>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-muted-foreground text-xs uppercase font-bold">Avaliações a Criar</p>
-                                                <Badge className="text-base px-3 py-1 bg-primary">{selectedRequirementIds.length}</Badge>
+                                                <p className="text-muted-foreground text-[10px] sm:text-xs uppercase font-bold">Avaliações</p>
+                                                <Badge className="text-sm sm:text-base px-2 py-0.5 sm:px-3 sm:py-1 bg-primary">{selectedRequirementIds.length}</Badge>
                                             </div>
                                         </div>
 
-                                        <div className="col-span-2">
-                                            <p className="text-muted-foreground mb-1">Título do Projeto</p>
-                                            <p className="font-medium">{formData.titulo}</p>
+                                        <div className="col-span-1 sm:col-span-2">
+                                            <p className="text-muted-foreground text-xs sm:text-sm mb-0.5 sm:mb-1">Título do Projeto</p>
+                                            <p className="font-medium text-sm sm:text-base">{formData.titulo}</p>
                                         </div>
 
                                         <div>
-                                            <p className="text-muted-foreground">Tipo</p>
-                                            <Badge variant="outline">{formData.tipo_avaliacao}</Badge>
+                                            <p className="text-muted-foreground text-xs sm:text-sm">Tipo</p>
+                                            <Badge variant="outline" className="text-xs sm:text-sm mt-0.5">{formData.tipo_avaliacao}</Badge>
                                         </div>
                                         <div>
-                                            <p className="text-muted-foreground">Metodologia</p>
-                                            <p className="font-medium capitalize">{formData.metodologia}</p>
+                                            <p className="text-muted-foreground text-xs sm:text-sm">Metodologia</p>
+                                            <p className="font-medium capitalize text-sm sm:text-base">{formData.metodologia}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-muted-foreground">Data Planejada</p>
-                                            <div className="flex items-center gap-2">
+                                        <div className="col-span-1 sm:col-span-2">
+                                            <p className="text-muted-foreground text-xs sm:text-sm">Data Planejada</p>
+                                            <div className="flex items-center gap-2 mt-0.5">
                                                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                <span className="font-medium">{format(new Date(formData.data_planejada), 'dd/MM/yyyy')}</span>
+                                                <span className="font-medium text-sm sm:text-base">{format(new Date(formData.data_planejada), 'dd/MM/yyyy')}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -660,7 +660,7 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-6 border-t bg-background flex justify-between items-center flex-shrink-0">
+                <div className="p-4 sm:p-6 border-t bg-background flex flex-col-reverse sm:flex-row justify-between items-center flex-shrink-0 gap-3 sm:gap-0">
                     <Button
                         variant="ghost"
                         onClick={handleBack}
@@ -670,7 +670,7 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                 onOpenChange(false);
                             }
                         }}
-                        className="gap-2"
+                        className="gap-2 w-full sm:w-auto"
                     >
                         {step === 1 && !showStandardLibrary ? 'Cancelar' : <><ArrowLeft className="h-4 w-4" /> Voltar</>}
                     </Button>
@@ -683,13 +683,13 @@ export function NewAssessmentWizard({ open, onOpenChange, onSuccess }: NewAssess
                                     (step === 1 && !selectedFrameworkId) ||
                                     (step === 2 && (!formData.titulo || selectedRequirementIds.length === 0))
                                 }
-                                className="gap-2"
+                                className="gap-2 w-full sm:w-auto"
                             >
                                 Próximo <ArrowRight className="h-4 w-4" />
                             </Button>
                         )
                     ) : (
-                        <Button onClick={handleSubmit} disabled={loading} className="gap-2 min-w-[140px]">
+                        <Button onClick={handleSubmit} disabled={loading} className="gap-2 w-full sm:min-w-[140px] sm:w-auto">
                             {loading ? (
                                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                             ) : (

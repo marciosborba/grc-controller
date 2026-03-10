@@ -6,45 +6,51 @@
 export interface Policy {
   id: string;
   tenant_id: string;
-  
+
   // Informações básicas
   title: string;
   description?: string;
   category: PolicyCategory;
   type: PolicyType;
-  
+  document_type?: PolicyType;
+  owner_id?: string;
+  tags?: string[];
+  compliance_frameworks?: string[];
+  impact_areas?: string[];
+  expiration_date?: string;
+
   // Status e workflow
   status: PolicyStatus;
   workflow_stage: WorkflowStage;
-  
+
   // Versionamento
   version: string;
   parent_policy_id?: string;
   is_current_version: boolean;
-  
+
   // Conteúdo estruturado
   content: PolicyContent;
   metadata: PolicyMetadata;
-  
+
   // Configurações
   priority: PolicyPriority;
   requires_approval: boolean;
   requires_training: boolean;
   is_template: boolean;
   is_active: boolean;
-  
+
   // Datas importantes
   effective_date?: string;
   expiry_date?: string;
   review_date?: string;
   next_review_date?: string;
-  
+
   // Auditoria
   created_by: string;
   updated_by?: string;
   approved_by?: string;
   published_by?: string;
-  
+
   created_at: string;
   updated_at: string;
   approved_at?: string;
@@ -55,32 +61,32 @@ export interface PolicyWorkflowStep {
   id: string;
   tenant_id: string;
   policy_id: string;
-  
+
   // Configuração da etapa
   step_type: WorkflowStepType;
   step_name: string;
   step_order: number;
-  
+
   // Status da etapa
   status: WorkflowStepStatus;
-  
+
   // Responsáveis
   assignee_id?: string;
   assignee_role?: string;
   completed_by?: string;
-  
+
   // Dados da execução
   instructions?: string;
   comments?: string;
   attachments: any[];
   alex_assistance: AlexAssistance;
-  
+
   // Datas
   assigned_at?: string;
   due_date?: string;
   started_at?: string;
   completed_at?: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -89,25 +95,25 @@ export interface PolicyApproval {
   id: string;
   tenant_id: string;
   policy_id: string;
-  
+
   // Configuração da aprovação
   approval_level: number;
   approver_id: string;
   approver_role?: string;
-  
+
   // Status e resultado
   status: ApprovalStatus;
   decision?: ApprovalDecision;
-  
+
   // Feedback
   comments?: string;
   conditions?: string;
-  
+
   // Datas
   requested_at: string;
   due_date?: string;
   responded_at?: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -116,36 +122,36 @@ export interface PolicyNotification {
   id: string;
   tenant_id: string;
   policy_id?: string;
-  
+
   // Configuração da notificação
   notification_type: NotificationType;
   title: string;
   message: string;
-  
+
   // Destinatários
   recipient_id?: string;
   recipient_role?: string;
   recipient_email?: string;
-  
+
   // Canais
   channels: NotificationChannel[];
-  
+
   // Status
   status: NotificationStatus;
   priority: NotificationPriority;
-  
+
   // Ação requerida
   action_required: boolean;
   action_type?: ActionType;
   action_url?: string;
-  
+
   // Datas
   scheduled_for: string;
   sent_at?: string;
   delivered_at?: string;
   read_at?: string;
   action_taken_at?: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -154,28 +160,28 @@ export interface PolicyMetric {
   id: string;
   tenant_id: string;
   policy_id?: string;
-  
+
   // Tipo de métrica
   metric_type: MetricType;
   metric_category: MetricCategory;
-  
+
   // Valores
   value: number;
   target_value?: number;
   unit: string;
-  
+
   // Contexto
   dimension_1?: string;
   dimension_2?: string;
   dimension_3?: string;
-  
+
   // Insights da IA
   ai_generated_insights: any;
-  
+
   // Período
   period_start: string;
   period_end: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -183,39 +189,39 @@ export interface PolicyMetric {
 export interface PolicyTemplate {
   id: string;
   tenant_id?: string;
-  
+
   // Informações básicas
   name: string;
   description?: string;
   category: PolicyCategory;
   policy_type: PolicyType;
-  
+
   // Conteúdo do template
   template_content: string;
   sections: PolicySection[];
   variables: Record<string, any>;
-  
+
   // Configurações
   is_global: boolean;
   is_active: boolean;
   requires_customization: boolean;
-  
+
   // Metadados
   compliance_frameworks: string[];
   regulatory_requirements: any[];
-  
+
   // Estatísticas
   usage_count: number;
   rating: number;
-  
+
   // IA
   alex_generated: boolean;
   alex_recommendations: any;
-  
+
   // Auditoria
   created_by?: string;
   updated_by?: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -224,24 +230,24 @@ export interface PolicyChangeHistory {
   id: string;
   tenant_id: string;
   policy_id: string;
-  
+
   // Tipo de mudança
   change_type: ChangeType;
   change_description?: string;
-  
+
   // Dados da mudança
   old_values?: any;
   new_values?: any;
   changed_fields: string[];
-  
+
   // Contexto
   reason?: string;
   impact_assessment?: string;
-  
+
   // Responsável
   changed_by: string;
   change_source: ChangeSource;
-  
+
   created_at: string;
 }
 
@@ -250,25 +256,25 @@ export interface PolicyAcknowledgment {
   tenant_id: string;
   policy_id: string;
   user_id: string;
-  
+
   // Status do acknowledgment
   status: AcknowledgmentStatus;
-  
+
   // Datas importantes
   required_by?: string;
   first_read_at?: string;
   acknowledged_at?: string;
   training_completed_at?: string;
-  
+
   // Detalhes
   read_count: number;
   time_spent_reading?: number;
   acknowledgment_method?: AcknowledgmentMethod;
-  
+
   // Feedback
   feedback_rating?: number;
   feedback_comments?: string;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -322,6 +328,7 @@ export interface PolicyMetadata {
   applicable_roles: string[];
   related_policies: string[];
   regulatory_basis: string[];
+  custom_fields?: Record<string, any>;
 }
 
 export interface AlexAssistance {
@@ -374,169 +381,169 @@ export interface AlexAnalysis {
 // ENUMS E TIPOS LITERAIS
 // =====================================================
 
-export type PolicyCategory = 
-  | 'governance' 
-  | 'compliance' 
-  | 'operational' 
-  | 'hr' 
-  | 'it' 
-  | 'financial' 
-  | 'security' 
-  | 'quality' 
-  | 'environmental' 
+export type PolicyCategory =
+  | 'governance'
+  | 'compliance'
+  | 'operational'
+  | 'hr'
+  | 'it'
+  | 'financial'
+  | 'security'
+  | 'quality'
+  | 'environmental'
   | 'legal';
 
-export type PolicyType = 
-  | 'policy' 
-  | 'procedure' 
-  | 'guideline' 
-  | 'standard' 
-  | 'manual' 
+export type PolicyType =
+  | 'policy'
+  | 'procedure'
+  | 'guideline'
+  | 'standard'
+  | 'manual'
   | 'instruction';
 
-export type PolicyStatus = 
-  | 'draft' 
-  | 'review' 
-  | 'approved' 
-  | 'published' 
-  | 'expired' 
-  | 'archived' 
+export type PolicyStatus =
+  | 'draft'
+  | 'review'
+  | 'approved'
+  | 'published'
+  | 'expired'
+  | 'archived'
   | 'suspended';
 
-export type WorkflowStage = 
-  | 'elaboration' 
-  | 'technical_review' 
-  | 'compliance_review' 
-  | 'legal_review' 
-  | 'approval' 
-  | 'publication' 
+export type WorkflowStage =
+  | 'elaboration'
+  | 'technical_review'
+  | 'compliance_review'
+  | 'legal_review'
+  | 'approval'
+  | 'publication'
   | 'distribution';
 
-export type PolicyPriority = 
-  | 'low' 
-  | 'medium' 
-  | 'high' 
+export type PolicyPriority =
+  | 'low'
+  | 'medium'
+  | 'high'
   | 'critical';
 
-export type WorkflowStepType = 
-  | 'elaboration' 
-  | 'technical_review' 
-  | 'compliance_review' 
-  | 'legal_review' 
-  | 'management_approval' 
-  | 'board_approval' 
-  | 'publication' 
-  | 'distribution' 
+export type WorkflowStepType =
+  | 'elaboration'
+  | 'technical_review'
+  | 'compliance_review'
+  | 'legal_review'
+  | 'management_approval'
+  | 'board_approval'
+  | 'publication'
+  | 'distribution'
   | 'training';
 
-export type WorkflowStepStatus = 
-  | 'pending' 
-  | 'in_progress' 
-  | 'completed' 
-  | 'rejected' 
-  | 'skipped' 
+export type WorkflowStepStatus =
+  | 'pending'
+  | 'in_progress'
+  | 'completed'
+  | 'rejected'
+  | 'skipped'
   | 'overdue';
 
-export type ApprovalStatus = 
-  | 'pending' 
-  | 'approved' 
-  | 'rejected' 
-  | 'delegated' 
+export type ApprovalStatus =
+  | 'pending'
+  | 'approved'
+  | 'rejected'
+  | 'delegated'
   | 'expired';
 
-export type ApprovalDecision = 
-  | 'approve' 
-  | 'reject' 
-  | 'request_changes' 
+export type ApprovalDecision =
+  | 'approve'
+  | 'reject'
+  | 'request_changes'
   | 'delegate';
 
-export type NotificationType = 
-  | 'new_policy' 
-  | 'policy_update' 
-  | 'review_required' 
-  | 'approval_needed' 
-  | 'expiry_warning' 
-  | 'training_required' 
+export type NotificationType =
+  | 'new_policy'
+  | 'policy_update'
+  | 'review_required'
+  | 'approval_needed'
+  | 'expiry_warning'
+  | 'training_required'
   | 'acknowledgment_required';
 
-export type NotificationChannel = 
-  | 'in_app' 
-  | 'email' 
-  | 'sms' 
-  | 'push' 
-  | 'slack' 
+export type NotificationChannel =
+  | 'in_app'
+  | 'email'
+  | 'sms'
+  | 'push'
+  | 'slack'
   | 'teams';
 
-export type NotificationStatus = 
-  | 'pending' 
-  | 'sent' 
-  | 'delivered' 
-  | 'read' 
-  | 'failed' 
+export type NotificationStatus =
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'failed'
   | 'cancelled';
 
-export type NotificationPriority = 
-  | 'low' 
-  | 'medium' 
-  | 'high' 
+export type NotificationPriority =
+  | 'low'
+  | 'medium'
+  | 'high'
   | 'urgent';
 
-export type ActionType = 
-  | 'read_policy' 
-  | 'approve' 
-  | 'review' 
-  | 'acknowledge' 
-  | 'complete_training' 
+export type ActionType =
+  | 'read_policy'
+  | 'approve'
+  | 'review'
+  | 'acknowledge'
+  | 'complete_training'
   | 'provide_feedback';
 
-export type MetricType = 
-  | 'read_rate' 
-  | 'compliance_rate' 
-  | 'training_completion' 
-  | 'feedback_score' 
-  | 'acknowledgment_rate' 
-  | 'time_to_approve' 
+export type MetricType =
+  | 'read_rate'
+  | 'compliance_rate'
+  | 'training_completion'
+  | 'feedback_score'
+  | 'acknowledgment_rate'
+  | 'time_to_approve'
   | 'effectiveness_score';
 
-export type MetricCategory = 
-  | 'engagement' 
-  | 'compliance' 
-  | 'effectiveness' 
-  | 'performance' 
-  | 'quality' 
+export type MetricCategory =
+  | 'engagement'
+  | 'compliance'
+  | 'effectiveness'
+  | 'performance'
+  | 'quality'
   | 'efficiency';
 
-export type ChangeType = 
-  | 'created' 
-  | 'updated' 
-  | 'approved' 
-  | 'published' 
-  | 'expired' 
-  | 'archived' 
-  | 'restored' 
+export type ChangeType =
+  | 'created'
+  | 'updated'
+  | 'approved'
+  | 'published'
+  | 'expired'
+  | 'archived'
+  | 'restored'
   | 'version_created';
 
-export type ChangeSource = 
-  | 'manual' 
-  | 'automated' 
-  | 'ai_suggestion' 
-  | 'scheduled' 
+export type ChangeSource =
+  | 'manual'
+  | 'automated'
+  | 'ai_suggestion'
+  | 'scheduled'
   | 'integration';
 
-export type AcknowledgmentStatus = 
-  | 'required' 
-  | 'read' 
-  | 'acknowledged' 
-  | 'trained' 
-  | 'exempted' 
+export type AcknowledgmentStatus =
+  | 'required'
+  | 'read'
+  | 'acknowledged'
+  | 'trained'
+  | 'exempted'
   | 'overdue';
 
-export type AcknowledgmentMethod = 
-  | 'digital_signature' 
-  | 'checkbox' 
-  | 'quiz' 
-  | 'training' 
-  | 'biometric' 
+export type AcknowledgmentMethod =
+  | 'digital_signature'
+  | 'checkbox'
+  | 'quiz'
+  | 'training'
+  | 'biometric'
   | 'two_factor';
 
 // =====================================================
@@ -685,27 +692,27 @@ export interface PolicyNotificationRule {
   tenant_id: string;
   name: string;
   description?: string;
-  
+
   // Triggers
   trigger_events: NotificationType[];
   conditions: NotificationCondition[];
-  
+
   // Recipients
   recipient_rules: RecipientRule[];
-  
+
   // Configuration
   channels: NotificationChannel[];
   priority: NotificationPriority;
   template_id?: string;
-  
+
   // Scheduling
   immediate: boolean;
   delay_minutes?: number;
   business_hours_only: boolean;
-  
+
   // Status
   is_active: boolean;
-  
+
   created_at: string;
   updated_at: string;
 }
@@ -764,30 +771,30 @@ export interface ReportParameters {
 
 export interface PolicyManagementSettings {
   tenant_id: string;
-  
+
   // Workflow Configuration
   default_workflow: WorkflowStepType[];
   approval_matrix: ApprovalMatrix[];
   auto_assignment_rules: AutoAssignmentRule[];
-  
+
   // Notification Settings
   notification_rules: PolicyNotificationRule[];
   default_channels: NotificationChannel[];
   escalation_rules: EscalationRule[];
-  
+
   // Alex Policy Settings
   alex_config: AlexPolicyConfig;
-  
+
   // Compliance Settings
   mandatory_frameworks: string[];
   review_cycles: ReviewCycle[];
   retention_policies: RetentionPolicy[];
-  
+
   // UI Settings
   default_view: 'dashboard' | 'list' | 'kanban';
   items_per_page: number;
   auto_save: boolean;
-  
+
   updated_at: string;
   updated_by: string;
 }
@@ -797,6 +804,25 @@ export interface ApprovalMatrix {
   policy_priority: PolicyPriority;
   approval_levels: ApprovalLevel[];
 }
+
+export interface CreatePolicyRequest {
+  title: string;
+  description?: string;
+  category: PolicyCategory;
+  document_type?: PolicyType;
+  version: string;
+  owner_id?: string;
+  effective_date?: Date;
+  review_date?: Date;
+  expiration_date?: Date;
+  tags?: string[];
+  compliance_frameworks?: string[];
+  impact_areas?: string[];
+  metadata?: any;
+}
+
+export type UpdatePolicyRequest = Partial<CreatePolicyRequest>;
+
 
 export interface ApprovalLevel {
   level: number;

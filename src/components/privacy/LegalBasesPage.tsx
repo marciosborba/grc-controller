@@ -214,10 +214,10 @@ export function LegalBasesPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">
               Bases Legais LGPD
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gestão de bases legais para tratamento de dados pessoais
             </p>
           </div>
@@ -225,7 +225,7 @@ export function LegalBasesPage() {
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="w-full md:w-auto flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Nova Base Legal
             </Button>
@@ -257,7 +257,7 @@ export function LegalBasesPage() {
       )}
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Bases</CardTitle>
@@ -330,9 +330,9 @@ export function LegalBasesPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <Select onValueChange={(value) => handleFilterChange('status', value)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -345,7 +345,7 @@ export function LegalBasesPage() {
               </Select>
 
               <Select onValueChange={(value) => handleFilterChange('legal_basis_type', value)}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Tipo de Base" />
                 </SelectTrigger>
                 <SelectContent>
@@ -372,23 +372,23 @@ export function LegalBasesPage() {
 
       {/* Legal Bases Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="all">
+        <TabsList className="flex items-center justify-start overflow-x-auto hide-scrollbar pb-1 sm:pb-0 w-full h-auto p-1">
+          <TabsTrigger value="all" className="whitespace-nowrap flex-shrink-0">
             Todas ({stats.total})
           </TabsTrigger>
-          <TabsTrigger value="active">
+          <TabsTrigger value="active" className="whitespace-nowrap flex-shrink-0">
             Ativas ({stats.active})
           </TabsTrigger>
-          <TabsTrigger value="suspended">
+          <TabsTrigger value="suspended" className="whitespace-nowrap flex-shrink-0">
             Suspensas ({stats.suspended})
           </TabsTrigger>
-          <TabsTrigger value="expired">
+          <TabsTrigger value="expired" className="whitespace-nowrap flex-shrink-0">
             Expiradas ({stats.expired})
           </TabsTrigger>
-          <TabsTrigger value="expiring">
+          <TabsTrigger value="expiring" className="whitespace-nowrap flex-shrink-0">
             Expirando ({stats.expiring_soon})
           </TabsTrigger>
-          <TabsTrigger value="by-type">
+          <TabsTrigger value="by-type" className="whitespace-nowrap flex-shrink-0">
             Por Tipo
           </TabsTrigger>
         </TabsList>

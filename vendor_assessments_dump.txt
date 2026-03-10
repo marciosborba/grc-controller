@@ -1,0 +1,240 @@
+=== vendor_assessments columns ===
+[
+  {
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "tenant_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "vendor_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "framework_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "assessment_name",
+    "data_type": "text"
+  },
+  {
+    "column_name": "assessment_type",
+    "data_type": "text"
+  },
+  {
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "column_name": "priority",
+    "data_type": "text"
+  },
+  {
+    "column_name": "due_date",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "start_date",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "completion_date",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "progress_percentage",
+    "data_type": "integer"
+  },
+  {
+    "column_name": "responses",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "overall_score",
+    "data_type": "numeric"
+  },
+  {
+    "column_name": "risk_level",
+    "data_type": "text"
+  },
+  {
+    "column_name": "public_link",
+    "data_type": "text"
+  },
+  {
+    "column_name": "public_link_expires_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "vendor_submitted_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "internal_review_status",
+    "data_type": "text"
+  },
+  {
+    "column_name": "reviewer_notes",
+    "data_type": "text"
+  },
+  {
+    "column_name": "evidence_attachments",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "metadata",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "created_by",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "updated_by",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "reviewed_by",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "reviewed_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "submission_summary",
+    "data_type": "text"
+  }
+]
+
+=== assessments for Gepriv ===
+[
+  {
+    "id": "497aadf4-015e-43e0-9eb0-0ba3fb4ac69e",
+    "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+    "assessment_name": "Assessment - GePriv",
+    "status": "approved",
+    "due_date": "2026-01-23T00:00:00.000Z",
+    "progress_percentage": 100,
+    "framework_id": null,
+    "created_at": "2025-12-10T23:55:10.461Z"
+  },
+  {
+    "id": "60b14cf8-bf89-4749-8381-aee4fb31f8ce",
+    "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+    "assessment_name": "Segurança da Informação",
+    "status": "approved",
+    "due_date": "2026-04-02T00:00:00.000Z",
+    "progress_percentage": 100,
+    "framework_id": null,
+    "created_at": "2026-03-03T23:57:45.423Z"
+  },
+  {
+    "id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+    "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+    "assessment_name": "Teste 5",
+    "status": "approved",
+    "due_date": "2026-04-03T00:00:00.000Z",
+    "progress_percentage": 100,
+    "framework_id": null,
+    "created_at": "2026-03-04T16:37:37.391Z"
+  }
+]
+
+=== assessment_frameworks columns ===
+[
+  {
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "tenant_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "codigo",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "nome",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "descricao",
+    "data_type": "text"
+  },
+  {
+    "column_name": "versao",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "tipo_framework",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "categoria",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "padrao_origem",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "industria_aplicavel",
+    "data_type": "ARRAY"
+  },
+  {
+    "column_name": "escala_maturidade",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "criterios_pontuacao",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "peso_total",
+    "data_type": "numeric"
+  },
+  {
+    "column_name": "status",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "publico",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "created_by",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "updated_by",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "is_standard",
+    "data_type": "boolean"
+  }
+]

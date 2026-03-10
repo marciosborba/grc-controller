@@ -438,10 +438,10 @@ const SOXControlsLibrary: React.FC = () => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Shield className="h-8 w-8 text-red-600" />
-            Biblioteca SOX
+        <div className="w-full">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 shrink-0" />
+            <span className="truncate">Biblioteca SOX</span>
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
@@ -479,28 +479,31 @@ const SOXControlsLibrary: React.FC = () => {
               </DialogContent>
             </Dialog>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Biblioteca global de controles Sarbanes-Oxley para todas as organizações
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
           <Button
+            className="flex-1 sm:flex-none"
             onClick={() => {
               setEditingControl(null);
               controlForm.reset();
               setIsDialogOpen(true);
             }}
           >
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Controle
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Adicionar Controle</span>
+            <span className="inline sm:hidden ml-1">Adicionar</span>
           </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
+          <Button variant="outline" className="flex-1 sm:flex-none">
+            <Download className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Exportar</span>
+            <span className="inline sm:hidden ml-1">Exportar</span>
           </Button>
-          <Button variant="outline">
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Documentação
+          <Button variant="outline" className="flex-1 sm:flex-none sm:hidden lg:flex w-full sm:w-auto mt-2 sm:mt-0">
+            <ExternalLink className="h-4 w-4 sm:mr-2" />
+            <span className="inline">Documentação</span>
           </Button>
         </div>
       </div>
@@ -511,10 +514,10 @@ const SOXControlsLibrary: React.FC = () => {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total de Controles</p>
-                <p className="text-2xl font-bold text-red-600">{controls.length}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground uppercase">Total de Controles</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-600">{controls.length}</p>
               </div>
-              <Shield className="h-8 w-8 text-red-600" />
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
@@ -523,10 +526,10 @@ const SOXControlsLibrary: React.FC = () => {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Entity Level</p>
-                <p className="text-2xl font-bold text-blue-600">{categoryStats.entity_level}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground uppercase">Entity Level</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">{categoryStats.entity_level}</p>
               </div>
-              <Shield className="h-8 w-8 text-blue-600" />
+              <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
@@ -535,10 +538,10 @@ const SOXControlsLibrary: React.FC = () => {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Transaction Level</p>
-                <p className="text-2xl font-bold text-green-600">{categoryStats.transaction_level}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground uppercase">Transaction Level</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{categoryStats.transaction_level}</p>
               </div>
-              <FileText className="h-8 w-8 text-green-600" />
+              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
@@ -547,10 +550,10 @@ const SOXControlsLibrary: React.FC = () => {
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">ITGC</p>
-                <p className="text-2xl font-bold text-purple-600">{categoryStats.itgc}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground uppercase">ITGC</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-600">{categoryStats.itgc}</p>
               </div>
-              <Settings className="h-8 w-8 text-purple-600" />
+              <Settings className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 opacity-80" />
             </div>
           </CardContent>
         </Card>
@@ -560,25 +563,24 @@ const SOXControlsLibrary: React.FC = () => {
       </div>
 
       {/* Filtros e Busca */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar controles por código, título ou descrição..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar controles por código, título ou descrição..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Filtros:</span>
-          <div className="flex flex-wrap gap-1 p-1 bg-muted rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
+          <span className="text-sm font-medium text-muted-foreground mb-1 sm:mb-0">Filtros:</span>
+          <div className="flex flex-wrap gap-1 p-1 bg-muted/50 rounded-lg w-full sm:w-auto">
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('all')}
               size="sm"
+              className="flex-1 sm:flex-none text-xs h-8"
             >
               Todos
             </Button>
@@ -586,6 +588,7 @@ const SOXControlsLibrary: React.FC = () => {
               variant={selectedCategory === 'entity_level' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('entity_level')}
               size="sm"
+              className="flex-1 sm:flex-none text-xs h-8"
             >
               Entity Level
             </Button>
@@ -593,6 +596,7 @@ const SOXControlsLibrary: React.FC = () => {
               variant={selectedCategory === 'transaction_level' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('transaction_level')}
               size="sm"
+              className="flex-1 sm:flex-none text-xs h-8"
             >
               Transaction Level
             </Button>
@@ -600,6 +604,7 @@ const SOXControlsLibrary: React.FC = () => {
               variant={selectedCategory === 'itgc' ? 'default' : 'ghost'}
               onClick={() => setSelectedCategory('itgc')}
               size="sm"
+              className="flex-1 sm:flex-none text-xs h-8"
             >
               ITGC
             </Button>
@@ -695,11 +700,11 @@ const SOXControlsLibrary: React.FC = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="details">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="details">Detalhes</TabsTrigger>
-                  <TabsTrigger value="activities">Atividades</TabsTrigger>
-                  <TabsTrigger value="evidence">Evidências</TabsTrigger>
-                  <TabsTrigger value="systems">Sistemas</TabsTrigger>
+                <TabsList className="flex flex-row w-full overflow-x-auto justify-start sm:justify-center p-1 gap-1 h-auto no-scrollbar">
+                  <TabsTrigger value="details" className="whitespace-nowrap flex-shrink-0">Detalhes</TabsTrigger>
+                  <TabsTrigger value="activities" className="whitespace-nowrap flex-shrink-0">Atividades</TabsTrigger>
+                  <TabsTrigger value="evidence" className="whitespace-nowrap flex-shrink-0">Evidências</TabsTrigger>
+                  <TabsTrigger value="systems" className="whitespace-nowrap flex-shrink-0">Sistemas</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="details" className="space-y-4">
@@ -797,48 +802,52 @@ const SOXControlsLibrary: React.FC = () => {
       </div>
 
       {/* Paginação */}
-      {filteredControls.length > 0 && (
-        <div className="flex items-center justify-between py-4">
-          <p className="text-sm text-muted-foreground">
-            Mostrando {startIndex + 1} a {Math.min(endIndex, filteredControls.length)} de {filteredControls.length} controles
-          </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-            >
-              Anterior
-            </Button>
-            <div className="flex items-center gap-1">
-              <span className="text-sm px-2">
-                Página {currentPage} de {totalPages}
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages}
-            >
-              Próxima
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {filteredControls.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum controle encontrado</h3>
-            <p className="text-muted-foreground">
-              Tente ajustar os filtros ou termo de busca para encontrar controles específicos.
+      {
+        filteredControls.length > 0 && (
+          <div className="flex items-center justify-between py-4">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {startIndex + 1} a {Math.min(endIndex, filteredControls.length)} de {filteredControls.length} controles
             </p>
-          </CardContent>
-        </Card>
-      )}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+              >
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                <span className="text-sm px-2">
+                  Página {currentPage} de {totalPages}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
+        )
+      }
+
+      {
+        filteredControls.length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum controle encontrado</h3>
+              <p className="text-muted-foreground">
+                Tente ajustar os filtros ou termo de busca para encontrar controles específicos.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* Dialog de Criação/Edição de Controle */}
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
@@ -1219,7 +1228,7 @@ const SOXControlsLibrary: React.FC = () => {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };
 

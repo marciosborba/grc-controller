@@ -1,0 +1,198 @@
+[
+  {
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "nome",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "descricao",
+    "data_type": "text"
+  },
+  {
+    "column_name": "fornecedor",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "versao",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "tenant_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "tipo",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "status",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "criticidade",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "responsavel_tecnico",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "responsavel_negocio",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "dados_sensiveis",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "internet_facing",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "autenticacao_sso",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "documentacao_link",
+    "data_type": "text"
+  },
+  {
+    "column_name": "is_lgpd",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "is_sox",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "is_acn",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "mac_address",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "hostname",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "domain",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "network_zone",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "location",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "building",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "floor",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "room",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "rack",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "os",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "os_version",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "manufacturer",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "model",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "serial_number",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "asset_tag",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "department",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "cost_center",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "business_unit",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "technical_contact",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "purchase_date",
+    "data_type": "date"
+  },
+  {
+    "column_name": "warranty_expiry",
+    "data_type": "date"
+  },
+  {
+    "column_name": "security_classification",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "encryption_required",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "backup_required",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "monitoring_enabled",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "ambiente",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "classificacao_dados",
+    "data_type": "character varying"
+  },
+  {
+    "column_name": "eol_date",
+    "data_type": "date"
+  },
+  {
+    "column_name": "edr_enabled",
+    "data_type": "boolean"
+  }
+]

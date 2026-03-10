@@ -184,10 +184,10 @@ export function PrivacyIncidentsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">
               Incidentes de Privacidade
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Gestão de incidentes e comunicação com a ANPD
             </p>
           </div>
@@ -195,7 +195,7 @@ export function PrivacyIncidentsPage() {
 
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+            <Button className="w-full md:w-auto flex items-center gap-2">
               <Plus className="w-4 h-4" />
               Novo Incidente
             </Button>
@@ -225,7 +225,7 @@ export function PrivacyIncidentsPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Incidentes</CardTitle>
@@ -295,12 +295,12 @@ export function PrivacyIncidentsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <Select
                 value={filters.status || ''}
                 onValueChange={(value) => handleFilterChange('status', value || undefined)}
               >
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -317,7 +317,7 @@ export function PrivacyIncidentsPage() {
                 value={filters.severity || ''}
                 onValueChange={(value) => handleFilterChange('severity', value || undefined)}
               >
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Severidade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -384,11 +384,11 @@ export function PrivacyIncidentsPage() {
 
       {/* Tabs for different views */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">Todos ({stats.total})</TabsTrigger>
-          <TabsTrigger value="open">Abertos ({stats.open})</TabsTrigger>
-          <TabsTrigger value="anpd">Requer ANPD ({stats.requiresANPDNotification})</TabsTrigger>
-          <TabsTrigger value="overdue">Em Atraso ({stats.overdue})</TabsTrigger>
+        <TabsList className="flex items-center justify-start overflow-x-auto hide-scrollbar pb-1 sm:pb-0 w-full h-auto p-1">
+          <TabsTrigger value="all" className="whitespace-nowrap flex-shrink-0">Todos ({stats.total})</TabsTrigger>
+          <TabsTrigger value="open" className="whitespace-nowrap flex-shrink-0">Abertos ({stats.open})</TabsTrigger>
+          <TabsTrigger value="anpd" className="whitespace-nowrap flex-shrink-0">Requer ANPD ({stats.requiresANPDNotification})</TabsTrigger>
+          <TabsTrigger value="overdue" className="whitespace-nowrap flex-shrink-0">Em Atraso ({stats.overdue})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">

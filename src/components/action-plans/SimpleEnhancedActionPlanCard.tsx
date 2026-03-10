@@ -255,7 +255,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
     toast.success('Atividade criada com sucesso');
   };
 
-  const handleUpdateActivity = (activityId: string, updates: Partial<SimpleActivity>) => {
+  const handleUpdateActivity = (activityId: string, updates: Partial<ActionPlanActivity>) => {
     const updatedPlan = {
       ...localActionPlan,
       atividades: localActionPlan.atividades?.map(activity =>
@@ -285,6 +285,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
       return;
     }
 
+    let updatedPlan: ActionPlan;
     if (newEvidence.activity_id) {
       // Evidência de atividade específica
       const evidence: ActivityEvidence = {
@@ -354,8 +355,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
           activity.id === activityId
             ? {
               ...activity,
-              evidencias: activity.evidencias?.filter(ev => ev.id !== evidenceId),
-              evidencias_count: Math.max(0, (activity.evidencias_count || 0) - 1)
+              evidencias: activity.evidencias?.filter(ev => ev.id !== evidenceId)
             }
             : activity
         )
@@ -386,8 +386,9 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
       autor_id: 'current_user',
       autor_nome: 'Usuário Atual', // TODO: Pegar do contexto de auth
       created_at: new Date().toISOString(),
-      tipo: newComment.tipo,
-    };
+      tipo: newComment.tipo as any,
+      referencia_id: newComment.referencia_id
+    } as ActionPlanComment;
 
     const updatedPlan = {
       ...localActionPlan,
@@ -416,7 +417,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
     toast.success('Comentário removido');
   };
 
-  const handleStartEditActivity = (activity: SimpleActivity) => {
+  const handleStartEditActivity = (activity: ActionPlanActivity) => {
     setEditActivityData({
       titulo: activity.titulo,
       descricao: activity.descricao || '',
@@ -437,18 +438,19 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
       return;
     }
 
-    const updates: Partial<SimpleActivity> = {
+    const updates: Partial<ActionPlanActivity> = {
       titulo: editActivityData.titulo,
       descricao: editActivityData.descricao,
       data_fim_planejada: editActivityData.data_fim_planejada,
       data_fim_replanejada: editActivityData.data_fim_replanejada || undefined,
       prioridade: editActivityData.prioridade,
       responsavel: {
+        id: '',
         nome: editActivityData.responsavel_nome || 'Não atribuído',
         email: editActivityData.responsavel_email || ''
       },
       percentual_conclusao: editActivityData.percentual_conclusao,
-      status: editActivityData.status
+      status: editActivityData.status as any
     };
 
     handleUpdateActivity(activityId, updates);
@@ -476,48 +478,51 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
         localActionPlan.prioridade === 'media' ? 'border-l-yellow-500' : 'border-l-green-500'
       } ${isExpanded ? 'ring-2 ring-primary/20' : ''}`}>
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 relative pr-8">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
               {getModuleIcon(localActionPlan.modulo_origem)}
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-[9px] sm:text-xs px-1 py-0 h-4 sm:h-5">
                 {localActionPlan.codigo}
               </Badge>
-              <Badge className={getPriorityColor(localActionPlan.prioridade)}>
+              <Badge className={`text-[9px] sm:text-xs px-1 py-0 h-4 sm:h-5 ${getPriorityColor(localActionPlan.prioridade)}`}>
                 {localActionPlan.prioridade}
               </Badge>
-              <Badge className={getStatusColor(localActionPlan.status)}>
+              <Badge className={`text-[9px] sm:text-xs px-1 py-0 h-4 sm:h-5 ${getStatusColor(localActionPlan.status)}`}>
                 {localActionPlan.status.replace('_', ' ')}
               </Badge>
             </div>
 
-            <CardTitle className="text-lg mb-2 line-clamp-2">
+            <CardTitle className="text-base sm:text-lg mb-1 sm:mb-2 line-clamp-3 sm:line-clamp-2 leading-tight">
               {localActionPlan.titulo}
             </CardTitle>
 
             {localActionPlan.descricao && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">
                 {localActionPlan.descricao}
               </p>
             )}
-            {localActionPlan.nome_origem && (
-              <p className="text-xs font-medium text-primary mt-1">
-                Origem: {localActionPlan.nome_origem}
-              </p>
-            )}
+
+            <div className="flex flex-wrap items-center gap-1 mt-2">
+              {showModuleLink && (
+                <Badge variant="outline" className={`text-[9px] sm:text-xs px-1 py-0 h-4 sm:h-5 ${getModuleColor(localActionPlan.modulo_origem)}`}>
+                  {getModuleName(localActionPlan.modulo_origem)}
+                </Badge>
+              )}
+              {localActionPlan.nome_origem && (
+                <span className="text-[9px] sm:text-xs font-medium text-primary line-clamp-1">
+                  Origem: {localActionPlan.nome_origem}
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 ml-4">
-            {showModuleLink && (
-              <Badge variant="outline" className={`text-xs ${getModuleColor(localActionPlan.modulo_origem)}`}>
-                {getModuleName(localActionPlan.modulo_origem)}
-              </Badge>
-            )}
-
+          <div className="absolute top-0 right-0">
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
+              size="icon"
               onClick={() => setIsExpanded(!isExpanded)}
+              className="h-8 w-8"
             >
               {isExpanded ? (
                 <ChevronUp className="h-4 w-4" />
@@ -529,9 +534,9 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
         </div>
 
         {/* Progress and Quick Info */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center gap-4">
+        <div className="space-y-3 mt-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3 text-muted-foreground" />
                 <span className={daysToDeadline < 0 ? 'text-red-600' : daysToDeadline < 7 ? 'text-orange-600' : ''}>
@@ -561,53 +566,24 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
           </div>
         </div>
 
-        {/* Quick Actions when expanded */}
-        {isExpanded && (
-          <div className="flex gap-2 pt-3 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditing(!isEditing)}
-            >
-              {isEditing ? (
-                <>
-                  <X className="h-3 w-3 mr-1" />
-                  Cancelar
-                </>
-              ) : (
-                <>
-                  <Edit className="h-3 w-3 mr-1" />
-                  Editar
-                </>
-              )}
-            </Button>
-
-            {isEditing && (
-              <Button size="sm" onClick={() => {
-                setIsEditing(false);
-                toast.success('Plano atualizado');
-              }}>
-                <Save className="h-3 w-3 mr-1" />
-                Salvar
-              </Button>
-            )}
-
-            <Button variant="outline" size="sm">
-              <CheckSquare className="h-3 w-3 mr-1" />
-              Atualizar Status
-            </Button>
-          </div>
-        )}
       </CardHeader>
 
       {isExpanded && (
         <CardContent className="pt-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-              <TabsTrigger value="activities">Atividades</TabsTrigger>
-              <TabsTrigger value="evidence">Evidências</TabsTrigger>
-              <TabsTrigger value="comments">Comentários</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="flex flex-row overflow-x-auto overflow-y-hidden w-full h-auto bg-transparent border-b rounded-none p-0 justify-start no-scrollbar snap-x mb-4">
+              <TabsTrigger value="overview" className="shrink-0 snap-start data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2">
+                Visão Geral
+              </TabsTrigger>
+              <TabsTrigger value="activities" className="shrink-0 snap-start data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2">
+                Atividade
+              </TabsTrigger>
+              <TabsTrigger value="evidence" className="shrink-0 snap-start data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2">
+                Evidência
+              </TabsTrigger>
+              <TabsTrigger value="comments" className="shrink-0 snap-start data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-1.5 text-xs sm:text-sm sm:px-4 sm:py-2">
+                Comentários
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-4">
@@ -682,12 +658,13 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                         <Progress value={localActionPlan.percentual_conclusao} className="flex-1" />
                         <span className="text-sm font-medium">{localActionPlan.percentual_conclusao}%</span>
                       </div>
-                      <div className="grid grid-cols-5 gap-1">
+                      <div className="grid grid-cols-5 gap-1 mt-1">
                         {[0, 25, 50, 75, 100].map((value) => (
                           <Button
                             key={value}
                             variant={localActionPlan.percentual_conclusao === value ? "default" : "outline"}
                             size="sm"
+                            className="text-[10px] sm:text-xs px-0 h-7 sm:h-9"
                             onClick={() => toast.success(`Progresso atualizado para ${value}%`)}
                           >
                             {value}%
@@ -701,11 +678,12 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
             </TabsContent>
 
             <TabsContent value="activities" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">Atividades Detalhadas</h4>
-                <Button size="sm" onClick={() => setShowAddActivity(true)}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Nova Atividade
+              <div className="flex justify-between items-center mb-2 sm:mb-4">
+                <h4 className="font-medium text-sm sm:text-base">Atividades Detalhadas</h4>
+                <Button size="sm" className="h-7 text-xs sm:h-9 sm:text-sm" onClick={() => setShowAddActivity(true)}>
+                  <Plus className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Nova Atividade</span>
+                  <span className="sm:hidden">Nova</span>
                 </Button>
               </div>
 
@@ -936,29 +914,29 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                       ) : (
                         // Modo de Visualização
                         <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline" className="text-xs">#{index + 1}</Badge>
-                                <h5 className="font-semibold">{activity.titulo}</h5>
-                                <Badge className={getPriorityColor(activity.prioridade)}>
-                                  <Flag className="h-3 w-3 mr-1" />
-                                  {activity.prioridade}
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5">
+                                <Badge variant="outline" className="text-[10px] sm:text-xs py-0 h-4 sm:h-5">#{index + 1}</Badge>
+                                <h5 className="font-semibold text-sm sm:text-base break-words leading-tight">{activity.titulo}</h5>
+                                <Badge className={`text-[9px] sm:text-xs px-1 py-0 h-4 sm:h-5 ${getPriorityColor(activity.prioridade)}`}>
+                                  <Flag className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                                  <span className="hidden sm:inline">{activity.prioridade}</span>
                                 </Badge>
                               </div>
 
                               {activity.descricao && (
-                                <p className="text-sm text-muted-foreground mb-3">{activity.descricao}</p>
+                                <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-2">{activity.descricao}</p>
                               )}
                             </div>
 
-                            <div className="text-right">
-                              <div className="text-lg font-bold">{activity.percentual_conclusao}%</div>
-                              <Progress value={activity.percentual_conclusao} className="w-16 h-2" />
+                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto bg-muted/30 sm:bg-transparent p-2 sm:p-0 rounded-md sm:rounded-none shrink-0">
+                              <div className="text-base sm:text-lg font-bold">{activity.percentual_conclusao}%</div>
+                              <Progress value={activity.percentual_conclusao} className="w-24 sm:w-16 h-1.5 sm:h-2 mt-0.5 sm:mt-1" />
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 text-[11px] sm:text-sm mb-3">
                             <div>
                               <div className="text-muted-foreground">Prazo Inicial</div>
                               <div className="font-medium">{formatDate(activity.data_fim_planejada)}</div>
@@ -983,8 +961,8 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between pt-2 border-t">
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-2 border-t gap-3 sm:gap-2">
+                            <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground w-full sm:w-auto">
                               <div className="flex items-center gap-1">
                                 <Paperclip className="h-3 w-3" />
                                 <span>{activity.evidencias?.length || 0} evidências</span>
@@ -996,40 +974,40 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                             </div>
 
 
-                            <div className="flex gap-1">
+                            <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 px-2"
+                                className="flex-1 sm:flex-none h-7 px-2 text-[10px] sm:text-xs"
                                 onClick={() => {
                                   setNewEvidence({ ...newEvidence, activity_id: activity.id });
                                   setShowAddEvidence(true);
                                 }}
                               >
-                                <Paperclip className="h-3 w-3 mr-1" />
-                                Anexar
+                                <Paperclip className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Anexar</span>
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 px-2"
+                                className="flex-1 sm:flex-none h-7 px-2 text-[10px] sm:text-xs"
                                 onClick={() => handleUpdateActivity(activity.id, {
                                   status: activity.status === 'concluida' ? 'em_execucao' : 'concluida',
                                   percentual_conclusao: activity.status === 'concluida' ? 75 : 100,
                                   data_fim_real: activity.status === 'concluida' ? undefined : new Date().toISOString().split('T')[0]
                                 })}
                               >
-                                <CheckSquare className="h-3 w-3 mr-1" />
-                                {activity.status === 'concluida' ? 'Reabrir' : 'Finalizar'}
+                                <CheckSquare className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">{activity.status === 'concluida' ? 'Reabrir' : 'Finalizar'}</span>
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 px-2"
+                                className="flex-1 sm:flex-none h-7 px-2 text-[10px] sm:text-xs"
                                 onClick={() => handleStartEditActivity(activity)}
                               >
-                                <Edit className="h-3 w-3 mr-1" />
-                                Editar
+                                <Edit className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Editar</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -1068,14 +1046,15 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
             </TabsContent>
 
             <TabsContent value="evidence" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">Evidências do Plano</h4>
-                <Button size="sm" onClick={() => {
+              <div className="flex justify-between items-center mb-2 sm:mb-4">
+                <h4 className="font-medium text-sm sm:text-base">Evidências do Plano</h4>
+                <Button size="sm" className="h-7 text-xs sm:h-9 sm:text-sm" onClick={() => {
                   setNewEvidence({ ...newEvidence, activity_id: '' });
                   setShowAddEvidence(true);
                 }}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Nova Evidência
+                  <Plus className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Nova Evidência</span>
+                  <span className="sm:hidden">Nova</span>
                 </Button>
               </div>
 
@@ -1172,28 +1151,28 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                   localActionPlan.evidencias.map((evidence) => (
                     <Card key={evidence.id} className="border-l-4 border-l-green-400">
                       <CardContent className="p-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <h6 className="font-medium">{evidence.titulo}</h6>
-                              <Badge variant="outline" className={`text-xs ${getEvidenceTypeColor(evidence.tipo_arquivo)}`}>
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
+                              <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                              <h6 className="font-medium text-sm sm:text-base break-words leading-tight">{evidence.titulo}</h6>
+                              <Badge variant="outline" className={`text-[10px] sm:text-xs py-0 h-4 sm:h-5 ${getEvidenceTypeColor(evidence.tipo_arquivo)}`}>
                                 {evidence.tipo_arquivo}
                               </Badge>
                             </div>
                             {evidence.descricao && (
-                              <p className="text-sm text-muted-foreground mb-2">{evidence.descricao}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground mb-2 line-clamp-2">{evidence.descricao}</p>
                             )}
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-[10px] sm:text-xs text-muted-foreground">
                               Adicionado em {formatDate(evidence.created_at)}
                             </div>
 
                           </div>
-                          <div className="flex gap-1">
-                            {evidence.link_url && (
-                              <Button size="sm" variant="outline" className="h-7 px-2">
-                                <Download className="h-3 w-3 mr-1" />
-                                Abrir
+                          <div className="flex gap-1 self-end sm:self-auto mt-2 sm:mt-0">
+                            {evidence.url_arquivo && (
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] sm:text-xs">
+                                <Download className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Abrir</span>
                               </Button>
                             )}
                             <Button
@@ -1248,7 +1227,7 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                               </div>
                             </div>
                             <div className="flex gap-1">
-                              {evidence.link_url && (
+                              {evidence.url_arquivo && (
                                 <Button size="sm" variant="outline" className="h-7 px-2">
                                   <Download className="h-3 w-3 mr-1" />
                                   Abrir
@@ -1277,11 +1256,12 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
             </TabsContent>
 
             <TabsContent value="comments" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h4 className="font-medium">Comentários e Discussões</h4>
-                <Button size="sm" onClick={() => setShowAddComment(true)}>
-                  <Plus className="h-3 w-3 mr-1" />
-                  Novo Comentário
+              <div className="flex justify-between items-center mb-2 sm:mb-4">
+                <h4 className="font-medium text-sm sm:text-base">Comentários e Discussões</h4>
+                <Button size="sm" className="h-7 text-xs sm:h-9 sm:text-sm" onClick={() => setShowAddComment(true)}>
+                  <Plus className="h-3 w-3 sm:mr-1" />
+                  <span className="hidden sm:inline">Novo Comentário</span>
+                  <span className="sm:hidden">Novo</span>
                 </Button>
               </div>
 
@@ -1362,34 +1342,34 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
                     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                     .map((comment) => (
                       <Card key={comment.id} className="border-l-4 border-l-purple-400">
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-medium">{comment.autor_nome}</span>
-                                <Badge variant="outline" className={`text-xs ${getCommentTypeColor(comment.tipo)}`}>
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
+                                <MessageSquare className="h-4 w-4 text-muted-foreground shrink-0" />
+                                <span className="font-medium text-sm sm:text-base break-words">{comment.autor_nome}</span>
+                                <Badge variant="outline" className={`text-[10px] sm:text-xs py-0 h-4 sm:h-5 ${getCommentTypeColor(comment.tipo)}`}>
                                   {comment.tipo}
                                 </Badge>
-                                <span className="text-xs text-muted-foreground">
+                                <span className="text-[10px] sm:text-xs text-muted-foreground w-full sm:w-auto mt-0.5 sm:mt-0">
                                   {formatDate(comment.created_at)}
                                 </span>
                               </div>
 
 
                               {comment.referencia_id && comment.tipo === 'atividade' && (
-                                <div className="text-xs text-blue-600 mb-2">
+                                <div className="text-[10px] sm:text-xs text-blue-600 mb-2 truncate">
                                   Sobre a atividade: {localActionPlan.atividades?.find(a => a.id === comment.referencia_id)?.titulo}
                                 </div>
                               )}
 
-                              <p className="text-sm whitespace-pre-wrap">{comment.conteudo}</p>
+                              <p className="text-[11px] sm:text-sm whitespace-pre-wrap break-words">{comment.conteudo}</p>
                             </div>
 
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 px-2 text-red-600 hover:text-red-700"
+                              className="h-7 px-2 text-red-600 hover:text-red-700 self-end sm:self-auto mt-2 sm:mt-0"
                               onClick={() => {
                                 if (window.confirm('Deseja excluir este comentário?')) {
                                   handleDeleteComment(comment.id);
@@ -1418,8 +1398,40 @@ export const SimpleEnhancedActionPlanCard: React.FC<SimpleEnhancedActionPlanCard
               </div>
             </TabsContent>
           </Tabs>
+
+          {/* Quick Actions (moved to bottom) */}
+          <div className="flex flex-col flex-wrap gap-2 pt-4 border-t mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditing(!isEditing)}
+              className="w-full"
+            >
+              {isEditing ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancelar
+                </>
+              ) : (
+                <>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </>
+              )}
+            </Button>
+
+            {isEditing && (
+              <Button size="sm" className="w-full" onClick={() => {
+                setIsEditing(false);
+                toast.success('Plano atualizado');
+              }}>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar
+              </Button>
+            )}
+          </div>
         </CardContent>
       )}
-    </Card>
+    </Card >
   );
 };

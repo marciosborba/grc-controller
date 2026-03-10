@@ -140,6 +140,7 @@ export const useVulnerabilities = (options: UseVulnerabilitiesOptions = {}) => {
       // Apply sorting and pagination
       query = query
         .order(sortBy, { ascending: sortOrder === 'asc' })
+        .order('id', { ascending: false })
         .range((page - 1) * limit, page * limit - 1);
 
       const { data, error, count } = await query;

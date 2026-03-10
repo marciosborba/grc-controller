@@ -412,13 +412,13 @@ const MonitoramentoManagement: React.FC = () => {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Activity className="h-8 w-8 text-blue-600" />
+        <div className="w-full">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 shrink-0" />
             Monitoramento de Conformidade
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -457,14 +457,16 @@ const MonitoramentoManagement: React.FC = () => {
             Monitore métricas e indicadores de conformidade em tempo real
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { setEditingItem(null); monitoringForm.reset(); }}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Monitoramento
-            </Button>
-          </DialogTrigger>
-        </Dialog>
+        <div className="w-full sm:w-auto mt-2 sm:mt-0">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { setEditingItem(null); monitoringForm.reset(); }} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Monitoramento
+              </Button>
+            </DialogTrigger>
+          </Dialog>
+        </div>
       </div>
 
       {/* Estatísticas */}

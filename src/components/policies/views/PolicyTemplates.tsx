@@ -27,7 +27,7 @@ import {
   Clock,
   TrendingUp
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -237,14 +237,14 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-start sm:space-y-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Templates de Governança</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Templates de Governança</h2>
+          <p className="text-sm text-muted-foreground">
             {templates.length} templates baseados em melhores práticas de mercado
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <Badge variant="outline" className="flex items-center gap-1">
             <Star className="h-3 w-3" />
@@ -268,10 +268,10 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                 />
               </div>
             </div>
-            
-            <div className="flex gap-2">
+
+            <div className="flex flex-col sm:flex-row gap-2">
               <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -281,9 +281,9 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-full sm:w-[150px]">
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -299,11 +299,11 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
       </Card>
 
       {/* Grid de Templates */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredTemplates.map((template) => {
           const CategoryIcon = getCategoryIcon(template.category);
           const TypeIcon = getTypeIcon(template.document_type);
-          
+
           return (
             <Card key={template.id} className="hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
@@ -316,11 +316,11 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                   </div>
                   <Badge className={`text-xs ${getPriorityColor(template.priority)}`}>
                     {template.priority === 'critical' ? 'Crítica' :
-                     template.priority === 'high' ? 'Alta' :
-                     template.priority === 'medium' ? 'Média' : 'Baixa'}
+                      template.priority === 'high' ? 'Alta' :
+                        template.priority === 'medium' ? 'Média' : 'Baixa'}
                   </Badge>
                 </div>
-                
+
                 <CardTitle className="text-lg leading-tight">
                   {template.title}
                 </CardTitle>
@@ -328,25 +328,25 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                   {template.description}
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="pt-0">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Categoria:</span>
                     <span className="font-medium">{template.category}</span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Framework:</span>
                     <span className="font-medium text-xs">{template.metadata.framework}</span>
                   </div>
-                  
+
                   <div className="flex gap-2 pt-2">
                     <Dialog open={showPreview && selectedTemplate?.id === template.id} onOpenChange={setShowPreview}>
                       <DialogTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="flex-1"
                           onClick={() => setSelectedTemplate(template)}
                         >
@@ -361,7 +361,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                             {template.description}
                           </DialogDescription>
                         </DialogHeader>
-                        
+
                         <div className="space-y-4">
                           <div className="grid grid-cols-2 gap-4 text-sm">
                             <div>
@@ -377,7 +377,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                               <span className="font-medium">Prioridade:</span> {template.priority}
                             </div>
                           </div>
-                          
+
                           <div>
                             <h4 className="font-medium mb-2">Conteúdo do Template:</h4>
                             <div className="bg-muted p-4 rounded-lg">
@@ -389,11 +389,11 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                         </div>
                       </DialogContent>
                     </Dialog>
-                    
+
                     <Dialog open={showCustomize && selectedTemplate?.id === template.id} onOpenChange={setShowCustomize}>
                       <DialogTrigger asChild>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="flex-1"
                           onClick={() => {
                             setSelectedTemplate(template);
@@ -415,7 +415,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                             Personalize o template antes de criar a política
                           </DialogDescription>
                         </DialogHeader>
-                        
+
                         <div className="space-y-4">
                           <div>
                             <label className="text-sm font-medium">Título</label>
@@ -425,7 +425,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                               placeholder="Título da nova política"
                             />
                           </div>
-                          
+
                           <div>
                             <label className="text-sm font-medium">Descrição</label>
                             <Textarea
@@ -435,7 +435,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                               rows={3}
                             />
                           </div>
-                          
+
                           <div>
                             <label className="text-sm font-medium">Conteúdo (JSON)</label>
                             <Textarea
@@ -446,16 +446,16 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ onPolicyUpdate }) => 
                               className="font-mono text-xs"
                             />
                           </div>
-                          
+
                           <div className="flex gap-2 pt-4">
-                            <Button 
+                            <Button
                               onClick={() => handleUseTemplate(template)}
                               className="flex-1"
                             >
                               Criar Política
                             </Button>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               onClick={() => setShowCustomize(false)}
                             >
                               Cancelar

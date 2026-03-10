@@ -39,6 +39,7 @@ export interface AuthUser {
   roles: string[];
   permissions: string[];
   isPlatformAdmin: boolean;
+  customRoleId?: string;
 }
 
 interface AuthContextType {
@@ -124,29 +125,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       auditor: ['read', 'audit.read', 'audit.write', 'logs.read', 'assessment.read', 'report.read', 'compliance.read'],
       user: ['read', 'all']
     };
-    
+
     const allPermissions = new Set<string>();
-    
+
     // Adicionar permissões das roles básicas
     roles.forEach(role => {
       const rolePermissions = permissionMap[role] || ['read'];
       rolePermissions.forEach(permission => allPermissions.add(permission));
     });
-    
+
     const finalPermissions = Array.from(allPermissions);
-    
+
     // Cachear resultado
     if (userId) {
       setCachedRoles(userId, roles, finalPermissions);
     }
-    
+
     return finalPermissions;
   }, [getCachedRoles, setCachedRoles]);
 
   // Helper function para construir objeto do usuário
   const buildUserObject = useCallback(async (supabaseUser: User): Promise<AuthUser> => {
     console.log('[AUTH] Construindo objeto do usuário:', supabaseUser.id);
-    
+
     // Verificar cache primeiro para otimização completa
     const cached = getCachedRoles(supabaseUser.id);
     if (cached) {
@@ -163,13 +164,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isPlatformAdmin: cached.roles.includes('platform_admin')
       };
     }
-    
+
     try {
       // Queries otimizadas com timeout menor
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Timeout na consulta do usuário')), 3000)
       );
-      
+
       const queryPromise = Promise.all([
         supabase
           .from('profiles')
@@ -243,12 +244,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         roles: authUser.roles,
         permissionsCount: authUser.permissions.length
       });
-      
+
       return authUser;
-      
+
     } catch (error: any) {
       console.error('[AUTH] Erro ao construir usuário:', error);
-      
+
       // Retornar usuário básico em caso de erro
       return {
         id: supabaseUser.id,
@@ -264,7 +265,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
-    
+
     try {
       // Validações básicas
       if (!validateEmailFormat(email)) {
@@ -284,10 +285,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) {
         throw error;
       }
-      
+
       if (data.user && data.session) {
         setSession(data.session);
-        
+
         // Construir usuário de forma assíncrona
         setTimeout(async () => {
           try {
@@ -307,7 +308,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const signup = async (email: string, password: string, fullName: string, jobTitle?: string): Promise<void> => {
     setIsLoading(true);
-    
+
     try {
       if (!validateEmailFormat(email)) {
         throw new Error('Formato de email inválido');
@@ -337,7 +338,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) {
         throw error;
       }
-      
+
       if (data.user) {
         // Atribuir role padrão
         await supabase
@@ -355,12 +356,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       // Limpar cache
       roleCache.clear();
-      
+
       await supabase.auth.signOut();
-      
+
       setUser(null);
       setSession(null);
-      
+
       // Forçar reload para estado limpo
       setTimeout(() => {
         window.location.href = '/login';
@@ -372,13 +373,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     console.log('[AUTH] Inicializando AuthProvider simples');
-    
+
     // Configurar listener de mudanças de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[AUTH] Mudança de estado:', event);
         setSession(session);
-        
+
         if (event === 'SIGNED_IN' && session?.user) {
           // Defer para evitar deadlocks
           setTimeout(async () => {
@@ -393,7 +394,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser(null);
           roleCache.clear();
         }
-        
+
         setIsLoading(false);
       }
     );
@@ -424,7 +425,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (session?.user) {
       // Limpar cache do usuário atual
       roleCache.delete(session.user.id);
-      
+
       try {
         const authUser = await buildUserObject(session.user);
         setUser(authUser);

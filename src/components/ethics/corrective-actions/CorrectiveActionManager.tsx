@@ -298,12 +298,12 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <Target className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Ações Corretivas</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Ações Corretivas</h3>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           {actions.length > 0 && (
             <div className="flex items-center gap-2 text-sm">
               <span>Progresso:</span>
@@ -320,7 +320,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 Nova Ação
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingAction ? 'Editar Ação Corretiva' : 'Nova Ação Corretiva'}
@@ -328,15 +328,15 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
               </DialogHeader>
 
               <Tabs defaultValue="basic" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="basic">Básico</TabsTrigger>
-                  <TabsTrigger value="planning">Planejamento</TabsTrigger>
-                  <TabsTrigger value="execution">Execução</TabsTrigger>
-                  <TabsTrigger value="verification">Verificação</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                  <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                  <TabsTrigger value="planning" className="text-xs sm:text-sm">Planejamento</TabsTrigger>
+                  <TabsTrigger value="execution" className="text-xs sm:text-sm">Execução</TabsTrigger>
+                  <TabsTrigger value="verification" className="text-xs sm:text-sm">Verificação</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="basic" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="action_type">Tipo de Ação</Label>
                       <Select
@@ -433,7 +433,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <Label htmlFor="target_individual">Indivíduo Alvo</Label>
                       <Input
@@ -467,7 +467,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
 
                 <TabsContent value="planning" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="due_date">Data de Vencimento</Label>
                       <Input
@@ -488,7 +488,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="estimated_cost">Custo Estimado (R$)</Label>
                       <Input
@@ -536,7 +536,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
 
                 <TabsContent value="execution" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="started_date">Data de Início</Label>
                       <Input
@@ -582,7 +582,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
 
                 <TabsContent value="verification" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="verification_date">Data de Verificação</Label>
                       <Input
@@ -648,12 +648,12 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                 </TabsContent>
               </Tabs>
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+                <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button onClick={handleSave}>
+                <Button className="w-full sm:w-auto" onClick={handleSave}>
                   <Save className="h-4 w-4 mr-2" />
                   Salvar Ação
                 </Button>
@@ -675,13 +675,18 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
         <div className="space-y-4">
           {actions.map((action) => (
             <Card key={action.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {getActionTypeIcon(action.action_type)}
+              <CardHeader className="p-4 sm:p-6 pb-2">
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sm:items-start">
+                  <div className="flex gap-3">
+                    <div className="mt-1 hidden sm:block">
+                      {getActionTypeIcon(action.action_type)}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg">{action.action_title}</CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <CardTitle className="text-base sm:text-lg flex items-start gap-2">
+                        <span className="mt-1 sm:hidden">{getActionTypeIcon(action.action_type)}</span>
+                        <span>{action.action_title}</span>
+                      </CardTitle>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {action.action_type === 'disciplinary' ? 'Ação Disciplinar' :
                           action.action_type === 'training' ? 'Treinamento' :
                             action.action_type === 'policy_change' ? 'Mudança de Política' :
@@ -691,7 +696,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     <div
                       className={`w-3 h-3 rounded-full ${getPriorityColor(action.priority)}`}
                       title={`Prioridade ${action.priority}`}
@@ -705,54 +710,55 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                                 action.status === 'overdue' ? 'Atrasada' :
                                   action.status}
                     </Badge>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(action)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(action)} className="h-8 w-8 p-0">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(action.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(action.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8 p-0">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0">
                 <div className="space-y-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                     {action.action_description}
                   </p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm bg-muted/30 p-3 rounded-md">
                     {action.due_date && (
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <span>Vence: {format(new Date(action.due_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
+                        <Calendar className="h-4 w-4 text-gray-500 shrink-0" />
+                        <span className="truncate">Vence: {format(new Date(action.due_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
                       </div>
                     )}
                     {action.estimated_cost && (
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-gray-500" />
-                        <span>R$ {action.estimated_cost.toLocaleString('pt-BR')}</span>
+                        <DollarSign className="h-4 w-4 text-gray-500 shrink-0" />
+                        <span className="truncate">R$ {action.estimated_cost.toLocaleString('pt-BR')}</span>
                       </div>
                     )}
                     {action.target_department && (
                       <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-gray-500" />
-                        <span>{action.target_department}</span>
+                        <Users className="h-4 w-4 text-gray-500 shrink-0" />
+                        <span className="truncate">{action.target_department}</span>
                       </div>
                     )}
                     {action.effectiveness_rating && (
                       <div className="flex items-center gap-2">
-                        <Award className="h-4 w-4 text-gray-500" />
-                        <span>Eficácia: {action.effectiveness_rating}/5</span>
+                        <Award className="h-4 w-4 text-gray-500 shrink-0" />
+                        <span className="truncate">Eficácia: {action.effectiveness_rating}/5</span>
                       </div>
                     )}
                   </div>
 
                   {action.status !== 'completed' && action.status !== 'cancelled' && (
-                    <div className="flex gap-2 pt-2 border-t">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t">
                       {action.status === 'planned' && (
                         <Button
                           size="sm"
                           onClick={() => updateActionStatus(action.id, 'approved')}
+                          className="w-full sm:w-auto"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Aprovar
@@ -763,6 +769,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                           size="sm"
                           variant="outline"
                           onClick={() => updateActionStatus(action.id, 'in_progress')}
+                          className="w-full sm:w-auto"
                         >
                           <Clock className="h-4 w-4 mr-1" />
                           Iniciar
@@ -772,6 +779,7 @@ const CorrectiveActionManager: React.FC<CorrectiveActionManagerProps> = ({
                         <Button
                           size="sm"
                           onClick={() => updateActionStatus(action.id, 'completed')}
+                          className="w-full sm:w-auto"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Concluir

@@ -71,14 +71,14 @@ import {
   FileCheck,
   GraduationCap
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { usePolicyManagement } from '@/hooks/usePolicyManagement';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import type { 
-  Policy, 
-  PolicyApproval, 
+import type {
+  Policy,
+  PolicyApproval,
   PolicyApprover,
   PolicyCategory,
   PolicyStatus,
@@ -108,11 +108,11 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
   canApprove = true
 }) => {
   const { user } = useAuth();
-  const { 
-    profiles, 
-    approvePolicy, 
-    addApprover, 
-    removeApprover, 
+  const {
+    profiles,
+    approvePolicy,
+    addApprover,
+    removeApprover,
     uploadDocument,
     sendForApproval,
     getPolicyApprovers,
@@ -126,7 +126,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
   // Helper function to safely format dates for input fields
   const formatDateForInput = useCallback((date: string | Date | undefined): string => {
     if (!date) return '';
-    
+
     try {
       if (typeof date === 'string') {
         // Check if it's already in YYYY-MM-DD format
@@ -232,12 +232,12 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         review_date: generalData.review_date ? new Date(generalData.review_date) : undefined,
         expiration_date: generalData.expiration_date ? new Date(generalData.expiration_date) : undefined,
         tags: generalData.tags ? generalData.tags.split(',').map(t => t.trim()).filter(t => t) : undefined,
-        compliance_frameworks: generalData.compliance_frameworks ? 
+        compliance_frameworks: generalData.compliance_frameworks ?
           generalData.compliance_frameworks.split(',').map(f => f.trim()).filter(f => f) : undefined,
-        impact_areas: generalData.impact_areas ? 
+        impact_areas: generalData.impact_areas ?
           generalData.impact_areas.split(',').map(a => a.trim()).filter(a => a) : undefined
       };
-      
+
       try {
         await onUpdate(policy.id, updates);
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -250,7 +250,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
 
   const handleApproval = async () => {
     if (!user) return;
-    
+
     try {
       await approvePolicy({
         policyId: policy.id,
@@ -258,7 +258,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         status: approvalData.status,
         comments: approvalData.comments
       });
-      
+
       setIsApprovalDialogOpen(false);
       setApprovalData({ status: 'approved', comments: '' });
     } catch (error) {
@@ -268,7 +268,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
 
   const handleAddApprover = async () => {
     if (!user || !approverData.approver_id) return;
-    
+
     try {
       await addApprover({
         policy_id: policy.id,
@@ -284,7 +284,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         notify_on_changes: true,
         created_by: user.id
       });
-      
+
       setApproverData({
         approver_id: '',
         approver_role: '',
@@ -301,7 +301,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
 
   const handleRemoveApprover = async (approverId: string) => {
     if (!confirm('Tem certeza que deseja remover este aprovador?')) return;
-    
+
     try {
       await removeApprover(approverId);
     } catch (error) {
@@ -318,7 +318,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
-    
+
     if (!allowedTypes.includes(file.type)) {
       toast.error('Apenas arquivos PDF e Word são permitidos');
       return;
@@ -329,14 +329,14 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
 
   const handleUploadDocument = async () => {
     if (!selectedFile) return;
-    
+
     setIsUploading(true);
     try {
       await uploadDocument({
         policyId: policy.id,
         file: selectedFile
       });
-      
+
       setIsDocumentDialogOpen(false);
       setSelectedFile(null);
     } catch (error) {
@@ -398,67 +398,67 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
   return (
     <Card className={cn(
       "rounded-lg border text-card-foreground w-full transition-all duration-300 overflow-hidden hover:bg-red-100",
-      isExpanded 
-        ? "shadow-lg border-primary/30" 
+      isExpanded
+        ? "shadow-lg border-primary/30"
         : "border-border"
     )}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <div className="group">
           <CollapsibleTrigger asChild>
             <CardHeader className="pb-3 relative z-10 cursor-pointer" title={isExpanded ? "Clique para recolher" : "Clique para expandir"}>
-            <div className="flex items-center justify-between gap-4 relative z-10">
-              {/* Left Section */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                {isExpanded ? 
-                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> : 
-                  <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                }
-                
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-                  <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CardTitle className="text-sm font-semibold truncate">{policy.title}</CardTitle>
-                    <Badge className={getStatusColor(policy.status)}>
-                      <div className="flex items-center gap-1">
-                        {getStatusIcon(policy.status)}
-                        {POLICY_STATUSES[policy.status]?.split(' - ')[0] || policy.status}
-                      </div>
-                    </Badge>
+              <div className="flex items-center justify-between gap-4 relative z-10">
+                {/* Left Section */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {isExpanded ?
+                    <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" /> :
+                    <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  }
+
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="truncate">{policy.category}</span>
-                    <span>"</span>
-                    <span className="truncate">v{policy.version}</span>
-                    <span>"</span>
-                    <span className="truncate">{policy.document_type || 'Política'}</span>
-                    {policy.owner_id && (
-                      <>
-                        <span>"</span>
-                        <span className="truncate">Proprietário: {getProfileName(policy.owner_id)}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Right Section */}
-              <div className="text-right flex-shrink-0">
-                {policy.review_date && (
-                  <div className={`text-xs ${isOverdue(policy.review_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                    <div>Revisão:</div>
-                    <div className="font-medium">
-                      {format(policy.review_date, "dd/MM/yyyy", { locale: ptBR })}
-                      {isOverdue(policy.review_date) && ' (Atrasada)'}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CardTitle className="text-sm font-semibold truncate">{policy.title}</CardTitle>
+                      <Badge className={getStatusColor(policy.status)}>
+                        <div className="flex items-center gap-1">
+                          {getStatusIcon(policy.status)}
+                          {POLICY_STATUSES[policy.status]?.split(' - ')[0] || policy.status}
+                        </div>
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="truncate">{policy.category}</span>
+                      <span>"</span>
+                      <span className="truncate">v{policy.version}</span>
+                      <span>"</span>
+                      <span className="truncate">{policy.document_type || 'Política'}</span>
+                      {policy.owner_id && (
+                        <>
+                          <span>"</span>
+                          <span className="truncate">Proprietário: {getProfileName(policy.owner_id)}</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* Right Section */}
+                <div className="text-right flex-shrink-0">
+                  {policy.review_date && (
+                    <div className={`text-xs ${isOverdue(policy.review_date) ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                      <div>Revisão:</div>
+                      <div className="font-medium">
+                        {format(policy.review_date, "dd/MM/yyyy", { locale: ptBR })}
+                        {isOverdue(policy.review_date) && ' (Atrasada)'}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
+            </CardHeader>
+          </CollapsibleTrigger>
         </div>
 
         <CollapsibleContent>
@@ -468,23 +468,21 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
               <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                 <button
                   onClick={() => setActiveSection('general')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'general' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'general'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Shield className="h-4 w-4" />
                   Informações Gerais
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('approvals')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'approvals' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'approvals'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <Users className="h-4 w-4" />
                   Aprovações
@@ -494,38 +492,35 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                     </Badge>
                   )}
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('documents')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'documents' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'documents'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <FileCheck className="h-4 w-4" />
                   Documentos
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('training')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'training' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'training'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <GraduationCap className="h-4 w-4" />
                   Treinamentos
                 </button>
-                
+
                 <button
                   onClick={() => setActiveSection('history')}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-                    activeSection === 'history' 
-                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary' 
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${activeSection === 'history'
+                      ? 'bg-white dark:bg-gray-700 shadow-sm text-primary'
                       : 'text-muted-foreground hover:text-primary'
-                  }`}
+                    }`}
                 >
                   <History className="h-4 w-4" />
                   Histórico
@@ -560,7 +555,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, title: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="category">Categoria</Label>
                         <Select
@@ -579,7 +574,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="document_type">Tipo de Documento</Label>
                         <Select
@@ -598,7 +593,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="version">Versão</Label>
                         <Input
@@ -607,7 +602,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, version: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="status">Status</Label>
                         <Select
@@ -626,7 +621,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="owner">Proprietário</Label>
                         <Select
@@ -645,7 +640,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="effective_date">Data de Vigência</Label>
                         <Input
@@ -655,7 +650,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, effective_date: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="review_date">Data de Revisão</Label>
                         <Input
@@ -665,7 +660,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, review_date: e.target.value })}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="expiration_date">Data de Expiração</Label>
                         <Input
@@ -675,7 +670,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           onChange={(e) => setGeneralData({ ...generalData, expiration_date: e.target.value })}
                         />
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label htmlFor="description">Descrição</Label>
                         <Textarea
@@ -685,7 +680,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           rows={3}
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="tags">Tags (separadas por vãrgula)</Label>
                         <Input
@@ -695,7 +690,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           placeholder="tag1, tag2, tag3"
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="compliance_frameworks">Frameworks de Compliance</Label>
                         <Input
@@ -705,7 +700,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           placeholder="ISO 27001, LGPD, SOX"
                         />
                       </div>
-                      
+
                       <div className="col-span-2">
                         <Label htmlFor="impact_areas">Áreas de Impacto</Label>
                         <Input
@@ -715,7 +710,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                           placeholder="TI, RH, Financeiro"
                         />
                       </div>
-                      
+
                       <div className="col-span-2 flex gap-2">
                         <Button onClick={handleSaveGeneral} disabled={isUpdating}>
                           <Save className="h-4 w-4 mr-2" />
@@ -1068,22 +1063,21 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Dialog para Aprovação */}
       <Dialog open={isApprovalDialogOpen} onOpenChange={setIsApprovalDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Aprovar Política</DialogTitle>
             <DialogDescription>
               {policy.title}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="approval_status">Decisão</Label>
               <Select
                 value={approvalData.status}
-                onValueChange={(value) => setApprovalData({...approvalData, status: value as 'approved' | 'rejected'})}
+                onValueChange={(value) => setApprovalData({ ...approvalData, status: value as 'approved' | 'rejected' })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -1094,19 +1088,19 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <Label htmlFor="approval_comments">Comentários</Label>
               <Textarea
                 id="approval_comments"
                 value={approvalData.comments}
-                onChange={(e) => setApprovalData({...approvalData, comments: e.target.value})}
+                onChange={(e) => setApprovalData({ ...approvalData, comments: e.target.value })}
                 rows={3}
                 placeholder="Adicione comentãrios sobre a decisão..."
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApprovalDialogOpen(false)}>
               Cancelar
@@ -1118,27 +1112,26 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para Gerenciar Aprovadores */}
       <Dialog open={isApproversDialogOpen} onOpenChange={setIsApproversDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Gerenciar Aprovadores</DialogTitle>
             <DialogDescription>
               {policy.title}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Formulário para adicionar aprovador */}
             <div className="border rounded-lg p-4 space-y-4">
               <h5 className="font-medium">Adicionar Novo Aprovador</h5>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="approver_id">Aprovador *</Label>
                   <Select
                     value={approverData.approver_id}
-                    onValueChange={(value) => setApproverData({...approverData, approver_id: value})}
+                    onValueChange={(value) => setApproverData({ ...approverData, approver_id: value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
@@ -1152,17 +1145,17 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="approver_role">Função</Label>
                   <Input
                     id="approver_role"
                     value={approverData.approver_role}
-                    onChange={(e) => setApproverData({...approverData, approver_role: e.target.value})}
+                    onChange={(e) => setApproverData({ ...approverData, approver_role: e.target.value })}
                     placeholder="Ex: Gerente, Diretor..."
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="order_sequence">Sequência</Label>
                   <Input
@@ -1170,10 +1163,10 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                     type="number"
                     min="1"
                     value={approverData.order_sequence}
-                    onChange={(e) => setApproverData({...approverData, order_sequence: parseInt(e.target.value)})}
+                    onChange={(e) => setApproverData({ ...approverData, order_sequence: parseInt(e.target.value) })}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="notification_days">Notificar (dias antes)</Label>
                   <Input
@@ -1181,37 +1174,37 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                     type="number"
                     min="0"
                     value={approverData.notification_days_before}
-                    onChange={(e) => setApproverData({...approverData, notification_days_before: parseInt(e.target.value)})}
+                    onChange={(e) => setApproverData({ ...approverData, notification_days_before: parseInt(e.target.value) })}
                   />
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-4">
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={approverData.is_required}
-                    onChange={(e) => setApproverData({...approverData, is_required: e.target.checked})}
+                    onChange={(e) => setApproverData({ ...approverData, is_required: e.target.checked })}
                   />
                   <span className="text-sm">Aprovação obrigatória</span>
                 </label>
-                
+
                 <label className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={approverData.can_delegate}
-                    onChange={(e) => setApproverData({...approverData, can_delegate: e.target.checked})}
+                    onChange={(e) => setApproverData({ ...approverData, can_delegate: e.target.checked })}
                   />
                   <span className="text-sm">Pode delegar</span>
                 </label>
               </div>
-              
+
               <Button onClick={handleAddApprover} className="w-full">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Adicionar Aprovador
               </Button>
             </div>
-            
+
             {/* Lista de aprovadores atuais */}
             <div className="space-y-3">
               <h5 className="font-medium">Aprovadores Atuais</h5>
@@ -1248,7 +1241,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
               )}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsApproversDialogOpen(false)}>
               Fechar
@@ -1257,16 +1250,15 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
         </DialogContent>
       </Dialog>
 
-      {/* Dialog para Upload de Documento */}
       <Dialog open={isDocumentDialogOpen} onOpenChange={setIsDocumentDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Arquivar Documento</DialogTitle>
             <DialogDescription>
               {policy.title}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="document-file">Documento (PDF ou Word)</Label>
@@ -1281,7 +1273,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
                 Formatos aceitos: PDF, DOC, DOCX
               </p>
             </div>
-            
+
             {selectedFile && (
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -1291,10 +1283,10 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
               </div>
             )}
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setIsDocumentDialogOpen(false);
                 setSelectedFile(null);
@@ -1303,7 +1295,7 @@ const PolicyCard: React.FC<PolicyCardProps> = ({
             >
               Cancelar
             </Button>
-            <Button 
+            <Button
               onClick={handleUploadDocument}
               disabled={!selectedFile || isUploading}
             >

@@ -106,37 +106,42 @@ export default function AssessmentWizard() {
     };
 
     return (
-        <div className="container max-w-5xl py-8 space-y-8">
+        <div className="container max-w-5xl py-4 sm:py-8 space-y-6 sm:space-y-8 px-4 sm:px-8">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Novo Assessment (Fixed)</h1>
-                    <p className="text-muted-foreground">Assistente de criação de avaliação</p>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Novo Assessment</h1>
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">Assistente de criação de avaliação</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    {[1, 2, 3].map(i => (
-                        <div key={i} className={`flex items-center ${i < 3 ? 'after:content-[""] after:h-px after:w-8 after:bg-border after:mx-2' : ''}`}>
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium border-2 
-                          ${step === i ? 'border-primary bg-primary text-primary-foreground' :
-                                    step > i ? 'border-primary bg-primary/20 text-primary' : 'border-muted text-muted-foreground'}`
-                            }>
-                                {i}
+                <div className="flex items-center justify-between w-full sm:w-auto">
+                    <div className="flex items-center gap-2 shrink-0">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className={`flex items-center ${i < 3 ? 'after:content-[""] after:h-px after:w-4 sm:after:w-8 after:bg-border after:mx-1 sm:after:mx-2' : ''}`}>
+                                <div className={`h-6 w-6 sm:h-8 sm:w-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium border-2 
+                              ${step === i ? 'border-primary bg-primary text-primary-foreground' :
+                                        step > i ? 'border-primary bg-primary/20 text-primary' : 'border-muted text-muted-foreground'}`
+                                }>
+                                    {i}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')} className="sm:hidden -mr-2">
+                        <X className="h-5 w-5 text-muted-foreground" />
+                    </Button>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')}>
+                <Button variant="ghost" size="icon" onClick={() => navigate('/assessments')} className="hidden sm:inline-flex">
                     <X className="h-6 w-6 text-muted-foreground" />
                 </Button>
             </div>
 
             <Card className="min-h-[500px] flex flex-col">
-                <CardContent className="flex-1 p-8">
+                <CardContent className="flex-1 p-4 sm:p-8">
                     {step === 1 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                            <div className="text-center space-y-2 mb-8">
-                                <h2 className="text-2xl font-semibold">Selecione o Framework</h2>
-                                <p className="text-muted-foreground">Escolha o padrão de conformidade para esta avaliação</p>
+                            <div className="text-center space-y-2 mb-6 sm:mb-8">
+                                <h2 className="text-xl sm:text-2xl font-semibold">Selecione o Framework</h2>
+                                <p className="text-sm sm:text-base text-muted-foreground">Escolha o padrão de conformidade para esta avaliação</p>
                             </div>
 
                             <div className="relative max-w-md mx-auto mb-8">
@@ -182,14 +187,14 @@ export default function AssessmentWizard() {
 
                     {step === 2 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 max-w-2xl mx-auto">
-                            <div className="text-center space-y-2 mb-8">
-                                <h2 className="text-2xl font-semibold">Detalhes da Avaliação</h2>
-                                <p className="text-muted-foreground">Defina o escopo, equipe e prazos</p>
+                            <div className="text-center space-y-2 mb-6 sm:mb-8">
+                                <h2 className="text-xl sm:text-2xl font-semibold">Detalhes da Avaliação</h2>
+                                <p className="text-sm sm:text-base text-muted-foreground">Defina o escopo, equipe e prazos</p>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label>Título do Assessment <span className="text-red-500">*</span></Label>
+                                    <Label className="text-sm">Título do Assessment <span className="text-red-500">*</span></Label>
                                     <Input
                                         value={formData.titulo}
                                         onChange={e => setFormData({ ...formData, titulo: e.target.value })}
@@ -198,7 +203,7 @@ export default function AssessmentWizard() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>Descrição</Label>
+                                    <Label className="text-sm">Descrição</Label>
                                     <Textarea
                                         value={formData.descricao}
                                         onChange={e => setFormData({ ...formData, descricao: e.target.value })}
@@ -207,9 +212,9 @@ export default function AssessmentWizard() {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Responsável <span className="text-red-500">*</span></Label>
+                                        <Label className="text-sm">Responsável <span className="text-red-500">*</span></Label>
                                         <Select
                                             value={formData.responsavel_id}
                                             onValueChange={v => setFormData({ ...formData, responsavel_id: v })}
@@ -223,7 +228,7 @@ export default function AssessmentWizard() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Aprovador</Label>
+                                        <Label className="text-sm">Aprovador</Label>
                                         <Select
                                             value={formData.aprovador_id}
                                             onValueChange={v => setFormData({ ...formData, aprovador_id: v })}
@@ -238,13 +243,13 @@ export default function AssessmentWizard() {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Data Início</Label>
+                                        <Label className="text-sm">Data Início</Label>
                                         <Input type="date" value={formData.data_inicio} onChange={e => setFormData({ ...formData, data_inicio: e.target.value })} />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Prazo Final</Label>
+                                        <Label className="text-sm">Prazo Final</Label>
                                         <Input type="date" value={formData.data_fim_planejada} onChange={e => setFormData({ ...formData, data_fim_planejada: e.target.value })} />
                                     </div>
                                 </div>
@@ -267,36 +272,37 @@ export default function AssessmentWizard() {
 
                     {step === 3 && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 max-w-2xl mx-auto text-center">
-                            <div className="space-y-2 mb-8">
-                                <h2 className="text-2xl font-semibold">Revisão</h2>
-                                <p className="text-muted-foreground">Confira os dados antes de criar</p>
+                            <div className="space-y-2 mb-6 sm:mb-8">
+                                <h2 className="text-xl sm:text-2xl font-semibold">Revisão</h2>
+                                <p className="text-sm sm:text-base text-muted-foreground">Confira os dados antes de criar</p>
                             </div>
 
-                            <div className="bg-muted/30 p-6 rounded-lg border text-left space-y-4">
-                                <div className="flex justify-between items-center border-b pb-2">
+                            <div className="bg-muted/30 p-4 sm:p-6 rounded-lg border text-left space-y-3 sm:space-y-4 text-xs sm:text-sm">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2 gap-1 sm:gap-2">
                                     <span className="text-muted-foreground">Framework</span>
                                     <span className="font-medium flex items-center gap-2"><BookOpen className="h-4 w-4" /> {selectedFramework?.nome}</span>
                                 </div>
-                                <div className="flex justify-between items-center border-b pb-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2 gap-1 sm:gap-2">
                                     <span className="text-muted-foreground">Título</span>
-                                    <span className="font-medium">{formData.titulo}</span>
+                                    <span className="font-medium text-right">{formData.titulo}</span>
                                 </div>
-                                <div className="flex justify-between items-center border-b pb-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2 gap-1 sm:gap-2">
                                     <span className="text-muted-foreground">Responsável</span>
-                                    <span className="font-medium flex items-center gap-2"><Users className="h-4 w-4" /> {availableUsers.find(u => u.id === formData.responsavel_id)?.full_name || formData.responsavel_id}</span>
+                                    <span className="font-medium flex items-center gap-2"><Users className="h-4 w-4 shrink-0" /> {availableUsers.find(u => u.id === formData.responsavel_id)?.full_name || formData.responsavel_id}</span>
                                 </div>
-                                <div className="flex justify-between items-center border-b pb-2">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2 gap-1 sm:gap-2">
                                     <span className="text-muted-foreground">Prazo</span>
                                     <span className="font-medium flex items-center gap-2"><Calendar className="h-4 w-4" /> {formData.data_fim_planejada || 'Não definido'}</span>
                                 </div>
-                                <div className="flex justify-between items-center">
+                                <div className="flex justify-between items-center sm:hidden pb-1"></div>
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2">
                                     <span className="text-muted-foreground">Prioridade</span>
-                                    <Badge variant={formData.prioridade === 'critica' ? 'destructive' : 'secondary'}>{formData.prioridade}</Badge>
+                                    <Badge variant={formData.prioridade === 'critica' ? 'destructive' : 'secondary'} className="w-fit">{formData.prioridade}</Badge>
                                 </div>
                             </div>
 
-                            <div className="bg-blue-50 text-blue-800 p-4 rounded-lg flex items-start gap-3 text-left text-sm">
-                                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                            <div className="bg-blue-50 text-blue-800 p-3 sm:p-4 rounded-lg flex flex-col sm:flex-row items-start gap-2 sm:gap-3 text-left text-xs sm:text-sm">
+                                <AlertCircle className="h-5 w-5 shrink-0 sm:mt-0.5" />
                                 <div>
                                     <p className="font-medium">Próximos Passos</p>
                                     <p>Ao confirmar, você será redirecionado para a tela de execução onde poderá iniciar o preenchimento das respostas.</p>
@@ -305,24 +311,30 @@ export default function AssessmentWizard() {
                         </div>
                     )}
                 </CardContent>
-                <CardFooter className="justify-between border-t p-6">
-                    <Button variant="ghost" onClick={prevStep} disabled={step === 1}>
-                        <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
-                    </Button>
-                    {step === 1 && (
-                        <Button variant="ghost" className="text-muted-foreground" onClick={() => navigate('/assessments')}>
-                            Cancelar
-                        </Button>
-                    )}
-                    {step < 3 ? (
-                        <Button onClick={nextStep}>
-                            Próximo <ChevronRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    ) : (
-                        <Button onClick={handleCreate} disabled={loading} className="w-32">
-                            {loading ? 'Criando...' : 'Criar e Iniciar'}
-                        </Button>
-                    )}
+                <CardFooter className="flex-col-reverse sm:flex-row justify-between gap-3 border-t p-4 sm:p-6">
+                    <div className="w-full sm:w-auto mt-2 sm:mt-0">
+                        {step === 1 ? (
+                            <Button variant="ghost" className="w-full sm:w-auto text-muted-foreground" onClick={() => navigate('/assessments')}>
+                                Cancelar
+                            </Button>
+                        ) : (
+                            <Button variant="ghost" className="w-full sm:w-auto" onClick={prevStep}>
+                                <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
+                            </Button>
+                        )}
+                    </div>
+
+                    <div className="w-full sm:w-auto">
+                        {step < 3 ? (
+                            <Button onClick={nextStep} className="w-full sm:w-auto">
+                                Próximo <ChevronRight className="ml-2 h-4 w-4" />
+                            </Button>
+                        ) : (
+                            <Button onClick={handleCreate} disabled={loading} className="w-full sm:w-32">
+                                {loading ? 'Criando...' : 'Criar e Iniciar'}
+                            </Button>
+                        )}
+                    </div>
                 </CardFooter>
             </Card>
         </div>

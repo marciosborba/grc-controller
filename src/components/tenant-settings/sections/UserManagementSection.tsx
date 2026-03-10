@@ -42,18 +42,21 @@ import {
   Search,
   UserCheck,
   UserX,
-  MoreHorizontal
+  MoreHorizontal,
+  UserCog
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { usePermissions } from '@/hooks/usePermissions';
 import { PermissionsInfo } from './PermissionsInfo';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 interface User {
   id: string;
+  user_id: string; // auth.users UUID — necessário para impersonação
   email: string;
   full_name: string;
-  role: 'user' | 'admin' | 'tenant_admin';
+  role: 'user' | 'admin' | 'tenant_admin' | 'guest' | 'vendor';
   status: 'active' | 'inactive' | 'pending';
   last_login: string | null;
   created_at: string;
@@ -67,37 +70,135 @@ interface UserManagementSectionProps {
   onUserChange?: () => void;
   onSettingsChange?: () => void;
   onMetricsUpdate?: (metrics: { totalUsers: number; activeUsers: number }) => void;
+  defaultRoleFilter?: 'all' | 'user' | 'admin' | 'tenant_admin' | 'guest' | 'vendor';
 }
 
 export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   tenantId,
   onUserChange = () => { },
   onSettingsChange = () => { },
-  onMetricsUpdate = () => { }
+  onMetricsUpdate = () => { },
+  defaultRoleFilter = 'all'
 }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedRole, setSelectedRole] = useState<string>(defaultRoleFilter);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
-    role: 'user' as User['role'],
+    system_role: 'user' as 'user' | 'admin' | 'tenant_admin' | 'guest' | 'vendor',
+    tenant_role_id: '',
     department: '',
     phone: '',
-    send_invitation: true
+    job_title: '',
+    send_invitation: true,
+    permissions: [] as string[],
   });
+  const [tenantRoles, setTenantRoles] = useState<{ id: string; name: string; color: string; display_name?: string }[]>([]);
 
   // Hook de permissões
   const permissions = usePermissions();
+  const { user: authUser, checkModuleAccess } = useAuth();
+
+  // Fetch custom tenant roles for the role picker
+  const loadTenantRoles = async () => {
+    if (!tenantId) return;
+
+    // As funções RBAC do GRC são salvas em tenant_roles (configuradas na aba de Permissões)
+    const { data: legacyRoles, error } = await supabase
+      .from('tenant_roles')
+      .select('id, name, color')
+      .eq('tenant_id', tenantId)
+      .order('name');
+
+    if (error) {
+      console.error('Error loading tenant roles:', error);
+      return;
+    }
+
+    const roles = (legacyRoles || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      display_name: r.name,
+      color: r.color || '#64748b'
+    }));
+
+    setTenantRoles(roles);
+  };
+
+  // Verificar se é Super Admin Global diretamente no banco (evita problema de cache de auth)
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
+  useEffect(() => {
+    const checkPlatformAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      const { data } = await supabase
+        .from('platform_admins')
+        .select('user_id')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+      setIsPlatformAdmin(!!data);
+    };
+    checkPlatformAdmin();
+  }, []);
+
+  // Estado de impersonação
+  const [isImpersonating, setIsImpersonating] = useState<string | null>(null);
+
+  const handleImpersonateUser = async (targetUser: User) => {
+    if (!isPlatformAdmin) {
+      toast.error('Apenas Super Admins podem impersonar usuários');
+      return;
+    }
+    if (!targetUser.user_id || !targetUser.email) {
+      toast.error('Usuário não possui email ou ID de autenticação configurado.');
+      return;
+    }
+
+    try {
+      setIsImpersonating(targetUser.id);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Sessão inválida');
+
+      // Montar redirect URL com params para o banner detectar a sessão
+      const redirectUrl = new URL(window.location.origin);
+      redirectUrl.searchParams.set('impersonated', 'true');
+      redirectUrl.searchParams.set('impersonated_by', authUser?.email || '');
+      redirectUrl.searchParams.set('impersonated_user', targetUser.email);
+
+      const { data, error } = await supabase.functions.invoke('impersonate-user', {
+        body: {
+          target_user_id: targetUser.user_id,
+          reason: 'Teste via painel Super Admin',
+          redirect_url: redirectUrl.toString()
+        },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Falha ao gerar link de impersonação');
+
+      // Abrir em nova aba
+      window.open(data.impersonation_url, '_blank', 'noopener,noreferrer');
+      toast.success(`🎭 Sessão de impersonação aberta para ${targetUser.email}`);
+    } catch (err: any) {
+      toast.error(`Erro ao impersonar usuário: ${err.message}`);
+    } finally {
+      setIsImpersonating(null);
+    }
+  };
 
   useEffect(() => {
     loadUsers();
+    loadTenantRoles();
   }, [tenantId]);
 
   const loadUsers = async () => {
@@ -177,34 +278,48 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         // Encontrar último login do usuário
         const lastLogin = lastLoginsData.find(log => log.user_id === profile.user_id);
 
-        // Buscar roles do usuário
+        // Buscar roles do usuário (vindo do user_roles)
         const userRoles = userRolesData.filter(ur => ur.user_id === profile.user_id).map(ur => ur.role);
 
-        // Determinar role principal
+        // Determinar role principal - priorizando system_role da tabela profiles
         let role: User['role'] = 'user';
-        if (userRoles.includes('tenant_admin')) role = 'tenant_admin';
-        else if (userRoles.includes('admin')) role = 'admin';
-        else if (userRoles.includes('super_admin')) role = 'admin';
+
+        // 1. Prioridade para o system_role salvo no perfil (mais descritivo para a UI)
+        if (profile.system_role === 'tenant_admin') role = 'tenant_admin';
+        else if (profile.system_role === 'admin') role = 'admin';
+        else if (profile.system_role === 'guest') role = 'guest';
+        else if (profile.system_role === 'vendor') role = 'vendor';
+        // 2. Fallback para roles do banco (user_roles) se o profile estiver incompleto
+        else if (userRoles.includes('tenant_admin')) role = 'tenant_admin';
+        else if (userRoles.includes('admin') || userRoles.includes('super_admin')) role = 'admin';
+        else if (userRoles.includes('vendor')) role = 'vendor';
+        else if (userRoles.includes('guest')) role = 'guest';
 
         // Determinar status baseado no user_id e is_active
         let status: User['status'] = 'active';
         try {
           if (!profile.user_id) {
-            // Se não tem user_id, é um convite pendente
+            // Se não tem user_id, é um convite pendente sem conta criada
             status = 'pending';
           } else if (profile.is_active === false) {
-            // Se tem user_id mas is_active é false, usuário foi inativado
-            status = 'inactive';
+            // Guests/convidados com convite enviado mas não confirmado ainda
+            // aparecem como 'pending' para diferenciar de usuários inativados
+            if (profile.system_role === 'guest' || profile.must_change_password === true) {
+              status = 'pending';
+            } else {
+              status = 'inactive';
+            }
           } else {
-            // Se tem user_id e is_active é true, usuário está ativo
             status = 'active';
           }
         } catch (error) {
           status = 'active';
         }
 
+
         const processedUser = {
           id: profile.id || `unknown_${index}`,
+          user_id: profile.user_id || '', // auth.users UUID para impersonação
           email: profile.email || '',
           full_name: profile.full_name || 'Usuário sem nome',
           role,
@@ -254,115 +369,69 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     try {
       setIsCreating(true);
 
-      // Validações básicas
-      if (!formData.email || formData.email.trim() === '') {
-        toast.error('Email é obrigatório');
-        setIsCreating(false);
-        return;
-      }
+      if (!formData.email?.trim()) { toast.error('Email é obrigatório'); return; }
+      if (!formData.full_name?.trim()) { toast.error('Nome é obrigatório'); return; }
+      if (!tenantId) { toast.error('Tenant ID não encontrado'); return; }
 
-      if (!formData.full_name || formData.full_name.trim() === '') {
-        toast.error('Nome é obrigatório');
-        setIsCreating(false);
-        return;
-      }
-
-      if (!tenantId) {
-        toast.error('Erro: Tenant ID não encontrado');
-        setIsCreating(false);
-        return;
-      }
-
-      // Verificar se email já existe
-      const { data: existingUsers, error: checkError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', formData.email);
-
-      if (checkError) {
-        toast.error('Erro ao verificar email existente');
-        setIsCreating(false);
-        return;
-      } else if (existingUsers && existingUsers.length > 0) {
-        toast.error('Este email já está cadastrado');
-        setIsCreating(false);
-        return;
-      }
-
-      // Validar formato do email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        toast.error('Email inválido');
-        setIsCreating(false);
-        return;
-      }
+      if (!emailRegex.test(formData.email)) { toast.error('Email inválido'); return; }
 
-      // Verificar permissões usando o hook
-      if (permissions.isLoading) {
-        toast.error('Verificando permissões...');
-        setIsCreating(false);
-        return;
-      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) { toast.error('Sessão inválida'); return; }
 
-      if (!permissions.canAccessTenant(tenantId)) {
-        toast.error('Você não tem permissão para criar usuários nesta organização');
-        setIsCreating(false);
-        return;
-      }
-
-
-      // Verificar tenant
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('id, name')
-        .eq('id', tenantId)
-        .single();
-
-      if (tenantError || !tenantData) {
-        toast.error('Erro: Organização não encontrada');
-        setIsCreating(false);
-        return;
-      }
-
-      // PASSO 1: Criar profile sem user_id (convite)
-      const profileData = {
+      const payload = {
+        email: formData.email.trim().toLowerCase(),
         full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
+        job_title: formData.job_title?.trim() || undefined,
+        department: formData.department?.trim() || undefined,
+        phone: formData.phone?.trim() || undefined,
         tenant_id: tenantId,
-        is_active: false, // Inativo até completar registro
-        department: formData.department?.trim() || null,
-        phone: formData.phone?.trim() || null
-        // user_id não enviado (será null) - usuário se vincula quando fazer login
+        system_role: formData.system_role,
+        roles: [formData.system_role],
+        tenant_role_id: formData.tenant_role_id || undefined,
+        permissions: formData.permissions.length ? formData.permissions : undefined,
+        send_invitation: formData.send_invitation,
+        must_change_password: true,
       };
 
+      const response = await supabase.functions.invoke('create-user-admin', {
+        body: payload,
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      const { data: newProfile, error: insertError } = await supabase
-        .from('profiles')
-        .insert(profileData)
-        .select('*')
-        .single();
+      const { data, error } = response;
 
-      if (insertError) {
-        toast.error(`Erro Profile: ${insertError.message}`);
-        setIsCreating(false);
-        return;
+      // Supabase edge functions often pack the real error message inside the `error` object or its context
+      if (error) {
+        let errorMsg = error.message;
+        try {
+          // Attempt to parse if it's a context object containing JSON
+          if (error.context?.json) {
+            const body = await error.context.json();
+            if (body.error) errorMsg = body.error;
+          } else if (typeof error.context === 'string') {
+            const body = JSON.parse(error.context);
+            if (body.error) errorMsg = body.error;
+          }
+        } catch (e) { /* ignore parse errors */ }
+        throw new Error(errorMsg);
       }
 
+      if (!data?.success) throw new Error(data?.error || 'Erro ao criar usuário');
 
-      // Nota: Role será criada quando o usuário se registrar com um user_id válido
-
-      // Finalizar
       setIsCreateDialogOpen(false);
       resetForm();
       await loadUsers();
-      onUserChange();
-      onSettingsChange();
+      onUserChange?.();
 
-      toast.success('Convite criado! O usuário deve se registrar para ativar a conta.');
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      toast.error(`Erro inesperado: ${errorMessage}`);
+      if (formData.send_invitation) {
+        toast.success(`✅ Convite enviado para ${formData.email}! O usuário receberá um e-mail para definir sua senha.`);
+      } else {
+        toast.success('Usuário criado com sucesso!');
+      }
+    } catch (error: any) {
+      toast.error(`Erro: ${error.message}`);
     } finally {
       setIsCreating(false);
     }
@@ -419,11 +488,14 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
       // Atualizar no banco de dados se for usuário real (não temporário)
       if (!selectedUser.id.startsWith('temp_')) {
+        // Atualizar perfil na tabela profiles
         const updateData = {
           email: formData.email,
           full_name: formData.full_name,
           department: formData.department || null,
           phone: formData.phone || null,
+          system_role: formData.system_role, // Ensure system_role is sync'd in profiles table
+          custom_role_id: formData.tenant_role_id || null, // Salva o perfil RBAC customizado
           updated_at: new Date().toISOString()
         };
 
@@ -438,48 +510,68 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           return;
         }
 
-        // Atualizar role se necessário (tabela user_roles)
-        if (formData.role !== selectedUser.role) {
-          // Buscar user_id do profile
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('user_id')
-            .eq('id', selectedUser.id)
-            .single();
+        // Atualizar role do sistema se necessário (tabela user_roles)
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('user_id')
+          .eq('id', selectedUser.id)
+          .single();
 
-          if (profileData?.user_id) {
-            // Remover roles antigas
-            await supabase
-              .from('user_roles')
-              .delete()
-              .eq('user_id', profileData.user_id);
+        if (profileData?.user_id) {
+          // Deleta as roles atuais para este tenant
+          const { error: deleteError } = await supabase.from('user_roles').delete().eq('user_id', profileData.user_id).eq('tenant_id', tenantId);
 
-            // Adicionar nova role
-            await supabase
-              .from('user_roles')
-              .insert({
-                user_id: profileData.user_id,
-                role: formData.role,
-                tenant_id: tenantId,
-                created_at: new Date().toISOString()
-              });
+          if (deleteError) {
+            console.error('❌ [IAM] Erro ao deletar roles antigas:', deleteError);
+            toast.error('Erro ao limpar permissões anteriores');
+            setIsProcessing(false);
+            return;
+          }
+
+          // Mapear role do sistema para role do banco (enum app_role)
+          // tenant_admin -> admin
+          // guest -> user
+          const mapSystemRoleToDbRole = (role: string): string => {
+            if (role === 'tenant_admin') return 'admin';
+            if (role === 'guest') return 'user';
+            return role;
+          };
+
+          const dbRole = mapSystemRoleToDbRole(formData.system_role);
+
+          // Insere a nova configuração
+          const { error: insertError } = await supabase.from('user_roles').insert({
+            user_id: profileData.user_id,
+            role: dbRole,
+            tenant_id: tenantId,
+          });
+
+          if (insertError) {
+            console.error('❌ [IAM] Erro ao inserir nova role:', insertError);
+            // Se for erro de RLS ou trigger, mostrar mensagem mais clara
+            if (insertError.code === '42501') {
+              toast.error('Sem permissão de banco (RLS) para alterar cargos de terceiros');
+            } else {
+              toast.error(`Erro ao salvar novo cargo: ${insertError.message}`);
+            }
+            setIsProcessing(false);
+            return;
           }
         }
 
+        // Fechar diálogo e resetar estado
+        setIsEditDialogOpen(false);
+        setSelectedUser(null);
+        resetForm();
+
+        // Recarregar dados do banco para garantir sincronização
+        await loadUsers();
+
+        onUserChange();
+        onSettingsChange();
+
+        toast.success('Usuário atualizado com sucesso!');
       }
-
-      // Fechar diálogo e resetar estado
-      setIsEditDialogOpen(false);
-      setSelectedUser(null);
-      resetForm();
-
-      // Recarregar dados do banco para garantir sincronização
-      await loadUsers();
-
-      onUserChange();
-      onSettingsChange();
-
-      toast.success('Usuário atualizado com sucesso!');
     } catch (error) {
       toast.error('Erro ao atualizar usuário');
     } finally {
@@ -496,20 +588,22 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       if (!confirm(`Tem certeza que deseja excluir o convite para ${user.full_name}?\n\nEsta ação não pode ser desfeita.`)) return;
 
       try {
-        // Excluir permanentemente da tabela profiles (é apenas um convite)
-        const { error: deleteError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', userId);
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData?.session?.access_token;
+        if (!token) { toast.error('Sessão inválida'); return; }
 
-        if (deleteError) {
-          toast.error('Erro ao excluir convite: ' + deleteError.message);
-          return;
-        }
+        // Chamar edge function para deletar completamente (profiles + user_roles + auth.users)
+        const { data, error } = await supabase.functions.invoke('delete-user-admin', {
+          body: { profile_id: userId, user_id: user.user_id || null },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (error) throw new Error(error.message);
+        if (!data?.success) throw new Error(data?.error || 'Erro ao excluir convite');
 
         toast.success('Convite excluído com sucesso!');
-      } catch (error) {
-        toast.error('Erro inesperado ao excluir convite');
+      } catch (error: any) {
+        toast.error('Erro ao excluir convite: ' + error.message);
       }
     } else {
       // Para usuários ativos/inativos, apenas inativar
@@ -590,26 +684,46 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     setFormData({
       email: '',
       full_name: '',
-      role: 'user',
+      system_role: 'user',
+      tenant_role_id: '',
       department: '',
       phone: '',
-      send_invitation: true
+      job_title: '',
+      send_invitation: true,
+      permissions: [],
     });
   };
 
-  const openEditDialog = (user: User) => {
+  const openEditDialog = async (user: User) => {
     setSelectedUser(user);
 
-    const newFormData = {
+    // Buscar o custom_role_id atual do perfil
+    let currentTenantRoleId = '';
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('custom_role_id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData?.custom_role_id) {
+        currentTenantRoleId = profileData.custom_role_id;
+      }
+    } catch (e) {
+      console.warn("Could not fetch custom_role_id for user", e);
+    }
+
+    setFormData({
       email: user.email,
       full_name: user.full_name,
-      role: user.role,
+      system_role: user.role,
       department: user.department || '',
       phone: user.phone || '',
-      send_invitation: false
-    };
-
-    setFormData(newFormData);
+      send_invitation: false,
+      permissions: [],
+      job_title: '',
+      tenant_role_id: currentTenantRoleId,
+    });
     setIsEditDialogOpen(true);
   };
 
@@ -617,7 +731,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     switch (role) {
       case 'tenant_admin': return 'Admin da Organização';
       case 'admin': return 'Administrador';
-      case 'user': return 'Usuário';
+      case 'user': return 'Usuário Interno';
+      case 'guest': return 'Convidado (Risco)';
+      case 'vendor': return 'Fornecedor';
       default: return role;
     }
   };
@@ -646,7 +762,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
   }
 
   // Se não tem permissão, mostrar informações sobre permissões
-  if (!permissions.isLoading && !permissions.canAccessTenant(tenantId)) {
+  const hasAccessToUsers = checkModuleAccess('settings') || checkModuleAccess('users');
+
+  if (!isLoading && !hasAccessToUsers) {
     return (
       <div className="space-y-6">
         <PermissionsInfo />
@@ -673,14 +791,14 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="users" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
+      <Tabs defaultValue="users" className="space-y-4 sm:space-y-6">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Users className="h-3.5 w-3.5" />
             <span>Usuários</span>
           </TabsTrigger>
-          <TabsTrigger value="groups" className="flex items-center space-x-2">
-            <Users className="h-4 w-4" />
+          <TabsTrigger value="groups" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Users className="h-3.5 w-3.5" />
             <span>Grupos</span>
           </TabsTrigger>
         </TabsList>
@@ -707,82 +825,137 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                         Novo Usuário
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
+                    <DialogContent className="w-[95vw] max-w-[540px] max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
-                        <DialogTitle>Criar Novo Usuário</DialogTitle>
+                        <DialogTitle>Convidar Novo Usuário</DialogTitle>
                         <DialogDescription>
-                          Adicione um novo usuário à sua organização.
+                          Preencha os dados e defina as permissões. Um e-mail de convite será enviado para o usuário definir sua senha.
                         </DialogDescription>
                       </DialogHeader>
 
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            required
-                          />
+                      <div className="grid gap-4 py-2">
+                        {/* ── Dados básicos ── */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="email">E-mail *</Label>
+                            <Input
+                              id="email"
+                              type="email"
+                              placeholder="usuario@empresa.com"
+                              value={formData.email}
+                              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="full_name">Nome Completo *</Label>
+                            <Input
+                              id="full_name"
+                              placeholder="João Silva"
+                              value={formData.full_name}
+                              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                            />
+                          </div>
                         </div>
 
-                        <div className="grid gap-2">
-                          <Label htmlFor="full_name">Nome Completo</Label>
-                          <Input
-                            id="full_name"
-                            value={formData.full_name}
-                            onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                            required
-                          />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="job_title">Cargo</Label>
+                            <Input
+                              id="job_title"
+                              placeholder="Ex: Analista de Riscos"
+                              value={formData.job_title}
+                              onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                            />
+                          </div>
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="department">Departamento</Label>
+                            <Input
+                              id="department"
+                              placeholder="Ex: TI / Compliance"
+                              value={formData.department}
+                              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                            />
+                          </div>
                         </div>
 
-                        <div className="grid gap-2">
-                          <Label htmlFor="role">Função</Label>
-                          <Select
-                            value={formData.role}
-                            onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="user">Usuário</SelectItem>
-                              <SelectItem value="admin">Administrador</SelectItem>
-                              <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        {/* ── Função & Perfil ── */}
+                        <div className="border rounded-lg p-3 bg-muted/30 space-y-3">
+                          <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Função e Permissões</p>
+
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="system_role">Função do Sistema *</Label>
+                            <Select
+                              value={formData.system_role}
+                              onValueChange={(value) => setFormData({ ...formData, system_role: value as typeof formData.system_role })}
+                            >
+                              <SelectTrigger id="system_role">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="user">👤 Usuário Interno — acesso padrão</SelectItem>
+                                <SelectItem value="admin">🔑 Administrador — gerencia usuários e config.</SelectItem>
+                                <SelectItem value="tenant_admin">👑 Admin da Organização — acesso total</SelectItem>
+                                <SelectItem value="guest">🔗 Convidado — somente Portal de Riscos</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              {formData.system_role === 'user' && 'Acesso aos módulos configurados pela política RBAC da organização.'}
+                              {formData.system_role === 'admin' && 'Pode gerenciar usuários, grupos e configurações da organização.'}
+                              {formData.system_role === 'tenant_admin' && 'Controle total sobre configurações, usuários e dados da organização.'}
+                              {formData.system_role === 'guest' && 'Acesso restrito ao Portal de Riscos onde for parte interessada.'}
+                            </p>
+                          </div>
+
+                          {tenantRoles.length > 0 && (
+                            <div className="grid gap-1.5">
+                              <Label htmlFor="tenant_role_id">Perfil Customizado (opcional)</Label>
+                              <Select
+                                value={formData.tenant_role_id || 'none'}
+                                onValueChange={(v) => setFormData({ ...formData, tenant_role_id: v === 'none' ? '' : v })}
+                              >
+                                <SelectTrigger id="tenant_role_id">
+                                  <SelectValue placeholder="Nenhum perfil adicional" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Nenhum</SelectItem>
+                                  {tenantRoles.map(r => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color || '#6b7280' }} />
+                                        {r.name}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground">Perfis customizados são criados em Permissões › Funções.</p>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="grid gap-2">
-                          <Label htmlFor="department">Departamento</Label>
-                          <Input
-                            id="department"
-                            value={formData.department}
-                            onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="phone">Telefone</Label>
-                          <Input
-                            id="phone"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="flex items-center space-x-2">
+                        {/* ── Envio do convite ── */}
+                        <div className="flex items-start gap-3 rounded-lg border p-3 bg-blue-500/5 border-blue-500/20">
                           <Switch
                             id="send_invitation"
                             checked={formData.send_invitation}
                             onCheckedChange={(checked) => setFormData({ ...formData, send_invitation: checked })}
+                            className="mt-0.5"
                           />
-                          <Label htmlFor="send_invitation">Enviar convite por email</Label>
+                          <div>
+                            <Label htmlFor="send_invitation" className="cursor-pointer font-medium">
+                              Enviar convite por e-mail
+                            </Label>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {formData.send_invitation
+                                ? '✅ Um e-mail será enviado com o link para o usuário definir sua própria senha.'
+                                : 'O usuário será criado sem envio de convite. Você poderá enviar o acesso depois.'}
+                            </p>
+                          </div>
                         </div>
                       </div>
 
-                      <DialogFooter>
+
+                      <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                         <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                           Cancelar
                         </Button>
@@ -824,13 +997,71 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                     <SelectItem value="all">Todas as funções</SelectItem>
                     <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
                     <SelectItem value="admin">Administrador</SelectItem>
-                    <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="user">Usuário Interno</SelectItem>
+                    <SelectItem value="guest">Convidado (Risco)</SelectItem>
+                    <SelectItem value="vendor">Fornecedor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Tabela de Usuários */}
-              <div className="rounded-md border">
+              {/* ── MOBILE: cards ── */}
+              <div className="sm:hidden space-y-2">
+                {filteredUsers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    {searchTerm || selectedRole !== 'all'
+                      ? 'Nenhum usuário encontrado com os filtros aplicados.'
+                      : 'Nenhum usuário cadastrado.'}
+                  </div>
+                ) : filteredUsers.map((user) => (
+                  <div key={user.id} className="rounded-lg border p-3 bg-card space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm truncate">{user.full_name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                        {user.department && (
+                          <div className="text-xs text-muted-foreground truncate">{user.department}</div>
+                        )}
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(user); }}>
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        {user.status === 'pending' ? (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <>
+                            {isPlatformAdmin && user.email && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-orange-500" onClick={(e) => { e.stopPropagation(); handleImpersonateUser(user); }} disabled={isImpersonating === user.id}>
+                                {isImpersonating === user.id ? <span className="text-xs animate-pulse">...</span> : <UserCog className="h-3.5 w-3.5" />}
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleToggleUserStatus(user.id); }}>
+                              {user.status === 'active' ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <Badge variant="outline" className="text-xs">{getRoleLabel(user.role)}</Badge>
+                      {getStatusBadge(user.status)}
+                      {user.mfa_enabled ? (
+                        <Badge className="bg-green-600 text-white text-xs"><Shield className="h-3 w-3 mr-0.5" />MFA</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-orange-600 text-xs">Sem MFA</Badge>
+                      )}
+                      {user.last_login && (
+                        <span className="text-xs text-muted-foreground">Login: {new Date(user.last_login).toLocaleDateString('pt-BR')}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* ── DESKTOP: tabela ── */}
+              <div className="hidden sm:block rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -915,8 +1146,28 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             ) : (
-                              // Para usuários ativos/inativos: toggle status + inativar
+                              // Para usuários ativos/inativos: toggle status + botão impersonar
                               <>
+                                {/* 🎭 Botão Assumir - apenas Super Admin Global */}
+                                {isPlatformAdmin && user.email && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleImpersonateUser(user);
+                                    }}
+                                    disabled={isImpersonating === user.id}
+                                    title="Assumir identidade deste usuário para testes (Super Admin)"
+                                    className="text-orange-500 hover:text-orange-600"
+                                  >
+                                    {isImpersonating === user.id ? (
+                                      <span className="text-xs animate-pulse">...</span>
+                                    ) : (
+                                      <UserCog className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -943,7 +1194,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
               </div>
 
               {filteredUsers.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="hidden sm:block text-center py-8 text-muted-foreground">
                   {searchTerm || selectedRole !== 'all'
                     ? 'Nenhum usuário encontrado com os filtros aplicados.'
                     : 'Nenhum usuário cadastrado.'
@@ -955,7 +1206,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
           {/* Dialog de Edição */}
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="w-[95vw] max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>Editar Usuário</DialogTitle>
                 <DialogDescription>
@@ -988,19 +1239,49 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                 <div className="grid gap-2">
                   <Label htmlFor="edit_role">Função</Label>
                   <Select
-                    value={formData.role}
-                    onValueChange={(value) => setFormData({ ...formData, role: value as User['role'] })}
+                    value={formData.system_role}
+                    onValueChange={(value) => setFormData({ ...formData, system_role: value as typeof formData.system_role })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">Usuário</SelectItem>
+                      <SelectItem value="user">Usuário Interno</SelectItem>
                       <SelectItem value="admin">Administrador</SelectItem>
                       <SelectItem value="tenant_admin">Admin da Organização</SelectItem>
+                      <SelectItem value="guest">Convidado (Risco)</SelectItem>
+                      <SelectItem value="vendor">Fornecedor</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                {tenantRoles.length > 0 && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit_tenant_role">Perfil Customizado (opcional)</Label>
+                    <Select
+                      value={formData.tenant_role_id || 'none'}
+                      onValueChange={(v) => setFormData({ ...formData, tenant_role_id: v === 'none' ? '' : v })}
+                    >
+                      <SelectTrigger id="edit_tenant_role">
+                        <SelectValue placeholder="Nenhum perfil adicional" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {tenantRoles.map((role) => (
+                          <SelectItem key={role.id} value={role.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full shrink-0"
+                                style={{ backgroundColor: role.color }}
+                              />
+                              <span className="truncate">{role.display_name || role.name}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="grid gap-2">
                   <Label htmlFor="edit_department">Departamento</Label>
@@ -1021,7 +1302,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                 </div>
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
                 <Button
                   variant="outline"
                   onClick={() => setIsEditDialogOpen(false)}

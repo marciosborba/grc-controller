@@ -5,10 +5,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContextOptimized';
-import { 
-  Notification, 
-  NotificationFilters, 
-  NotificationStats, 
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Notification as AppNotification,
+  NotificationFilters,
+  NotificationStats,
   NotificationPreferences,
   CreateNotificationPayload,
   UpdateNotificationPayload,
@@ -19,8 +20,8 @@ import {
   NotificationType
 } from '@/types/notifications';
 
-// Mock data para desenvolvimento - substituir por API real
-const MOCK_NOTIFICATIONS: Notification[] = [
+// Mock data para desenvolvimento
+const MOCK_NOTIFICATIONS: AppNotification[] = [
   {
     id: '1',
     type: 'assessment_due',
@@ -164,7 +165,6 @@ const MOCK_NOTIFICATIONS: Notification[] = [
     createdAt: new Date(Date.now() - 14400000).toISOString(),
     updatedAt: new Date(Date.now() - 14400000).toISOString(),
     metadata: {
-      source: 'backup_service',
       category: 'backup',
       customFields: {
         backupId: 'backup_20240816',
@@ -191,44 +191,44 @@ const MOCK_NOTIFICATIONS: Notification[] = [
 
 interface UseNotificationsReturn {
   // Estado das notificações
-  notifications: Notification[];
+  notifications: AppNotification[];
   loading: boolean;
   error: string | null;
-  
+
   // Estatísticas
   stats: NotificationStats;
   unreadCount: number;
-  
+
   // Ações CRUD
   createNotification: (payload: CreateNotificationPayload) => Promise<void>;
   updateNotification: (id: string, payload: UpdateNotificationPayload) => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
-  
+
   // Ações de estado
   markAsRead: (id: string) => Promise<void>;
   markAsUnread: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   archiveNotification: (id: string) => Promise<void>;
   dismissNotification: (id: string) => Promise<void>;
-  
+
   // Busca e filtros
   searchNotifications: (query: string) => void;
   filterNotifications: (filters: NotificationFilters) => void;
   clearFilters: () => void;
-  
+
   // Preferências
   preferences: NotificationPreferences | null;
   updatePreferences: (preferences: Partial<NotificationPreferences>) => Promise<void>;
-  
+
   // Utilitários
   refreshNotifications: () => Promise<void>;
-  getNotificationById: (id: string) => Notification | undefined;
+  getNotificationById: (id: string) => AppNotification | undefined;
   executeAction: (notificationId: string, actionId: string) => Promise<void>;
 }
 
 export const useNotifications = (): UseNotificationsReturn => {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -239,17 +239,17 @@ export const useNotifications = (): UseNotificationsReturn => {
   const stats = useMemo((): NotificationStats => {
     const total = notifications.length;
     const unread = notifications.filter(n => n.status === 'unread').length;
-    
+
     const byPriority = notifications.reduce((acc, notification) => {
       acc[notification.priority] = (acc[notification.priority] || 0) + 1;
       return acc;
     }, {} as Record<NotificationPriority, number>);
-    
+
     const byModule = notifications.reduce((acc, notification) => {
       acc[notification.module] = (acc[notification.module] || 0) + 1;
       return acc;
     }, {} as Record<NotificationModule, number>);
-    
+
     const byStatus = notifications.reduce((acc, notification) => {
       acc[notification.status] = (acc[notification.status] || 0) + 1;
       return acc;
@@ -261,7 +261,7 @@ export const useNotifications = (): UseNotificationsReturn => {
       return dueDate && new Date(dueDate).getTime() < now;
     }).length;
 
-    const actionRequired = notifications.filter(n => 
+    const actionRequired = notifications.filter(n =>
       n.status === 'unread' && n.actions && n.actions.length > 0
     ).length;
 
@@ -278,44 +278,51 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   const unreadCount = stats.unread;
 
-  // Carregar notificações (mock)
+  // Carregar notificações reais do Supabase
   const loadNotifications = useCallback(async () => {
+    if (!user?.id) return;
+
     try {
       setLoading(true);
       setError(null);
-      
-      // Simular delay da API
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Filtrar por usuário atual
-      let userNotifications = MOCK_NOTIFICATIONS.filter(n => n.userId === 'current-user');
-      
-      // Aplicar filtros
+
+      let query = supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
       if (filters.status?.length) {
-        userNotifications = userNotifications.filter(n => filters.status!.includes(n.status));
+        query = query.in('status', filters.status);
       }
-      
       if (filters.priority?.length) {
-        userNotifications = userNotifications.filter(n => filters.priority!.includes(n.priority));
+        query = query.in('priority', filters.priority);
       }
-      
       if (filters.module?.length) {
-        userNotifications = userNotifications.filter(n => filters.module!.includes(n.module));
+        query = query.in('module', filters.module);
       }
-      
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) throw fetchError;
+
+      let userNotifications = (data as any[])?.map(n => ({
+        ...n,
+        priority: n.priority as NotificationPriority,
+        module: n.module as NotificationModule,
+        status: n.status as NotificationStatus,
+        createdAt: n.created_at,
+        updatedAt: n.created_at, // Map if you have updated_at
+      })) as AppNotification[] || [];
+
       if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        userNotifications = userNotifications.filter(n => 
-          n.title.toLowerCase().includes(query) || 
-          n.message.toLowerCase().includes(query)
+        const q = searchQuery.toLowerCase();
+        userNotifications = userNotifications.filter(n =>
+          n.title.toLowerCase().includes(q) ||
+          n.message.toLowerCase().includes(q)
         );
       }
-      
-      // Ordenar por data de criação (mais recentes primeiro)
-      userNotifications.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      
+
       setNotifications(userNotifications);
     } catch (err) {
       setError('Erro ao carregar notificações');
@@ -323,28 +330,42 @@ export const useNotifications = (): UseNotificationsReturn => {
     } finally {
       setLoading(false);
     }
-  }, [filters, searchQuery]);
+  }, [user?.id, filters, searchQuery]);
 
-  // Carregar preferências do usuário
+  // Carregar preferências do usuário do Supabase
   const loadPreferences = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      // Mock de preferências - em produção seria carregado da API
-      const mockPreferences: NotificationPreferences = {
-        userId: user?.id || 'current-user',
+      const { data, error: fetchError } = await supabase
+        .from('profiles')
+        .select('notification_preferences')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') throw fetchError;
+
+      const defaultPreferences: NotificationPreferences = {
+        userId: user.id,
         moduleSettings: {
-          assessments: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: false, digestMode: 'immediate' },
-          risks: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: true, digestMode: 'immediate' },
-          compliance: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: false, digestMode: 'daily' },
-          policies: { enabled: true, emailEnabled: true, pushEnabled: false, smsEnabled: false, digestMode: 'weekly' },
-          privacy: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: true, digestMode: 'immediate' },
-          audit: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: false, digestMode: 'daily' },
-          users: { enabled: true, emailEnabled: false, pushEnabled: true, smsEnabled: false, digestMode: 'immediate' },
-          system: { enabled: true, emailEnabled: false, pushEnabled: true, smsEnabled: false, digestMode: 'hourly' },
-          'general-settings': { enabled: true, emailEnabled: false, pushEnabled: false, smsEnabled: false, digestMode: 'daily' },
-          frameworks: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: false, digestMode: 'immediate' },
-          incidents: { enabled: true, emailEnabled: true, pushEnabled: true, smsEnabled: true, digestMode: 'immediate' }
+          assessments: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'immediate' },
+          risks: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'immediate' },
+          compliance: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'daily' },
+          policies: { enabled: true, emailEnabled: true, pushEnabled: false, digestMode: 'weekly' },
+          privacy: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'immediate' },
+          audit: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'daily' },
+          users: { enabled: true, emailEnabled: false, pushEnabled: true, digestMode: 'immediate' },
+          system: { enabled: true, emailEnabled: false, pushEnabled: true, digestMode: 'hourly' },
+          'general-settings': { enabled: true, emailEnabled: false, pushEnabled: false, digestMode: 'daily' },
+          frameworks: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'immediate' },
+          incidents: { enabled: true, emailEnabled: true, pushEnabled: true, digestMode: 'immediate' }
         },
-        typeSettings: {} as any, // Seria preenchido com configurações específicas por tipo
+        granularEvents: {
+          actionPlanDue: { enabled: true, emailEnabled: true, pushEnabled: true },
+          criticalRisk: { enabled: true, emailEnabled: true, pushEnabled: true },
+          policyApproval: { enabled: true, emailEnabled: true, pushEnabled: true },
+          riskLetterPending: { enabled: true, emailEnabled: true, pushEnabled: true }
+        },
+        typeSettings: {} as any,
         globalSettings: {
           maxNotificationsPerPage: 50,
           autoMarkAsRead: false,
@@ -354,8 +375,12 @@ export const useNotifications = (): UseNotificationsReturn => {
           enableDesktopNotifications: true
         }
       };
-      
-      setPreferences(mockPreferences);
+
+      const loadedPrefs: NotificationPreferences = data?.notification_preferences
+        ? { ...defaultPreferences, ...(data.notification_preferences as any) }
+        : defaultPreferences;
+
+      setPreferences(loadedPrefs);
     } catch (err) {
       console.error('Erro ao carregar preferências:', err);
     }
@@ -363,34 +388,70 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Ações CRUD
   const createNotification = useCallback(async (payload: CreateNotificationPayload): Promise<void> => {
+    if (!user?.id) return;
     try {
-      // Em produção, fazer POST para API
-      const newNotification: Notification = {
-        id: `notif_${Date.now()}`,
-        ...payload,
-        status: 'unread',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      setNotifications(prev => [newNotification, ...prev]);
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: payload.userId || user.id,
+          type: payload.type,
+          module: payload.module,
+          title: payload.title,
+          message: payload.message,
+          priority: payload.priority,
+          status: 'unread',
+          metadata: payload.metadata as any
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const newNotification: AppNotification = {
+          ...data,
+          priority: data.priority as NotificationPriority,
+          module: data.module as NotificationModule,
+          status: data.status as NotificationStatus,
+          createdAt: data.created_at,
+          updatedAt: data.created_at
+        } as AppNotification;
+        setNotifications(prev => [newNotification, ...prev]);
+      }
     } catch (err) {
       setError('Erro ao criar notificação');
       throw err;
     }
-  }, []);
+  }, [user?.id]);
 
   const updateNotification = useCallback(async (id: string, payload: UpdateNotificationPayload): Promise<void> => {
     try {
       console.log('📝 Atualizando notificação:', id, payload);
-      setNotifications(prev => prev.map(notification => 
-        notification.id === id 
-          ? { 
-              ...notification, 
-              ...payload, 
-              metadata: payload.metadata ? { ...notification.metadata, ...payload.metadata } : notification.metadata,
-              updatedAt: new Date().toISOString() 
-            }
+
+      // Map frontend fields to DB fields
+      const dbPayload: any = {};
+      if (payload.status) dbPayload.status = payload.status;
+      if (payload.priority) dbPayload.priority = payload.priority;
+      if (payload.metadata) {
+        const currentNotif = notifications.find(n => n.id === id);
+        dbPayload.metadata = { ...(currentNotif?.metadata || {}), ...payload.metadata };
+      }
+
+      const { error } = await supabase
+        .from('notifications')
+        .update(dbPayload)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.map(notification =>
+        notification.id === id
+          ? {
+            ...notification,
+            ...payload,
+            metadata: payload.metadata ? { ...notification.metadata, ...payload.metadata } : notification.metadata,
+            updatedAt: new Date().toISOString()
+          }
           : notification
       ));
       console.log('✅ Notificação atualizada com sucesso');
@@ -399,10 +460,12 @@ export const useNotifications = (): UseNotificationsReturn => {
       setError('Erro ao atualizar notificação');
       throw err;
     }
-  }, []);
+  }, [notifications]);
 
   const deleteNotification = useCallback(async (id: string): Promise<void> => {
     try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (error) throw error;
       setNotifications(prev => prev.filter(notification => notification.id !== id));
     } catch (err) {
       setError('Erro ao excluir notificação');
@@ -413,9 +476,8 @@ export const useNotifications = (): UseNotificationsReturn => {
   // Ações de estado
   const markAsRead = useCallback(async (id: string): Promise<void> => {
     console.log('🔵 Marcando notificação como lida:', id);
-    await updateNotification(id, { 
-      status: 'read',
-      readAt: new Date().toISOString() // Diretamente na notificação, não em metadata
+    await updateNotification(id, {
+      status: 'read'
     });
   }, [updateNotification]);
 
@@ -452,21 +514,39 @@ export const useNotifications = (): UseNotificationsReturn => {
 
   // Preferências
   const updatePreferences = useCallback(async (newPreferences: Partial<NotificationPreferences>): Promise<void> => {
+    if (!user?.id) return;
     try {
-      setPreferences(prev => prev ? { ...prev, ...newPreferences } : null);
-      // Em produção, fazer PUT para API
+      const updatedPrefs = { ...preferences, ...newPreferences };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ notification_preferences: updatedPrefs as any })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setPreferences(updatedPrefs as NotificationPreferences);
+
+      // Request Push Notification permission if Push is enabled
+      const needsPush = Object.values(updatedPrefs.moduleSettings || {}).some(s => s.pushEnabled) ||
+        Object.values(updatedPrefs.granularEvents || {}).some(g => g.pushEnabled);
+
+      if (needsPush && 'Notification' in window && Notification.permission !== 'granted') {
+        await Notification.requestPermission();
+      }
+
     } catch (err) {
       setError('Erro ao atualizar preferências');
       throw err;
     }
-  }, []);
+  }, [preferences, user?.id]);
 
   // Utilitários
   const refreshNotifications = useCallback(async (): Promise<void> => {
     await loadNotifications();
   }, [loadNotifications]);
 
-  const getNotificationById = useCallback((id: string): Notification | undefined => {
+  const getNotificationById = useCallback((id: string): AppNotification | undefined => {
     return notifications.find(notification => notification.id === id);
   }, [notifications]);
 
@@ -474,10 +554,10 @@ export const useNotifications = (): UseNotificationsReturn => {
     try {
       const notification = getNotificationById(notificationId);
       if (!notification) throw new Error('Notificação não encontrada');
-      
+
       const action = notification.actions?.find(a => a.id === actionId);
       if (!action) throw new Error('Ação não encontrada');
-      
+
       // Executar ação baseada no tipo
       switch (action.action) {
         case 'acknowledge':

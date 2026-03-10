@@ -1,0 +1,9 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  load multiple .env files with { path: ['.env.local', '.env'] }
+=== HUMAN READABLE RLS POLICIES ===
+Policy: Users can manage risk_registration_action_plans from their tena
+Command: *
+Qual: (tenant_id IN ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))
+WithCheck: null
+

@@ -958,51 +958,51 @@ export const SystemSecuritySection = () => {
   return (
     <div className="space-y-6">
       {/* Security Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium">MFA Ativado</CardTitle>
             <Key className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{mfaPercentage.toFixed(0)}%</div>
             <Progress value={mfaPercentage} className="mt-2" />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               {securityMetrics.mfaEnabled} de {securityMetrics.mfaTotal} usuários
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium">Logins Falhados</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{securityMetrics.failedLogins24h}</div>
-            <p className="text-xs text-muted-foreground">últimas 24 horas</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">últimas 24 horas</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium">Sessões Ativas</CardTitle>
             <Activity className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{securityMetrics.activeSessionsCount}</div>
-            <p className="text-xs text-muted-foreground">usuários conectados</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">usuários conectados</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 sm:pb-2 p-3 sm:p-6 sm:pb-2">
             <CardTitle className="text-sm font-medium">Alertas Abertos</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">{securityMetrics.securityAlertsOpen}</div>
-            <p className="text-xs text-muted-foreground">requerem atenção</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">requerem atenção</p>
           </CardContent>
         </Card>
       </div>
@@ -1088,7 +1088,7 @@ export const SystemSecuritySection = () => {
                     <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium">{event.description}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
                         {event.user_name} • {formatLastActivity(event.created_at)}
                       </p>
                     </div>
@@ -1158,7 +1158,7 @@ export const SystemSecuritySection = () => {
                         <div className="flex flex-col items-center space-y-2">
                           <CheckCircle className="h-8 w-8 text-green-500" />
                           <span className="text-muted-foreground">Nenhum evento de segurança encontrado</span>
-                          <span className="text-xs text-muted-foreground">Isso é uma boa notícia!</span>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">Isso é uma boa notícia!</span>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -1170,7 +1170,7 @@ export const SystemSecuritySection = () => {
                             <span className="text-sm font-medium">
                               {new Date(event.created_at).toLocaleDateString('pt-BR')}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">
                               {new Date(event.created_at).toLocaleTimeString('pt-BR', {
                                 hour: '2-digit',
                                 minute: '2-digit'

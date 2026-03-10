@@ -134,17 +134,17 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
   const { filters, setFilters } = useRiskFilters();
 
-  // Ações rápidas integradas e organizadas
   const getQuickActions = (): QuickAction[] => [
     // Ações Primárias
     {
       id: 'register-risk',
       title: 'Registrar Risco',
-      description: 'Criação manual de risco',
+      description: 'Assistente Inteligente',
       icon: Plus,
       color: 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700',
-      action: () => handleRegisterRisk(),
-      category: 'primary'
+      action: () => handleAlexAnalysis(),
+      category: 'primary',
+      badge: 'IA Integrada'
     },
     {
       id: 'action-plans-management',
@@ -192,16 +192,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       category: 'secondary',
       badge: '50+ templates'
     },
-    {
-      id: 'reports',
-      title: 'Relatórios',
-      description: 'Dashboards executivos',
-      icon: BarChart3,
-      color: 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700',
-      action: () => handleReports(),
-      category: 'secondary',
-      badge: metrics?.totalRisks > 0 ? metrics.totalRisks : undefined
-    },
+
 
     // Integrações
     {
@@ -237,16 +228,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
   ];
 
   // Handlers melhorados
-  const handleRegisterRisk = () => {
-    console.log('handleRegisterRisk chamado - abrindo Processo Manual Guiado com biblioteca de riscos');
-    setGuidedCreationOpen(true);
-
-    toast({
-      title: '📋 Registro Manual de Risco',
-      description: 'Abrindo processo guiado com integração à biblioteca de riscos e metodologias...',
-    });
-  };
-
   const handleRiskLibrary = () => {
     setLibraryDialogOpen(true);
 
@@ -268,8 +249,8 @@ export const RiskManagementCenterImproved: React.FC = () => {
     console.log('handleAlexAnalysis chamado - abrindo processo guiado');
     setProcessDialogOpen(true);
     toast({
-      title: '🧠 Análise Alex Risk',
-      description: 'Abrindo processo guiado com assistência de IA...',
+      title: '🎯 Novo Registro de Risco',
+      description: 'Abrindo formulário de registro de risco...',
     });
   };
 
@@ -310,7 +291,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       case 'dashboard': return 'Dashboard Executivo';
       case 'table': return 'Lista Detalhada';
       case 'kanban': return 'Kanban Board';
-      case 'process': return 'Processo Guiado com Alex Risk';
+      case 'process': return 'Novo Registro de Risco';
       case 'matrix': return 'Matriz de Risco';
       case 'documentation': return 'Documentação Completa';
       case 'library': return 'Biblioteca de Riscos';
@@ -347,27 +328,23 @@ export const RiskManagementCenterImproved: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold truncate">Gestão de Riscos - Centro Integrado</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Plataforma unificada com Alex Risk para gestão completa de riscos corporativos
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">Gestão de Riscos - Centro Integrado</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm lg:text-base mt-0.5 sm:mt-0">
+            Plataforma Unificada para Gestão de Riscos Corporativos
           </p>
 
           {/* Status do Sistema Melhorado */}
-          <div className="flex items-center space-x-4 text-sm">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-4 text-xs sm:text-sm">
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-green-600 dark:text-green-400 font-medium">Sistema Operacional</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Activity className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+              <Activity className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500 dark:text-blue-400" />
               <span>{risks.length} riscos monitorados</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Brain className="h-4 w-4 text-purple-500 dark:text-purple-400" />
-              <span>Alex Risk {alexRiskActive ? 'ativo' : 'standby'}</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Clock className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500 dark:text-orange-400" />
               <span>Última sync: agora</span>
             </div>
           </div>
@@ -375,26 +352,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
         {/* Controles do Header Melhorados */}
         <div className="flex items-center space-x-2">
-          {/* Alex Risk sempre disponível */}
-          <ImprovedAIChatDialog
-            type="risk"
-            context={{
-              totalRisks: metrics?.totalRisks || 0,
-              highRisks: metrics?.risksByLevel?.['Alto'] || 0,
-              overdueActions: metrics?.overdueActivities || 0,
-              currentView: viewMode
-            }}
-            trigger={
-              <Button variant="outline" className="flex items-center space-x-2 hover:bg-purple-50 dark:hover:bg-purple-950/50 transition-colors border-purple-200 dark:border-purple-800">
-                <div className="p-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
-                  <Brain className="h-3 w-3 text-white" />
-                </div>
-                <span>Alex Risk</span>
-                <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400">IA</Badge>
-              </Button>
-            }
-          />
-
           {/* Painel de Notificações */}
           <NotificationPanel />
         </div>
@@ -404,165 +361,58 @@ export const RiskManagementCenterImproved: React.FC = () => {
       <QuickMetrics metrics={metrics} isLoading={isLoadingMetrics} />
 
       {/* Ações Rápidas Organizadas */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
-            <span>Centro de Ações Integradas</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Ações Primárias */}
-          <div className="mb-6">
-            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Ações Principais</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {getQuickActions().filter(action => action.category === 'primary').map((action) => {
-                const Icon = action.icon;
+      <div className="mb-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
+          <h2 className="text-lg font-semibold">Centro de Ações Integradas</h2>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+          {getQuickActions().map((action) => {
+            const Icon = action.icon;
 
-                // Extraindo cor base do gradiente (fallback simples)
-                const baseColorClass = action.color.includes('blue') ? 'blue' :
-                  action.color.includes('purple') ? 'purple' :
-                    action.color.includes('green') ? 'green' : 'gray';
-
-                return (
-                  <Card
-                    key={action.id}
-                    className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500`}
-                    onClick={action.action}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Icon className={`h-24 w-24 text-${baseColorClass}-500`} />
-                    </div>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className={`p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors`}>
-                          <Icon className={`h-6 w-6 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
-                        </div>
-                        {action.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        {action.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center text-sm font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
-                          Acessar <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700`}>
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Ações Secundárias */}
-          <div className="mb-6">
-            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Análise e Relatórios</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {getQuickActions().filter(action => action.category === 'secondary').map((action) => {
-                const Icon = action.icon;
-
-                // Extraindo cor base do gradiente (fallback simples)
-                const baseColorClass = action.color.includes('orange') || action.color.includes('red') ? 'orange' :
-                  action.color.includes('cyan') || action.color.includes('blue') ? 'cyan' :
+            const baseColorClass = action.color.includes('blue') ? 'blue' :
+              action.color.includes('purple') ? 'purple' :
+                action.color.includes('green') || action.color.includes('emerald') ? 'emerald' :
+                  action.color.includes('orange') || action.color.includes('amber') || action.color.includes('red') ? 'orange' :
                     action.color.includes('indigo') ? 'indigo' : 'gray';
 
-                return (
-                  <Card
-                    key={action.id}
-                    className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500`}
-                    onClick={action.action}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Icon className={`h-24 w-24 text-${baseColorClass}-500`} />
+            return (
+              <Card
+                key={action.id}
+                className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500 flex flex-col`}
+                onClick={action.action}
+              >
+                <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Icon className={`h-16 w-16 sm:h-24 sm:w-24 text-${baseColorClass}-500`} />
+                </div>
+                <CardHeader className="p-3 sm:p-5 pb-1 sm:pb-2">
+                  <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 text-sm sm:text-base leading-tight">
+                    <div className={`p-1.5 sm:p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors shrink-0`}>
+                      <Icon className={`h-4 w-4 sm:h-5 sm:w-5 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
                     </div>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className={`p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors`}>
-                          <Icon className={`h-6 w-6 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
-                        </div>
-                        {action.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        {action.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center text-sm font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
-                          Visualizar <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700`}>
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Integrações */}
-          <div>
-            <h4 className="text-sm font-medium text-muted-foreground mb-3 uppercase tracking-wide">Workflow Integrado</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {getQuickActions().filter(action => action.category === 'integration').map((action) => {
-                const Icon = action.icon;
-
-                // Extraindo cor base do gradiente (fallback simples)
-                const baseColorClass = action.color.includes('emerald') || action.color.includes('green') ? 'emerald' :
-                  action.color.includes('amber') || action.color.includes('orange') ? 'amber' :
-                    action.color.includes('pink') || action.color.includes('red') ? 'pink' : 'gray';
-
-                return (
-                  <Card
-                    key={action.id}
-                    className={`relative overflow-hidden group hover:shadow-lg transition-all cursor-pointer border-t-4 border-t-${baseColorClass}-500`}
-                    onClick={action.action}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Icon className={`h-24 w-24 text-${baseColorClass}-500`} />
+                    <span className="font-semibold line-clamp-2 sm:line-clamp-1">{action.title}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-5 pt-1 sm:pt-2 flex flex-col flex-1 justify-between">
+                  <p className="text-muted-foreground mb-3 text-[10px] sm:text-xs leading-relaxed line-clamp-2 flex-1">
+                    {action.description}
+                  </p>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-auto">
+                    <div className={`flex items-center text-[10px] sm:text-xs font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
+                      Acessar <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
                     </div>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-3 text-lg">
-                        <div className={`p-2 rounded-lg bg-${baseColorClass}-100 dark:bg-${baseColorClass}-900/20 group-hover:bg-${baseColorClass}-200 dark:group-hover:bg-${baseColorClass}-900/40 transition-colors`}>
-                          <Icon className={`h-6 w-6 text-${baseColorClass}-600 dark:text-${baseColorClass}-400`} />
-                        </div>
-                        {action.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground mb-4 text-sm">
-                        {action.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className={`flex items-center text-sm font-medium text-${baseColorClass}-600 group-hover:translate-x-1 transition-transform`}>
-                          Gerenciar <ArrowRight className="h-4 w-4 ml-1" />
-                        </div>
-                        {action.badge && (
-                          <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700`}>
-                            {action.badge}
-                          </Badge>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                    {action.badge && (
+                      <Badge variant="secondary" className={`bg-${baseColorClass}-50 text-${baseColorClass}-700 text-[9px] sm:text-[10px] px-1.5 py-0 h-4 sm:h-5`}>
+                        {action.badge}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Área Principal de Conteúdo */}
       <div className="space-y-6">
@@ -571,32 +421,33 @@ export const RiskManagementCenterImproved: React.FC = () => {
           {/* Navegação de Views */}
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
                 <div className="flex items-center space-x-2">
-                  <h3 className="text-lg font-semibold">
+                  <h3 className="text-base sm:text-lg font-semibold truncate max-w-[150px] sm:max-w-none">
                     {getViewTitle(viewMode)}
                   </h3>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs">
                     {viewMode}
                   </Badge>
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center justify-start sm:justify-end gap-1 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
                   {(['dashboard', 'table', 'kanban', 'process', 'matrix'] as ViewMode[]).map((view) => {
                     const Icon = getViewIcon(view);
                     return (
                       <Button
                         key={view}
                         variant={viewMode === view ? "default" : "outline"}
-                        size="sm"
+                        size="icon"
                         onClick={() => changeViewMode(view)}
-                        className="flex items-center space-x-1"
+                        className={`h-8 w-8 sm:h-9 text-xs flex-shrink-0 ${viewMode === view ? '' : 'text-muted-foreground'} sm:w-auto sm:px-3 sm:space-x-2`}
+                        title={view}
                       >
                         <Icon className="h-4 w-4" />
                         <span className="hidden sm:inline">
                           {view === 'dashboard' && 'Dashboard'}
                           {view === 'table' && 'Lista'}
                           {view === 'kanban' && 'Kanban'}
-                          {view === 'process' && 'Processo'}
+                          {view === 'process' && 'Registro'}
                           {view === 'matrix' && 'Matriz'}
                         </span>
                       </Button>
@@ -606,107 +457,109 @@ export const RiskManagementCenterImproved: React.FC = () => {
               </div>
 
               {/* Busca e Filtros Compactos */}
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-4">
                 {/* Campo de busca */}
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
-                    <Input
-                      placeholder="Pesquisar riscos por nome, categoria ou responsável..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Pesquisar riscos..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-10 w-full"
+                  />
+                </div>
+
+                {/* Filtros ativos e ações */}
+                <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+                  {/* Mostrar filtros ativos apenas em desktop ou se houver espaço */}
+                  <div className="hidden md:flex items-center gap-2">
+                    {filters?.categories && filters.categories.length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <Target className="h-3 w-3" />
+                        <span>{filters.categories.length} categoria(s)</span>
+                      </Badge>
+                    )}
+                    {filters?.levels && filters.levels.length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>{filters.levels.length} nível(is)</span>
+                      </Badge>
+                    )}
+                    {filters?.statuses && filters.statuses.length > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        <span>{filters.statuses.length} status</span>
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {/* Contador de resultados */}
+                    <Badge variant="outline" className="h-10 px-3 flex-1 sm:flex-none justify-center whitespace-nowrap text-sm bg-muted/20">
+                      {risks.length} riscos
+                    </Badge>
+
+                    {/* Botão de filtros */}
+                    <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="flex-1 sm:flex-none h-10 px-4 flex items-center gap-2 bg-muted/20 hover:bg-muted/50">
+                          <Filter className="h-4 w-4" />
+                          <span>Filtros</span>
+                          {((filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)) > 0 && (
+                            <Badge className="ml-1 px-1.5 h-5 flex items-center justify-center text-[10px] bg-primary text-primary-foreground border-none">
+                              {(filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)}
+                            </Badge>
+                          )}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center space-x-2">
+                            <Filter className="h-5 w-5" />
+                            <span>Filtros de Riscos</span>
+                          </DialogTitle>
+                          <DialogDescription>
+                            Refine sua busca por categoria, nível de risco, status e outros critérios.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-6 py-4">
+                          <RiskFilters
+                            filters={filters}
+                            onFiltersChange={setFilters}
+                            searchTerm={searchTerm}
+                            onSearchChange={setSearchTerm}
+                            onClose={() => setFilterDialogOpen(false)}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between pt-4 border-t">
+                          <div className="text-sm text-muted-foreground">
+                            {risks.length} risco(s) encontrado(s)
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setFilters({});
+                                setSearchTerm('');
+                              }}
+                            >
+                              Limpar tudo
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => setFilterDialogOpen(false)}
+                            >
+                              Aplicar filtros
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
-
-                {/* Filtros ativos */}
-                <div className="flex items-center space-x-2">
-                  {/* Mostrar filtros ativos */}
-                  {filters?.categories && filters.categories.length > 0 && (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <Target className="h-3 w-3" />
-                      <span>{filters.categories.length} categoria(s)</span>
-                    </Badge>
-                  )}
-                  {filters?.levels && filters.levels.length > 0 && (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <AlertTriangle className="h-3 w-3" />
-                      <span>{filters.levels.length} nível(is)</span>
-                    </Badge>
-                  )}
-                  {filters?.statuses && filters.statuses.length > 0 && (
-                    <Badge variant="secondary" className="flex items-center space-x-1">
-                      <CheckCircle className="h-3 w-3" />
-                      <span>{filters.statuses.length} status</span>
-                    </Badge>
-                  )}
-
-                  {/* Contador de resultados */}
-                  <Badge variant="outline" className="text-xs">
-                    {risks.length} riscos
-                  </Badge>
-                </div>
-
-                {/* Botão de filtros */}
-                <Dialog open={filterDialogOpen} onOpenChange={setFilterDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="flex items-center space-x-2">
-                      <Filter className="h-4 w-4" />
-                      <span>Filtros</span>
-                      {((filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)) > 0 && (
-                        <Badge variant="secondary" className="ml-1">
-                          {(filters?.categories?.length || 0) + (filters?.levels?.length || 0) + (filters?.statuses?.length || 0)}
-                        </Badge>
-                      )}
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center space-x-2">
-                        <Filter className="h-5 w-5" />
-                        <span>Filtros de Riscos</span>
-                      </DialogTitle>
-                      <DialogDescription>
-                        Refine sua busca por categoria, nível de risco, status e outros critérios.
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="space-y-6 py-4">
-                      <RiskFilters
-                        filters={filters}
-                        onFiltersChange={setFilters}
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        onClose={() => setFilterDialogOpen(false)}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between pt-4 border-t">
-                      <div className="text-sm text-muted-foreground">
-                        {risks.length} risco(s) encontrado(s)
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFilters({});
-                            setSearchTerm('');
-                          }}
-                        >
-                          Limpar tudo
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => setFilterDialogOpen(false)}
-                        >
-                          Aplicar filtros
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
             </CardContent>
           </Card>
@@ -781,48 +634,51 @@ export const RiskManagementCenterImproved: React.FC = () => {
         </div>
       </div>
 
-      {/* Alex Risk Integration - Contextual e Sempre Ativo */}
-      {alexRiskActive && (
-        <AlexRiskIntegration
-          currentView={viewMode}
-          selectedRisks={risks}
-          onSuggestion={(suggestion) => {
-            toast({
-              title: '🤖 Sugestão Alex Risk',
-              description: suggestion,
-            });
-          }}
-        />
-      )}
-
-      {/* Dialog do Processo Guiado Alex Risk */}
+      {/* Dialog do Assistente de Registro de Risco */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[95vh] overflow-y-auto overflow-x-hidden p-0" style={{ maxWidth: '95vw' }}>
-          <DialogHeader className="px-3 pt-3 pb-2">
+        <DialogContent className="w-full max-w-[100vw] sm:max-w-[95vw] md:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 m-0 sm:mx-auto border-none sm:border-solid rounded-none sm:rounded-lg flex flex-col">
+          <DialogHeader className="pt-10 pb-4 px-4 sm:px-6 text-left relative flex-shrink-0 border-b border-border/40 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 dark:border-green-900/50">
             <DialogTitle className="flex items-center space-x-2 text-sm">
-              <Brain className="h-5 w-5 text-purple-600" />
-              <span>Alex Risk - Processo Guiado</span>
+              <span>Novo Registro de Risco</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Processo inteligente e guiado com suporte de IA.
+              Processo inteligente e guiado.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="px-3 pb-3">
+          <div className="flex-1 w-full p-2 sm:p-4 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden bg-background">
             <AlexRiskGuidedProcess
               onComplete={(riskData) => {
-                createRisk(riskData);
+                // Adaptando do formato do Wizard/IA para o formato do Controller
+                createRisk({
+                  name: riskData.risk_title || 'Risco Sem Nome',
+                  category: riskData.risk_category || 'Operacional',
+                  probability: Number(Math.max(1, (riskData as any).probability || 1)),
+                  impact: Number(Math.max(1, (riskData as any).impact || 1)),
+                  status: 'Identificado',
+                  action_plans: (riskData as any).action_plans || [],
+                  stakeholders: (riskData as any).stakeholders || [],
+                  extraData: {
+                    ...riskData,
+                    risk_title: undefined,
+                    risk_category: undefined,
+                    probability: undefined,
+                    impact: undefined,
+                    action_plans: undefined,
+                    stakeholders: undefined
+                  }
+                } as any);
                 setProcessDialogOpen(false);
                 toast({
-                  title: '🎉 Alex Risk Processo Concluído',
+                  title: '🎉 Registro Concluído',
                   description: `Risco "${riskData.risk_title}" registrado com sucesso!`,
                 });
               }}
               onCancel={() => {
                 setProcessDialogOpen(false);
                 toast({
-                  title: 'Alex Risk Cancelado',
-                  description: 'O processo guiado foi cancelado.',
+                  title: 'Cancelado',
+                  description: 'O formulário foi fechado.',
                 });
               }}
             />
@@ -832,18 +688,18 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
       {/* Dialog da Biblioteca de Riscos */}
       <Dialog open={libraryDialogOpen} onOpenChange={setLibraryDialogOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 mx-auto" style={{ maxWidth: 'calc(100vw - 1rem)', width: 'calc(100vw - 1rem)' }}>
+          <DialogHeader className="px-4 pr-10 pt-8 sm:pt-10 pb-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 dark:from-green-950/20 dark:to-emerald-950/20 dark:border-green-900/50 text-left">
+            <DialogTitle className="flex items-center space-x-2 text-lg sm:text-xl">
               <Library className="h-6 w-6 text-green-600" />
               <span>Biblioteca de Riscos - Templates e Modelos</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs">
               Explore nossa coleção de templates pré-definidos, modelos de riscos por setor e melhores práticas para acelerar sua gestão de riscos.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="py-4">
+          <div className="px-3 py-6 sm:px-6 sm:py-8 overflow-x-hidden">
             <RiskLibraryIntegrated
               onSelectTemplate={(template) => {
                 toast({
@@ -892,7 +748,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };
 

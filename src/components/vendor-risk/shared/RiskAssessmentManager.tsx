@@ -3615,7 +3615,7 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                     </Button>
                   </div>
 
-                  <ScrollArea className="h-80 w-full rounded-md border p-4">
+                  <ScrollArea className="h-[60vh] w-full rounded-md border p-4">
                     <div className="space-y-3">
                       {selectedTemplate.questions.map((question, index) => (
                         <div key={question.id} className="border rounded-lg p-4 space-y-2">
@@ -3851,12 +3851,14 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
               <div className="space-y-2">
                 <Label>Opções de Resposta</Label>
                 <div className="space-y-2">
-                  {(editingQuestion?.options || newQuestion.options || []).map((option, index) => (
+                  {((opts: any) => Array.isArray(opts) ? opts : typeof opts === 'string' ? opts.split(',').map((s: string) => s.trim()) : [])(editingQuestion?.options || newQuestion.options || []).map((option, index) => (
                     <div key={index} className="flex gap-2">
                       <Input
                         value={option}
                         onChange={(e) => {
-                          const newOptions = [...(editingQuestion?.options || newQuestion.options || [])];
+                          const rawOpts: any = editingQuestion?.options || newQuestion.options || [];
+                          const currentOptions: string[] = Array.isArray(rawOpts) ? rawOpts : (typeof rawOpts === 'string' ? rawOpts.split(',').map((s: string) => s.trim()) : []);
+                          const newOptions = [...currentOptions];
                           newOptions[index] = e.target.value;
                           if (editingQuestion) {
                             setEditingQuestion({ ...editingQuestion, options: newOptions });
@@ -3870,7 +3872,9 @@ export const RiskAssessmentManager: React.FC<RiskAssessmentManagerProps> = ({
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          const newOptions = (editingQuestion?.options || newQuestion.options || []).filter((_, i) => i !== index);
+                          const rawOpts: any = editingQuestion?.options || newQuestion.options || [];
+                          const currentOptions: string[] = Array.isArray(rawOpts) ? rawOpts : (typeof rawOpts === 'string' ? rawOpts.split(',').map((s: string) => s.trim()) : []);
+                          const newOptions = currentOptions.filter((_, i) => i !== index);
                           if (editingQuestion) {
                             setEditingQuestion({ ...editingQuestion, options: newOptions });
                           } else {

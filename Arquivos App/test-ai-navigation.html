@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test AI Manager Navigation</title>
+</head>
+<body>
+    <h1>Teste de Navegação AI Manager</h1>
+    <p>Clique nos links abaixo para testar a navegação:</p>
+    
+    <ul>
+        <li><a href="http://localhost:8081/ai-management" target="_blank">Teste 1: /ai-management</a></li>
+        <li><a href="http://localhost:8081/admin/ai-management" target="_blank">Teste 2: /admin/ai-management</a></li>
+    </ul>
+    
+    <h2>JavaScript Test</h2>
+    <button onclick="testNavigation()">Testar window.location</button>
+    
+    <script>
+        function testNavigation() {
+            console.log('Testando navegação via JavaScript...');
+            window.location.href = 'http://localhost:8081/ai-management';
+        }
+    </script>
+</body>
+</html>

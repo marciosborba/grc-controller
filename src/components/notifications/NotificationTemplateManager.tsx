@@ -4,16 +4,16 @@
 // Sistema completo para criar, editar e gerenciar templates de notificação
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Copy, 
-  Eye, 
-  Save, 
-  X, 
-  Code, 
-  Wand2, 
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Copy,
+  Eye,
+  Save,
+  X,
+  Code,
+  Wand2,
   TestTube,
   FileText,
   Settings,
@@ -31,7 +31,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -198,10 +198,10 @@ export const NotificationTemplateManager: React.FC = () => {
   // Filtrar templates
   const filteredTemplates = templates.filter(template => {
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchQuery.toLowerCase());
+      template.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesModule = filterModule === 'all' || template.module === filterModule;
     const matchesType = filterType === 'all' || template.type === filterType;
-    
+
     return matchesSearch && matchesModule && matchesType;
   });
 
@@ -247,7 +247,7 @@ export const NotificationTemplateManager: React.FC = () => {
   // Gerar dados de exemplo para preview
   const generateSampleData = (template: NotificationTemplate) => {
     const sampleData: Record<string, string> = {};
-    
+
     template.availableVariables.forEach(variable => {
       switch (variable) {
         case 'assessment_name':
@@ -278,7 +278,7 @@ export const NotificationTemplateManager: React.FC = () => {
           sampleData[variable] = `Exemplo ${variable}`;
       }
     });
-    
+
     return sampleData;
   };
 
@@ -459,13 +459,13 @@ export const NotificationTemplateManager: React.FC = () => {
                   </CardDescription>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2 mt-3">
                 <Badge variant="outline" className="text-xs">
                   {template.module}
                 </Badge>
-                <Badge 
-                  variant="outline" 
+                <Badge
+                  variant="outline"
                   className={cn(
                     "text-xs",
                     template.defaultPriority === 'critical' && "border-red-200 text-red-700",
@@ -492,7 +492,7 @@ export const NotificationTemplateManager: React.FC = () => {
                     {template.titleTemplate}
                   </p>
                 </div>
-                
+
                 <div>
                   <Label className="text-xs font-medium text-muted-foreground">
                     Mensagem
@@ -532,7 +532,7 @@ export const NotificationTemplateManager: React.FC = () => {
                       <Eye className="h-3 w-3 mr-1" />
                       Preview
                     </Button>
-                    
+
                     <Button
                       size="sm"
                       variant="outline"
@@ -551,7 +551,7 @@ export const NotificationTemplateManager: React.FC = () => {
                     >
                       <Edit className="h-3 w-3" />
                     </Button>
-                    
+
                     {!template.isSystemTemplate && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -563,7 +563,7 @@ export const NotificationTemplateManager: React.FC = () => {
                           <AlertDialogHeader>
                             <AlertDialogTitle>Excluir Template</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Tem certeza que deseja excluir o template "{template.name}"? 
+                              Tem certeza que deseja excluir o template "{template.name}"?
                               Esta ação não pode ser desfeita.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -589,7 +589,7 @@ export const NotificationTemplateManager: React.FC = () => {
 
       {/* Dialog de Edição/Criação */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {isCreating ? 'Criar Novo Template' : 'Editar Template'}
@@ -618,13 +618,13 @@ export const NotificationTemplateManager: React.FC = () => {
                     placeholder="Ex: Assessment Vencendo"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="module">Módulo *</Label>
                   <Select
                     value={formData.module}
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
+                    onValueChange={(value) => setFormData(prev => ({
+                      ...prev,
                       module: value as NotificationModule,
                       availableVariables: moduleVariables[value as NotificationModule]
                     }))}
@@ -712,7 +712,7 @@ export const NotificationTemplateManager: React.FC = () => {
                   placeholder="Ex: Assessment {{assessment_name}} Vencendo"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Use {{variavel}} para inserir dados dinâmicos
+                  Use {{ variavel }} para inserir dados dinâmicos
                 </p>
               </div>
 
@@ -761,7 +761,7 @@ export const NotificationTemplateManager: React.FC = () => {
                 <p className="text-xs text-muted-foreground mb-3">
                   Configure as ações que aparecerão nas notificações
                 </p>
-                
+
                 {/* Lista de ações seria implementada aqui */}
                 <div className="border rounded-lg p-4 text-center text-muted-foreground">
                   <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -776,7 +776,7 @@ export const NotificationTemplateManager: React.FC = () => {
                 <p className="text-xs text-muted-foreground mb-3">
                   Visualize como a notificação aparecerá
                 </p>
-                
+
                 {formData.titleTemplate && formData.messageTemplate && (
                   <Card>
                     <CardContent className="p-4">
@@ -800,7 +800,7 @@ export const NotificationTemplateManager: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        
+
                         {formData.shortMessageTemplate && (
                           <div className="text-xs text-muted-foreground border-t pt-2">
                             <strong>Mensagem curta:</strong> {formData.shortMessageTemplate.replace(/\{\{(\w+)\}\}/g, '{{$1}}')}
@@ -831,7 +831,7 @@ export const NotificationTemplateManager: React.FC = () => {
         setSelectedTemplate(null);
         setPreviewData({});
       }}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-2xl">
           <DialogHeader>
             <DialogTitle>Preview do Template</DialogTitle>
             <DialogDescription>
@@ -869,7 +869,7 @@ export const NotificationTemplateManager: React.FC = () => {
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-2 pt-2">
                           <Badge variant="outline">{selectedTemplate.module}</Badge>
                           <Badge variant="outline">{selectedTemplate.defaultPriority}</Badge>

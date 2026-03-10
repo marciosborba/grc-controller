@@ -81,20 +81,20 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
   const overduePercentage = Math.min(100, Math.round((currentMetrics.overdueCount / total) * 100));
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="flex overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 snap-x snap-mandatory hide-scrollbar">
 
       {/* Card 1: Status Narrative (Dynamic) */}
-      <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
+      <Card className="min-w-[240px] sm:min-w-0 flex-shrink-0 snap-start relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
         <div className="absolute top-0 right-0 p-3 opacity-10">
           <NarrativeIcon className="h-24 w-24" />
         </div>
-        <CardHeader className="pb-2">
-          <CardTitle className={`text-lg font-bold flex items-center gap-2 ${narrative.color}`}>
+        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+          <CardTitle className={`text-sm sm:text-lg font-bold flex items-center gap-2 ${narrative.color}`}>
             {narrative.title}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground font-medium text-sm leading-relaxed">
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+          <p className="text-muted-foreground font-medium text-xs sm:text-sm leading-relaxed">
             {narrative.desc}
           </p>
           <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${narrative.bg} ${narrative.color}`}>
@@ -105,25 +105,25 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
 
       {/* Card 2: Impact Analysis (Blue - Unread) */}
       <Card
-        className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer"
+        className="min-w-[240px] sm:min-w-0 flex-shrink-0 snap-start relative overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer"
         onClick={() => navigate('/notifications?status=unread')}
       >
         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
           <Mail className="h-24 w-24 text-blue-500" />
         </div>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold text-foreground">
+        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+          <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
             Novas Notificações
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">
+            <span className="text-xl sm:text-3xl font-bold text-foreground">
               {isLoading ? '...' : currentMetrics.unreadCount}
             </span>
-            <span className="text-sm text-muted-foreground">Pendentes</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">Pendentes</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
             {unreadPercentage}% das notificações ainda não foram lidas.
           </p>
           <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
@@ -134,25 +134,25 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
 
       {/* Card 3: Asset Attack Surface (Purple/Orange - Overdue) */}
       <Card
-        className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer"
+        className="min-w-[240px] sm:min-w-0 flex-shrink-0 snap-start relative overflow-hidden shadow-sm hover:shadow-md transition-all group cursor-pointer"
         onClick={() => navigate('/notifications?status=overdue')}
       >
         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
           <Clock className="h-24 w-24 text-orange-500" />
         </div>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold text-foreground">
+        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+          <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
             Prazos Vencidos
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">
+            <span className="text-xl sm:text-3xl font-bold text-foreground">
               {isLoading ? '...' : currentMetrics.overdueCount}
             </span>
-            <span className="text-sm text-muted-foreground">Atrasadas</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">Atrasadas</span>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
             Requer ação imediata em {currentMetrics.overdueCount} itens.
           </p>
           <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
@@ -162,17 +162,17 @@ export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }
       </Card>
 
       {/* Card 4: Remediation Focus (Action) */}
-      <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+      <Card className="min-w-[240px] sm:min-w-0 flex-shrink-0 snap-start relative overflow-hidden shadow-sm hover:shadow-md transition-all bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
+        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+          <CardTitle className="text-sm sm:text-lg font-bold text-foreground flex items-center gap-2">
             Engajamento <Target className="h-4 w-4 text-primary" />
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm font-medium text-foreground">
+        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+          <p className="text-xs sm:text-sm font-medium text-foreground">
             Taxa de Resposta: {currentMetrics.responseRate}%
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
             Tempo médio de resposta: {currentMetrics.avgResponseTime}h
           </p>
           <Button

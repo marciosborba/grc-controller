@@ -142,15 +142,15 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Dashboard de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Dashboard de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             Visão geral do status e métricas das políticas organizacionais
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center">
           <Badge variant="outline" className="flex items-center gap-1 border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20">
             <TrendingUp className="h-3 w-3" />
             {stats.recentPolicies.length} criadas esta semana
@@ -164,21 +164,23 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
       {/* Alertas importantes */}
       {stats.needsAttention > 0 && (
         <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              <div>
-                <p className="font-medium text-orange-900 dark:text-orange-100">
-                  {stats.needsAttention} política(s) precisam de atenção
-                </p>
-                <p className="text-sm text-orange-700 dark:text-orange-300">
-                  Políticas expirando ou que precisam de revisão nos próximos 30 dias
-                </p>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-2">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 text-orange-600 dark:text-orange-400 shrink-0" />
+                <div>
+                  <p className="font-medium text-orange-900 dark:text-orange-100 text-sm sm:text-base">
+                    {stats.needsAttention} política(s) precisam de atenção
+                  </p>
+                  <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
+                    Políticas expirando ou que precisam de revisão nos próximos 30 dias
+                  </p>
+                </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="ml-auto border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-200 dark:hover:bg-orange-900/50"
+                className="w-full sm:w-auto sm:ml-auto border-orange-300 text-orange-800 hover:bg-orange-100 dark:border-orange-600 dark:text-orange-200 dark:hover:bg-orange-900/50"
               >
                 Ver Detalhes
               </Button>
@@ -188,7 +190,7 @@ const PolicyDashboard: React.FC<PolicyDashboardProps> = ({
       )}
 
       {/* Gráficos e análises */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Distribuição por status */}
         <Card>
           <CardHeader>

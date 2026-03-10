@@ -1,0 +1,108 @@
+{
+  "columns": [
+    {
+      "column_name": "id",
+      "data_type": "uuid"
+    },
+    {
+      "column_name": "nome",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "descricao",
+      "data_type": "text"
+    },
+    {
+      "column_name": "fornecedor",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "versao",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "tenant_id",
+      "data_type": "uuid"
+    },
+    {
+      "column_name": "created_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "column_name": "updated_at",
+      "data_type": "timestamp with time zone"
+    },
+    {
+      "column_name": "tipo",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "status",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "criticidade",
+      "data_type": "character varying"
+    },
+    {
+      "column_name": "responsavel_tecnico",
+      "data_type": "uuid"
+    },
+    {
+      "column_name": "responsavel_negocio",
+      "data_type": "uuid"
+    },
+    {
+      "column_name": "dados_sensiveis",
+      "data_type": "boolean"
+    },
+    {
+      "column_name": "internet_facing",
+      "data_type": "boolean"
+    },
+    {
+      "column_name": "autenticacao_sso",
+      "data_type": "boolean"
+    },
+    {
+      "column_name": "documentacao_link",
+      "data_type": "text"
+    },
+    {
+      "column_name": "is_lgpd",
+      "data_type": "boolean"
+    },
+    {
+      "column_name": "is_sox",
+      "data_type": "boolean"
+    },
+    {
+      "column_name": "is_acn",
+      "data_type": "boolean"
+    }
+  ],
+  "data": [
+    {
+      "id": "277cfafd-823c-4a01-9591-f69d72b92a62",
+      "nome": "Portal Web Corporativo",
+      "descricao": "Portal principal para acesso dos clientes aos serviços da empresa.",
+      "fornecedor": "Internal / React",
+      "versao": "2.5.0",
+      "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+      "created_at": "2026-01-08T00:03:12.512Z",
+      "updated_at": "2026-01-08T00:03:12.512Z",
+      "tipo": "SaaS",
+      "status": "Ativo",
+      "criticidade": "Alta",
+      "responsavel_tecnico": "8edb17c5-bb64-49b9-b5d0-4386e30fc428",
+      "responsavel_negocio": null,
+      "dados_sensiveis": true,
+      "internet_facing": true,
+      "autenticacao_sso": true,
+      "documentacao_link": "https://confluence.corp/display/PORTAL",
+      "is_lgpd": true,
+      "is_sox": true,
+      "is_acn": true
+    }
+  ]
+}

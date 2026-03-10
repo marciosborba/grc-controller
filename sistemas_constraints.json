@@ -1,0 +1,14 @@
+[
+  {
+    "constraint_name": "sistemas_criticidade_check",
+    "constraint_definition": "CHECK (((criticidade)::text = ANY (ARRAY[('Baixa'::character varying)::text, ('Média'::character varying)::text, ('Alta'::character varying)::text, ('Crítica'::character varying)::text])))"
+  },
+  {
+    "constraint_name": "sistemas_status_check",
+    "constraint_definition": "CHECK (((status)::text = ANY (ARRAY[('Ativo'::character varying)::text, ('Em Implementação'::character varying)::text, ('Descontinuado'::character varying)::text])))"
+  },
+  {
+    "constraint_name": "sistemas_tipo_check",
+    "constraint_definition": "CHECK (((tipo)::text = ANY (ARRAY[('SaaS'::character varying)::text, ('On-Premise'::character varying)::text, ('PaaS'::character varying)::text, ('IaaS'::character varying)::text, ('Legacy'::character varying)::text, ('Outro'::character varying)::text])))"
+  }
+]

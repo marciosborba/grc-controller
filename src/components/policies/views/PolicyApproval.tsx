@@ -13,7 +13,7 @@ import {
   Stamp,
   AlertTriangle
 } from 'lucide-react';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -35,9 +35,18 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filtrar políticas que precisam de aprovação
-  const policiesForApproval = policies.filter(p => 
+  const policiesForApproval = policies.filter(p =>
     p.status === 'pending_approval' || p.workflow_stage === 'approval'
   );
+
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
+  const totalPages = Math.ceil(policiesForApproval.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, policiesForApproval.length);
+  const currentPolicies = policiesForApproval.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleApprovalAction = async (policyId: string, action: 'approve' | 'reject') => {
     if (!approvalComment.trim() && action === 'reject') {
@@ -52,7 +61,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
     setIsSubmitting(true);
     try {
       const newStatus = action === 'approve' ? 'approved' : 'rejected';
-      
+
       const updateData: any = {
         status: newStatus,
         workflow_stage: action === 'approve' ? 'publication' : 'elaboration',
@@ -125,15 +134,15 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h2 className="text-2xl font-bold">Aprovação de Políticas</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-xl sm:text-2xl font-bold">Aprovação de Políticas</h2>
+          <p className="text-sm text-muted-foreground">
             {policiesForApproval.length} política(s) aguardando aprovação final
           </p>
         </div>
-        
-        <div className="flex items-center space-x-2">
+
+        <div className="flex items-center">
           <Badge variant="outline" className="flex items-center gap-1 border-orange-300 text-orange-800 bg-orange-50 dark:border-orange-600 dark:text-orange-200 dark:bg-orange-950/20">
             <Stamp className="h-3 w-3" />
             Pendentes: {policiesForApproval.length}
@@ -141,17 +150,16 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Lista de políticas para aprovação */}
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Políticas Pendentes</h3>
-          
-          {policiesForApproval.map((policy) => (
-            <Card 
-              key={policy.id} 
-              className={`cursor-pointer transition-all hover:shadow-md ${
-                selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
-              }`}
+
+          {currentPolicies.map((policy) => (
+            <Card
+              key={policy.id}
+              className={`cursor-pointer transition-all hover:shadow-md ${selectedPolicy?.id === policy.id ? 'ring-2 ring-primary' : ''
+                }`}
               onClick={() => setSelectedPolicy(policy)}
             >
               <CardHeader className="pb-3">
@@ -165,43 +173,82 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                   {getStatusBadge(policy.status)}
                 </div>
               </CardHeader>
-              
+
               <CardContent className="pt-0">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <User className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">Categoria:</span>
-                      <span>{policy.category}</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <div className="flex items-center space-x-1">
+                    <User className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Categoria:</span>
+                    <span className="truncate max-w-[100px]">{policy.category}</span>
                   </div>
-                  
+
+                  <div className="flex items-center space-x-1">
+                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {new Date(policy.updated_at).toLocaleDateString('pt-BR')}
+                    </span>
+                  </div>
+
                   {policy.priority && (
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${
-                        policy.priority === 'high' 
-                          ? 'border-red-300 text-red-800 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-950/20'
-                          : policy.priority === 'medium'
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${policy.priority === 'high'
+                        ? 'border-red-300 text-red-800 bg-red-50 dark:border-red-600 dark:text-red-200 dark:bg-red-950/20'
+                        : policy.priority === 'medium'
                           ? 'border-yellow-300 text-yellow-800 bg-yellow-50 dark:border-yellow-600 dark:text-yellow-200 dark:bg-yellow-950/20'
                           : 'border-green-300 text-green-800 bg-green-50 dark:border-green-600 dark:text-green-200 dark:bg-green-950/20'
-                      }`}
+                        }`}
                     >
                       Prioridade: {policy.priority === 'high' ? 'Alta' :
-                                  policy.priority === 'medium' ? 'Média' : 'Baixa'}
+                        policy.priority === 'medium' ? 'Média' : 'Baixa'}
                     </Badge>
                   )}
                 </div>
               </CardContent>
             </Card>
           ))}
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex flex-col items-center justify-center gap-4 mt-6 pb-2">
+              <span className="text-sm text-muted-foreground">
+                Mostrando {startIndex + 1}–{endIndex} de {policiesForApproval.length} políticas
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-9 w-9"
+                >
+                  &lt;
+                </Button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setCurrentPage(page)}
+                    className="h-9 w-9"
+                  >
+                    {page}
+                  </Button>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="h-9 w-9"
+                >
+                  &gt;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Painel de aprovação */}
@@ -215,7 +262,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                     Aprovação: {selectedPolicy.title}
                   </CardTitle>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   {/* Informações da política */}
                   <div className="space-y-3">
@@ -225,7 +272,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                         {selectedPolicy.description || 'Sem descrição'}
                       </p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium">Categoria</label>
@@ -236,7 +283,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                         <p className="text-sm text-muted-foreground">{selectedPolicy.version}</p>
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="text-sm font-medium">Status Atual</label>
                       <div className="mt-1">
@@ -282,7 +329,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Aprovar e Enviar para Publicação
                     </Button>
-                    
+
                     <Button
                       variant="destructive"
                       onClick={() => handleApprovalAction(selectedPolicy.id, 'reject')}
@@ -299,7 +346,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                     <div className="flex items-start gap-2">
                       <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 dark:text-yellow-400" />
                       <div className="text-sm text-yellow-800 dark:text-yellow-200">
-                        <strong>Importante:</strong> Políticas rejeitadas retornarão para a fase de elaboração 
+                        <strong>Importante:</strong> Políticas rejeitadas retornarão para a fase de elaboração
                         e precisarão passar novamente por todo o processo de revisão.
                       </div>
                     </div>
@@ -312,7 +359,7 @@ const PolicyApproval: React.FC<PolicyApprovalProps> = ({
                 <CardHeader>
                   <CardTitle className="text-base">Checklist de Aprovação</CardTitle>
                 </CardHeader>
-                
+
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">

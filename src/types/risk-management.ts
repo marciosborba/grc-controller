@@ -6,25 +6,25 @@
 export type RiskLevel = 'Muito Alto' | 'Alto' | 'Médio' | 'Baixo' | 'Muito Baixo';
 export type RiskStatus = 'Identificado' | 'Avaliado' | 'Em Tratamento' | 'Monitorado' | 'Fechado' | 'Reaberto';
 export type TreatmentType = 'Mitigar' | 'Transferir' | 'Evitar' | 'Aceitar';
-export type RiskCategory = 
-  | 'Estratégico' 
-  | 'Operacional' 
-  | 'Financeiro' 
-  | 'Tecnológico' 
-  | 'Regulatório' 
-  | 'Reputacional' 
-  | 'Segurança da Informação' 
-  | 'Terceiros' 
-  | 'Ambiental' 
+export type RiskCategory =
+  | 'Estratégico'
+  | 'Operacional'
+  | 'Financeiro'
+  | 'Tecnológico'
+  | 'Regulatório'
+  | 'Reputacional'
+  | 'Segurança da Informação'
+  | 'Terceiros'
+  | 'Ambiental'
   | 'Recursos Humanos';
 
 // Tipos específicos para análise de risco
-export type RiskAnalysisType = 
-  | 'Técnico' 
-  | 'Fornecedor' 
-  | 'Processo' 
-  | 'Incidente' 
-  | 'Estratégico' 
+export type RiskAnalysisType =
+  | 'Técnico'
+  | 'Fornecedor'
+  | 'Processo'
+  | 'Incidente'
+  | 'Estratégico'
   | 'Operacional';
 
 export type MatrixSize = '4x4' | '5x5';
@@ -70,76 +70,99 @@ export type CommunicationDecision = 'Aceitar' | 'Rejeitar' | 'Pendente';
 export interface Risk {
   id: string;
   riskCode?: string; // ID sequencial no formato 001/08/25
-  
+
   // Informações Básicas
   name: string;
   description?: string;
   executiveSummary?: string;
   category: RiskCategory;
-  
+
   // Avaliação de Risco
   probability: number; // 1-5
   impact: number; // 1-5
   riskScore: number; // Calculado: probability * impact
   riskLevel: RiskLevel; // Calculado baseado no score
-  
+
   // Análise Estruturada de Risco (nova funcionalidade)
   analysisData?: RiskAnalysisData;
-  
+
   // Arrays de dados relacionados (carregados via JOIN)
   risk_registration_action_plans?: any[];
   risk_action_plans?: any[]; // Tabela correta para action plans
   risk_stakeholders?: any[];
-  
+
   // Gestão
   status: RiskStatus;
   treatmentType: TreatmentType;
   owner: string; // Responsável pelo risco
   assignedTo?: string; // Responsável pelas ações
-  
+
   // Datas e Controle
   identifiedDate: Date;
   lastReviewDate?: Date;
   nextReviewDate?: Date;
   dueDate?: Date;
-  
+
   // Controle de auditoria
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Dados expandidos
   technicalDetails?: string;
   attachments?: RiskAttachment[];
-  
+
   // Relacionamentos
   actionPlan?: ActionPlan;
   acceptanceLetter?: RiskAcceptanceLetter;
   communications?: RiskCommunication[];
   changeLog?: RiskChangeLog[];
-  
+
   // ============================================================================
   // CAMPOS ADICIONAIS DO WIZARD DE REGISTRO
   // ============================================================================
-  
+
+  // Histórico e Contexto
+  historical_events?: string;
+  root_causes?: string;
+
+  // Controles
+  controls_effectiveness?: string;
+  existing_controls?: string;
+
   // Etapa 1: Identificação
   source?: string; // Fonte do risco
   responsibleArea?: string; // Área responsável
-  
+  department?: string; // Missing
+  relatedProcess?: string; // Missing
+  tags?: string; // Missing
+  regulations?: string; // Missing
+
+  // Plano de Ação Geral
+  action_plan_responsible?: string;
+  action_plan_due_date?: Date;
+
   // Etapa 2: Análise
   analysisMethodology?: string; // Metodologia de análise
-  
+  causes?: string; // Missing
+  consequences?: string; // Missing
+  evaluationCriteria?: string; // Missing
+  tolerance?: string; // Missing
+  riskType?: string; // Missing
+  nature?: string; // Missing
+  temporality?: string; // Missing
+
   // Etapa 3: Classificação GUT
   gut_gravity?: number; // Gravidade (1-5)
   gut_urgency?: number; // Urgência (1-5)
   gut_tendency?: number; // Tendência (1-5)
   gut_priority?: string; // Prioridade calculada
-  
+
   // Etapa 4: Tratamento
   treatment_rationale?: string; // Justificativa do tratamento
   treatment_cost?: number; // Custo do tratamento
   treatment_timeline?: string; // Cronograma do tratamento
-  
+
   // Etapa 5: Plano de Ação - Atividade 1
   activity_1_name?: string;
   activity_1_description?: string;
@@ -148,18 +171,18 @@ export interface Risk {
   activity_1_priority?: string;
   activity_1_status?: string;
   activity_1_due_date?: Date;
-  
+
   // Etapa 6: Comunicação - Pessoas de Ciência
   awareness_person_1_name?: string;
   awareness_person_1_position?: string;
   awareness_person_1_email?: string;
-  
+
   // Etapa 6: Comunicação - Pessoas de Aprovação
   approval_person_1_name?: string;
   approval_person_1_position?: string;
   approval_person_1_email?: string;
   approval_person_1_status?: string;
-  
+
   // Etapa 7: Monitoramento
   monitoring_frequency?: string; // Frequência de monitoramento
   monitoring_responsible?: string; // Responsável pelo monitoramento
@@ -169,6 +192,26 @@ export interface Risk {
   closure_criteria?: string; // Critérios de encerramento
   closure_notes?: string; // Notas de encerramento
   closure_date?: Date; // Data de encerramento
+
+  // Mapeamentos legados e componentes antigos
+  subcategory?: string;
+  indicators?: string;
+  reviewFrequency?: string;
+  nextReview?: Date;
+  existingControls?: string;
+  stakeholders?: string;
+  communicationPlan?: string;
+  communicationChannel?: string;
+  lessonsLearned?: string;
+  reviewStatus?: string;
+  controlEffectiveness?: string;
+  reviewHistory?: any[];
+  updatedBy?: string;
+  lastCommunication?: Date;
+  monitoring_indicators?: string[];
+  review_date?: Date;
+  monitoring_notes?: string;
+  residual_risk_level?: string;
 }
 
 // ============================================================================
@@ -184,9 +227,9 @@ export interface ActionPlan {
   budget?: number;
   approvedBy?: string;
   approvalDate?: Date;
-  
+
   activities: Activity[];
-  
+
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -195,25 +238,30 @@ export interface ActionPlan {
 export interface Activity {
   id: string;
   actionPlanId: string;
-  
+
   name: string;
   details?: string;
   dueDate?: Date;
   responsible: string;
   status: ActivityStatus;
   priority: 'Baixa' | 'Média' | 'Alta' | 'Crítica';
-  
+
   // Evidências
   evidenceUrl?: string;
   evidenceDescription?: string;
   completionPercentage: number; // 0-100
-  
+
+  // Sub-atividades e Validação
+  subActivities?: { id: string; text: string; done: boolean }[];
+  analystValidationStatus?: 'pending' | 'approved' | 'rejected';
+  analystNotes?: string;
+
   // Controles
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
   completedAt?: Date;
-  
+
   // Comentários e histórico
   comments?: ActivityComment[];
 }
@@ -233,26 +281,26 @@ export interface ActivityComment {
 export interface RiskAcceptanceLetter {
   id: string;
   riskId: string;
-  
+
   // Justificativa
   justification: string;
   compensatingControls?: string;
   businessJustification: string;
-  
+
   // Aprovação
   approver: string;
   approverTitle?: string;
   approvalDate: Date;
   validUntil?: Date;
-  
+
   // Condições de revisão
   reviewConditions?: string;
   kris?: string; // Key Risk Indicators
-  
+
   // PDF e documentação
   pdfPath?: string;
   digitalSignature?: string;
-  
+
   // Controle
   createdBy: string;
   createdAt: Date;
@@ -267,24 +315,24 @@ export interface RiskCommunication {
   id: string;
   riskId: string;
   type: 'Apontamento' | 'Carta de Risco' | 'Plano de Ação' | 'Revisão' | 'Notificação';
-  
+
   // Destinatário
   recipientName: string;
   recipientEmail: string;
   recipientTitle?: string;
-  
+
   // Comunicação
   subject: string;
   message?: string;
   decision?: CommunicationDecision;
   decisionJustification?: string;
-  
+
   // Status e datas
   sentAt?: Date;
   viewedAt?: Date;
   respondedAt?: Date;
   followUpDate?: Date;
-  
+
   // Controle
   createdBy: string;
   createdAt: Date;
@@ -336,6 +384,8 @@ export interface RiskMetrics {
   overdueActivities: number;
   riskTrend: 'Aumentando' | 'Diminuindo' | 'Estável';
   averageResolutionTime: number; // em dias
+  pendingApprovals?: number;
+  acceptedRisks?: number;
 }
 
 export interface KRI {
@@ -394,29 +444,32 @@ export interface CreateRiskRequest {
   dueDate?: Date;
   technicalDetails?: string;
   analysisData?: RiskAnalysisData;
+  extraData?: any;
+  action_plans?: any[];
+  stakeholders?: any[];
 }
 
 export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {
   status?: RiskStatus;
   lastReviewDate?: Date;
   nextReviewDate?: Date;
-  
+
   // Campos adicionais do wizard de registro
   source?: string;
   responsibleArea?: string;
   analysisMethodology?: string;
-  
+
   // Dados GUT
   gut_gravity?: number;
   gut_urgency?: number;
   gut_tendency?: number;
   gut_priority?: string;
-  
+
   // Dados de tratamento detalhados
   treatment_rationale?: string;
   treatment_cost?: number;
   treatment_timeline?: string;
-  
+
   // Dados de atividades do plano de ação
   activity_1_name?: string;
   activity_1_description?: string;
@@ -425,7 +478,7 @@ export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {
   activity_1_priority?: string;
   activity_1_status?: string;
   activity_1_due_date?: Date;
-  
+
   // Dados de comunicação/stakeholders
   awareness_person_1_name?: string;
   awareness_person_1_position?: string;
@@ -434,7 +487,7 @@ export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {
   approval_person_1_position?: string;
   approval_person_1_email?: string;
   approval_person_1_status?: string;
-  
+
   // Dados de monitoramento
   monitoring_frequency?: string;
   monitoring_responsible?: string;

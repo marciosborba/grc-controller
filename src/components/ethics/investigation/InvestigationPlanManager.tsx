@@ -110,7 +110,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
         .select('*, ethics_reports(title, protocol_number)');
 
       if (reportId) {
-        query = query.eq('ethics_report_id', reportId);
+        query = query.eq('id', reportId);
       } else if (!user.isPlatformAdmin && user.tenantId) {
         query = query.eq('tenant_id', user.tenantId);
       }
@@ -137,7 +137,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
       const planData = {
         ...formData,
         ethics_report_id: reportId,
-        tenant_id: user?.tenant_id,
+        tenant_id: user?.tenantId,
         created_by: user?.id,
         updated_at: new Date().toISOString()
       };
@@ -226,10 +226,10 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-semibold">Planos de Investigação</h3>
+          <h3 className="text-base sm:text-lg font-semibold">Planos de Investigação</h3>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -238,7 +238,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] sm:w-auto sm:max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingPlan ? 'Editar Plano de Investigação' : 'Novo Plano de Investigação'}
@@ -246,15 +246,15 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
             </DialogHeader>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="basic">Básico</TabsTrigger>
-                <TabsTrigger value="methodology">Metodologia</TabsTrigger>
-                <TabsTrigger value="resources">Recursos</TabsTrigger>
-                <TabsTrigger value="legal">Legal/Regulatório</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsTrigger value="basic" className="text-xs sm:text-sm">Básico</TabsTrigger>
+                <TabsTrigger value="methodology" className="text-xs sm:text-sm">Metodologia</TabsTrigger>
+                <TabsTrigger value="resources" className="text-xs sm:text-sm">Recursos</TabsTrigger>
+                <TabsTrigger value="legal" className="text-xs sm:text-sm">Legal/Regulatório</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="investigation_type">Tipo de Investigação</Label>
                     <Select
@@ -384,7 +384,7 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
               </TabsContent>
 
               <TabsContent value="resources" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="budget_allocated">Orçamento Alocado (R$)</Label>
                     <Input
@@ -487,12 +487,12 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
               </TabsContent>
             </Tabs>
 
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCreateDialogOpen(false)}>
                 <X className="h-4 w-4 mr-2" />
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button className="w-full sm:w-auto" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-2" />
                 Salvar Plano
               </Button>
@@ -513,24 +513,27 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
         <div className="space-y-4">
           {plans.map((plan) => (
             <Card key={plan.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="p-4 sm:p-6 pb-2">
+                <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-0 sm:items-start">
                   <div className="flex items-center gap-3">
-                    {getTypeIcon(plan.investigation_type)}
+                    <div className="hidden sm:block">
+                      {getTypeIcon(plan.investigation_type)}
+                    </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        <span className="sm:hidden">{getTypeIcon(plan.investigation_type)}</span>
                         {plan.investigation_type === 'preliminary' ? 'Investigação Preliminar' :
                           plan.investigation_type === 'full' ? 'Investigação Completa' :
                             plan.investigation_type === 'external' ? 'Investigação Externa' :
                               plan.investigation_type === 'legal' ? 'Investigação Legal' :
                                 plan.investigation_type}
                       </CardTitle>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         Criado em {format(new Date(plan.created_at), 'dd/MM/yyyy', { locale: ptBR })}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
                     <Badge className={`text-xs px-2 py-0.5 ${getStatusColor(plan.status)}`}>
                       {plan.status === 'planning' ? 'Planejamento' :
                         plan.status === 'approved' ? 'Aprovado' :
@@ -540,20 +543,20 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                                 plan.status === 'cancelled' ? 'Cancelado' :
                                   plan.status}
                     </Badge>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(plan)}>
+                    <Button variant="ghost" size="sm" onClick={() => handleEdit(plan)} className="h-8 w-8 p-0">
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(plan.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <Button variant="ghost" size="sm" onClick={() => setItemToDelete(plan.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 h-8 w-8 p-0">
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 bg-muted/30 p-3 rounded-md">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">
+                    <Calendar className="h-4 w-4 text-gray-500 shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">
                       {plan.planned_start_date ?
                         format(new Date(plan.planned_start_date), 'dd/MM/yyyy', { locale: ptBR }) :
                         'Não definida'
@@ -561,39 +564,37 @@ const InvestigationPlanManager: React.FC<InvestigationPlanManagerProps> = ({ rep
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{plan.estimated_duration_days || 0} dias</span>
+                    <Clock className="h-4 w-4 text-gray-500 shrink-0" />
+                    <span className="text-xs sm:text-sm truncate">{plan.estimated_duration_days || 0} dias</span>
                   </div>
                   {plan.budget_allocated && (
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm">R$ {plan.budget_allocated.toLocaleString('pt-BR')}</span>
+                      <DollarSign className="h-4 w-4 text-gray-500 shrink-0" />
+                      <span className="text-xs sm:text-sm truncate">R$ {plan.budget_allocated.toLocaleString('pt-BR')}</span>
                     </div>
                   )}
                 </div>
 
-                <Separator className="my-4" />
-
                 <div className="space-y-3">
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Escopo da Investigação:</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    <h4 className="font-semibold text-xs sm:text-sm mb-1">Escopo da Investigação:</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {plan.investigation_scope}
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm mb-1">Objetivos:</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    <h4 className="font-semibold text-xs sm:text-sm mb-1">Objetivos:</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                       {plan.investigation_objectives}
                     </p>
                   </div>
                   {plan.risk_assessment && (
                     <div>
-                      <h4 className="font-semibold text-sm mb-1 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3 text-yellow-600" />
+                      <h4 className="font-semibold text-xs sm:text-sm mb-1 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 text-yellow-600 shrink-0" />
                         Avaliação de Riscos:
                       </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                         {plan.risk_assessment}
                       </p>
                     </div>

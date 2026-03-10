@@ -1,0 +1,32 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  specify custom .env file path with { path: '/custom/path/.env' }
+Connected. Reloading PostgREST schema cache...
+
+Ô£à PostgREST schema cache reload signal sent!
+PostgREST will now re-introspect the database schema.
+This means select("*") will no longer include phantom columns.
+
+=== CHECKING FOR DROPPED COLUMNS ===
+No dropped columns found in risk_registration_action_plans.
+
+=== LIVE COLUMNS (what database reports) ===
+  id
+  tenant_id
+  risk_registration_id
+  activity_name
+  activity_description
+  responsible_name
+  responsible_email
+  due_date
+  priority
+  status
+  created_by
+  created_at
+  updated_at
+  stakeholder_notes
+  evidence_url
+  evidence_name
+  analyst_validation_status
+  analyst_notes
+  metadados
+
+Done.

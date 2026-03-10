@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
   Brain,
   FileText,
   Target,
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 // Importar os steps
 import { Step1Identification } from './steps/Step1Identification';
@@ -35,36 +35,44 @@ export interface RiskRegistrationData {
   risk_title?: string;
   risk_description?: string;
   risk_category?: string;
+  risk_subcategory?: string;
   risk_source?: string;
   identification_date?: string;
   responsible_area?: string;
-  
+
   // Step 2: Analysis
   methodology_id?: string;
+  analysis_methodology?: string;
   impact_score?: number;
   probability_score?: number;
+  likelihood_score?: number;
   risk_score?: number;
   risk_level?: string;
-  
+  analysis_notes?: string;
+
   // Step 3: Classification (GUT)
   gravity_score?: number;
+  gut_gravity?: number;
   urgency_score?: number;
+  gut_urgency?: number;
   tendency_score?: number;
+  gut_tendency?: number;
   gut_score?: number;
   gut_priority?: string;
-  
+
   // Step 4: Treatment
   treatment_strategy?: string;
   treatment_rationale?: string;
   treatment_cost?: number;
   treatment_timeline?: string;
-  
+
   // Step 5: Action Plan
   action_plans?: any[];
-  
+
   // Step 6: Communication
   stakeholders?: any[];
-  
+  requires_approval?: boolean;
+
   // Step 7: Monitoring
   monitoring_frequency?: string;
   monitoring_responsible?: string;
@@ -72,10 +80,13 @@ export interface RiskRegistrationData {
   residual_risk_level?: string;
   residual_impact?: number;
   residual_probability?: number;
+  residual_likelihood?: number;
   residual_risk_score?: number;
+  residual_score?: number;
   closure_criteria?: string;
   monitoring_notes?: string;
   kpi_definition?: string;
+  metadata?: Record<string, any>;
 }
 
 interface RiskRegistrationWizardProps {
@@ -95,12 +106,12 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   const [registrationData, setRegistrationData] = useState<RiskRegistrationData>({});
   const [registrationId, setRegistrationId] = useState<string | null>(existingRiskId || null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Função para rolar para o topo da página
   const scrollToTop = () => {
     console.log('🔝 Executando scroll para o topo...');
     console.log('Posição atual do scroll:', window.pageYOffset || document.documentElement.scrollTop);
-    
+
     // Método 1: Scroll instantâneo primeiro
     try {
       document.documentElement.scrollTop = 0;
@@ -110,7 +121,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
     } catch (error) {
       console.warn('❌ Erro com scroll instantâneo:', error);
     }
-    
+
     // Método 2: Scroll suave após um pequeno delay
     setTimeout(() => {
       try {
@@ -124,7 +135,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         console.warn('❌ Erro com scroll suave:', error);
       }
     }, 50);
-    
+
     // Método 3: Forçar scroll em elementos específicos
     setTimeout(() => {
       try {
@@ -136,26 +147,26 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           document.querySelector('.scroll-container'),
           document.querySelector('[data-scroll-container]')
         ].filter(Boolean);
-        
+
         scrollableElements.forEach((element, index) => {
           if (element) {
             element.scrollTop = 0;
             console.log(`✅ Scroll aplicado ao elemento ${index + 1}:`, element.tagName || element.className);
           }
         });
-        
+
         // Tentar scrollIntoView no header do wizard
         const wizardHeader = document.querySelector('h2');
         if (wizardHeader) {
           wizardHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
           console.log('✅ ScrollIntoView executado no header do wizard');
         }
-        
+
       } catch (error) {
         console.warn('❌ Erro com scroll forçado:', error);
       }
     }, 100);
-    
+
     // Verificar se o scroll funcionou
     setTimeout(() => {
       const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
@@ -165,16 +176,16 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       }
     }, 1000);
   };
-  
+
   // Estados específicos para Step 5 (Action Plan)
   const [actionPlanItems, setActionPlanItems] = useState<any[]>([]);
-  
+
   // Estados específicos para Step 6 (Communication)
   const [stakeholders, setStakeholders] = useState<any[]>([]);
-  
+
   const { toast } = useToast();
   const { user } = useAuth();
-  
+
   // Funções wrapper para sincronizar estados
   const updateStakeholders = (newStakeholders: any[]) => {
     console.log('Atualizando stakeholders:', newStakeholders);
@@ -184,7 +195,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       stakeholders: newStakeholders
     }));
   };
-  
+
   const updateActionPlanItems = (newItems: any[]) => {
     console.log('Atualizando action plan items:', newItems);
     setActionPlanItems(newItems);
@@ -252,7 +263,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       tenantId: user?.tenantId,
       registrationId
     });
-    
+
     if (editMode && existingRiskId) {
       console.log('📖 Modo edição: carregando dados existentes...');
       loadExistingRiskData();
@@ -264,7 +275,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         userExists: !!user,
         registrationId
       });
-      
+
       // Adicionar um pequeno delay para garantir que o contexto está totalmente carregado
       setTimeout(() => {
         createNewRiskRegistration();
@@ -275,7 +286,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       console.log('✅ Registro já existe, não criando novo:', registrationId);
     }
   }, [editMode, existingRiskId, user?.id, user?.tenantId, registrationId]);
-  
+
   // useEffect para monitorar mudanças no registrationId
   useEffect(() => {
     console.log('🆔 registrationId mudou:', {
@@ -284,11 +295,11 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       editMode,
       currentStep
     });
-    
+
     // Se perdemos o registrationId e não estamos em modo de edição, tentar recriar
     if (!registrationId && !editMode && user?.tenantId && user?.id && currentStep > 1) {
       console.warn('⚠️ registrationId perdido durante o processo! Tentando recuperar...');
-      
+
       // Tentar recriar o registro
       setTimeout(() => {
         if (!registrationId) {
@@ -298,7 +309,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       }, 1000);
     }
   }, [registrationId, editMode, user?.tenantId, user?.id, currentStep]);
-  
+
   // useEffect para monitorar mudanças no usuário
   useEffect(() => {
     console.log('👤 Dados do usuário mudaram:', {
@@ -308,17 +319,17 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       registrationId
     });
   }, [user]);
-  
+
   // useEffect adicional para garantir scroll quando a etapa muda
   useEffect(() => {
     console.log('🔄 useEffect: Etapa mudou para', currentStep, '- executando scroll...');
-    
+
     // Delay maior para garantir que o DOM seja atualizado
     const timeoutId = setTimeout(() => {
       console.log('🔄 useEffect: Executando scroll para etapa', currentStep);
       scrollToTop();
     }, 500);
-    
+
     return () => {
       clearTimeout(timeoutId);
     };
@@ -326,7 +337,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
 
   const loadExistingRiskData = async () => {
     if (!existingRiskId) return;
-    
+
     setIsLoading(true);
     try {
       // Carregar dados principais do risco
@@ -337,16 +348,16 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         .single();
 
       if (error) throw error;
-      
+
       setRegistrationData(data);
       setRegistrationId(data.id);
-      
+
       // Carregar action plan items
       await loadActionPlanItems(data.id);
-      
+
       // Carregar stakeholders
       await loadStakeholders(data.id);
-      
+
     } catch (error) {
       console.error('Erro ao carregar dados do risco:', error);
       toast({
@@ -358,23 +369,23 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       setIsLoading(false);
     }
   };
-  
+
   const loadActionPlanItems = async (riskId: string) => {
     try {
       const { data, error } = await supabase
         .from('risk_registration_action_plans')
-        .select('*')
+        .select('id, activity_name, activity_description, responsible_name, responsible_email, due_date, priority, status')
         .eq('risk_registration_id', riskId)
         .order('created_at', { ascending: true });
-        
+
       if (error) throw error;
-      
+
       updateActionPlanItems(data || []);
     } catch (error) {
       console.error('Erro ao carregar action plan items:', error);
     }
   };
-  
+
   const loadStakeholders = async (riskId: string) => {
     try {
       const { data, error } = await supabase
@@ -382,9 +393,9 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         .select('*')
         .eq('risk_registration_id', riskId)
         .order('created_at', { ascending: true });
-        
+
       if (error) throw error;
-      
+
       updateStakeholders(data || []);
     } catch (error) {
       console.error('Erro ao carregar stakeholders:', error);
@@ -393,7 +404,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
 
   const createNewRiskRegistration = async () => {
     console.log('🔍 [DEBUG] Iniciando createNewRiskRegistration...');
-    
+
     if (!user?.tenantId || !user?.id) {
       console.log('❌ Dados do usuário incompletos:', {
         hasTenantId: !!user?.tenantId,
@@ -402,21 +413,21 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       });
       return;
     }
-    
+
     // Evitar criar múltiplos registros
     if (registrationId) {
       console.log('⚠️ Registro já existe, pulando criação:', registrationId);
       return;
     }
-    
+
     // Verificar se já está em processo de criação
     if (isLoading) {
       console.log('⚠️ Já está criando registro, aguardando...');
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       console.log('💾 Criando novo registro no banco...');
       console.log('🔍 [DEBUG] Dados para inserção:', {
@@ -426,7 +437,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         current_step: 1,
         completion_percentage: 0
       });
-      
+
       // Verificar se o usuário está autenticado no Supabase
       const { data: { user: supabaseUser }, error: authError } = await supabase.auth.getUser();
       console.log('🔍 [DEBUG] Usuário autenticado no Supabase:', {
@@ -434,21 +445,21 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         userId: supabaseUser?.id,
         authError
       });
-      
+
       if (authError) {
         console.error('❌ Erro de autenticação:', authError);
         throw new Error(`Erro de autenticação: ${authError.message}`);
       }
-      
+
       if (!supabaseUser) {
         console.error('❌ Usuário não autenticado no Supabase');
         throw new Error('Usuário não autenticado');
       }
-      
+
       // CORREÇÃO: Tentar inserção direta primeiro (RLS temporariamente desabilitado)
       console.log('🔧 [FIX] Configurando contexto do tenant:', user.tenantId);
       console.log('🔍 [DEBUG] Tentando inserção direta primeiro...');
-      
+
       const { data: directData, error: directError } = await supabase
         .from('risk_registrations')
         .insert({
@@ -471,29 +482,29 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           details: directError.details,
           hint: directError.hint
         });
-        
+
         // Fallback: tentar RPC que bypassa RLS
         console.log('🔄 [FALLBACK] Tentando via RPC que bypassa RLS...');
-        
+
         const { data: rpcData, error: rpcError } = await supabase.rpc('create_risk_registration_bypass_rls', {
           p_tenant_id: user.tenantId,
           p_created_by: user.id
         });
-        
+
         if (rpcError) {
           console.error('❌ Erro ao criar registro via RPC:', rpcError);
           throw rpcError;
         }
-        
+
         if (!rpcData) {
           console.error('❌ Nenhum dado retornado da inserção via RPC');
           throw new Error('Nenhum dado retornado da inserção');
         }
-        
+
         console.log('🔍 [DEBUG] Definindo registrationId (RPC):', rpcData);
         setRegistrationId(rpcData);
         console.log('✅ Novo registro de risco criado com sucesso (RPC):', rpcData);
-        
+
         // Verificar se o estado foi atualizado
         setTimeout(() => {
           console.log('🔍 [DEBUG] Verificando estado após setRegistrationId (RPC):', {
@@ -506,11 +517,11 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           console.error('❌ Nenhum dado retornado da inserção direta');
           throw new Error('Nenhum dado retornado da inserção');
         }
-        
+
         console.log('🔍 [DEBUG] Definindo registrationId (direto):', directData.id);
         setRegistrationId(directData.id);
         console.log('✅ Novo registro de risco criado com sucesso (direto):', directData.id);
-        
+
         // Verificar se o estado foi atualizado
         setTimeout(() => {
           console.log('🔍 [DEBUG] Verificando estado após setRegistrationId (direto):', {
@@ -519,21 +530,21 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           });
         }, 100);
       }
-      
+
       toast({
         title: '✅ Registro Iniciado',
         description: 'Novo registro de risco criado. Você pode começar a preencher os dados.',
       });
-      
+
     } catch (error) {
       console.error('❌ Erro ao criar registro de risco:', error);
       console.error('🔍 [DEBUG] Stack trace:', error.stack);
-      
+
       let errorMessage = 'Não foi possível criar o registro de risco.';
       if (error?.message) {
         errorMessage += ` Erro: ${error.message}`;
       }
-      
+
       toast({
         title: 'Erro ao criar registro',
         description: errorMessage,
@@ -547,7 +558,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
   const updateRegistrationData = (newData: Partial<RiskRegistrationData>) => {
     const updatedData = { ...registrationData, ...newData };
     setRegistrationData(updatedData);
-    
+
     // Salvar no Supabase
     saveToSupabase(updatedData);
   };
@@ -557,14 +568,14 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       console.warn('⚠️ saveToSupabase: registrationId não encontrado');
       return;
     }
-    
+
     try {
       console.log('💾 saveToSupabase: Salvando dados:', {
         registrationId,
         dataKeys: Object.keys(data),
         data
       });
-      
+
       const { error } = await supabase
         .from('risk_registrations')
         .update(data)
@@ -574,7 +585,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         console.error('❌ saveToSupabase: Erro ao salvar:', error);
         throw error;
       }
-      
+
       console.log('✅ saveToSupabase: Dados salvos com sucesso');
     } catch (error) {
       console.error('❌ saveToSupabase: Erro geral:', error);
@@ -599,9 +610,9 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       title: '✅ Etapa Concluída',
       description: `Avançando para: ${steps[currentStep]?.title}`,
     });
-    
+
     console.log('🚀 handleNext: Agendando scroll para o topo...');
-    
+
     // Rolar para o topo após um delay maior para garantir que o conteúdo seja renderizado
     setTimeout(() => {
       console.log('🚀 handleNext: Executando scroll agendado...');
@@ -632,9 +643,9 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         }
         break;
       case 3:
-        if (!registrationData.gut_gravity || registrationData.gut_gravity < 1 || 
-            !registrationData.gut_urgency || registrationData.gut_urgency < 1 || 
-            !registrationData.gut_tendency || registrationData.gut_tendency < 1) {
+        if (!registrationData.gut_gravity || registrationData.gut_gravity < 1 ||
+          !registrationData.gut_urgency || registrationData.gut_urgency < 1 ||
+          !registrationData.gut_tendency || registrationData.gut_tendency < 1) {
           toast({
             title: '⚠️ Classificação GUT Incompleta',
             description: 'Por favor, complete a classificação GUT (Gravidade, Urgência e Tendência).',
@@ -662,7 +673,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           stakeholdersLength: stakeholders?.length,
           registrationDataStakeholders: registrationData.stakeholders
         });
-        
+
         if (!stakeholders || stakeholders.length === 0) {
           toast({
             title: '⚠️ Stakeholders Necessários',
@@ -674,10 +685,10 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         break;
       case 7:
         // Validar apenas se pelo menos um campo de monitoramento foi preenchido
-        const hasMonitoringData = registrationData.monitoring_frequency || 
-                                 registrationData.monitoring_responsible || 
-                                 registrationData.closure_criteria;
-        
+        const hasMonitoringData = registrationData.monitoring_frequency ||
+          registrationData.monitoring_responsible ||
+          registrationData.closure_criteria;
+
         // Permitir finalizar mesmo sem todos os campos de monitoramento
         // A etapa 7 é opcional para finalização
         console.log('🔍 Validando etapa 7:', {
@@ -686,7 +697,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           monitoring_responsible: registrationData.monitoring_responsible,
           closure_criteria: registrationData.closure_criteria
         });
-        
+
         // Não bloquear a finalização se não tiver dados de monitoramento
         // if (!hasMonitoringData) {
         //   toast({
@@ -709,9 +720,9 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       } else {
         setCurrentStep(currentStep - 1);
       }
-      
+
       console.log('⬅️ handlePrevious: Agendando scroll para o topo...');
-      
+
       // Rolar para o topo após um delay maior
       setTimeout(() => {
         console.log('⬅️ handlePrevious: Executando scroll agendado...');
@@ -731,7 +742,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       editMode,
       existingRiskId
     });
-    
+
     // Verificar se registrationId existe
     if (!registrationId) {
       console.error('❌ registrationId não encontrado!');
@@ -745,13 +756,13 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         registrationDataKeys: Object.keys(registrationData),
         hasRiskTitle: !!registrationData.risk_title
       });
-      
+
       // Tentar recuperar ou criar um novo registro
       if (!editMode && user?.tenantId && user?.id) {
         console.log('🔄 [RECOVERY] Tentando criar novo registro antes de finalizar...');
         try {
           await createNewRiskRegistration();
-          
+
           // Aguardar um momento para o registrationId ser definido
           setTimeout(() => {
             if (registrationId) {
@@ -771,7 +782,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           console.error('❌ [RECOVERY] Erro ao tentar criar registro:', error);
         }
       }
-      
+
       toast({
         title: 'Erro de Registro',
         description: 'ID do registro não encontrado. Tente recarregar a página.',
@@ -779,7 +790,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       });
       return;
     }
-    
+
     if (!validateCurrentStep()) {
       console.log('❌ Validação da etapa final falhou');
       return;
@@ -788,7 +799,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
     setIsLoading(true);
     try {
       console.log('💾 Preparando dados finais para salvar...');
-      
+
       // Preparar dados finais com validação de constraints
       const finalData = {
         // Campos básicos
@@ -796,7 +807,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         completion_percentage: 100,
         current_step: 7,
         completed_at: new Date().toISOString(),
-        
+
         // Etapa 1: Identificação
         risk_title: registrationData.risk_title || null,
         risk_description: registrationData.risk_description || null,
@@ -804,7 +815,8 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         risk_source: registrationData.risk_source || null,
         identified_date: registrationData.identification_date || null,
         business_area: registrationData.responsible_area || null,
-        
+        metadata: registrationData.metadata || null,
+
         // Etapa 2: Análise
         analysis_methodology: registrationData.analysis_methodology || registrationData.methodology_id || null,
         impact_score: registrationData.impact_score || null,
@@ -812,19 +824,19 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         risk_score: registrationData.risk_score || null,
         risk_level: registrationData.risk_level || null,
         analysis_notes: registrationData.analysis_notes || null,
-        
+
         // Etapa 3: Classificação GUT
         gut_gravity: registrationData.gut_gravity || registrationData.gravity_score || null,
         gut_urgency: registrationData.gut_urgency || registrationData.urgency_score || null,
         gut_tendency: registrationData.gut_tendency || registrationData.tendency_score || null,
         gut_priority: registrationData.gut_priority || null,
-        
+
         // Etapa 4: Tratamento
         treatment_strategy: registrationData.treatment_strategy || null,
         treatment_rationale: registrationData.treatment_rationale || null,
         treatment_cost: registrationData.treatment_cost || null,
         treatment_timeline: registrationData.treatment_timeline || null,
-        
+
         // Etapa 5: Plano de Ação - Salvar primeira atividade diretamente na tabela principal
         activity_1_name: actionPlanItems?.[0]?.activity_name || null,
         activity_1_description: actionPlanItems?.[0]?.activity_description || null,
@@ -833,7 +845,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         activity_1_priority: actionPlanItems?.[0]?.priority || null,
         activity_1_status: actionPlanItems?.[0]?.status || null,
         activity_1_due_date: actionPlanItems?.[0]?.due_date || null,
-        
+
         // Etapa 6: Comunicação - Salvar primeiro stakeholder de cada tipo
         awareness_person_1_name: stakeholders?.find(s => s.stakeholder_type === 'awareness')?.person_name || null,
         awareness_person_1_position: stakeholders?.find(s => s.stakeholder_type === 'awareness')?.person_position || null,
@@ -843,7 +855,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         approval_person_1_email: stakeholders?.find(s => s.stakeholder_type === 'approval')?.person_email || null,
         approval_person_1_status: stakeholders?.find(s => s.stakeholder_type === 'approval')?.notification_status || null,
         requires_approval: registrationData.requires_approval || false,
-        
+
         // Etapa 7: Monitoramento
         monitoring_frequency: registrationData.monitoring_frequency || null,
         monitoring_responsible: registrationData.monitoring_responsible || null,
@@ -854,7 +866,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         closure_date: registrationData.review_date || null,
         closure_notes: registrationData.monitoring_notes || null
       };
-      
+
       console.log('🔍 [SAVE] Dados que serão salvos na tabela principal:', {
         finalData,
         actionPlanItems: actionPlanItems?.map(item => ({
@@ -880,16 +892,16 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           closure_criteria: registrationData.closure_criteria
         }
       });
-      
+
       // Remover campos undefined ou que não existem na tabela
       Object.keys(finalData).forEach(key => {
         if (finalData[key] === undefined) {
           delete finalData[key];
         }
       });
-      
+
       console.log('🔍 [SAVE] Dados finais preparados:', finalData);
-      
+
       console.log('💾 Atualizando registro principal...');
       const { data: updatedData, error } = await supabase
         .from('risk_registrations')
@@ -902,44 +914,44 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         console.error('❌ Erro ao atualizar registro principal:', error);
         throw error;
       }
-      
+
       console.log('✅ Registro principal atualizado com sucesso:', updatedData);
-      
+
       // Verificar se há action plan items para salvar
       if (actionPlanItems && actionPlanItems.length > 0) {
         console.log('💾 Verificando action plan items...');
-        const itemsToSave = actionPlanItems.filter(item => 
+        const itemsToSave = actionPlanItems.filter(item =>
           item.id && !item.id.toString().startsWith('temp-')
         );
         console.log(`${itemsToSave.length} action plan items já salvos no banco`);
       }
-      
+
       // Verificar se há stakeholders para salvar
       if (stakeholders && stakeholders.length > 0) {
         console.log('💾 Verificando stakeholders...');
-        const stakeholdersToSave = stakeholders.filter(stakeholder => 
+        const stakeholdersToSave = stakeholders.filter(stakeholder =>
           stakeholder.id && !stakeholder.id.toString().startsWith('temp-')
         );
         console.log(`${stakeholdersToSave.length} stakeholders já salvos no banco`);
       }
-      
+
       console.log('🎉 Registro finalizado com sucesso na tabela risk_registrations!');
-      
+
       // Confirmar que o registro aparecerá na lista
       toast({
         title: '✅ Registro Completo',
         description: 'O risco foi registrado e aparecerá na lista detalhada.',
       });
-      
+
       console.log('🎉 Finalizando processo...');
-      
+
       toast({
         title: '🎉 Registro de Risco Concluído',
         description: `Risco "${registrationData.risk_title}" foi registrado com sucesso.`,
       });
-      
+
       console.log('✅ Processo de finalização concluído com sucesso!');
-      
+
       // Aguardar um momento para mostrar o toast e depois fechar o formulário
       setTimeout(() => {
         // Chamar callback de conclusão para fechar o formulário
@@ -949,10 +961,10 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
           stakeholders: stakeholders
         });
       }, 1500); // 1.5 segundos para o usuário ver o toast de sucesso
-      
+
     } catch (error) {
       console.error('❌ Erro ao finalizar registro:', error);
-      
+
       let errorMessage = 'Não foi possível finalizar o registro do risco.';
       if (error?.message) {
         errorMessage += ` Erro: ${error.message}`;
@@ -960,7 +972,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
       if (error?.details) {
         errorMessage += ` Detalhes: ${error.details}`;
       }
-      
+
       toast({
         title: 'Erro ao finalizar',
         description: errorMessage,
@@ -982,7 +994,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
         </div>
       );
     }
-    
+
     // Verificar se temos registrationId (exceto para a primeira etapa)
     if (!registrationId && !editMode && currentStep > 1) {
       return (
@@ -995,7 +1007,7 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
             <p className="text-muted-foreground mb-4">
               O ID do registro foi perdido. Isso pode acontecer se a página foi recarregada.
             </p>
-            <Button 
+            <Button
               onClick={() => {
                 console.log('🔄 Usuário solicitou recriação do registro');
                 createNewRiskRegistration();
@@ -1112,16 +1124,15 @@ export const RiskRegistrationWizard: React.FC<RiskRegistrationWizardProps> = ({
             const Icon = step.icon;
             const isActive = step.id === currentStep;
             const isCompleted = step.id < currentStep;
-            
+
             return (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center space-x-2 p-3 rounded-lg transition-all ${
-                  isActive 
-                    ? 'bg-primary text-primary-foreground' 
-                    : isCompleted 
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                      : 'bg-muted text-muted-foreground'
-                }`}>
+                <div className={`flex items-center space-x-2 p-3 rounded-lg transition-all ${isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : isCompleted
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                    : 'bg-muted text-muted-foreground'
+                  }`}>
                   {isCompleted ? (
                     <CheckCircle className="h-5 w-5" />
                   ) : (

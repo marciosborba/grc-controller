@@ -1,0 +1,101 @@
+[
+  {
+    "id": "7e1c915b-ac78-453d-b805-0abdcdf5e34f",
+    "titulo": "GePriv",
+    "status": "planejado",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor",
+    "metadados": {
+      "assessment_id": "60b14cf8-bf89-4749-8381-aee4fb31f8ce",
+      "assessment_name": "Segurança da Informação"
+    }
+  },
+  {
+    "id": "21f34d15-94c8-447e-bb27-64b506f7d491",
+    "titulo": "Adequar Controle: Como é realizado o processo de revogação de acessos de colab",
+    "status": "aguardando_validacao",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "efeb6779-92d6-4995-8f44-299f173741be",
+    "titulo": "Adequar Controle: Existe revisão periódica de direitos de acesso?",
+    "status": "aguardando_validacao",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "5e04898e-bd73-4a26-bb2c-547d457719d3",
+    "titulo": "Adequar Controle: Existe um processo definido para resposta a incidentes de vi",
+    "status": "aguardando_validacao",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "a781871c-0ce9-4a08-b988-57c35128c239",
+    "titulo": "Adequar Controle: Os fornecedores críticos são avaliados quanto a riscos de se",
+    "status": "aguardando_validacao",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "e298ceb7-f13a-40d2-bd01-1baa060d98c6",
+    "titulo": "Adequar Controle: Existe revisão periódica de direitos de acesso?",
+    "status": "aguardando_validacao",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "6c16d0c0-fe67-488b-abf1-737846646861",
+    "titulo": "Adequar Controle: Existe um processo definido para resposta a incidentes de vi",
+    "status": "aguardando_validacao",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "3a251aea-12d0-4035-bd6b-09b8b5245604",
+    "titulo": "Adequar Controle: Como é realizado o processo de revogação de acessos de colab",
+    "status": "disponivel_fornecedor",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  },
+  {
+    "id": "acdeaa18-0021-4937-884f-68dc56f74ebb",
+    "titulo": "Adequar Controle: Os fornecedores críticos são avaliados quanto a riscos de se",
+    "status": "disponivel_fornecedor",
+    "entidade_origem_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "entidade_origem_tipo": "vendor_assessment",
+    "metadados": {
+      "assessment_id": "9ec209e3-cccb-4bc3-b9b3-15a515605e90",
+      "assessment_name": "Teste 5"
+    }
+  }
+]

@@ -47,7 +47,7 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
   const loadFindingsData = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('projetos_auditoria')
         .select(`
@@ -76,17 +76,17 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
 
   const calculateCompleteness = useCallback(() => {
     let score = 0;
-    
+
     // Apontamentos identificados (40 pontos)
     if (findingsData.apontamentos.length > 0) {
       score += 40;
     }
-    
+
     // Análise concluída (30 pontos)
     if (findingsData.analise_concluida) {
       score += 30;
     }
-    
+
     // Classificação realizada (30 pontos)
     if (findingsData.classificacao_realizada) {
       score += 30;
@@ -98,9 +98,9 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
   const autoSaveFindingsData = async () => {
     try {
       setAutoSaving(true);
-      
+
       const completeness = calculateCompleteness();
-      
+
       const { error } = await supabase
         .from('projetos_auditoria')
         .update({
@@ -127,9 +127,9 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
   const saveFindingsData = async () => {
     try {
       setSaving(true);
-      
+
       const completeness = calculateCompleteness();
-      
+
       const { error } = await supabase
         .from('projetos_auditoria')
         .update({
@@ -169,32 +169,39 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
     <div className="space-y-6">
       {/* Header com Progresso */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3 px-4 sm:pb-6 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg tracking-tight">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
                 Achados e Apontamentos
-                {autoSaving && <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />}
+                {autoSaving && <RefreshCw className="h-3 w-3 animate-spin text-blue-500" />}
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm mt-1">
                 Análise e classificação de apontamentos
                 {lastSaved && (
-                  <span className="block text-xs text-green-600 mt-1">
+                  <span className="block text-[10px] sm:text-xs text-green-600 mt-1">
                     Último salvamento: {lastSaved.toLocaleTimeString('pt-BR')}
                   </span>
                 )}
               </CardDescription>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Completude</p>
-                <p className="text-lg font-bold">{completeness}%</p>
-                <Badge variant={completeness >= 80 ? 'default' : completeness >= 50 ? 'secondary' : 'outline'}>
-                  {completeness >= 80 ? 'Excelente' : completeness >= 50 ? 'Bom' : 'Em progresso'}
-                </Badge>
+
+            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <div className="flex flex-col sm:items-end w-full sm:w-auto">
+                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto mb-1 sm:mb-0">
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-wider">Completude</p>
+                </div>
+                <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm sm:text-lg font-bold leading-none">{completeness}%</p>
+                    <Badge className="text-[9px] px-1.5 py-0 h-4 rounded" variant={completeness >= 80 ? 'default' : completeness >= 50 ? 'secondary' : 'outline'}>
+                      {completeness >= 80 ? 'Excelente' : completeness >= 50 ? 'Bom' : 'Em progresso'}
+                    </Badge>
+                  </div>
+                  <Progress value={completeness} className="w-20 sm:w-24 h-2 sm:h-3 ml-auto sm:ml-2" />
+                </div>
               </div>
-              <Progress value={completeness} className="w-24 h-3" />
             </div>
           </div>
         </CardHeader>
@@ -202,37 +209,37 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
 
       {/* Resumo dos Achados */}
       <Card>
-        <CardHeader>
-          <CardTitle>Resumo dos Achados</CardTitle>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm sm:text-base tracking-tight">Resumo dos Achados</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
+        <CardContent className="px-4 pb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-950/20">
+              <div className="text-xl sm:text-2xl font-bold text-red-600">
                 {findingsData.apontamentos.filter(a => a.criticidade === 'critica').length}
               </div>
-              <div className="text-sm text-muted-foreground">Críticos</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-0.5">Críticos</div>
             </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
+
+            <div className="text-center p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">
                 {findingsData.apontamentos.filter(a => a.criticidade === 'alta').length}
               </div>
-              <div className="text-sm text-muted-foreground">Altos</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-0.5">Altos</div>
             </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">
+
+            <div className="text-center p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
+              <div className="text-xl sm:text-2xl font-bold text-yellow-600">
                 {findingsData.apontamentos.filter(a => a.criticidade === 'media').length}
               </div>
-              <div className="text-sm text-muted-foreground">Médios</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-0.5">Médios</div>
             </div>
-            
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
+
+            <div className="text-center p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">
                 {findingsData.apontamentos.filter(a => a.criticidade === 'baixa').length}
               </div>
-              <div className="text-sm text-muted-foreground">Baixos</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-0.5">Baixos</div>
             </div>
           </div>
         </CardContent>
@@ -240,10 +247,10 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
 
       {/* Controles de Status */}
       <Card>
-        <CardHeader>
-          <CardTitle>Status da Análise</CardTitle>
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="text-sm sm:text-base tracking-tight">Status da Análise</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 px-4 pb-4">
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -255,11 +262,11 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
               }))}
               className="rounded"
             />
-            <label htmlFor="analise-concluida" className="text-sm font-medium">
+            <label htmlFor="analise-concluida" className="text-xs sm:text-sm font-medium">
               Análise de achados concluída
             </label>
           </div>
-          
+
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -271,7 +278,7 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
               }))}
               className="rounded"
             />
-            <label htmlFor="classificacao-realizada" className="text-sm font-medium">
+            <label htmlFor="classificacao-realizada" className="text-xs sm:text-sm font-medium">
               Classificação de riscos realizada
             </label>
           </div>
@@ -280,38 +287,38 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
 
       {/* Lista de Apontamentos */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="py-3 px-4">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base tracking-tight">
             Apontamentos Identificados
-            <Badge variant="outline">{findingsData.apontamentos.length}</Badge>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">{findingsData.apontamentos.length}</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4">
           {findingsData.apontamentos.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {findingsData.apontamentos.map((apontamento, index) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium">{apontamento.titulo || `Apontamento ${index + 1}`}</h4>
-                    <Badge variant={
+                <div key={index} className="border rounded-md p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className="font-medium text-xs sm:text-sm">{apontamento.titulo || `Apontamento ${index + 1}`}</h4>
+                    <Badge className="text-[10px] px-1.5 py-0 h-5" variant={
                       apontamento.criticidade === 'critica' ? 'destructive' :
-                      apontamento.criticidade === 'alta' ? 'default' :
-                      apontamento.criticidade === 'media' ? 'secondary' : 'outline'
+                        apontamento.criticidade === 'alta' ? 'default' :
+                          apontamento.criticidade === 'media' ? 'secondary' : 'outline'
                     }>
                       {apontamento.criticidade?.toUpperCase()}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
                     {apontamento.descricao || 'Descrição não disponível'}
                   </p>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <AlertTriangle className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-semibold">Nenhum apontamento identificado</h3>
-              <p className="text-muted-foreground">
+            <div className="text-center py-6">
+              <AlertTriangle className="mx-auto h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground/50" />
+              <h3 className="mt-3 text-sm sm:text-base font-medium">Nenhum apontamento identificado</h3>
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 max-w-[250px] mx-auto">
                 Os apontamentos serão carregados automaticamente dos trabalhos de auditoria.
               </p>
             </div>
@@ -321,31 +328,31 @@ export function FindingsPhaseFixed({ project }: FindingsPhaseProps) {
 
       {/* Ações */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle className={`h-4 w-4 ${completeness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
-              <span className="text-sm text-muted-foreground">
-                {completeness >= 80 ? 'Análise completa - Pronto para próxima fase' : 
-                 completeness >= 50 ? `${completeness}% completo - Bom progresso` :
-                 `${completeness}% completo - Continue analisando`}
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+              <CheckCircle className={`h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 ${completeness >= 80 ? 'text-green-600' : 'text-gray-400'}`} />
+              <span className="text-[10px] sm:text-xs text-muted-foreground flex-1 sm:flex-none leading-tight">
+                {completeness >= 80 ? 'Completo' :
+                  completeness >= 50 ? `${completeness}% completo - Bom progresso` :
+                    `${completeness}% completo - Continue analisando`}
               </span>
               {autoSaving && (
-                <Badge variant="outline" className="ml-2">
-                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-                  Auto-salvando...
+                <Badge variant="outline" className="hidden sm:inline-flex ml-2 text-[9px] px-1 py-0 h-4">
+                  <RefreshCw className="h-2.5 w-2.5 mr-1 animate-spin" />
+                  Auto-salvando
                 </Badge>
               )}
             </div>
-            
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={loadFindingsData}>
-                <RefreshCw className="h-4 w-4 mr-1" />
+
+            <div className="flex gap-2 w-full sm:w-auto justify-end">
+              <Button variant="outline" size="sm" onClick={loadFindingsData} className="text-[10px] sm:text-xs h-8">
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                 Recarregar
               </Button>
-              <Button onClick={saveFindingsData} disabled={saving}>
-                <Save className="h-4 w-4 mr-1" />
-                {saving ? 'Salvando...' : 'Salvar Agora'}
+              <Button size="sm" onClick={saveFindingsData} disabled={saving} className="text-[10px] sm:text-xs h-8">
+                <Save className="h-3.5 w-3.5 mr-1.5" />
+                {saving ? 'Salvando...' : 'Salvar'}
               </Button>
             </div>
           </div>

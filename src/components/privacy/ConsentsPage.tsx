@@ -233,24 +233,24 @@ export function ConsentsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="border-l border-muted-foreground/20 pl-4">
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground truncate">
               Gestão de Consentimentos
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
               Controle e auditoria de consentimentos LGPD
             </p>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleGenerateReport}>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <Button variant="outline" onClick={handleGenerateReport} className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
             Relatório
           </Button>
 
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button className="w-full sm:w-auto flex items-center gap-2">
                 <Plus className="w-4 h-4" />
                 Registrar Consentimento
               </Button>
@@ -283,7 +283,7 @@ export function ConsentsPage() {
       )}
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -356,9 +356,9 @@ export function ConsentsPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
               <Select onValueChange={(value) => handleFilterChange('status', value)}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -371,7 +371,7 @@ export function ConsentsPage() {
               </Select>
 
               <Select onValueChange={(value) => handleFilterChange('collection_method', value)}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="Método de Coleta" />
                 </SelectTrigger>
                 <SelectContent>
@@ -417,23 +417,23 @@ export function ConsentsPage() {
 
       {/* Consents Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="all">
+        <TabsList className="flex items-center justify-start overflow-x-auto hide-scrollbar pb-1 sm:pb-0 w-full h-auto p-1">
+          <TabsTrigger value="all" className="whitespace-nowrap flex-shrink-0">
             Todos ({stats.total})
           </TabsTrigger>
-          <TabsTrigger value="granted">
+          <TabsTrigger value="granted" className="whitespace-nowrap flex-shrink-0">
             Ativos ({stats.granted})
           </TabsTrigger>
-          <TabsTrigger value="revoked">
+          <TabsTrigger value="revoked" className="whitespace-nowrap flex-shrink-0">
             Revogados ({stats.revoked})
           </TabsTrigger>
-          <TabsTrigger value="expired">
+          <TabsTrigger value="expired" className="whitespace-nowrap flex-shrink-0">
             Expirados ({stats.expired})
           </TabsTrigger>
-          <TabsTrigger value="expiring">
+          <TabsTrigger value="expiring" className="whitespace-nowrap flex-shrink-0">
             Expirando ({stats.expiring_soon})
           </TabsTrigger>
-          <TabsTrigger value="by-method">
+          <TabsTrigger value="by-method" className="whitespace-nowrap flex-shrink-0">
             Por Método
           </TabsTrigger>
         </TabsList>

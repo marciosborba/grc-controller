@@ -229,7 +229,7 @@ const NonConformitiesManagement: React.FC = () => {
       id: req.id,
       titulo: req.titulo,
       framework_id: req.framework_id,
-      framework_nome: req.frameworks_compliance?.nome || 'N/A'
+      framework_nome: (req.frameworks_compliance as any)?.nome || ((req.frameworks_compliance as any)?.[0]?.nome) || 'N/A'
     })) || [];
 
     setRequirements(processedRequirements);
@@ -476,13 +476,13 @@ const NonConformitiesManagement: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <AlertTriangle className="h-8 w-8 text-red-600" />
+        <div className="w-full">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600 shrink-0" />
             Não Conformidades
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary shrink-0">
                   <HelpCircle className="h-4 w-4" />
                 </Button>
               </DialogTrigger>
@@ -521,13 +521,11 @@ const NonConformitiesManagement: React.FC = () => {
             Gestão de gaps de conformidade e planos de ação corretiva
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar
           </Button>
-
-
 
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
@@ -537,7 +535,7 @@ const NonConformitiesManagement: React.FC = () => {
             }
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="w-full sm:w-auto">
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Não Conformidade
               </Button>
@@ -957,7 +955,7 @@ const NonConformitiesManagement: React.FC = () => {
 
                 {nc.risco_score && (
                   <div className="mb-4">
-                    <RiskLevelDisplay level={nc.risco_score} />
+                    <RiskLevelDisplay risks={[{ riskLevel: String(nc.risco_score) }]} />
                   </div>
                 )}
               </CardContent>
@@ -1093,7 +1091,7 @@ const NonConformitiesManagement: React.FC = () => {
                     {selectedNonConformity.risco_score && (
                       <div>
                         <h4 className="font-semibold mb-2">Análise de Risco</h4>
-                        <RiskLevelDisplay level={selectedNonConformity.risco_score} />
+                        <RiskLevelDisplay risks={[{ riskLevel: String(selectedNonConformity.risco_score) }]} />
                       </div>
                     )}
                   </div>
