@@ -84,6 +84,8 @@ const TenantSettingsPage: React.FC = () => {
 
   const isPlatformAdmin = user?.isPlatformAdmin;
   const hasAccess = checkModuleAccess('settings');
+  const ADMIN_ROLES = ['admin', 'super_admin', 'tenant_admin'];
+  const isAdmin = isPlatformAdmin || user?.roles?.some(r => ADMIN_ROLES.includes(r));
 
   useEffect(() => {
     if (selectedTenantId) {
@@ -283,6 +285,20 @@ const TenantSettingsPage: React.FC = () => {
           <div className="text-center text-muted-foreground">
             <Settings className="mx-auto h-12 w-12 mb-4" />
             <p>Acesso restrito a administradores da organização ou super administradores.</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">
+            <Lock className="mx-auto h-12 w-12 mb-4 text-amber-500" />
+            <h3 className="text-lg font-semibold mb-2">Acesso Exclusivo para Administradores</h3>
+            <p className="text-muted-foreground">Este módulo é exclusivo para usuários com a função de Administrador ou Administrador da Organização. Entre em contato com o administrador para solicitar acesso elevado.</p>
           </div>
         </CardContent>
       </Card>
