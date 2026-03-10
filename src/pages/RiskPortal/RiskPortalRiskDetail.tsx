@@ -1,20 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ShieldAlert, Users, Target, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+    ArrowLeft, ShieldAlert, Users, Target, AlertTriangle,
+    Calendar, UploadCloud, Paperclip, FileText, Trash2,
+    CheckCircle, XCircle, Clock, Activity
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 const RESP_LABELS: Record<string, string> = {
     pending: '⏳ Pendente', acknowledged: '👁️ Ciência Tomada',
     approved: '✅ Aprovado', rejected: '❌ Rejeitado',
 };
-const APStatus: Record<string, string> = {
-    pending: '⏳ Pendente', in_progress: '🔄 Em Andamento',
-    completed: '✅ Concluído', delayed: '⚠️ Atrasado',
+
+const AP_STATUS_MAP: Record<string, { label: string; color: string }> = {
+    pending: { label: 'Pendente', color: 'bg-amber-500/10 text-amber-700 border-amber-500/20' },
+    in_progress: { label: 'Em Andamento', color: 'bg-blue-500/10 text-blue-700 border-blue-500/20' },
+    completed: { label: 'Concluído', color: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20' },
+    delayed: { label: 'Atrasado', color: 'bg-red-500/10 text-red-700 border-red-500/20' },
+    awaiting_validation: { label: 'Aguard. Validação', color: 'bg-purple-500/10 text-purple-700 border-purple-500/20' },
 };
 
 export const RiskPortalRiskDetail = () => {
@@ -28,16 +42,20 @@ export const RiskPortalRiskDetail = () => {
     const [myStakeholder, setMyStakeholder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
+    const [selectedPlanForEvidence, setSelectedPlanForEvidence] = useState<any>(null);
+    const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [evidenceForm, setEvidenceForm] = useState({ notes: '', evidence_url: '', evidence_name: '' });
 
-    useEffect(() => { if (id) fetchData(); }, [id]);
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
+        if (!id) return;
         try {
             setLoading(true);
             const [riskRes, stkRes, apRes] = await Promise.all([
                 supabase.from('risk_registrations').select('*').eq('id', id).single(),
                 supabase.from('risk_stakeholders').select('*').eq('risk_registration_id', id),
-                supabase.from('risk_registration_action_plans').select('*').eq('risk_registration_id', id),
+                supabase.from('risk_registration_action_plans').select('*').eq('risk_registration_id', id).order('due_date'),
             ]);
             if (riskRes.error) throw riskRes.error;
             setRisk(riskRes.data);
@@ -48,7 +66,9 @@ export const RiskPortalRiskDetail = () => {
         } catch (err: any) {
             toast({ title: 'Erro ao carregar risco', description: err.message, variant: 'destructive' });
         } finally { setLoading(false); }
-    };
+    }, [id, user, toast]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
 
     const updateMyStatus = async (newStatus: string) => {
         if (!myStakeholder) return;
@@ -62,6 +82,60 @@ export const RiskPortalRiskDetail = () => {
         } catch (err: any) {
             toast({ title: 'Erro', description: err.message, variant: 'destructive' });
         } finally { setUpdating(false); }
+    };
+
+    const openEvidenceModal = (plan: any) => {
+        setSelectedPlanForEvidence(plan);
+        setEvidenceForm({ notes: plan.stakeholder_notes || '', evidence_url: plan.evidence_url || '', evidence_name: plan.evidence_name || '' });
+        setIsEvidenceModalOpen(true);
+    };
+
+    const handleUploadEvidence = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        setIsUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `risk_evidence/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+            const { error: uploadError } = await supabase.storage.from('chat-attachments').upload(fileName, file, { upsert: true });
+            if (uploadError) throw uploadError;
+            const { data: { publicUrl } } = supabase.storage.from('chat-attachments').getPublicUrl(fileName);
+            setEvidenceForm(prev => ({ ...prev, evidence_url: publicUrl, evidence_name: file.name }));
+            toast({ title: 'Evidência anexada!', description: file.name });
+        } catch (err: any) {
+            toast({ title: 'Erro no upload', description: err.message, variant: 'destructive' });
+        } finally { setIsUploading(false); }
+    };
+
+    const handleSaveEvidence = async () => {
+        if (!selectedPlanForEvidence) return;
+        setIsSaving(true);
+        try {
+            const newStatus = evidenceForm.evidence_url ? 'awaiting_validation' : selectedPlanForEvidence.status;
+            const { error } = await supabase.from('risk_registration_action_plans').update({
+                stakeholder_notes: evidenceForm.notes || null,
+                evidence_url: evidenceForm.evidence_url || null,
+                evidence_name: evidenceForm.evidence_name || null,
+                status: newStatus,
+            }).eq('id', selectedPlanForEvidence.id);
+            if (error) throw error;
+            toast({ title: 'Evidência enviada!', description: 'Aguardando validação do analista.' });
+            setIsEvidenceModalOpen(false);
+            fetchData();
+        } catch (err: any) {
+            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
+    };
+
+    const handleUpdatePlanStatus = async (planId: string, newStatus: string) => {
+        try {
+            const { error } = await supabase.from('risk_registration_action_plans').update({ status: newStatus }).eq('id', planId);
+            if (error) throw error;
+            setActionPlans(prev => prev.map(p => p.id === planId ? { ...p, status: newStatus } : p));
+            toast({ title: 'Status atualizado!' });
+        } catch (err: any) {
+            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+        }
     };
 
     if (loading) return (
@@ -87,6 +161,7 @@ export const RiskPortalRiskDetail = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
+            {/* Header */}
             <div className="flex items-center gap-3">
                 <Button variant="ghost" size="icon" onClick={() => navigate(-1)}><ArrowLeft className="h-5 w-5" /></Button>
                 <div>
@@ -157,6 +232,105 @@ export const RiskPortalRiskDetail = () => {
                 </CardContent>
             </Card>
 
+            {/* Action Plans — interactive */}
+            <Card className="border border-border shadow-sm">
+                <CardHeader className="bg-muted/50 border-b border-border">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <Target className="h-4 w-4 text-purple-600" /> Planos de Ação ({actionPlans.length})
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                    {actionPlans.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Nenhum plano de ação registrado.</p>
+                    ) : (
+                        <div className="space-y-4">
+                            {actionPlans.map((ap) => {
+                                const s = AP_STATUS_MAP[ap.status] || AP_STATUS_MAP.pending;
+                                return (
+                                    <div key={ap.id} className="p-4 rounded-lg border border-border bg-card hover:border-purple-600/30 transition-colors">
+                                        {/* Plan header */}
+                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-wrap gap-2 mb-1">
+                                                    <Badge variant="outline" className={`text-xs ${s.color}`}>{s.label}</Badge>
+                                                    {ap.analyst_validation_status === 'approved' && (
+                                                        <Badge variant="outline" className="text-xs border-emerald-500/40 text-emerald-600 bg-emerald-500/10">✅ Validado</Badge>
+                                                    )}
+                                                    {ap.analyst_validation_status === 'rejected' && (
+                                                        <Badge variant="outline" className="text-xs border-red-500/40 text-red-600 bg-red-500/10">❌ Rejeitado</Badge>
+                                                    )}
+                                                </div>
+                                                <p className="font-semibold text-sm text-foreground">{ap.activity_name || 'Sem título'}</p>
+                                                {ap.description && <p className="text-xs text-muted-foreground mt-1">{ap.description}</p>}
+                                            </div>
+                                            {ap.analyst_validation_status !== 'approved' && (
+                                                <Select
+                                                    value={ap.status}
+                                                    onValueChange={v => handleUpdatePlanStatus(ap.id, v)}
+                                                    disabled={ap.status === 'awaiting_validation'}
+                                                >
+                                                    <SelectTrigger className="h-7 text-xs w-[140px] shrink-0">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="pending">⏳ Pendente</SelectItem>
+                                                        <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
+                                                        <SelectItem value="completed">✅ Concluído</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        </div>
+
+                                        {/* Plan meta */}
+                                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3">
+                                            {ap.responsible_name && (
+                                                <span className="flex items-center gap-1"><Activity className="h-3 w-3" /> {ap.responsible_name}</span>
+                                            )}
+                                            {ap.due_date && (
+                                                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(ap.due_date).toLocaleDateString('pt-BR')}</span>
+                                            )}
+                                        </div>
+
+                                        {/* Evidence submitted */}
+                                        {(ap.evidence_url || ap.stakeholder_notes) && (
+                                            <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2 mb-3">
+                                                {ap.stakeholder_notes && (
+                                                    <p className="text-xs text-foreground">
+                                                        <span className="font-semibold text-muted-foreground uppercase text-[10px] mr-1">Obs.:</span>
+                                                        {ap.stakeholder_notes}
+                                                    </p>
+                                                )}
+                                                {ap.evidence_url && (
+                                                    <a href={ap.evidence_url} target="_blank" rel="noopener noreferrer"
+                                                        className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                                                        <Paperclip className="h-3 w-3" /> {ap.evidence_name || 'Ver Evidência'}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Analyst feedback */}
+                                        {ap.analyst_notes && (
+                                            <div className={`p-3 rounded-lg border text-xs mb-3 ${ap.analyst_validation_status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700' : 'border-red-500/30 bg-red-500/5 text-red-700'}`}>
+                                                <span className="font-semibold mr-1">Analista:</span>{ap.analyst_notes}
+                                            </div>
+                                        )}
+
+                                        {/* Action button */}
+                                        {ap.analyst_validation_status !== 'approved' && (
+                                            <Button variant="outline" size="sm" onClick={() => openEvidenceModal(ap)} className="border-purple-600/30 text-purple-700 hover:bg-purple-600/5">
+                                                <UploadCloud className="h-3.5 w-3.5 mr-1" />
+                                                {ap.evidence_url ? 'Atualizar Evidência' : 'Enviar Evidência'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* Stakeholders */}
             <Card className="border border-border shadow-sm">
                 <CardHeader className="bg-muted/50 border-b border-border">
@@ -177,9 +351,7 @@ export const RiskPortalRiskDetail = () => {
                                         <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 border-blue-500/20">
                                             {stk.notification_type === 'approval' ? '🔐 Aprovação' : '👁️ Ciência'}
                                         </Badge>
-                                        <Badge variant="outline" className="text-xs">
-                                            {RESP_LABELS[stk.response_status] || stk.response_status || '⏳ Pendente'}
-                                        </Badge>
+                                        <Badge variant="outline" className="text-xs">{RESP_LABELS[stk.response_status] || '⏳ Pendente'}</Badge>
                                     </div>
                                 </div>
                             ))}
@@ -188,31 +360,68 @@ export const RiskPortalRiskDetail = () => {
                 </CardContent>
             </Card>
 
-            {/* Action Plans */}
-            <Card className="border border-border shadow-sm">
-                <CardHeader className="bg-muted/50 border-b border-border">
-                    <CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4 text-purple-600" /> Planos de Ação ({actionPlans.length})</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                    {actionPlans.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Nenhum plano de ação registrado.</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {actionPlans.map((ap) => (
-                                <div key={ap.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-lg border border-border bg-muted/30">
-                                    <div>
-                                        <p className="font-semibold text-sm text-foreground">{ap.activity_name || 'Sem título'}</p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Responsável: {ap.responsible_name || '—'} · Prazo: {ap.due_date ? new Date(ap.due_date).toLocaleDateString('pt-BR') : '—'}
-                                        </p>
-                                    </div>
-                                    <Badge variant="outline" className="text-xs shrink-0">{APStatus[ap.status] || ap.status || '⏳ Pendente'}</Badge>
-                                </div>
-                            ))}
+            {/* Evidence Modal */}
+            <Dialog open={isEvidenceModalOpen} onOpenChange={setIsEvidenceModalOpen}>
+                <DialogContent className="sm:max-w-[520px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <UploadCloud className="h-5 w-5 text-purple-600" />
+                            Enviar Evidência e Observações
+                        </DialogTitle>
+                        <DialogDescription>
+                            Anexe evidências de conclusão e deixe observações para o analista validar esta atividade.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-2">
+                        <div className="p-3 rounded-lg bg-muted/30 border">
+                            <p className="text-xs font-medium text-muted-foreground">Atividade:</p>
+                            <p className="text-sm font-semibold mt-0.5">{selectedPlanForEvidence?.activity_name}</p>
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+
+                        <div className="space-y-2">
+                            <Label>Observações / Descrição da Execução</Label>
+                            <Textarea
+                                value={evidenceForm.notes}
+                                onChange={e => setEvidenceForm(prev => ({ ...prev, notes: e.target.value }))}
+                                placeholder="Descreva o que foi executado, quando e como foi feito..."
+                                rows={4}
+                            />
+                        </div>
+
+                        <div className="space-y-2 pt-2 border-t">
+                            <Label>Evidência de Conclusão</Label>
+                            {evidenceForm.evidence_name ? (
+                                <div className="flex items-center justify-between border rounded p-2 bg-muted/20 text-sm">
+                                    <span className="flex items-center gap-2">
+                                        <Paperclip className="h-4 w-4 text-primary" />
+                                        <span className="truncate max-w-[280px]">{evidenceForm.evidence_name}</span>
+                                    </span>
+                                    <Button variant="ghost" size="sm" onClick={() => setEvidenceForm(prev => ({ ...prev, evidence_url: '', evidence_name: '' }))} className="h-6 w-6 p-0 text-red-500">
+                                        <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    <Input type="file" onChange={handleUploadEvidence} disabled={isUploading} className="text-xs cursor-pointer" />
+                                    {isUploading && <p className="text-xs text-muted-foreground animate-pulse">Enviando arquivo...</p>}
+                                </div>
+                            )}
+                            <p className="text-xs text-muted-foreground">Aceita: PDF, DOC, DOCX, XLSX, PNG, JPG, etc.</p>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsEvidenceModalOpen(false)}>Cancelar</Button>
+                        <Button
+                            disabled={isSaving || isUploading || (!evidenceForm.notes && !evidenceForm.evidence_url)}
+                            onClick={handleSaveEvidence}
+                        >
+                            {isSaving ? 'Salvando...' : 'Enviar para Validação'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

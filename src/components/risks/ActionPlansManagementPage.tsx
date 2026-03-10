@@ -26,7 +26,10 @@ import {
   Download,
   RefreshCw,
   Activity,
-  Zap
+  Zap,
+  Paperclip,
+  XCircle,
+  ShieldCheck
 } from 'lucide-react';
 import {
   Select,
@@ -66,10 +69,16 @@ interface Activity {
   responsible_email: string;
   due_date: string;
   priority: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'awaiting_validation';
   evidence_description?: string;
   days_until_due?: number;
   is_overdue: boolean;
+  // Stakeholder interaction fields
+  stakeholder_notes?: string;
+  evidence_url?: string;
+  evidence_name?: string;
+  analyst_validation_status?: string;
+  analyst_notes?: string;
 }
 
 const PRIORITY_COLORS = {
@@ -118,6 +127,8 @@ export const ActionPlansManagementPage: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [validationNotes, setValidationNotes] = useState<Record<string, string>>({});
 
   // Carregar dados dos planos de ação
   useEffect(() => {
@@ -185,7 +196,13 @@ export const ActionPlansManagementPage: React.FC = () => {
             status: activity.status,
             evidence_description: activity.evidence_description,
             days_until_due: daysDiff,
-            is_overdue: daysDiff < 0 && activity.status !== 'completed'
+            is_overdue: daysDiff < 0 && activity.status !== 'completed',
+            // Stakeholder interaction
+            stakeholder_notes: activity.stakeholder_notes,
+            evidence_url: activity.evidence_url,
+            evidence_name: activity.evidence_name,
+            analyst_validation_status: activity.analyst_validation_status || 'pending',
+            analyst_notes: activity.analyst_notes,
           };
         });
 
@@ -236,6 +253,30 @@ export const ActionPlansManagementPage: React.FC = () => {
       title: "Dados Atualizados",
       description: "Os planos de ação foram atualizados com sucesso.",
     });
+  };
+
+  const handleAnalystValidation = async (activityId: string, decision: 'approved' | 'rejected') => {
+    setValidatingId(activityId);
+    try {
+      const notes = validationNotes[activityId] || '';
+      const newStatus = decision === 'approved' ? 'completed' : 'in_progress';
+      const { error } = await supabase
+        .from('risk_registration_action_plans')
+        .update({
+          analyst_validation_status: decision,
+          analyst_notes: notes || null,
+          status: newStatus,
+        })
+        .eq('id', activityId);
+      if (error) throw error;
+      toast({ title: decision === 'approved' ? '✅ Atividade validada!' : '❌ Atividade rejeitada', description: notes || '' });
+      setValidationNotes(prev => { const n = { ...prev }; delete n[activityId]; return n; });
+      loadActionPlans();
+    } catch (err: any) {
+      toast({ title: 'Erro na validação', description: err.message, variant: 'destructive' });
+    } finally {
+      setValidatingId(null);
+    }
   };
 
   const toggleCardExpanded = (planId: string) => {
@@ -691,15 +732,69 @@ export const ActionPlansManagementPage: React.FC = () => {
                                         </div>
                                       </div>
 
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1 flex-col items-end">
                                         {activity.is_overdue && (
                                           <AlertTriangle className="h-4 w-4 text-red-500" />
                                         )}
-                                        {activity.status === 'completed' && (
-                                          <CheckCircle className="h-4 w-4 text-green-500" />
+                                        {activity.status === 'completed' && activity.analyst_validation_status === 'approved' && (
+                                          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                        )}
+                                        {activity.status === 'awaiting_validation' && (
+                                          <span className="text-[10px] font-medium text-purple-600 bg-purple-500/10 border border-purple-500/30 px-1.5 py-0.5 rounded">Aguard. Validação</span>
                                         )}
                                       </div>
                                     </div>
+
+                                    {/* Analyst Validation Section */}
+                                    {activity.status === 'awaiting_validation' && (
+                                      <div className="mt-3 pt-3 border-t border-purple-500/20 bg-purple-500/5 rounded-b-lg -mx-3 -mb-3 px-3 pb-3">
+                                        <p className="text-xs font-semibold text-purple-700 mb-2 flex items-center gap-1">
+                                          <ShieldCheck className="h-3.5 w-3.5" /> Evidências da Parte Interessada
+                                        </p>
+                                        {activity.stakeholder_notes && (
+                                          <p className="text-xs text-foreground mb-2">
+                                            <span className="font-medium text-muted-foreground">Obs.: </span>{activity.stakeholder_notes}
+                                          </p>
+                                        )}
+                                        {activity.evidence_url && (
+                                          <a href={activity.evidence_url} target="_blank" rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 text-xs text-primary hover:underline mb-2">
+                                            <Paperclip className="h-3.5 w-3.5" />{activity.evidence_name || 'Ver Evidência'}
+                                          </a>
+                                        )}
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <input
+                                            type="text"
+                                            placeholder="Observações do analista (opcional)"
+                                            value={validationNotes[activity.id] || ''}
+                                            onChange={e => setValidationNotes(prev => ({ ...prev, [activity.id]: e.target.value }))}
+                                            className="flex-1 min-w-0 text-xs border rounded px-2 py-1 bg-background"
+                                          />
+                                          <Button size="sm" variant="outline"
+                                            className="border-emerald-500/50 text-emerald-700 hover:bg-emerald-500/10 text-xs h-7"
+                                            disabled={validatingId === activity.id}
+                                            onClick={() => handleAnalystValidation(activity.id, 'approved')}>
+                                            <CheckCircle className="h-3 w-3 mr-1" />Aprovar
+                                          </Button>
+                                          <Button size="sm" variant="outline"
+                                            className="border-red-500/50 text-red-700 hover:bg-red-500/10 text-xs h-7"
+                                            disabled={validatingId === activity.id}
+                                            onClick={() => handleAnalystValidation(activity.id, 'rejected')}>
+                                            <XCircle className="h-3 w-3 mr-1" />Rejeitar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                    {activity.analyst_validation_status === 'approved' && activity.analyst_notes && (
+                                      <div className="mt-2 p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-700">
+                                        <span className="font-medium">Analista: </span>{activity.analyst_notes}
+                                      </div>
+                                    )}
+                                    {activity.analyst_validation_status === 'rejected' && (
+                                      <div className="mt-2 p-2 rounded bg-red-500/10 border border-red-500/20 text-xs text-red-700">
+                                        <span className="font-medium">Rejeitado: </span>{activity.analyst_notes || 'Evidência rejeitada pelo analista.'}
+                                      </div>
+                                    )}
                                   </CardContent>
                                 </Card>
                               );
