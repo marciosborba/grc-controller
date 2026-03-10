@@ -45,7 +45,7 @@ interface RiskPlan {
     id: string;
     risk_registration_id: string;
     activity_name: string;
-    description?: string;
+    activity_description?: string;
     responsible_name?: string;
     responsible_email?: string;
     due_date?: string;
@@ -56,6 +56,7 @@ interface RiskPlan {
     stakeholder_notes?: string;
     analyst_validation_status?: string;
     analyst_notes?: string;
+    sub_activities?: { id: string; text: string; done: boolean }[];
     risk?: { id: string; risk_title: string; risk_level: string; risk_category: string };
 }
 
@@ -81,12 +82,14 @@ export const RiskPortalActionPlans = () => {
     const [editingActivity, setEditingActivity] = useState<RiskPlan | null>(null);
     const [activityForm, setActivityForm] = useState({
         activity_name: '',
-        description: '',
+        activity_description: '',
         responsible_name: '',
         responsible_email: '',
         due_date: '',
         priority: 'medium',
         status: 'pending',
+        sub_activities: [] as { id: string; text: string; done: boolean }[],
+        risk_registration_id: '',
     });
 
     const fetchPlans = useCallback(async () => {
@@ -104,9 +107,9 @@ export const RiskPortalActionPlans = () => {
             const { data: apData, error } = await supabase
                 .from('risk_registration_action_plans')
                 .select(`
-                    id, risk_registration_id, activity_name, description, responsible_name,
+                    id, risk_registration_id, activity_name, activity_description, responsible_name,
                     due_date, status, evidence_url, evidence_name, stakeholder_notes,
-                    analyst_validation_status, analyst_notes,
+                    analyst_validation_status, analyst_notes, sub_activities,
                     risk_registrations!inner(id, risk_title, risk_level, risk_category)
                 `)
                 .in('risk_registration_id', riskIds)
@@ -216,29 +219,28 @@ export const RiskPortalActionPlans = () => {
             setEditingActivity(activity);
             setActivityForm({
                 activity_name: activity.activity_name || '',
-                description: activity.description || '',
+                activity_description: activity.activity_description || '',
                 responsible_name: activity.responsible_name || '',
                 responsible_email: activity.responsible_email || '',
                 due_date: activity.due_date || '',
                 priority: activity.priority || 'medium',
                 status: activity.status || 'pending',
+                sub_activities: activity.sub_activities || [],
+                risk_registration_id: riskId,
             });
         } else {
             setEditingActivity(null);
             setActivityForm({
                 activity_name: '',
-                description: '',
+                activity_description: '',
                 responsible_name: (user as any)?.user_metadata?.full_name || '',
                 responsible_email: user?.email || '',
                 due_date: new Date().toISOString().split('T')[0],
                 priority: 'medium',
                 status: 'pending',
+                sub_activities: [],
+                risk_registration_id: riskId,
             });
-        }
-        // If creating new, we need to know which risk it belongs to
-        if (!activity) {
-            // @ts-ignore
-            setActivityForm(prev => ({ ...prev, risk_registration_id: riskId }));
         }
         setIsActivityModalOpen(true);
     };
@@ -255,12 +257,13 @@ export const RiskPortalActionPlans = () => {
                     .from('risk_registration_action_plans')
                     .update({
                         activity_name: activityForm.activity_name,
-                        description: activityForm.description,
+                        activity_description: activityForm.activity_description,
                         responsible_name: activityForm.responsible_name,
                         responsible_email: activityForm.responsible_email,
                         due_date: activityForm.due_date,
                         priority: activityForm.priority,
                         status: activityForm.status,
+                        sub_activities: activityForm.sub_activities,
                     })
                     .eq('id', editingActivity.id);
                 if (error) throw error;
@@ -273,12 +276,13 @@ export const RiskPortalActionPlans = () => {
                         // @ts-ignore
                         risk_registration_id: activityForm.risk_registration_id,
                         activity_name: activityForm.activity_name,
-                        description: activityForm.description,
+                        activity_description: activityForm.activity_description,
                         responsible_name: activityForm.responsible_name,
                         responsible_email: activityForm.responsible_email,
                         due_date: activityForm.due_date,
                         priority: activityForm.priority,
                         status: activityForm.status,
+                        sub_activities: activityForm.sub_activities,
                         tenant_id: (user as any)?.user_metadata?.tenant_id
                     }]);
                 if (error) throw error;
@@ -345,6 +349,22 @@ export const RiskPortalActionPlans = () => {
     const getStatusBadge = (status: string) => {
         const s = STATUS_MAP[status] || STATUS_MAP.pending;
         return <Badge variant="outline" className={`text-xs ${s.color}`}>{s.label}</Badge>;
+    };
+
+    const handleAnalystValidation = async (apId: string) => {
+        if (!window.confirm('Tem certeza que deseja validar este plano de ação? Ele será marcado como concluído.')) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('risk_registration_action_plans')
+                .update({ analyst_validation_status: 'approved', status: 'completed' })
+                .eq('id', apId);
+            if (error) throw error;
+            toast({ title: 'Plano Validado', description: 'O plano de ação foi validado e movido para concluídos.' });
+            fetchPlans();
+        } catch (err: any) {
+            toast({ title: 'Erro na validação', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
     };
 
     if (loading) return (
@@ -498,8 +518,22 @@ export const RiskPortalActionPlans = () => {
                                     </div>
                                 </div>
 
-                                {selectedPlan.description && (
-                                    <p className="text-sm text-muted-foreground mt-2">{selectedPlan.description}</p>
+                                {selectedPlan.activity_description && (
+                                    <p className="text-sm text-muted-foreground mt-2">{selectedPlan.activity_description}</p>
+                                )}
+
+                                {selectedPlan.sub_activities && selectedPlan.sub_activities.length > 0 && (
+                                    <div className="mt-4 space-y-1.5 p-3 rounded-md bg-muted/20 border border-border">
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">Sub-atividades</p>
+                                        {selectedPlan.sub_activities.map((sub: any, idx: number) => (
+                                            <div key={sub.id || idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                <div className={`h-4 w-4 rounded-sm border flex items-center justify-center shrink-0 ${sub.done ? 'bg-emerald-500 border-emerald-500' : 'border-muted-foreground'}`}>
+                                                    {sub.done && <CheckCircle className="h-3 w-3 text-white" />}
+                                                </div>
+                                                <span className={sub.done ? 'line-through opacity-70' : ''}>{sub.text}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
 
                                 <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-dashed text-sm">
@@ -539,10 +573,17 @@ export const RiskPortalActionPlans = () => {
                                         </SelectContent>
                                     </Select>
                                     {selectedPlan.status === 'awaiting_validation' && (
-                                        <p className="text-xs text-purple-600">⏳ Aguardando validação do analista</p>
+                                        <div className="flex flex-col gap-2 mt-2">
+                                            <p className="text-xs text-purple-600">⏳ Aguardando validação do analista</p>
+                                            {selectedPlan.analyst_validation_status !== 'approved' && (
+                                                <Button size="sm" onClick={() => handleAnalystValidation(selectedPlan.id)} className="w-fit bg-emerald-600 hover:bg-emerald-700 text-white text-xs mt-1">
+                                                    ✅ Validar Plano (Analista)
+                                                </Button>
+                                            )}
+                                        </div>
                                     )}
                                     {selectedPlan.analyst_validation_status === 'approved' && (
-                                        <p className="text-xs text-emerald-600">✅ Validado e aprovado pelo analista</p>
+                                        <p className="text-xs text-emerald-600 mt-2">✅ Validado e aprovado pelo analista</p>
                                     )}
                                 </div>
 
@@ -716,8 +757,8 @@ export const RiskPortalActionPlans = () => {
                             <Label htmlFor="description">Descrição</Label>
                             <Textarea
                                 id="description"
-                                value={activityForm.description}
-                                onChange={e => setActivityForm(prev => ({ ...prev, description: e.target.value }))}
+                                value={activityForm.activity_description}
+                                onChange={e => setActivityForm(prev => ({ ...prev, activity_description: e.target.value }))}
                                 placeholder="Detalhes sobre a execução..."
                                 rows={3}
                             />
@@ -784,6 +825,78 @@ export const RiskPortalActionPlans = () => {
                                     <SelectItem value="delayed">Atrasada</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+
+                        <div className="grid gap-2 py-2 border-t mt-2">
+                            <Label>Sub-atividades</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Nova sub-atividade"
+                                    id="new-sub-activity"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const input = e.currentTarget;
+                                            if (input.value.trim()) {
+                                                setActivityForm(prev => ({
+                                                    ...prev,
+                                                    sub_activities: [...prev.sub_activities, { id: Math.random().toString(36).substring(7), text: input.value.trim(), done: false }]
+                                                }));
+                                                input.value = '';
+                                            }
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={() => {
+                                        const input = document.getElementById('new-sub-activity') as HTMLInputElement;
+                                        if (input?.value.trim()) {
+                                            setActivityForm(prev => ({
+                                                ...prev,
+                                                sub_activities: [...prev.sub_activities, { id: Math.random().toString(36).substring(7), text: input.value.trim(), done: false }]
+                                            }));
+                                            input.value = '';
+                                        }
+                                    }}
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            {activityForm.sub_activities.length > 0 && (
+                                <div className="space-y-2 mt-2 max-h-[150px] overflow-y-auto pr-1">
+                                    {activityForm.sub_activities.map((sub, i) => (
+                                        <div key={sub.id || i} className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-border">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={sub.done}
+                                                    onChange={(e) => {
+                                                        const updated = [...activityForm.sub_activities];
+                                                        updated[i].done = e.target.checked;
+                                                        setActivityForm(prev => ({ ...prev, sub_activities: updated }));
+                                                    }}
+                                                    className="h-4 w-4 text-emerald-600 rounded"
+                                                />
+                                                <span className={`text-sm ${sub.done ? 'line-through text-muted-foreground' : ''}`}>{sub.text}</span>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-red-500 hover:bg-red-50"
+                                                onClick={() => {
+                                                    const updated = [...activityForm.sub_activities];
+                                                    updated.splice(i, 1);
+                                                    setActivityForm(prev => ({ ...prev, sub_activities: updated }));
+                                                }}
+                                            >
+                                                <XCircle className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 

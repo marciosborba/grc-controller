@@ -40,15 +40,13 @@ const RiskPortalSidebar = () => {
             <div className={`${collapsed ? 'h-14 px-2' : 'h-14 sm:h-16 px-3 sm:px-4'} flex items-center justify-between border-b border-border transition-all duration-300`}>
                 {!collapsed && (
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
-                        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-red-600/10 flex items-center justify-center flex-shrink-0">
-                            <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
-                        </div>
+                        <img src="/logo.png?v=2" alt="GEPRIV Logo" className="h-6 w-6 sm:h-8 sm:w-8 object-contain flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                             <h1 className="text-sm sm:text-base font-bold text-foreground truncate">Portal de Riscos</h1>
                         </div>
                     </div>
                 )}
-                <SidebarTrigger className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground p-1.5 sm:p-2 rounded-md" />
+
             </div>
 
             <SidebarContent className={`${collapsed ? 'px-1 py-2' : 'px-1 sm:px-2 py-2 sm:py-3'} transition-all duration-300`}>
@@ -189,12 +187,12 @@ const RiskPortalLayoutContent = () => {
             <div className="flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-300 w-full md:w-auto">
                 <RiskPortalHeader />
                 <main className="flex-1 w-full p-3 sm:p-4 md:p-6 lg:p-8 overflow-auto bg-background">
-                    <div className="max-w-[1400px] mx-auto w-full">
+                    <div className="w-full">
                         <Outlet />
                     </div>
                 </main>
                 <footer className="bg-card border-t border-border py-4 px-6 mt-auto">
-                    <div className="max-w-[1400px] text-center mx-auto flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-muted-foreground">
+                    <div className="w-full text-center flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-muted-foreground">
                         <p>© {new Date().getFullYear()} GRC Controller — Portal de Gestão de Riscos</p>
                         <div className="flex space-x-4">
                             <span className="hover:text-foreground cursor-pointer transition-colors">Privacidade</span>

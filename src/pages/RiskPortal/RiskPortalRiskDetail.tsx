@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     ArrowLeft, ShieldAlert, Users, Target, AlertTriangle,
     Calendar, UploadCloud, Paperclip, FileText, Trash2,
@@ -52,12 +53,13 @@ export const RiskPortalRiskDetail = () => {
     const [editingActivity, setEditingActivity] = useState<any>(null);
     const [activityForm, setActivityForm] = useState({
         activity_name: '',
-        description: '',
+        activity_description: '',
         responsible_name: '',
         responsible_email: '',
         due_date: '',
         priority: 'medium',
         status: 'pending',
+        sub_activities: [] as { id: string; text: string; done: boolean }[],
     });
 
     const fetchData = useCallback(async () => {
@@ -67,7 +69,10 @@ export const RiskPortalRiskDetail = () => {
             const [riskRes, stkRes, apRes] = await Promise.all([
                 supabase.from('risk_registrations').select('*').eq('id', id).single(),
                 supabase.from('risk_stakeholders').select('*').eq('risk_registration_id', id),
-                supabase.from('risk_registration_action_plans').select('*').eq('risk_registration_id', id).order('due_date'),
+                supabase.from('risk_registration_action_plans')
+                    .select('id, risk_registration_id, activity_name, activity_description, responsible_name, due_date, status, evidence_url, evidence_name, stakeholder_notes, analyst_validation_status, analyst_notes, sub_activities')
+                    .eq('risk_registration_id', id)
+                    .order('due_date'),
             ]);
             if (riskRes.error) throw riskRes.error;
             setRisk(riskRes.data);
@@ -155,23 +160,25 @@ export const RiskPortalRiskDetail = () => {
             setEditingActivity(activity);
             setActivityForm({
                 activity_name: activity.activity_name || '',
-                description: activity.description || '',
+                activity_description: activity.activity_description || '',
                 responsible_name: activity.responsible_name || '',
                 responsible_email: activity.responsible_email || '',
                 due_date: activity.due_date || '',
                 priority: activity.priority || 'medium',
                 status: activity.status || 'pending',
+                sub_activities: activity.sub_activities || [],
             });
         } else {
             setEditingActivity(null);
             setActivityForm({
                 activity_name: '',
-                description: '',
+                activity_description: '',
                 responsible_name: (user as any)?.user_metadata?.full_name || '',
                 responsible_email: user?.email || '',
                 due_date: new Date().toISOString().split('T')[0],
                 priority: 'medium',
                 status: 'pending',
+                sub_activities: [],
             });
         }
         setIsActivityModalOpen(true);
@@ -189,12 +196,13 @@ export const RiskPortalRiskDetail = () => {
                     .from('risk_registration_action_plans')
                     .update({
                         activity_name: activityForm.activity_name,
-                        description: activityForm.description,
+                        activity_description: activityForm.activity_description,
                         responsible_name: activityForm.responsible_name,
                         responsible_email: activityForm.responsible_email,
                         due_date: activityForm.due_date,
                         priority: activityForm.priority,
                         status: activityForm.status,
+                        sub_activities: activityForm.sub_activities,
                     })
                     .eq('id', editingActivity.id);
                 if (error) throw error;
@@ -205,12 +213,13 @@ export const RiskPortalRiskDetail = () => {
                     .insert([{
                         risk_registration_id: id,
                         activity_name: activityForm.activity_name,
-                        description: activityForm.description,
+                        activity_description: activityForm.activity_description,
                         responsible_name: activityForm.responsible_name,
                         responsible_email: activityForm.responsible_email,
                         due_date: activityForm.due_date,
                         priority: activityForm.priority,
                         status: activityForm.status,
+                        sub_activities: activityForm.sub_activities,
                         tenant_id: (user as any)?.user_metadata?.tenant_id
                     }]);
                 if (error) throw error;
@@ -236,6 +245,22 @@ export const RiskPortalRiskDetail = () => {
             fetchData();
         } catch (err: any) {
             toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
+    };
+
+    const handleAnalystValidation = async (apId: string) => {
+        if (!window.confirm('Tem certeza que deseja validar este plano de ação? Ele será marcado como concluído.')) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('risk_registration_action_plans')
+                .update({ analyst_validation_status: 'approved', status: 'completed' })
+                .eq('id', apId);
+            if (error) throw error;
+            toast({ title: 'Plano Validado', description: 'O plano de ação foi validado e movido para concluídos.' });
+            fetchData();
+        } catch (err: any) {
+            toast({ title: 'Erro na validação', description: err.message, variant: 'destructive' });
         } finally { setIsSaving(false); }
     };
 
@@ -347,100 +372,137 @@ export const RiskPortalRiskDetail = () => {
                     {actionPlans.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Nenhum plano de ação registrado.</p>
                     ) : (
-                        <div className="space-y-4">
-                            {actionPlans.map((ap) => {
-                                const s = AP_STATUS_MAP[ap.status] || AP_STATUS_MAP.pending;
+                        <Tabs defaultValue="pending" className="w-full">
+                            <TabsList className="mb-4 bg-muted">
+                                <TabsTrigger value="pending" className="data-[state=active]:bg-background">
+                                    Em Aberto ({actionPlans.filter(ap => ap.analyst_validation_status !== 'approved' && ap.status !== 'completed').length})
+                                </TabsTrigger>
+                                <TabsTrigger value="completed" className="data-[state=active]:bg-background">
+                                    Concluídos ({actionPlans.filter(ap => ap.analyst_validation_status === 'approved' || ap.status === 'completed').length})
+                                </TabsTrigger>
+                            </TabsList>
+
+                            {['pending', 'completed'].map(tab => {
+                                const plansInTab = actionPlans.filter(ap =>
+                                    tab === 'completed'
+                                        ? (ap.analyst_validation_status === 'approved' || ap.status === 'completed')
+                                        : (ap.analyst_validation_status !== 'approved' && ap.status !== 'completed')
+                                );
+
                                 return (
-                                    <div key={ap.id} className="p-4 rounded-lg border border-border bg-card hover:border-purple-600/30 transition-colors">
-                                        {/* Plan header */}
-                                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex flex-wrap gap-2 mb-1">
-                                                    <Badge variant="outline" className={`text-xs ${s.color}`}>{s.label}</Badge>
-                                                    {ap.analyst_validation_status === 'approved' && (
-                                                        <Badge variant="outline" className="text-xs border-emerald-500/40 text-emerald-600 bg-emerald-500/10">✅ Validado</Badge>
+                                    <TabsContent key={tab} value={tab} className="space-y-4 m-0 outline-none">
+                                        {plansInTab.length === 0 ? (
+                                            <p className="text-sm text-muted-foreground italic">Nenhum plano nesta categoria.</p>
+                                        ) : plansInTab.map((ap) => {
+                                            const s = AP_STATUS_MAP[ap.status] || AP_STATUS_MAP.pending;
+                                            return (
+                                                <div key={ap.id} className="p-4 rounded-lg border border-border bg-card hover:border-purple-600/30 transition-colors">
+                                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex flex-wrap gap-2 mb-1">
+                                                                <Badge variant="outline" className={`text-xs ${s.color}`}>{s.label}</Badge>
+                                                                {ap.analyst_validation_status === 'approved' && (
+                                                                    <Badge variant="outline" className="text-xs border-emerald-500/40 text-emerald-600 bg-emerald-500/10">✅ Validado</Badge>
+                                                                )}
+                                                                {ap.analyst_validation_status === 'rejected' && (
+                                                                    <Badge variant="outline" className="text-xs border-red-500/40 text-red-600 bg-red-500/10">❌ Rejeitado</Badge>
+                                                                )}
+                                                            </div>
+                                                            <p className="font-semibold text-sm text-foreground">{ap.activity_name || 'Sem título'}</p>
+                                                            {ap.activity_description && <p className="text-xs text-muted-foreground mt-1">{ap.activity_description}</p>}
+
+                                                            {ap.sub_activities && ap.sub_activities.length > 0 && (
+                                                                <div className="mt-3 space-y-1.5 p-3 rounded-md bg-muted/20 border border-border">
+                                                                    <p className="text-xs font-semibold text-muted-foreground uppercase">Sub-atividades</p>
+                                                                    {ap.sub_activities.map((sub: any, idx: number) => (
+                                                                        <div key={sub.id || idx} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                                            <div className={`h-3 w-3 rounded-sm border flex items-center justify-center shrink-0 ${sub.done ? 'bg-emerald-500 border-emerald-500' : 'border-muted-foreground'}`}>
+                                                                                {sub.done && <CheckCircle className="h-2 w-2 text-white" />}
+                                                                            </div>
+                                                                            <span className={sub.done ? 'line-through opacity-70' : ''}>{sub.text}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                                            <div className="flex gap-1">
+                                                                <Button variant="ghost" size="icon" title="Editar" className="h-7 w-7 text-blue-600" onClick={() => openActivityModal(ap)}>
+                                                                    <Edit2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                                <Button variant="ghost" size="icon" title="Excluir" className="h-7 w-7 text-red-600" onClick={() => handleDeleteActivity(ap.id)}>
+                                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                                </Button>
+                                                            </div>
+                                                            {ap.analyst_validation_status !== 'approved' && (
+                                                                <Select
+                                                                    value={ap.status}
+                                                                    onValueChange={v => handleUpdatePlanStatus(ap.id, v)}
+                                                                    disabled={ap.status === 'awaiting_validation'}
+                                                                >
+                                                                    <SelectTrigger className="h-7 text-xs w-[140px]">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="pending">⏳ Pendente</SelectItem>
+                                                                        <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
+                                                                        <SelectItem value="completed">✅ Concluído</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                            {ap.analyst_validation_status !== 'approved' && ap.status === 'awaiting_validation' && (
+                                                                <Button size="sm" onClick={() => handleAnalystValidation(ap.id)} className="h-7 mt-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs">
+                                                                    ✅ Validar (Analista)
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3">
+                                                        {ap.responsible_name && (
+                                                            <span className="flex items-center gap-1"><Activity className="h-3 w-3" /> {ap.responsible_name}</span>
+                                                        )}
+                                                        {ap.due_date && (
+                                                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(ap.due_date).toLocaleDateString('pt-BR')}</span>
+                                                        )}
+                                                    </div>
+
+                                                    {(ap.evidence_url || ap.stakeholder_notes) && (
+                                                        <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2 mb-3">
+                                                            {ap.stakeholder_notes && (
+                                                                <p className="text-xs text-foreground">
+                                                                    <span className="font-semibold text-muted-foreground uppercase text-[10px] mr-1">Obs.:</span>
+                                                                    {ap.stakeholder_notes}
+                                                                </p>
+                                                            )}
+                                                            {ap.evidence_url && (
+                                                                <a href={ap.evidence_url} target="_blank" rel="noopener noreferrer"
+                                                                    className="flex items-center gap-1.5 text-xs text-primary hover:underline">
+                                                                    <Paperclip className="h-3 w-3" /> {ap.evidence_name || 'Ver Evidência'}
+                                                                </a>
+                                                            )}
+                                                        </div>
                                                     )}
-                                                    {ap.analyst_validation_status === 'rejected' && (
-                                                        <Badge variant="outline" className="text-xs border-red-500/40 text-red-600 bg-red-500/10">❌ Rejeitado</Badge>
+
+                                                    {ap.analyst_notes && (
+                                                        <div className={`p-3 rounded-lg border text-xs mb-3 ${ap.analyst_validation_status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700' : 'border-red-500/30 bg-red-500/5 text-red-700'}`}>
+                                                            <span className="font-semibold mr-1">Analista:</span>{ap.analyst_notes}
+                                                        </div>
+                                                    )}
+
+                                                    {ap.analyst_validation_status !== 'approved' && (
+                                                        <Button variant="outline" size="sm" onClick={() => openEvidenceModal(ap)} className="border-purple-600/30 text-purple-700 hover:bg-purple-600/5">
+                                                            <UploadCloud className="h-3.5 w-3.5 mr-1" />
+                                                            {ap.evidence_url ? 'Atualizar Evidência' : 'Enviar Evidência'}
+                                                        </Button>
                                                     )}
                                                 </div>
-                                                <p className="font-semibold text-sm text-foreground">{ap.activity_name || 'Sem título'}</p>
-                                                {ap.description && <p className="text-xs text-muted-foreground mt-1">{ap.description}</p>}
-                                            </div>
-                                            <div className="flex flex-col items-end gap-2 shrink-0">
-                                                <div className="flex gap-1">
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" onClick={() => openActivityModal(ap)}>
-                                                        <Edit2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" onClick={() => handleDeleteActivity(ap.id)}>
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                    </Button>
-                                                </div>
-                                                {ap.analyst_validation_status !== 'approved' && (
-                                                    <Select
-                                                        value={ap.status}
-                                                        onValueChange={v => handleUpdatePlanStatus(ap.id, v)}
-                                                        disabled={ap.status === 'awaiting_validation'}
-                                                    >
-                                                        <SelectTrigger className="h-7 text-xs w-[140px]">
-                                                            <SelectValue />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="pending">⏳ Pendente</SelectItem>
-                                                            <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
-                                                            <SelectItem value="completed">✅ Concluído</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Plan meta */}
-                                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground mb-3">
-                                            {ap.responsible_name && (
-                                                <span className="flex items-center gap-1"><Activity className="h-3 w-3" /> {ap.responsible_name}</span>
-                                            )}
-                                            {ap.due_date && (
-                                                <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(ap.due_date).toLocaleDateString('pt-BR')}</span>
-                                            )}
-                                        </div>
-
-                                        {/* Evidence submitted */}
-                                        {(ap.evidence_url || ap.stakeholder_notes) && (
-                                            <div className="p-3 rounded-lg bg-muted/30 border border-border space-y-2 mb-3">
-                                                {ap.stakeholder_notes && (
-                                                    <p className="text-xs text-foreground">
-                                                        <span className="font-semibold text-muted-foreground uppercase text-[10px] mr-1">Obs.:</span>
-                                                        {ap.stakeholder_notes}
-                                                    </p>
-                                                )}
-                                                {ap.evidence_url && (
-                                                    <a href={ap.evidence_url} target="_blank" rel="noopener noreferrer"
-                                                        className="flex items-center gap-1.5 text-xs text-primary hover:underline">
-                                                        <Paperclip className="h-3 w-3" /> {ap.evidence_name || 'Ver Evidência'}
-                                                    </a>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {/* Analyst feedback */}
-                                        {ap.analyst_notes && (
-                                            <div className={`p-3 rounded-lg border text-xs mb-3 ${ap.analyst_validation_status === 'approved' ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700' : 'border-red-500/30 bg-red-500/5 text-red-700'}`}>
-                                                <span className="font-semibold mr-1">Analista:</span>{ap.analyst_notes}
-                                            </div>
-                                        )}
-
-                                        {/* Action button */}
-                                        {ap.analyst_validation_status !== 'approved' && (
-                                            <Button variant="outline" size="sm" onClick={() => openEvidenceModal(ap)} className="border-purple-600/30 text-purple-700 hover:bg-purple-600/5">
-                                                <UploadCloud className="h-3.5 w-3.5 mr-1" />
-                                                {ap.evidence_url ? 'Atualizar Evidência' : 'Enviar Evidência'}
-                                            </Button>
-                                        )}
-                                    </div>
+                                            );
+                                        })}
+                                    </TabsContent>
                                 );
                             })}
-                        </div>
+                        </Tabs>
                     )}
                 </CardContent>
             </Card>
@@ -564,8 +626,8 @@ export const RiskPortalRiskDetail = () => {
                             <Label htmlFor="description">Descrição</Label>
                             <Textarea
                                 id="description"
-                                value={activityForm.description}
-                                onChange={e => setActivityForm(prev => ({ ...prev, description: e.target.value }))}
+                                value={activityForm.activity_description}
+                                onChange={e => setActivityForm(prev => ({ ...prev, activity_description: e.target.value }))}
                                 placeholder="Detalhes..."
                                 rows={3}
                             />
@@ -618,15 +680,87 @@ export const RiskPortalRiskDetail = () => {
                         </div>
                     </div>
 
+                    <div className="grid gap-2 py-2 border-t mt-2">
+                        <Label>Sub-atividades</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                placeholder="Nova sub-atividade"
+                                id="new-sub-activity"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        const input = e.currentTarget;
+                                        if (input.value.trim()) {
+                                            setActivityForm(prev => ({
+                                                ...prev,
+                                                sub_activities: [...prev.sub_activities, { id: Math.random().toString(36).substring(7), text: input.value.trim(), done: false }]
+                                            }));
+                                            input.value = '';
+                                        }
+                                    }
+                                }}
+                            />
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={(e) => {
+                                    const input = document.getElementById('new-sub-activity') as HTMLInputElement;
+                                    if (input?.value.trim()) {
+                                        setActivityForm(prev => ({
+                                            ...prev,
+                                            sub_activities: [...prev.sub_activities, { id: Math.random().toString(36).substring(7), text: input.value.trim(), done: false }]
+                                        }));
+                                        input.value = '';
+                                    }
+                                }}
+                            >
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        {activityForm.sub_activities.length > 0 && (
+                            <div className="space-y-2 mt-2 max-h-[150px] overflow-y-auto pr-1">
+                                {activityForm.sub_activities.map((sub, i) => (
+                                    <div key={sub.id || i} className="flex items-center justify-between p-2 rounded-md bg-muted/30 border border-border">
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                checked={sub.done}
+                                                onChange={(e) => {
+                                                    const updated = [...activityForm.sub_activities];
+                                                    updated[i].done = e.target.checked;
+                                                    setActivityForm(prev => ({ ...prev, sub_activities: updated }));
+                                                }}
+                                                className="h-4 w-4 text-emerald-600 rounded"
+                                            />
+                                            <span className={`text-sm ${sub.done ? 'line-through text-muted-foreground' : ''}`}>{sub.text}</span>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-red-500 hover:bg-red-50"
+                                            onClick={() => {
+                                                const updated = [...activityForm.sub_activities];
+                                                updated.splice(i, 1);
+                                                setActivityForm(prev => ({ ...prev, sub_activities: updated }));
+                                            }}
+                                        >
+                                            <XCircle className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsActivityModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleUpsertActivity} disabled={isSaving}>
-                            {isSaving ? 'Salvar Atividade' : 'Salvar Atividade'}
+                            {isSaving ? 'Salvando...' : 'Salvar Atividade'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </div >
     );
 };
 

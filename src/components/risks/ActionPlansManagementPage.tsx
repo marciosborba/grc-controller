@@ -170,7 +170,7 @@ export const ActionPlansManagementPage: React.FC = () => {
       for (const risk of riskData) {
         const { data: activities, error: activitiesError } = await supabase
           .from('risk_registration_action_plans')
-          .select('*')
+          .select('id, activity_name, activity_description, responsible_name, responsible_email, due_date, priority, status, evidence_url, evidence_name, stakeholder_notes, analyst_validation_status, analyst_notes')
           .eq('risk_registration_id', risk.id)
           .order('due_date', { ascending: true });
 
@@ -194,7 +194,7 @@ export const ActionPlansManagementPage: React.FC = () => {
             due_date: activity.due_date,
             priority: activity.priority,
             status: activity.status,
-            evidence_description: activity.evidence_description,
+            evidence_description: (activity as any).evidence_description,
             days_until_due: daysDiff,
             is_overdue: daysDiff < 0 && activity.status !== 'completed',
             // Stakeholder interaction
