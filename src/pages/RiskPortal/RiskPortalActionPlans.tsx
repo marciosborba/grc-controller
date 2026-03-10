@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
     Target, Calendar, FileText, CheckCircle, Clock, ChevronRight, ChevronDown,
     ArrowLeft, UploadCloud, Paperclip, ShieldAlert, Trash2, AlertTriangle,
-    CheckCheck, XCircle, MessageSquare, Activity
+    CheckCheck, XCircle, MessageSquare, Activity, Plus, Edit2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,7 +47,9 @@ interface RiskPlan {
     activity_name: string;
     description?: string;
     responsible_name?: string;
+    responsible_email?: string;
     due_date?: string;
+    priority?: string;
     status: string;
     evidence_url?: string;
     evidence_name?: string;
@@ -73,6 +75,18 @@ export const RiskPortalActionPlans = () => {
         notes: '',
         evidence_url: '',
         evidence_name: '',
+    });
+
+    const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+    const [editingActivity, setEditingActivity] = useState<RiskPlan | null>(null);
+    const [activityForm, setActivityForm] = useState({
+        activity_name: '',
+        description: '',
+        responsible_name: '',
+        responsible_email: '',
+        due_date: '',
+        priority: 'medium',
+        status: 'pending',
     });
 
     const fetchPlans = useCallback(async () => {
@@ -197,6 +211,103 @@ export const RiskPortalActionPlans = () => {
         }
     };
 
+    const openActivityModal = (riskId: string, activity?: RiskPlan) => {
+        if (activity) {
+            setEditingActivity(activity);
+            setActivityForm({
+                activity_name: activity.activity_name || '',
+                description: activity.description || '',
+                responsible_name: activity.responsible_name || '',
+                responsible_email: activity.responsible_email || '',
+                due_date: activity.due_date || '',
+                priority: activity.priority || 'medium',
+                status: activity.status || 'pending',
+            });
+        } else {
+            setEditingActivity(null);
+            setActivityForm({
+                activity_name: '',
+                description: '',
+                responsible_name: (user as any)?.user_metadata?.full_name || '',
+                responsible_email: user?.email || '',
+                due_date: new Date().toISOString().split('T')[0],
+                priority: 'medium',
+                status: 'pending',
+            });
+        }
+        // If creating new, we need to know which risk it belongs to
+        if (!activity) {
+            // @ts-ignore
+            setActivityForm(prev => ({ ...prev, risk_registration_id: riskId }));
+        }
+        setIsActivityModalOpen(true);
+    };
+
+    const handleUpsertActivity = async () => {
+        if (!activityForm.activity_name) {
+            toast({ title: 'Erro', description: 'Nome da atividade é obrigatório', variant: 'destructive' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            if (editingActivity) {
+                const { error } = await supabase
+                    .from('risk_registration_action_plans')
+                    .update({
+                        activity_name: activityForm.activity_name,
+                        description: activityForm.description,
+                        responsible_name: activityForm.responsible_name,
+                        responsible_email: activityForm.responsible_email,
+                        due_date: activityForm.due_date,
+                        priority: activityForm.priority,
+                        status: activityForm.status,
+                    })
+                    .eq('id', editingActivity.id);
+                if (error) throw error;
+                toast({ title: 'Atividade atualizada!' });
+            } else {
+                // @ts-ignore
+                const { error } = await supabase
+                    .from('risk_registration_action_plans')
+                    .insert([{
+                        // @ts-ignore
+                        risk_registration_id: activityForm.risk_registration_id,
+                        activity_name: activityForm.activity_name,
+                        description: activityForm.description,
+                        responsible_name: activityForm.responsible_name,
+                        responsible_email: activityForm.responsible_email,
+                        due_date: activityForm.due_date,
+                        priority: activityForm.priority,
+                        status: activityForm.status,
+                        tenant_id: (user as any)?.user_metadata?.tenant_id
+                    }]);
+                if (error) throw error;
+                toast({ title: 'Atividade criada!' });
+            }
+            setIsActivityModalOpen(false);
+            fetchPlans();
+        } catch (err: any) {
+            toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
+    };
+
+    const handleDeleteActivity = async (id: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir esta atividade?')) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('risk_registration_action_plans')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            toast({ title: 'Atividade excluída' });
+            if (selectedPlan?.id === id) setSelectedPlan(null);
+            fetchPlans();
+        } catch (err: any) {
+            toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
+    };
+
     // Group plans by risk
     const groupByRisk = (list: RiskPlan[]): Record<string, { risk: any; plans: RiskPlan[] }> => {
         const grouped: Record<string, { risk: any; plans: RiskPlan[] }> = {};
@@ -288,20 +399,32 @@ export const RiskPortalActionPlans = () => {
                                         {Object.entries(groupedData).map(([riskId, { risk, plans: riskPlans }]) => (
                                             <div key={riskId} className="flex flex-col">
                                                 {/* Risk Group Header */}
-                                                <button
-                                                    className="flex items-center gap-2 p-3 bg-muted/20 hover:bg-muted/40 cursor-pointer text-left w-full"
-                                                    onClick={() => toggleRisk(riskId)}
+                                                <div
+                                                    className="flex items-center gap-2 p-3 bg-muted/20 hover:bg-muted/40 group relative"
                                                 >
-                                                    {expandedRisks.includes(riskId)
-                                                        ? <ChevronDown className="h-4 w-4 shrink-0 text-red-600" />
-                                                        : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                                    }
-                                                    <ShieldAlert className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                                    <span className="font-semibold text-xs sm:text-sm truncate flex-1">
-                                                        {risk?.risk_title || 'Risco'}
-                                                    </span>
-                                                    <Badge variant="secondary" className="text-[10px] px-1.5">{riskPlans.length}</Badge>
-                                                </button>
+                                                    <div
+                                                        className="flex items-center gap-2 cursor-pointer text-left flex-1"
+                                                        onClick={() => toggleRisk(riskId)}
+                                                    >
+                                                        {expandedRisks.includes(riskId)
+                                                            ? <ChevronDown className="h-4 w-4 shrink-0 text-red-600" />
+                                                            : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                                        }
+                                                        <ShieldAlert className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                                                        <span className="font-semibold text-xs sm:text-sm truncate flex-1">
+                                                            {risk?.risk_title || 'Risco'}
+                                                        </span>
+                                                        <Badge variant="secondary" className="text-[10px] px-1.5">{riskPlans.length}</Badge>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={(e) => { e.stopPropagation(); openActivityModal(riskId); }}
+                                                    >
+                                                        <Plus className="h-3 w-3 text-red-600" />
+                                                    </Button>
+                                                </div>
 
                                                 {/* Plan items */}
                                                 {expandedRisks.includes(riskId) && (
@@ -361,7 +484,15 @@ export const RiskPortalActionPlans = () => {
                                         )}
                                         <CardTitle className="text-lg sm:text-xl leading-tight">{selectedPlan.activity_name}</CardTitle>
                                     </div>
-                                    <div className="shrink-0 flex gap-2 flex-wrap">
+                                    <div className="shrink-0 flex gap-2 flex-wrap items-center">
+                                        <div className="flex gap-1 mr-2 border-r pr-2">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => openActivityModal(selectedPlan.risk_registration_id, selectedPlan)}>
+                                                <Edit2 className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => handleDeleteActivity(selectedPlan.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                         {getStatusBadge(selectedPlan.status)}
                                         {getValidationBadge(selectedPlan)}
                                     </div>
@@ -553,6 +684,113 @@ export const RiskPortalActionPlans = () => {
                             onClick={handleSaveEvidence}
                         >
                             {isSaving ? 'Salvando...' : 'Enviar para Validação'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Activity Modal (Create/Edit) */}
+            <Dialog open={isActivityModalOpen} onOpenChange={setIsActivityModalOpen}>
+                <DialogContent className="sm:max-w-[550px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            {editingActivity ? <Edit2 className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                            {editingActivity ? 'Editar Atividade' : 'Nova Atividade'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editingActivity ? 'Atualize os detalhes desta atividade do plano de ação.' : 'Crie uma nova atividade para este plano de ação.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Nome da Atividade</Label>
+                            <Input
+                                id="name"
+                                value={activityForm.activity_name}
+                                onChange={e => setActivityForm(prev => ({ ...prev, activity_name: e.target.value }))}
+                                placeholder="Ex: Implementar criptografia no banco"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="description">Descrição</Label>
+                            <Textarea
+                                id="description"
+                                value={activityForm.description}
+                                onChange={e => setActivityForm(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Detalhes sobre a execução..."
+                                rows={3}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="resp">Responsável</Label>
+                                <Input
+                                    id="resp"
+                                    value={activityForm.responsible_name}
+                                    onChange={e => setActivityForm(prev => ({ ...prev, responsible_name: e.target.value }))}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="resp_email">E-mail do Responsável</Label>
+                                <Input
+                                    id="resp_email"
+                                    value={activityForm.responsible_email}
+                                    onChange={e => setActivityForm(prev => ({ ...prev, responsible_email: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="due">Prazo</Label>
+                                <Input
+                                    id="due"
+                                    type="date"
+                                    value={activityForm.due_date}
+                                    onChange={e => setActivityForm(prev => ({ ...prev, due_date: e.target.value }))}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="priority">Prioridade</Label>
+                                <Select
+                                    value={activityForm.priority}
+                                    onValueChange={v => setActivityForm(prev => ({ ...prev, priority: v }))}
+                                >
+                                    <SelectTrigger id="priority">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Baixa</SelectItem>
+                                        <SelectItem value="medium">Média</SelectItem>
+                                        <SelectItem value="high">Alta</SelectItem>
+                                        <SelectItem value="critical">Crítica</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="status">Status</Label>
+                            <Select
+                                value={activityForm.status}
+                                onValueChange={v => setActivityForm(prev => ({ ...prev, status: v }))}
+                            >
+                                <SelectTrigger id="status">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="pending">Pendente</SelectItem>
+                                    <SelectItem value="in_progress">Em Andamento</SelectItem>
+                                    <SelectItem value="completed">Concluída</SelectItem>
+                                    <SelectItem value="delayed">Atrasada</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsActivityModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleUpsertActivity} disabled={isSaving}>
+                            {isSaving ? 'Salvando...' : 'Salvar Atividade'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

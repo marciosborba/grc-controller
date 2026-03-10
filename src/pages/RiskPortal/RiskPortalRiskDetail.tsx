@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
     ArrowLeft, ShieldAlert, Users, Target, AlertTriangle,
     Calendar, UploadCloud, Paperclip, FileText, Trash2,
-    CheckCircle, XCircle, Clock, Activity
+    CheckCircle, XCircle, Clock, Activity, Plus, Edit2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
@@ -47,6 +47,18 @@ export const RiskPortalRiskDetail = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [evidenceForm, setEvidenceForm] = useState({ notes: '', evidence_url: '', evidence_name: '' });
+
+    const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+    const [editingActivity, setEditingActivity] = useState<any>(null);
+    const [activityForm, setActivityForm] = useState({
+        activity_name: '',
+        description: '',
+        responsible_name: '',
+        responsible_email: '',
+        due_date: '',
+        priority: 'medium',
+        status: 'pending',
+    });
 
     const fetchData = useCallback(async () => {
         if (!id) return;
@@ -136,6 +148,95 @@ export const RiskPortalRiskDetail = () => {
         } catch (err: any) {
             toast({ title: 'Erro', description: err.message, variant: 'destructive' });
         }
+    };
+
+    const openActivityModal = (activity?: any) => {
+        if (activity) {
+            setEditingActivity(activity);
+            setActivityForm({
+                activity_name: activity.activity_name || '',
+                description: activity.description || '',
+                responsible_name: activity.responsible_name || '',
+                responsible_email: activity.responsible_email || '',
+                due_date: activity.due_date || '',
+                priority: activity.priority || 'medium',
+                status: activity.status || 'pending',
+            });
+        } else {
+            setEditingActivity(null);
+            setActivityForm({
+                activity_name: '',
+                description: '',
+                responsible_name: (user as any)?.user_metadata?.full_name || '',
+                responsible_email: user?.email || '',
+                due_date: new Date().toISOString().split('T')[0],
+                priority: 'medium',
+                status: 'pending',
+            });
+        }
+        setIsActivityModalOpen(true);
+    };
+
+    const handleUpsertActivity = async () => {
+        if (!activityForm.activity_name) {
+            toast({ title: 'Erro', description: 'Nome da atividade é obrigatório', variant: 'destructive' });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            if (editingActivity) {
+                const { error } = await supabase
+                    .from('risk_registration_action_plans')
+                    .update({
+                        activity_name: activityForm.activity_name,
+                        description: activityForm.description,
+                        responsible_name: activityForm.responsible_name,
+                        responsible_email: activityForm.responsible_email,
+                        due_date: activityForm.due_date,
+                        priority: activityForm.priority,
+                        status: activityForm.status,
+                    })
+                    .eq('id', editingActivity.id);
+                if (error) throw error;
+                toast({ title: 'Atividade atualizada!' });
+            } else {
+                const { error } = await supabase
+                    .from('risk_registration_action_plans')
+                    .insert([{
+                        risk_registration_id: id,
+                        activity_name: activityForm.activity_name,
+                        description: activityForm.description,
+                        responsible_name: activityForm.responsible_name,
+                        responsible_email: activityForm.responsible_email,
+                        due_date: activityForm.due_date,
+                        priority: activityForm.priority,
+                        status: activityForm.status,
+                        tenant_id: (user as any)?.user_metadata?.tenant_id
+                    }]);
+                if (error) throw error;
+                toast({ title: 'Atividade criada!' });
+            }
+            setIsActivityModalOpen(false);
+            fetchData();
+        } catch (err: any) {
+            toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
+    };
+
+    const handleDeleteActivity = async (apId: string) => {
+        if (!window.confirm('Tem certeza que deseja excluir esta atividade?')) return;
+        setIsSaving(true);
+        try {
+            const { error } = await supabase
+                .from('risk_registration_action_plans')
+                .delete()
+                .eq('id', apId);
+            if (error) throw error;
+            toast({ title: 'Atividade excluída' });
+            fetchData();
+        } catch (err: any) {
+            toast({ title: 'Erro ao excluir', description: err.message, variant: 'destructive' });
+        } finally { setIsSaving(false); }
     };
 
     if (loading) return (
@@ -234,10 +335,13 @@ export const RiskPortalRiskDetail = () => {
 
             {/* Action Plans — interactive */}
             <Card className="border border-border shadow-sm">
-                <CardHeader className="bg-muted/50 border-b border-border">
+                <CardHeader className="bg-muted/50 border-b border-border flex flex-row items-center justify-between py-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Target className="h-4 w-4 text-purple-600" /> Planos de Ação ({actionPlans.length})
                     </CardTitle>
+                    <Button variant="outline" size="sm" onClick={() => openActivityModal()} className="h-8 border-purple-600/30 text-purple-700 hover:bg-purple-600/5">
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Nova Atividade
+                    </Button>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6">
                     {actionPlans.length === 0 ? (
@@ -263,22 +367,32 @@ export const RiskPortalRiskDetail = () => {
                                                 <p className="font-semibold text-sm text-foreground">{ap.activity_name || 'Sem título'}</p>
                                                 {ap.description && <p className="text-xs text-muted-foreground mt-1">{ap.description}</p>}
                                             </div>
-                                            {ap.analyst_validation_status !== 'approved' && (
-                                                <Select
-                                                    value={ap.status}
-                                                    onValueChange={v => handleUpdatePlanStatus(ap.id, v)}
-                                                    disabled={ap.status === 'awaiting_validation'}
-                                                >
-                                                    <SelectTrigger className="h-7 text-xs w-[140px] shrink-0">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="pending">⏳ Pendente</SelectItem>
-                                                        <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
-                                                        <SelectItem value="completed">✅ Concluído</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            )}
+                                            <div className="flex flex-col items-end gap-2 shrink-0">
+                                                <div className="flex gap-1">
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-600" onClick={() => openActivityModal(ap)}>
+                                                        <Edit2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" onClick={() => handleDeleteActivity(ap.id)}>
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                                {ap.analyst_validation_status !== 'approved' && (
+                                                    <Select
+                                                        value={ap.status}
+                                                        onValueChange={v => handleUpdatePlanStatus(ap.id, v)}
+                                                        disabled={ap.status === 'awaiting_validation'}
+                                                    >
+                                                        <SelectTrigger className="h-7 text-xs w-[140px]">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="pending">⏳ Pendente</SelectItem>
+                                                            <SelectItem value="in_progress">🔄 Em Andamento</SelectItem>
+                                                            <SelectItem value="completed">✅ Concluído</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Plan meta */}
@@ -418,6 +532,96 @@ export const RiskPortalRiskDetail = () => {
                             onClick={handleSaveEvidence}
                         >
                             {isSaving ? 'Salvando...' : 'Enviar para Validação'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Activity Modal (Create/Edit) */}
+            <Dialog open={isActivityModalOpen} onOpenChange={setIsActivityModalOpen}>
+                <DialogContent className="sm:max-w-[550px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            {editingActivity ? <Edit2 className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+                            {editingActivity ? 'Editar Atividade' : 'Nova Atividade'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {editingActivity ? 'Atualize os detalhes desta atividade.' : 'Crie uma nova atividade para este risco.'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="name">Nome da Atividade</Label>
+                            <Input
+                                id="name"
+                                value={activityForm.activity_name}
+                                onChange={e => setActivityForm(prev => ({ ...prev, activity_name: e.target.value }))}
+                                placeholder="Ex: Implementar criptografia"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="description">Descrição</Label>
+                            <Textarea
+                                id="description"
+                                value={activityForm.description}
+                                onChange={e => setActivityForm(prev => ({ ...prev, description: e.target.value }))}
+                                placeholder="Detalhes..."
+                                rows={3}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="resp">Responsável</Label>
+                                <Input
+                                    id="resp"
+                                    value={activityForm.responsible_name}
+                                    onChange={e => setActivityForm(prev => ({ ...prev, responsible_name: e.target.value }))}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="resp_email">E-mail do Responsável</Label>
+                                <Input
+                                    id="resp_email"
+                                    value={activityForm.responsible_email}
+                                    onChange={e => setActivityForm(prev => ({ ...prev, responsible_email: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="due">Prazo</Label>
+                                <Input
+                                    id="due"
+                                    type="date"
+                                    value={activityForm.due_date}
+                                    onChange={e => setActivityForm(prev => ({ ...prev, due_date: e.target.value }))}
+                                />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="priority">Prioridade</Label>
+                                <Select
+                                    value={activityForm.priority}
+                                    onValueChange={v => setActivityForm(prev => ({ ...prev, priority: v }))}
+                                >
+                                    <SelectTrigger id="priority">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Baixa</SelectItem>
+                                        <SelectItem value="medium">Média</SelectItem>
+                                        <SelectItem value="high">Alta</SelectItem>
+                                        <SelectItem value="critical">Crítica</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsActivityModalOpen(false)}>Cancelar</Button>
+                        <Button onClick={handleUpsertActivity} disabled={isSaving}>
+                            {isSaving ? 'Salvar Atividade' : 'Salvar Atividade'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
