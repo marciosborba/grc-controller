@@ -217,6 +217,13 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         const fullProfile = rpcData as any;
         console.log('✅ [AUTH] RPC Data received:', JSON.stringify(fullProfile, null, 2));
 
+        // PROTEÇÃO EXTRA: O usuário tem o perfil mas está marcado explicitamente como inativo
+        if (fullProfile && fullProfile.is_active === false) {
+          console.error('❌ [AUTH] Conta REGULAR DESATIVADA detectada via perfil principal!');
+          await supabase.auth.signOut();
+          throw new Error('CONTA_DESATIVADA');
+        }
+
         if (!fullProfile || !fullProfile.profile) {
           console.warn('⚠️ [AUTH] Perfil não retornado pelo RPC');
           throw new Error('Perfil não encontrado');
@@ -279,11 +286,16 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
           if (rpcVendorError) {
             console.warn('⚠️ [AUTH] Erro ao chamar check_is_vendor RPC, fazendo fallback manual:', rpcVendorError);
-          } else if (isVendorRpc === true) {
+          } else if (isVendorRpc === 'active') {
             console.log('✅ [AUTH] Usuário identificado como fornecedor seguro via RPC');
             isVendorOnly = true;
+          } else if (isVendorRpc === 'inactive') {
+            console.error('❌ [AUTH] Conta de fornecedor DESATIVADA detectada no fluxo principal!');
+            await supabase.auth.signOut();
+            throw new Error('CONTA_DESATIVADA');
           }
-        } catch (vendorCheckError) {
+        } catch (vendorCheckError: any) {
+          if (vendorCheckError?.message === 'CONTA_DESATIVADA') throw vendorCheckError;
           console.error('❌ [AUTH] Erro ao verificar fornecedor no fluxo principal via RPC:', vendorCheckError);
         }
 
@@ -332,32 +344,42 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         setCachedUser(supabaseUser.id, userData);
         return userData;
 
-      } catch (dbError) {
+      } catch (dbError: any) {
+        if (dbError?.message === 'CONTA_DESATIVADA') throw dbError;
         console.warn('⚠️ [AUTH] Erro ao carregar perfil, verificando se é fornecedor...', dbError);
 
         try {
-          // 🚀 FALLBACK SEGURA DE FORNECEDOR
-          const { data: isVendorRpc, error: rpcVendorError } = await supabase
+          // 🚀 FALLBACK SEGURA DE FORNECEDOR - Agora retorna STATUS (active, inactive, not_found)
+          const { data: vendorStatus, error: rpcVendorError } = await supabase
             .rpc('check_is_vendor', {
               check_uid: supabaseUser.id,
               check_email: supabaseUser.email || ''
             });
 
-          if (isVendorRpc === true) {
-            console.log('✅ [AUTH] Usuário fallback identificado como fornecedor via RPC');
+          if (vendorStatus === 'active') {
+            console.log('✅ [AUTH] Usuário identificado como fornecedor ATIVO');
             const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
             setCachedUser(supabaseUser.id, vendorData);
             return vendorData;
+          } else if (vendorStatus === 'inactive') {
+            console.error('❌ [AUTH] Conta de fornecedor DESATIVADA detectada!');
+            // Forçar logout imediato se estiver inativo
+            await supabase.auth.signOut();
+            throw new Error('CONTA_DESATIVADA');
           }
-        } catch (vendorCheckError) {
-          console.error('❌ [AUTH] Erro ao verificar fornecedor no block catch:', vendorCheckError);
+        } catch (vendorCheckError: any) {
+          if (vendorCheckError.message === 'CONTA_DESATIVADA') throw vendorCheckError;
+          console.error('❌ [AUTH] Erro ao verificar status de fornecedor:', vendorCheckError);
         }
 
         console.warn('⚠️ [AUTH] Usuário não é fornecedor, usando dados básicos padrão');
         return basicUser;
       }
 
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message === 'CONTA_DESATIVADA') {
+        throw error;
+      }
       console.error('❌ [AUTH] Erro inesperado ao carregar dados do usuário:', error);
       return basicUser;
     }
@@ -391,8 +413,16 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
 
         console.log('👤 [AUTH] User data loaded:', { id: userData?.id, name: userData?.name });
         setUser(userData);
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ [AUTH] Erro ao carregar dados do usuário:', error);
+        
+        if (error.message === 'CONTA_DESATIVADA') {
+          console.error('🛑 Bloqueando acesso de conta desativada no handler');
+          setUser(null);
+          setSession(null);
+          return;
+        }
+
         // Em caso de erro, criar usuário básico para não travar
         const basicUser: AuthUser = {
           id: session.user.id,

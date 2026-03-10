@@ -610,17 +610,15 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       if (!confirm(`Tem certeza que deseja inativar o usuário ${user.full_name}?\n\nO usuário ficará inativo mas poderá ser reativado posteriormente.`)) return;
 
       try {
-        // Marcar usuário como inativo (soft delete)
-        const { error: deactivateError } = await supabase
-          .from('profiles')
-          .update({
-            is_active: false,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
+        // Marcar usuário como inativo (soft delete) E DELETAR SESSÃO VIA RPC
+        const { error: deactivateError } = await supabase.rpc('toggle_user_active_status', {
+            p_user_id: user.user_id,
+            p_email: user.email,
+            p_active: false
+        });
 
         if (deactivateError) {
-          toast.error('Erro ao desativar usuário no banco de dados');
+          toast.error('Erro ao inativar usuário e encerrar sessões no banco de dados');
           return;
         }
 
@@ -651,18 +649,17 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       const newStatus = user.status === 'active' ? 'inactive' : 'active';
       const isActive = newStatus === 'active';
 
-      // Atualizar no banco de dados se for usuário real (não temporário)
+      // Atualizar no banco de dados E DELETAR SESSÃO VIA RPC se for inativar
       if (!user.id.startsWith('temp_')) {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            is_active: isActive,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
+        const { error: updateError } = await supabase.rpc('toggle_user_active_status', {
+            p_user_id: user.user_id,
+            p_email: user.email,
+            p_active: isActive
+        });
 
         if (updateError) {
-          toast.error('Erro ao atualizar status no banco de dados');
+          console.error(updateError);
+          toast.error('Erro ao atualizar status e sessões no banco de dados');
           return;
         }
 

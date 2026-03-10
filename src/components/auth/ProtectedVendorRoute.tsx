@@ -22,39 +22,23 @@ export const ProtectedVendorRoute = ({ children }: { children: React.ReactNode }
             }
 
             try {
-                // Primeira tentativa: buscar em vendor_users
-                const { data: vendorUser, error: vendorError } = await supabase
-                    .from('vendor_users')
-                    .select('id, is_active')
-                    .eq('auth_user_id', session.user.id)
-                    .limit(1)
-                    .maybeSingle();
-
-                if (vendorUser) {
-                    if (mounted) {
-                        setIsVendor(vendorUser.is_active !== false);
-                        setLoading(false);
-                    }
-                    return;
-                }
-
-                // Segunda tentativa: buscar em vendor_portal_users
-                const { data: portalUser, error: portalError } = await supabase
-                    .from('vendor_portal_users')
-                    .select('vendor_id, is_active')
-                    .eq('email', session.user.email?.trim().toLowerCase())
-                    .limit(1)
-                    .maybeSingle();
+                // Usar o RPC unificado que retorna 'active', 'inactive', 'not_found'
+                const { data: status, error } = await supabase.rpc('check_is_vendor', {
+                    check_uid: session.user.id,
+                    check_email: session.user.email || ''
+                });
 
                 if (mounted) {
-                    if (portalUser) {
-                        setIsVendor(portalUser.is_active !== false);
+                    if (status === 'active') {
+                        setIsVendor(true);
                     } else {
+                        // Se for 'inactive' ou 'not_found', bloqueia acesso
                         setIsVendor(false);
                     }
                     setLoading(false);
                 }
             } catch (err) {
+                console.error('❌ [ProtectedVendorRoute] Erro ao verificar acesso:', err);
                 if (mounted) {
                     setIsVendor(false);
                     setLoading(false);

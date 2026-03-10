@@ -43,38 +43,28 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
             if (error) throw error;
 
             if (data.user) {
-                // Verify the user is a vendor via vendor_users (preferred) or vendor_portal_users (fallback)
-                const { data: vendorUser } = await supabase
-                    .from('vendor_users')
-                    .select('id, name, is_active')
-                    .eq('auth_user_id', data.user.id)
-                    .maybeSingle();
+                // VERIFICAR STATUS VIA RPC UNIFICADO
+                const { data: status, error: rpcError } = await supabase.rpc('check_is_vendor', {
+                    check_uid: data.user.id,
+                });
 
-                // Fallback: check vendor_portal_users by email
-                const { data: portalUserCheck } = await supabase
-                    .from('vendor_portal_users')
-                    .select('vendor_id, email, force_password_change, is_active')
-                    .eq('email', email.trim().toLowerCase())
-                    .maybeSingle();
+                if (rpcError) throw rpcError;
 
-                if (!vendorUser && !portalUserCheck) {
+                const cleanStatus = status ? String(status).trim().toLowerCase() : 'unknown';
+
+                if (cleanStatus === 'not_found') {
                     await supabase.auth.signOut();
                     toast({
                         title: "Acesso Negado",
                         description: "Esta conta não possui permissões de fornecedor no sistema.",
                         variant: "destructive"
                     });
+                    setIsLoading(false);
                     return;
                 }
 
-                // CHECK IF ACTIVE
-                const isActive = vendorUser ? (vendorUser as any).is_active : portalUserCheck?.is_active;
-
-                if (isActive === false) {
-                    try {
-                        await supabase.auth.signOut();
-                    } catch (e) { }
-
+                if (cleanStatus === 'inactive') {
+                    await supabase.auth.signOut();
                     toast({
                         title: "Conta Desativada",
                         description: "Sua conta de acesso ao portal está desativada. Entre em contato com o administrador.",
@@ -83,6 +73,20 @@ export const VendorLogin: React.FC<VendorLoginProps> = ({ onLoginSuccess }) => {
                     setIsLoading(false);
                     return;
                 }
+
+                // Se for 'active', continuamos o fluxo normal
+                // Mas ainda precisamos do vendorUser/portalUserCheck para outros metadados (como nome e force_change)
+                const { data: vendorUser } = await supabase
+                    .from('vendor_users')
+                    .select('id, name')
+                    .eq('auth_user_id', data.user.id)
+                    .maybeSingle();
+
+                const { data: portalUserCheck } = await supabase
+                    .from('vendor_portal_users')
+                    .select('vendor_id, force_password_change')
+                    .eq('email', email.trim().toLowerCase())
+                    .maybeSingle();
 
                 // Check if forced password change is required
                 if (portalUserCheck?.force_password_change) {

@@ -338,7 +338,7 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-border">
-                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings').map(mod => {
+                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings' || m.key === 'risk_portal').map(mod => {
                                             const allowed = permissions[selectedRole.id]?.[mod.key] ?? false;
                                             const isSaving = saving === `${selectedRole.id}-${mod.key}`;
                                             return (
