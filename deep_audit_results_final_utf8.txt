@@ -1,0 +1,107 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ­ƒôí version env with Radar: https://dotenvx.com/radar
+--- 1. RLS POLICIES FOR vendor_portal_users ---
+[
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "manage_portal_users_delete",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM profiles p\n  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "manage_portal_users_insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM profiles p\n  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "manage_portal_users_select",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM profiles p\n  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "manage_portal_users_update",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM profiles p\n  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM profiles p\n  WHERE ((p.id = auth.uid()) AND ((p.tenant_id IS NULL) OR (p.tenant_id = vendor_portal_users.tenant_id)))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "vendor_portal_users_insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "true"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "vendor_portal_users_self_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(email = auth.email())",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "vendor_portal_users",
+    "policyname": "vendor_portal_users_self_update",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(email = (auth.jwt() ->> 'email'::text))",
+    "with_check": "(email = (auth.jwt() ->> 'email'::text))"
+  }
+]
+
+--- 2. ALL USERS WITH "LUCAS" IN EMAIL ---
+[
+  {
+    "id": "64551788-a987-4297-9bf4-694c687c5c1c",
+    "email": "lucas@grc-controller.com",
+    "last_sign_in_at": "2026-03-10T19:51:57.426Z"
+  },
+  {
+    "id": "8c50e41c-7339-404a-98d3-6d7f4237ec05",
+    "email": "lucas.alcantara@gepriv.com",
+    "last_sign_in_at": "2026-03-10T20:52:15.356Z"
+  }
+]
+
+--- 3. VPU RECORDS FOR ALL LUCAS ---
+VPU for lucas@grc-controller.com: []
+VPU for lucas.alcantara@gepriv.com: [
+  {
+    "id": "d07eb4c1-acbd-42ce-aba0-01daa2b7b856",
+    "email": "lucas.alcantara@gepriv.com",
+    "vendor_id": "6302338c-9d89-4489-8bb1-8b6c002dda00",
+    "tenant_id": "46b1c048-85a1-423b-96fc-776007c8de1f",
+    "force_password_change": false,
+    "created_at": "2026-03-08T16:42:11.299Z",
+    "updated_at": "2026-03-08T16:42:11.299Z",
+    "is_active": false
+  }
+]
+
+--- 4. TEST RPC check_is_vendor ---
+RPC check_is_vendor(64551788-a987-4297-9bf4-694c687c5c1c, lucas@grc-controller.com): { check_is_vendor: false }
+RPC check_is_vendor(8c50e41c-7339-404a-98d3-6d7f4237ec05, lucas.alcantara@gepriv.com): { check_is_vendor: false }

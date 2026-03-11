@@ -104,6 +104,20 @@ const navigationItems = [{
       description: 'Gestão de Riscos'
     },
     {
+      title: 'Portal de Riscos',
+      url: '/risk-portal',
+      icon: Shield,
+      permissions: ['risk_portal'],
+      description: 'Acesso às comunicações de risco'
+    },
+    {
+      title: 'Portal Vuln.',
+      url: '/vulnerability-portal',
+      icon: Bug,
+      permissions: ['vulnerability_portal'],
+      description: 'Gestão e mitigação de vulnerabilidades'
+    },
+    {
       title: 'Planos de Ação',
       url: '/action-plans',
       icon: Target,
@@ -529,6 +543,7 @@ export function AppSidebarFixed() {
               'Conformidade': 'compliance',
               'Ética': 'ethics',
               'Riscos': 'risk_management',
+              'Portal de Riscos': 'risk_portal',
               'Planos de Ação': 'action_plans',
               'Incidentes': 'incidents',
               'Políticas': 'policy_management',

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth} from '@/contexts/AuthContextOptimized';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import { toast } from 'sonner';
 import type {
   ExtendedUser,
@@ -26,12 +26,12 @@ export const useUserManagement = () => {
       console.log(`[hasPermission] Platform admin has permission: ${permission}`);
       return true;
     }
-    
+
     const hasDirectPermission = user?.permissions?.includes(permission);
     const isSystemAdmin = user?.roles?.includes('admin');
-    
+
     console.log(`[hasPermission] Checking permission "${permission}": direct=${hasDirectPermission}, isAdmin=${isSystemAdmin}, roles=${JSON.stringify(user?.roles)}`);
-    
+
     return hasDirectPermission || isSystemAdmin || false;
   };
 
@@ -107,19 +107,19 @@ export const useUserManagement = () => {
           .from('tenants')
           .select('id, name, slug, contact_email, max_users, current_users_count, subscription_plan, is_active')
           .in('id', uniqueTenantIds)
-        : { data: [] };
+          : { data: [] };
 
         // Transformar dados para o formato ExtendedUser
         return profiles.map((profile: any) => {
           const roles = userRoles?.filter(ur => ur.user_id === profile.user_id).map(ur => ur.role) || [];
-          
+
           // Filtrar por role se especificado
           if (filters.role && !roles.includes(filters.role)) {
             return null;
           }
 
           // Encontrar tenant correspondente
-          const tenant = profile.tenant_id 
+          const tenant = profile.tenant_id
             ? tenants?.find(t => t.id === profile.tenant_id) || null
             : null;
 
@@ -225,7 +225,9 @@ export const useUserManagement = () => {
               risk_manager: 0,
               compliance_officer: 0,
               auditor: 0,
-              user: 0
+              user: 0,
+              guest: 0,
+              vendor: 0
             },
             recent_logins: 0,
             failed_login_attempts: 0
@@ -241,7 +243,7 @@ export const useUserManagement = () => {
 
         // Calcular usuários realmente logados (últimas 24 horas)
         const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        const recentlyLoggedIn = authUsersList.filter(authUser => 
+        const recentlyLoggedIn = authUsersList.filter(authUser =>
           authUser.last_sign_in_at && new Date(authUser.last_sign_in_at) > last24Hours
         ).length;
 
@@ -249,10 +251,9 @@ export const useUserManagement = () => {
         const totalUsers = profiles?.length || 0;
         const activeProfileUsers = profiles?.filter(p => p.is_active && (!p.locked_until || new Date(p.locked_until) <= now)).length || 0;
         const lockedUsers = profiles?.filter(p => p.locked_until && new Date(p.locked_until) > now).length || 0;
-        
-        // Verificar usuários bloqueados no auth
-        const bannedAuthUsers = authUsersList.filter(authUser => authUser.banned_until).length;
-        const totalLockedUsers = lockedUsers + bannedAuthUsers;
+
+        // Verificar usuários bloqueados no auth (usando metadados se existir)
+        const totalLockedUsers = lockedUsers;
 
         const stats: UserManagementStats = {
           total_users: totalUsers,
@@ -288,7 +289,7 @@ export const useUserManagement = () => {
 
           // Contar roles únicos por usuário
           const roleCountMap = new Map<string, Set<string>>();
-          
+
           userRoles?.forEach((ur: any) => {
             if (!roleCountMap.has(ur.user_id)) {
               roleCountMap.set(ur.user_id, new Set());
@@ -304,12 +305,12 @@ export const useUserManagement = () => {
               }
             });
           });
-          
+
           // Contar usuários sem role definida como 'user'
           const usersWithRoles = roleCountMap.size;
           const usersWithoutRoles = Math.max(0, totalUsers - usersWithRoles);
           stats.users_by_role.user += usersWithoutRoles;
-          
+
         } catch (roleError) {
           console.warn('Erro ao buscar roles para estatísticas:', roleError);
           // Se falhar, assumir que todos são usuários básicos
@@ -347,7 +348,7 @@ export const useUserManagement = () => {
       console.log(`[createUser] Checking permissions - isPlatformAdmin: ${user?.isPlatformAdmin}`);
       console.log(`[createUser] User roles: ${JSON.stringify(user?.roles)}`);
       console.log(`[createUser] User permissions: ${JSON.stringify(user?.permissions)}`);
-      
+
       if (!hasPermission('users.create')) {
         console.error('[createUser] Permission denied - missing users.create permission');
         throw new Error('Sem permissão para criar usuários. Verifique se você é administrador da plataforma ou possui a role admin.');
@@ -355,7 +356,7 @@ export const useUserManagement = () => {
 
       // Determinar tenant_id
       let targetTenantId = userData.tenant_id;
-      
+
       // Se não for admin da plataforma, usar o tenant do usuário atual
       if (!user?.isPlatformAdmin) {
         targetTenantId = user?.tenantId;
@@ -394,7 +395,7 @@ export const useUserManagement = () => {
         send_invitation: userData.send_invitation,
         must_change_password: userData.must_change_password
       };
-      
+
       console.log('[createUser] Calling Edge Function with data:', {
         email: functionData.email,
         full_name: functionData.full_name,
@@ -412,17 +413,17 @@ export const useUserManagement = () => {
         console.error('[createUser] Edge function error:', functionError);
         console.error('[createUser] Error type:', typeof functionError);
         console.error('[createUser] Error properties:', Object.keys(functionError));
-        
+
         if (functionError.context) {
           console.error('[createUser] Error context status:', functionError.context.status);
           console.error('[createUser] Error context statusText:', functionError.context.statusText);
-          
+
           // Tentar ler corpo da resposta
           try {
             if (functionError.context.clone) {
               const errorBody = await functionError.context.clone().text();
               console.error('[createUser] Error response body:', errorBody);
-              
+
               // Tentar parsear como JSON
               try {
                 const errorJson = JSON.parse(errorBody);
@@ -437,7 +438,7 @@ export const useUserManagement = () => {
             console.error('[createUser] Erro ao ler corpo da resposta:', bodyError);
           }
         }
-        
+
         throw new Error(`Erro na criação do usuário: ${functionError.message || 'Edge Function retornou erro'}`);
       }
 
@@ -474,23 +475,41 @@ export const useUserManagement = () => {
           .select('tenant_id')
           .eq('user_id', userId)
           .single();
-        
+
         if (checkError) {
           throw new Error('Usuário não encontrado');
         }
-        
+
         if (targetUser.tenant_id !== user?.tenantId) {
           throw new Error('Sem permissão para editar usuários de outro tenant');
         }
       }
 
       // Atualizar perfil
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(userData)
-        .eq('user_id', userId);
+      if (userData.is_active !== undefined) {
+        // Se is_active for alterado, usar o RPC unificado para garantir encerramento de sessões
+        const { error: rpcError } = await supabase.rpc('toggle_user_active_status', {
+          p_user_id: userId,
+          p_active: userData.is_active
+        });
+        if (rpcError) throw rpcError;
 
-      if (profileError) throw profileError;
+        // Remover de userData para não atualizar via profiles.update (opcional, mas limpo)
+        const { is_active, ...otherData } = userData;
+        if (Object.keys(otherData).length > 0) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update(otherData)
+            .eq('user_id', userId);
+          if (profileError) throw profileError;
+        }
+      } else {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(userData)
+          .eq('user_id', userId);
+        if (profileError) throw profileError;
+      }
 
       // Atualizar roles se fornecidas
       if (userData.roles) {
@@ -553,11 +572,11 @@ export const useUserManagement = () => {
           .select('tenant_id')
           .eq('user_id', userId)
           .single();
-        
+
         if (checkError) {
           throw new Error('Usuário não encontrado');
         }
-        
+
         if (targetUser.tenant_id !== user?.tenantId) {
           throw new Error('Sem permissão para excluir usuários de outro tenant');
         }
@@ -604,11 +623,11 @@ export const useUserManagement = () => {
           .from('profiles')
           .select('user_id, tenant_id')
           .in('user_id', action.user_ids);
-        
+
         if (checkError) {
           throw new Error('Erro ao verificar usuários');
         }
-        
+
         const invalidUsers = targetUsers?.filter(u => u.tenant_id !== user?.tenantId) || [];
         if (invalidUsers.length > 0) {
           throw new Error(`Sem permissão para editar ${invalidUsers.length} usuário(s) de outro tenant`);
@@ -621,17 +640,17 @@ export const useUserManagement = () => {
         try {
           switch (action.action) {
             case 'activate':
-              await supabase
-                .from('profiles')
-                .update({ is_active: true, locked_until: null })
-                .eq('user_id', userId);
+              await supabase.rpc('toggle_user_active_status', {
+                p_user_id: userId,
+                p_active: true
+              });
               break;
 
             case 'deactivate':
-              await supabase
-                .from('profiles')
-                .update({ is_active: false })
-                .eq('user_id', userId);
+              await supabase.rpc('toggle_user_active_status', {
+                p_user_id: userId,
+                p_active: false
+              });
               break;
 
             case 'unlock':
@@ -691,10 +710,10 @@ export const useUserManagement = () => {
     onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['user-stats'] });
-      
+
       const successful = results.filter(r => r.success).length;
       const failed = results.filter(r => !r.success).length;
-      
+
       if (failed === 0) {
         toast.success(`Ação executada com sucesso em ${successful} usuários`);
       } else {
@@ -781,14 +800,14 @@ export const useUserManagement = () => {
     users,
     stats,
     filters,
-    
+
     // Loading states
     isLoadingUsers,
     isLoadingStats,
-    
+
     // Errors
     usersError,
-    
+
     // Actions
     setFilters,
     createUser: createUserMutation.mutate,
@@ -796,13 +815,13 @@ export const useUserManagement = () => {
     deleteUser: deleteUserMutation.mutate,
     bulkAction: bulkActionMutation.mutate,
     getUserActivity,
-    
+
     // Loading states for mutations
     isCreatingUser: createUserMutation.isPending,
     isUpdatingUser: updateUserMutation.isPending,
     isDeletingUser: deleteUserMutation.isPending,
     isBulkActionLoading: bulkActionMutation.isPending,
-    
+
     // Permissions
     hasPermission
   };

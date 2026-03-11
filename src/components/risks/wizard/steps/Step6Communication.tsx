@@ -34,6 +34,7 @@ interface Stakeholder {
   phone?: string;
   notification_type: 'awareness' | 'approval';
   response_status?: 'pending' | 'acknowledged' | 'approved' | 'rejected';
+  notified_at?: string;
 }
 
 interface Step6Props {
@@ -267,22 +268,70 @@ export const Step6Communication: React.FC<Step6Props> = ({
     }
 
     try {
-      // Aqui implementaríamos o envio de emails/notificações
-      // Por ora, apenas atualizar o status
       if (!stakeholders || stakeholders.length === 0) {
         toast.error('Nenhum stakeholder cadastrado');
         return;
       }
-      
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) { toast.error('Sessão inválida'); return; }
+
+      const tenantId = data.tenant_id || '46b1c048-85a1-423b-96fc-776007c8de1f';
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const stakeholder of stakeholders) {
+        // Enviar apenas para quem ainda não foi notificado hoje (ou nunca)
+        if (!stakeholder.notified_at) {
+          try {
+            const { error: invokeErr } = await supabase.functions.invoke('invite-risk-stakeholder', {
+              body: { 
+                email: stakeholder.email, 
+                full_name: stakeholder.name,
+                tenant_id: tenantId 
+              },
+              headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (invokeErr) throw invokeErr;
+            successCount++;
+          } catch (err) {
+            console.error(`Erro ao notificar ${stakeholder.email}:`, err);
+            errorCount++;
+          }
+        }
+      }
+
+      // Atualiza visualmente todos que não tem data para data atual
+      const now = new Date().toISOString();
       const updates = stakeholders.map(stakeholder => ({
         ...stakeholder,
-        notified_at: new Date().toISOString()
+        notified_at: stakeholder.notified_at || now
       }));
 
       setStakeholders(updates);
-      toast.success('Notificações enviadas com sucesso!');
+
+      // Atualiza no banco
+      const toUpdateDb = updates.filter(s => s.id && !s.id.toString().startsWith('temp-'));
+      for (const up of toUpdateDb) {
+        await supabase.from('risk_stakeholders').update({ notified_at: up.notified_at }).eq('id', up.id);
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} notificação(ões) enviada(s) com sucesso!`);
+      } else if (errorCount === 0) {
+        // Todos já notificados
+        toast.info('Nova notificação omitida: Stakeholders já foram notificados anteriormente.');
+      }
+
+      if (errorCount > 0) {
+        toast.warning(`${errorCount} erro(s) ao tentar enviar e-mails.`);
+      }
+
     } catch (error) {
-      console.error('Erro ao enviar notificações:', error);
+      console.error('Erro ao processar notificações:', error);
       toast.error('Erro ao enviar notificações');
     }
   };

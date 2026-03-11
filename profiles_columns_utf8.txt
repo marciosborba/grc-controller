@@ -1,0 +1,127 @@
+﻿[dotenv@17.2.1] injecting env (5) from .env -- tip: ÔÜÖ´©Å  enable debug logging with { debug: true }
+Profiles columns: [
+  {
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "full_name",
+    "data_type": "text"
+  },
+  {
+    "column_name": "job_title",
+    "data_type": "text"
+  },
+  {
+    "column_name": "department",
+    "data_type": "text"
+  },
+  {
+    "column_name": "phone",
+    "data_type": "text"
+  },
+  {
+    "column_name": "avatar_url",
+    "data_type": "text"
+  },
+  {
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "tenant_id",
+    "data_type": "uuid"
+  },
+  {
+    "column_name": "is_active",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "theme",
+    "data_type": "text"
+  },
+  {
+    "column_name": "last_login",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "column_name": "permissions",
+    "data_type": "ARRAY"
+  },
+  {
+    "column_name": "last_login_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "login_count",
+    "data_type": "integer"
+  },
+  {
+    "column_name": "failed_login_attempts",
+    "data_type": "integer"
+  },
+  {
+    "column_name": "locked_until",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "password_changed_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "column_name": "must_change_password",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "two_factor_enabled",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "email_verified",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "timezone",
+    "data_type": "text"
+  },
+  {
+    "column_name": "language",
+    "data_type": "text"
+  },
+  {
+    "column_name": "notification_preferences",
+    "data_type": "jsonb"
+  },
+  {
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "column_name": "roles",
+    "data_type": "ARRAY"
+  },
+  {
+    "column_name": "is_platform_admin",
+    "data_type": "boolean"
+  },
+  {
+    "column_name": "system_role",
+    "data_type": "text"
+  },
+  {
+    "column_name": "custom_role_id",
+    "data_type": "uuid"
+  }
+]

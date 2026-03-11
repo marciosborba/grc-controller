@@ -1,0 +1,14 @@
+[
+  {
+    "table_name": "profiles",
+    "trigger_name": "update_profiles_updated_at",
+    "event_manipulation": "UPDATE",
+    "action_statement": "EXECUTE FUNCTION update_updated_at_column()"
+  },
+  {
+    "table_name": "users",
+    "trigger_name": "on_auth_user_created",
+    "event_manipulation": "INSERT",
+    "action_statement": "EXECUTE FUNCTION handle_new_user()"
+  }
+]

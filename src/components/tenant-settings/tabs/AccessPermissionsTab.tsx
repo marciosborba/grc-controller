@@ -70,6 +70,7 @@ const MODULES = [
     { key: 'strategic_planning', label: 'Planejamento Estratégico', description: 'Metas e objetivos corporativos' },
     { key: 'policy_management', label: 'Políticas', description: 'Gestão de políticas e documentos normativos' },
     { key: 'risk_portal', label: 'Portal de Riscos', description: 'Acesso ao portal para partes interessadas' },
+    { key: 'vulnerability_portal', label: 'Portal de Vulnerabilidades', description: 'Acesso ao portal de vulnerabilidades para equipes atuantes' },
     { key: 'vendor_portal', label: 'Portal do Fornecedor', description: 'Acesso ao portal de fornecedores' },
     { key: 'settings', label: 'Configurações', description: 'Configurações da organização e IAM' },
 ];
@@ -338,7 +339,7 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-border">
-                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings' || m.key === 'risk_portal').map(mod => {
+                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings' || m.key === 'risk_portal' || m.key === 'vulnerability_portal').map(mod => {
                                             const allowed = permissions[selectedRole.id]?.[mod.key] ?? false;
                                             const isSaving = saving === `${selectedRole.id}-${mod.key}`;
                                             return (

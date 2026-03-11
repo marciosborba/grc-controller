@@ -1,0 +1,10 @@
+{
+  "vendor_users": [],
+  "vendor_portal_users": [
+    {
+      "id": "d07eb4c1-acbd-42ce-aba0-01daa2b7b856",
+      "email": "lucas.alcantara@gepriv.com",
+      "is_active": false
+    }
+  ]
+}

@@ -171,6 +171,12 @@ const RiskPortalMyRisks = lazy(() => import("@/pages/RiskPortal/RiskPortalMyRisk
 const RiskPortalRiskDetail = lazy(() => import("@/pages/RiskPortal/RiskPortalRiskDetail").then(module => ({ default: module.RiskPortalRiskDetail })));
 const RiskPortalActionPlans = lazy(() => import("@/pages/RiskPortal/RiskPortalActionPlans").then(module => ({ default: module.RiskPortalActionPlans })));
 
+// Portal de Vulnerabilidades (Autenticado via SSO principal)
+const VulnerabilityPortalLayout = lazy(() => import("@/pages/VulnerabilityPortal/VulnerabilityPortalLayout").then(module => ({ default: module.VulnerabilityPortalLayout })));
+const VulnerabilityPortalDashboard = lazy(() => import("@/pages/VulnerabilityPortal/VulnerabilityPortalDashboard").then(module => ({ default: module.VulnerabilityPortalDashboard })));
+const VulnerabilityPortalList = lazy(() => import("@/pages/VulnerabilityPortal/VulnerabilityPortalList").then(module => ({ default: module.VulnerabilityPortalList })));
+const VulnerabilityPortalDetail = lazy(() => import("@/pages/VulnerabilityPortal/VulnerabilityPortalDetail").then(module => ({ default: module.VulnerabilityPortalDetail })));
+
 // Debug pages (development only)
 const DebugUserInfo = lazy(() => import("@/components/admin/DebugUserInfo"));
 const UserDebugInfo = lazy(() => import("@/components/admin/UserDebugInfo"));
@@ -411,6 +417,17 @@ const App = () => (
                       <Route path="my-risks" element={<RiskPortalMyRisks />} />
                       <Route path="risk/:id" element={<RiskPortalRiskDetail />} />
                       <Route path="action-plans" element={<RiskPortalActionPlans />} />
+                    </Route>
+
+                    {/* Vulnerability Portal Routes (SSO - same login as main app) */}
+                    <Route path="/vulnerability-portal" element={
+                      <Suspense fallback={<PageLoader />}>
+                        <VulnerabilityPortalLayout />
+                      </Suspense>
+                    }>
+                      <Route index element={<VulnerabilityPortalDashboard />} />
+                      <Route path="list" element={<VulnerabilityPortalList />} />
+                      <Route path="vuln/:id" element={<VulnerabilityPortalDetail />} />
                     </Route>
 
                     {/* Protected Routes */}

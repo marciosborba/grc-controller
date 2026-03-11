@@ -45,7 +45,7 @@ export const IdentityAccessManagementSection: React.FC<IdentityAccessManagementS
                             className="relative h-9 rounded-none border-b-2 border-b-transparent bg-transparent px-2 pb-3 pt-2 font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:bg-transparent hover:text-foreground"
                         >
                             <Users className="w-4 h-4 mr-2" />
-                            Fornecedores
+                            Usuários Externos
                         </TabsTrigger>
 
                         <TabsTrigger

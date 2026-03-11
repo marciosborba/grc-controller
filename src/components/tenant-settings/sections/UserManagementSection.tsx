@@ -43,7 +43,8 @@ import {
   UserCheck,
   UserX,
   MoreHorizontal,
-  UserCog
+  UserCog,
+  Bug
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,6 +64,8 @@ interface User {
   department?: string;
   phone?: string;
   mfa_enabled: boolean;
+  override_risk_portal?: boolean;
+  override_vulnerability_portal?: boolean;
 }
 
 interface UserManagementSectionProps {
@@ -328,7 +331,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
           created_at: profile.created_at || new Date().toISOString(),
           department: profile.department || undefined,
           phone: profile.phone || undefined,
-          mfa_enabled: false // TODO: Implementar quando houver campo MFA
+          mfa_enabled: false, // TODO: Implementar quando houver campo MFA
+          override_risk_portal: profile.override_risk_portal || false,
+          override_vulnerability_portal: profile.override_vulnerability_portal || false
         };
 
         return processedUser;
@@ -579,6 +584,26 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     }
   };
 
+  const handleResendInvite = async (email: string, fullName: string) => {
+    setIsProcessing(true);
+    try {
+      const { error } = await supabase.functions.invoke('invite-risk-stakeholder', {
+        body: {
+          email,
+          full_name: fullName || email.split('@')[0],
+          tenant_id: tenantId,
+          resend: true
+        }
+      });
+      if (error) throw new Error(error.message);
+      toast.success(`Credenciais reenviadas para ${email}`);
+    } catch (err: any) {
+      toast.error(`Erro ao reenviar: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
@@ -633,6 +658,44 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
 
     onUserChange();
     onSettingsChange();
+  };
+
+  const handleToggleRiskPortalOverride = async (userId: string, currentVal: boolean) => {
+    try {
+      setIsProcessing(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ override_risk_portal: !currentVal })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      toast.success('Acesso individual ao Portal de Riscos atualizado com sucesso!');
+      await loadUsers();
+    } catch (error: any) {
+      toast.error(`Erro ao atualizar acesso: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleToggleVulnerabilityPortalOverride = async (userId: string, currentVal: boolean) => {
+    try {
+      setIsProcessing(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ override_vulnerability_portal: !currentVal })
+        .eq('id', userId);
+
+      if (error) throw error;
+      
+      toast.success('Acesso individual ao Portal de Vulnerabilidades atualizado com sucesso!');
+      await loadUsers();
+    } catch (error: any) {
+      toast.error(`Erro ao atualizar acesso: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleToggleUserStatus = async (userId: string) => {
@@ -1034,6 +1097,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                                 {isImpersonating === user.id ? <span className="text-xs animate-pulse">...</span> : <UserCog className="h-3.5 w-3.5" />}
                               </Button>
                             )}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleResendInvite(user.email, user.full_name); }} title="Reenviar Convite ou Senha">
+                              <Mail className="h-3.5 w-3.5" />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleToggleUserStatus(user.id); }}>
                               {user.status === 'active' ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
                             </Button>
@@ -1053,6 +1119,28 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                         <span className="text-xs text-muted-foreground">Login: {new Date(user.last_login).toLocaleDateString('pt-BR')}</span>
                       )}
                     </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium flex items-center gap-1"><Shield className="h-3 w-3" /> Acesso Portal de Risco</span>
+                      </div>
+                      <Switch 
+                        checked={user.override_risk_portal}
+                        onCheckedChange={() => handleToggleRiskPortalOverride(user.id, !!user.override_risk_portal)}
+                        disabled={isProcessing}
+                        className="scale-90"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-1 border-t-transparent">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-medium flex items-center gap-1"><Bug className="h-3 w-3" /> Acesso Portal Vuln.</span>
+                      </div>
+                      <Switch 
+                        checked={user.override_vulnerability_portal}
+                        onCheckedChange={() => handleToggleVulnerabilityPortalOverride(user.id, !!user.override_vulnerability_portal)}
+                        disabled={isProcessing}
+                        className="scale-90"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1067,6 +1155,8 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                       <TableHead>Status</TableHead>
                       <TableHead>Último Login</TableHead>
                       <TableHead>MFA</TableHead>
+                      <TableHead className="text-center">Acesso Risco</TableHead>
+                      <TableHead className="text-center">Acesso Vuln.</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1113,6 +1203,22 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                               Inativo
                             </Badge>
                           )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch 
+                            checked={user.override_risk_portal}
+                            onCheckedChange={() => handleToggleRiskPortalOverride(user.id, !!user.override_risk_portal)}
+                            disabled={isProcessing}
+                            title="Conceder/Retirar acesso individual ao Portal de Riscos"
+                          />
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Switch 
+                            checked={user.override_vulnerability_portal}
+                            onCheckedChange={() => handleToggleVulnerabilityPortalOverride(user.id, !!user.override_vulnerability_portal)}
+                            disabled={isProcessing}
+                            title="Conceder/Retirar acesso individual ao Portal de Vulnerabilidades"
+                          />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -1165,6 +1271,17 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                                     )}
                                   </Button>
                                 )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResendInvite(user.email, user.full_name);
+                                  }}
+                                  title="Reenviar Convite ou Setup de Senha"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"

@@ -242,6 +242,18 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           .map((m: any) => m.module_key);
         console.log('📦 [AUTH] Enabled Modules for Tenant:', enabledModules);
 
+        // 🚀 Acesso Individual ao Portal de Risco
+        if (profile?.override_risk_portal && !enabledModules.includes('risk_portal')) {
+          enabledModules.push('risk_portal');
+          console.log('🔓 [AUTH] Risk Portal access granted via individual override');
+        }
+
+        // 🛡️ Acesso Individual ao Portal de Vulnerabilidades
+        if (profile?.override_vulnerability_portal && !enabledModules.includes('vulnerability_portal')) {
+          enabledModules.push('vulnerability_portal');
+          console.log('🔓 [AUTH] Vulnerability Portal access granted via individual override');
+        }
+
         console.log('📊 [AUTH] Profile loaded via RPC:', {
           hasProfile: !!profile,
           rolesCount: rolesList.length,

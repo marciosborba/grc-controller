@@ -1,0 +1,7 @@
+[
+  {
+    "proname": "check_is_vendor",
+    "args": "check_uid uuid, check_email text",
+    "rettype": "text"
+  }
+]
