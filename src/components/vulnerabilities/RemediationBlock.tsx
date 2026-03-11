@@ -40,6 +40,7 @@ interface RemediationBlockProps {
     isRemediationValid?: boolean;
     users?: any[];
     groups?: any[];
+    tenantId?: string;
 }
 
 export function RemediationBlock({
@@ -55,7 +56,8 @@ export function RemediationBlock({
     onUpdateVulnerabilityStatus,
     isRemediationValid = true,
     users = [],
-    groups = []
+    groups = [],
+    tenantId
 }: RemediationBlockProps) {
     const { user } = useAuth();
     const [description, setDescription] = useState(task.description || '');
@@ -158,7 +160,7 @@ export function RemediationBlock({
                 is_completed: false,
                 task_id: task.id,
                 vulnerability_id: task.vulnerability_id,
-                tenant_id: user?.tenantId
+                tenant_id: tenantId
             });
 
         if (!error) {
@@ -217,7 +219,7 @@ export function RemediationBlock({
                 file_path: filePath,
                 file_type: file.type,
                 size: file.size,
-                tenant_id: user?.tenantId
+                tenant_id: tenantId
             });
 
             if (dbError) {
