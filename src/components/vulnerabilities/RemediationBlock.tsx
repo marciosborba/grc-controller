@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDropzone } from 'react-dropzone';
+import { useAuth } from '@/contexts/AuthContextOptimized';
+import { X } from 'lucide-react';
 
 interface RemediationBlockProps {
     task: any;
@@ -36,6 +38,8 @@ interface RemediationBlockProps {
     vulnerabilityStatus: string;
     onUpdateVulnerabilityStatus: (status: string) => void;
     isRemediationValid?: boolean;
+    users?: any[];
+    groups?: any[];
 }
 
 export function RemediationBlock({
@@ -49,11 +53,41 @@ export function RemediationBlock({
     isAdmin,
     vulnerabilityStatus,
     onUpdateVulnerabilityStatus,
-    isRemediationValid = true
+    isRemediationValid = true,
+    users = [],
+    groups = []
 }: RemediationBlockProps) {
+    const { user } = useAuth();
     const [description, setDescription] = useState(task.description || '');
-    const [assignedTo, setAssignedTo] = useState(task.assigned_to || '');
-    const [assignedTeam, setAssignedTeam] = useState(task.assigned_team || '');
+    
+    // Multi-select state initialized from task props
+    const [assignedItems, setAssignedItems] = useState<{ id: string; type: 'user' | 'group'; name: string }[]>(() => {
+        const items: { id: string; type: 'user' | 'group'; name: string }[] = [];
+        // Support previous single values or new JSON array
+        if (task.assigned_to) {
+            try {
+                const parsed = JSON.parse(task.assigned_to);
+                if (Array.isArray(parsed)) items.push(...parsed);
+                else items.push({ id: task.assigned_to, type: 'user', name: task.assigned_to });
+            } catch {
+                const u = users.find(x => x.id === task.assigned_to);
+                items.push({ id: task.assigned_to, type: 'user', name: u ? (u.full_name || u.email) : task.assigned_to });
+            }
+        }
+        if (task.assigned_team) {
+            try {
+                const parsed = JSON.parse(task.assigned_team);
+                if (Array.isArray(parsed) && parsed.length && parsed[0].type === 'group') items.push(...parsed);
+                else items.push({ id: task.assigned_team, type: 'group', name: task.assigned_team });
+            } catch {
+                items.push({ id: task.assigned_team, type: 'group', name: task.assigned_team });
+            }
+        }
+        return items;
+    });
+    const [assigneeSearchTerm, setAssigneeSearchTerm] = useState('');
+    const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+
     const [status, setStatus] = useState(task.status || 'open');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -81,8 +115,8 @@ export function RemediationBlock({
             .from('remediation_tasks')
             .update({
                 description,
-                assigned_to: assignedTo,
-                assigned_team: assignedTeam,
+                assigned_to: assignedItems.filter(i => i.type === 'user').length > 0 ? JSON.stringify(assignedItems.filter(i => i.type === 'user')) : null,
+                assigned_team: assignedItems.filter(i => i.type === 'group').length > 0 ? JSON.stringify(assignedItems.filter(i => i.type === 'group')) : null,
                 status,
                 updated_at: new Date().toISOString()
             })
@@ -123,7 +157,8 @@ export function RemediationBlock({
                 title: newItem,
                 is_completed: false,
                 task_id: task.id,
-                vulnerability_id: task.vulnerability_id
+                vulnerability_id: task.vulnerability_id,
+                tenant_id: user?.tenantId
             });
 
         if (!error) {
@@ -181,7 +216,8 @@ export function RemediationBlock({
                 file_name: file.name,
                 file_path: filePath,
                 file_type: file.type,
-                size: file.size
+                size: file.size,
+                tenant_id: user?.tenantId
             });
 
             if (dbError) {
@@ -230,15 +266,20 @@ export function RemediationBlock({
                     <Badge variant={getStatusColor()} className="uppercase">
                         {getCurrentStatusLabel()}
                     </Badge>
-                    {assignedTeam && (
-                        <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <Users className="h-3 w-3" /> {assignedTeam}
-                        </span>
-                    )}
-                    {assignedTo && (
-                        <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                            <User className="h-3 w-3" /> {assignedTo}
-                        </span>
+                    {assignedItems.length > 0 && (
+                        <div className="flex items-center gap-2">
+                            {assignedItems.filter(i => i.type === 'group').length > 0 && (
+                                <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                                    <Users className="h-3 w-3" /> {assignedItems.filter(i => i.type === 'group').length} Grupos
+                                </span>
+                            )}
+                            {assignedItems.filter(i => i.type === 'user').length > 0 && (
+                                <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                                    <User className="h-3 w-3" /> {assignedItems.filter(i => i.type === 'user')[0].name}
+                                    {assignedItems.filter(i => i.type === 'user').length > 1 && ` +${assignedItems.filter(i => i.type === 'user').length - 1}`}
+                                </span>
+                            )}
+                        </div>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -267,22 +308,78 @@ export function RemediationBlock({
                     </div>
 
                     <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Responsável</Label>
+                        <div className="space-y-2">
+                            <Label>Responsáveis</Label>
+                            {/* Selected items badges */}
+                            {assignedItems.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                    {assignedItems.map(item => (
+                                        <span
+                                            key={`${item.type}-${item.id}`}
+                                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+                                        >
+                                            {item.type === 'group' ? '👥' : '👤'} {item.name}
+                                            <button
+                                                type="button"
+                                                onClick={() => setAssignedItems(prev => prev.filter(i => i.id !== item.id || i.type !== item.type))}
+                                                className="ml-0.5 hover:text-destructive transition-colors"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+                            {/* Search + dropdown */}
+                            <div className="relative">
                                 <Input
-                                    value={assignedTo}
-                                    onChange={(e) => setAssignedTo(e.target.value)}
-                                    placeholder="Email ou Nome"
+                                    placeholder="Buscar usuário ou grupo..."
+                                    value={assigneeSearchTerm}
+                                    onChange={e => { setAssigneeSearchTerm(e.target.value); setShowAssigneeDropdown(true); }}
+                                    onFocus={() => setShowAssigneeDropdown(true)}
+                                    onBlur={() => setTimeout(() => setShowAssigneeDropdown(false), 200)}
+                                    className="h-9"
                                 />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Equipe</Label>
-                                <Input
-                                    value={assignedTeam}
-                                    onChange={(e) => setAssignedTeam(e.target.value)}
-                                    placeholder="Ex: DevOps"
-                                />
+                                {showAssigneeDropdown && (
+                                    <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-52 overflow-y-auto">
+                                        {/* Groups section */}
+                                        {groups.filter(g =>
+                                            !assignedItems.some(i => i.id === g.id && i.type === 'group') &&
+                                            g.name.toLowerCase().includes(assigneeSearchTerm.toLowerCase())
+                                        ).map(g => (
+                                            <button
+                                                key={`group-${g.id}`}
+                                                type="button"
+                                                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-left"
+                                                onMouseDown={e => { e.preventDefault(); setAssignedItems(prev => [...prev, { id: g.id, type: 'group', name: g.name }]); setAssigneeSearchTerm(''); }}
+                                            >
+                                                <span className="text-base">👥</span>
+                                                <span>{g.name}</span>
+                                                <span className="ml-auto text-xs text-muted-foreground">Grupo</span>
+                                            </button>
+                                        ))}
+                                        {/* Users section */}
+                                        {users.filter(u =>
+                                            !assignedItems.some(i => i.id === u.id && i.type === 'user') &&
+                                            (u.full_name?.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) || u.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase()))
+                                        ).map(u => (
+                                            <button
+                                                key={`user-${u.id}`}
+                                                type="button"
+                                                className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-accent text-left"
+                                                onMouseDown={e => { e.preventDefault(); setAssignedItems(prev => [...prev, { id: u.id, type: 'user', name: u.full_name || u.email }]); setAssigneeSearchTerm(''); }}
+                                            >
+                                                <span className="text-base">👤</span>
+                                                <span>{u.full_name || u.email}</span>
+                                                <span className="ml-auto text-xs text-muted-foreground">{u.email}</span>
+                                            </button>
+                                        ))}
+                                        {groups.filter(g => !assignedItems.some(i => i.id === g.id && i.type === 'group') && g.name.toLowerCase().includes(assigneeSearchTerm.toLowerCase())).length === 0 &&
+                                            users.filter(u => !assignedItems.some(i => i.id === u.id && i.type === 'user') && (u.full_name?.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) || u.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase()))).length === 0 && (
+                                                <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum resultado encontrado</div>
+                                            )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
