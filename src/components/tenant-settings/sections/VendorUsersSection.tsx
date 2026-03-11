@@ -216,7 +216,7 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
         }
     };
 
-    const handleResendInvite = async (user: ExternalUser, targetPortal: 'vendor' | 'risk') => {
+    const handleResendInvite = async (user: ExternalUser, targetPortal: 'vendor' | 'risk' | 'vulnerability') => {
         setIsProcessing(`invite-${user.email}`);
         try {
             if (targetPortal === 'vendor') {
@@ -232,6 +232,8 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                 if (error) throw new Error(error.message);
                 toast.success(`Convite Fornecedor reenviado para ${user.email}`);
             } else {
+                // Both 'risk' and 'vulnerability' use the same function for now
+                const portalName = targetPortal === 'risk' ? 'Riscos' : 'Vulnerabilidades';
                 const { error } = await supabase.functions.invoke('invite-risk-stakeholder', {
                     body: {
                         email: user.email,
@@ -241,7 +243,7 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                     }
                 });
                 if (error) throw new Error(error.message);
-                toast.success(`Convite Riscos/Vulnerabilidades reenviado para ${user.email}`);
+                toast.success(`Convite ${portalName} reenviado para ${user.email}`);
             }
         } catch (err: any) {
             toast.error(`Erro ao reenviar convite: ${err.message}`);
@@ -493,12 +495,21 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent>
-                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'vendor')}>
-                                                        Portal de Fornecedores
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'risk')}>
-                                                        Portal de Riscos
-                                                    </DropdownMenuItem>
+                                                    {u.has_vendor_access && (
+                                                        <DropdownMenuItem onClick={() => handleResendInvite(u, 'vendor')}>
+                                                            Portal de Fornecedores
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {u.has_risk_access && (
+                                                        <DropdownMenuItem onClick={() => handleResendInvite(u, 'risk')}>
+                                                            Portal de Riscos
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {u.has_vulnerability_access && (
+                                                        <DropdownMenuItem onClick={() => handleResendInvite(u, 'vulnerability')}>
+                                                            Portal de Vulnerabilidades
+                                                        </DropdownMenuItem>
+                                                    )}
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
 
@@ -564,12 +575,21 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                                                                 </Button>
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent>
-                                                                <DropdownMenuItem onClick={() => handleResendInvite(u, 'vendor')}>
-                                                                    Portal de Fornecedores
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem onClick={() => handleResendInvite(u, 'risk')}>
-                                                                    Portal de Riscos
-                                                                </DropdownMenuItem>
+                                                                {u.has_vendor_access && (
+                                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'vendor')}>
+                                                                        Portal de Fornecedores
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {u.has_risk_access && (
+                                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'risk')}>
+                                                                        Portal de Riscos
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {u.has_vulnerability_access && (
+                                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'vulnerability')}>
+                                                                        Portal de Vulnerabilidades
+                                                                    </DropdownMenuItem>
+                                                                )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
 
