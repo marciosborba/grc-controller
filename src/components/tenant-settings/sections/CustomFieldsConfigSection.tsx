@@ -50,6 +50,7 @@ const MODULE_LABELS: Record<string, string> = {
     // Ativos & Vulnerabilidades
     asset: 'CMDB (Modal: Novo Ativo)',
     vulnerability: 'Vulnerabilidades (Modal: Nova Vulnerabilidade)',
+    application: 'Aplicações (Modal: Nova Aplicação / Editar Aplicação)',
 
     // Políticas & Conformidade
     policy: 'Políticas (Modal: Criar Política)',

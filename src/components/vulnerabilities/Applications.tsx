@@ -69,6 +69,7 @@ type Application = {
   internet_facing?: boolean;
   environment?: string;
   data_classification?: string;
+  custom_fields?: Record<string, any>;
 };
 
 export default function Applications() {
@@ -183,6 +184,7 @@ export default function Applications() {
           internet_facing: sys.internet_facing === true || sys.internet_exposto === true || sys.internet_facing === 'Sim' || sys.internet_exposto === 'Sim' || sys.internet === true || sys.internet === 'Sim',
           environment: sys.ambiente || '',
           data_classification: sys.classificacao_dados || '',
+          custom_fields: sys.custom_fields && typeof sys.custom_fields === 'object' ? sys.custom_fields as Record<string, any> : undefined,
         };
       });
 
@@ -711,18 +713,27 @@ export default function Applications() {
   };
 
   const executeExport = (format: string, options: any = {}) => {
-    const dataToExport = filteredApplications.map(app => ({
-      ID: app.id,
-      Nome: app.name,
-      Tipo: app.type,
-      Status: app.status,
-      URL: app.url,
-      Tecnologia: app.technology,
-      Responsável: app.owner,
-      Vulnerabilidades: app.vulnerabilities,
-      'Nível de Risco': app.risk_level,
-      'Último Scan': app.last_scan
-    }));
+    const dataToExport = filteredApplications.map(app => {
+      const base: Record<string, any> = {
+        ID: app.id,
+        Nome: app.name,
+        Tipo: app.type,
+        Status: app.status,
+        URL: app.url,
+        Tecnologia: app.technology,
+        Responsável: app.owner,
+        Vulnerabilidades: app.vulnerabilities,
+        'Nível de Risco': app.risk_level,
+        'Último Scan': app.last_scan
+      };
+      // Append custom fields as extra columns
+      if (app.custom_fields) {
+        Object.entries(app.custom_fields).forEach(([key, value]) => {
+          base[`custom_${key}`] = Array.isArray(value) ? value.join(', ') : value;
+        });
+      }
+      return base;
+    });
 
     switch (format) {
       case 'csv':

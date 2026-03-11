@@ -113,7 +113,8 @@ export type ApplicationType = {
     internet_facing?: boolean;
     environment?: string;
     data_classification?: string;
-    [key: string]: string | number | boolean | null | undefined; // Allow other properties if needed
+    custom_fields?: Record<string, any>;
+    [key: string]: string | number | boolean | null | undefined | Record<string, any>; // Allow custom_fields and other properties
 };
 
 interface ExpandableApplicationCardProps {
@@ -126,7 +127,8 @@ interface ExpandableApplicationCardProps {
 const ExpandableApplicationCard: React.FC<ExpandableApplicationCardProps> = memo(({
     application,
     onView,
-    onDelete
+    onDelete,
+    onUpdate
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const navigate = useNavigate();

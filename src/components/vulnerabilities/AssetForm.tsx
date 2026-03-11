@@ -138,7 +138,8 @@ export default function AssetForm({
   const tenantId = useCurrentTenantId();
 
   // Custom Fields hook
-  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('asset');
+  const [initialCustomValues, setInitialCustomValues] = useState<Record<string, any>>({});
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('asset', initialCustomValues);
 
   const [activeTab, setActiveTab] = useState('basic');
   const [loading, setLoading] = useState(false);
@@ -253,6 +254,10 @@ export default function AssetForm({
           tags: [],
           notes: ''
         });
+        // Load custom fields from JSONB column
+        if (data.custom_fields && typeof data.custom_fields === 'object') {
+          setInitialCustomValues(data.custom_fields as Record<string, any>);
+        }
       }
     } catch (error) {
       console.error('Error loading asset:', error);
@@ -346,7 +351,8 @@ export default function AssetForm({
         criticidade: formData.criticality,
         eol_date: formData.eol_date || null,
         edr_enabled: formData.edr_enabled || false,
-        status: formData.status
+        status: formData.status,
+        custom_fields: customFields.length > 0 ? customFieldValues : undefined,
       };
 
       if (isEditing) {

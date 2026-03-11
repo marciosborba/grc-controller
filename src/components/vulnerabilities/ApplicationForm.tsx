@@ -19,12 +19,15 @@ import {
   Database,
   Cloud,
   Monitor,
-  Edit
+  Edit,
+  Sliders
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
+import { useCustomFields } from '@/hooks/useCustomFields';
+import { CustomFieldInputs } from '@/components/shared/CustomFieldInputs';
 
 interface Application {
   id: string;
@@ -125,6 +128,8 @@ export default function ApplicationForm({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [initialCustomValues, setInitialCustomValues] = useState<Record<string, any>>({});
+  const { fields: customFields, fieldValues: customFieldValues, setFieldValues: setCustomFieldValues } = useCustomFields('application', initialCustomValues);
 
   useEffect(() => {
     async function loadData() {
@@ -168,6 +173,10 @@ export default function ApplicationForm({
               acn: data.acn === true || data.is_acn === true || data.acn === 'Sim',
               internet: data.internet_facing === true || data.internet === true || data.internet === 'Sim' || data.internet_exposto === true || data.internet_exposto === 'Sim'
             });
+            // Load custom fields values
+            if (data.custom_fields && typeof data.custom_fields === 'object') {
+              setInitialCustomValues(data.custom_fields as Record<string, any>);
+            }
           }
         } catch (error) {
           console.error("Error loading application:", error);
@@ -253,6 +262,7 @@ export default function ApplicationForm({
         is_acn: formData.acn || false,
         internet_facing: formData.internet || false,
         tenant_id: tenantId,
+        custom_fields: customFields.length > 0 ? customFieldValues : undefined,
       };
 
       if (isEditing && id) {
@@ -393,6 +403,12 @@ export default function ApplicationForm({
             <TabsTrigger value="basic" className="text-xs px-2 py-1.5 flex-shrink-0">Básico</TabsTrigger>
             <TabsTrigger value="technical" className="text-xs px-2 py-1.5 flex-shrink-0">Técnico</TabsTrigger>
             <TabsTrigger value="business" className="text-xs px-2 py-1.5 flex-shrink-0">Negócio</TabsTrigger>
+            {customFields.length > 0 && (
+              <TabsTrigger value="custom" className="text-xs px-2 py-1.5 flex-shrink-0">
+                <Sliders className="h-3 w-3 mr-1" />
+                Adicionais
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 mt-3">
@@ -701,6 +717,31 @@ export default function ApplicationForm({
               </CardContent>
             </Card>
           </TabsContent>
+
+          {customFields.length > 0 && (
+            <TabsContent value="custom" className="space-y-4 mt-3">
+              <Card>
+                <CardHeader className="pb-3 pt-4 px-4">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-violet-500" />
+                    Informações Adicionais
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Campos personalizados configurados pela sua organização
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CustomFieldInputs
+                      fields={customFields.filter(f => f.show_in_interior !== false)}
+                      values={customFieldValues}
+                      onChange={setCustomFieldValues}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </form>
     </div>
