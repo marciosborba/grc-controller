@@ -159,8 +159,7 @@ export function RemediationBlock({
                 title: newItem,
                 is_completed: false,
                 task_id: task.id,
-                vulnerability_id: task.vulnerability_id,
-                tenant_id: tenantId
+                vulnerability_id: task.vulnerability_id
             });
 
         if (!error) {
@@ -218,8 +217,7 @@ export function RemediationBlock({
                 file_name: file.name,
                 file_path: filePath,
                 file_type: file.type,
-                size: file.size,
-                tenant_id: tenantId
+                size: file.size
             });
 
             if (dbError) {

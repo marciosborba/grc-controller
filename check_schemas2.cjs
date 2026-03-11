@@ -1,0 +1,12 @@
+const { Client } = require('pg');
+const fs = require('fs');
+let envContent = fs.readFileSync('.env', 'utf8');
+const dbPassMatch = envContent.match(/SUPABASE_DB_PASSWORD=(.*)/);
+const client = new Client({ connectionString: 'postgresql://postgres:' + dbPassMatch[1].trim() + '@db.myxvxponlmulnjstbjwd.supabase.co:5432/postgres' });
+client.connect().then(async () => {
+  const result1 = await client.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'vulnerability_action_items'");
+  console.log('Action Items columns:', result1.rows.map(r => r.column_name).join(', '));
+  const result2 = await client.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'vulnerability_attachments'");
+  console.log('Attachments columns:', result2.rows.map(r => r.column_name).join(', '));
+  await client.end();
+});
