@@ -1,30 +1,14 @@
 const { Client } = require('pg');
 const fs = require('fs');
-require('dotenv').config();
+let envContent = fs.readFileSync('.env', 'utf8');
+const dbPassMatch = envContent.match(/SUPABASE_DB_PASSWORD=(.*)/);
+const client = new Client({ connectionString: 'postgresql://postgres:' + dbPassMatch[1].trim() + '@db.myxvxponlmulnjstbjwd.supabase.co:5432/postgres' });
+client.connect().then(async () => {
+  const triggers = await client.query(
+    "SELECT tgname, tgenabled, tgtype FROM pg_trigger WHERE tgrelid = 'remediation_tasks'::regclass"
+  );
+  console.log('--- Triggers on remediation_tasks ---');
+  triggers.rows.forEach(r => console.log(r));
 
-const client = new Client({
-    host: 'db.myxvxponlmulnjstbjwd.supabase.co',
-    port: 5432,
-    database: 'postgres',
-    user: 'postgres',
-    password: process.env.SUPABASE_DB_PASSWORD,
-    ssl: { rejectUnauthorized: false }
+  await client.end();
 });
-
-client.connect()
-    .then(() => {
-        return client.query(`
-            SELECT event_object_table AS table_name, trigger_name, event_manipulation, action_statement
-            FROM information_schema.triggers
-            WHERE event_object_table IN ('users', 'sessions', 'profiles', 'vendor_users', 'vendor_portal_users')
-        `);
-    })
-    .then(res => {
-        fs.writeFileSync('trigger_dump.json', JSON.stringify(res.rows, null, 2));
-        client.end();
-        console.log('Saved to trigger_dump.json');
-    })
-    .catch(err => {
-        console.error('Error:', err);
-        client.end();
-    });

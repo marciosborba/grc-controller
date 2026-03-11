@@ -1,0 +1,44 @@
+[
+  {
+    "tablename": "vulnerability_attachments",
+    "policyname": "unified_DELETE_attachments",
+    "cmd": "DELETE",
+    "qual": "(vulnerability_id IN ( SELECT v.id\n   FROM vulnerabilities v\n  WHERE (v.tenant_id IN ( SELECT p.tenant_id\n           FROM profiles p\n          WHERE (p.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))",
+    "with_check": null
+  },
+  {
+    "tablename": "vulnerability_attachments",
+    "policyname": "unified_INSERT_attachments",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(vulnerability_id IN ( SELECT v.id\n   FROM vulnerabilities v\n  WHERE (v.tenant_id IN ( SELECT p.tenant_id\n           FROM profiles p\n          WHERE (p.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))"
+  },
+  {
+    "tablename": "vulnerability_attachments",
+    "policyname": "unified_SELECT_attachments",
+    "cmd": "SELECT",
+    "qual": "(vulnerability_id IN ( SELECT v.id\n   FROM vulnerabilities v\n  WHERE (v.tenant_id IN ( SELECT p.tenant_id\n           FROM profiles p\n          WHERE (p.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))",
+    "with_check": null
+  },
+  {
+    "tablename": "vulnerability_attachments",
+    "policyname": "unified_UPDATE_attachments",
+    "cmd": "UPDATE",
+    "qual": "(vulnerability_id IN ( SELECT v.id\n   FROM vulnerabilities v\n  WHERE (v.tenant_id IN ( SELECT p.tenant_id\n           FROM profiles p\n          WHERE (p.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))",
+    "with_check": "(vulnerability_id IN ( SELECT v.id\n   FROM vulnerabilities v\n  WHERE (v.tenant_id IN ( SELECT p.tenant_id\n           FROM profiles p\n          WHERE (p.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))"
+  },
+  {
+    "tablename": "vulnerability_comments",
+    "policyname": "vulnerability_comments_insert",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(tenant_id IN ( SELECT profiles.tenant_id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid())))"
+  },
+  {
+    "tablename": "vulnerability_comments",
+    "policyname": "vulnerability_comments_select",
+    "cmd": "SELECT",
+    "qual": "(tenant_id IN ( SELECT profiles.tenant_id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid())))",
+    "with_check": null
+  }
+]

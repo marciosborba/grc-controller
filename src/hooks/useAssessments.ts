@@ -332,8 +332,7 @@ export const useAssessmentMetrics = () => {
       const { data: frameworks, error: frameworksError } = await supabase
         .from('assessment_frameworks')
         .select('id')
-        .eq('tenant_id', tenantId)
-        .eq('is_active', true);
+        .eq('tenant_id', tenantId);
 
       if (frameworksError) {
         console.error('❌ [useAssessmentMetrics] Erro ao buscar frameworks:', frameworksError);

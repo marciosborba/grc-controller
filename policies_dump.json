@@ -1,0 +1,72 @@
+[
+  {
+    "tablename": "profiles",
+    "policyname": "Only admins can delete profiles",
+    "cmd": "DELETE",
+    "qual": "has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role)",
+    "with_check": null
+  },
+  {
+    "tablename": "profiles",
+    "policyname": "Users can insert profiles",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) OR (( SELECT ( SELECT auth.uid() AS uid) AS uid) = user_id))"
+  },
+  {
+    "tablename": "profiles",
+    "policyname": "Users can update profiles based on permissions",
+    "cmd": "UPDATE",
+    "qual": "can_manage_user(( SELECT ( SELECT auth.uid() AS uid) AS uid), user_id)",
+    "with_check": "can_manage_user(( SELECT ( SELECT auth.uid() AS uid) AS uid), user_id)"
+  },
+  {
+    "tablename": "profiles",
+    "policyname": "profiles_select_policy",
+    "cmd": "SELECT",
+    "qual": "((id = auth.uid()) OR (tenant_id = get_auth_tenant_id()) OR is_platform_admin())",
+    "with_check": null
+  },
+  {
+    "tablename": "profiles",
+    "policyname": "profiles_update_policy",
+    "cmd": "UPDATE",
+    "qual": "((id = auth.uid()) OR is_tenant_admin() OR is_platform_admin())",
+    "with_check": null
+  },
+  {
+    "tablename": "remediation_tasks",
+    "policyname": "Enable read access for authenticated users",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "tablename": "vulnerabilities",
+    "policyname": "vulnerabilities_tenant_delete",
+    "cmd": "DELETE",
+    "qual": "(tenant_id IN ( SELECT profiles.tenant_id\n   FROM profiles\n  WHERE ((profiles.user_id = auth.uid()) AND (profiles.system_role <> ALL (ARRAY['guest'::text, 'vendor'::text])))))",
+    "with_check": null
+  },
+  {
+    "tablename": "vulnerabilities",
+    "policyname": "vulnerabilities_tenant_insert",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(tenant_id IN ( SELECT profiles.tenant_id\n   FROM profiles\n  WHERE ((profiles.user_id = auth.uid()) AND (profiles.system_role <> ALL (ARRAY['guest'::text, 'vendor'::text])))))"
+  },
+  {
+    "tablename": "vulnerabilities",
+    "policyname": "vulnerabilities_tenant_select",
+    "cmd": "SELECT",
+    "qual": "(tenant_id IN ( SELECT profiles.tenant_id\n   FROM profiles\n  WHERE (profiles.user_id = auth.uid())))",
+    "with_check": null
+  },
+  {
+    "tablename": "vulnerabilities",
+    "policyname": "vulnerabilities_tenant_update",
+    "cmd": "UPDATE",
+    "qual": "(tenant_id IN ( SELECT profiles.tenant_id\n   FROM profiles\n  WHERE ((profiles.user_id = auth.uid()) AND (profiles.system_role <> ALL (ARRAY['guest'::text, 'vendor'::text])))))",
+    "with_check": null
+  }
+]

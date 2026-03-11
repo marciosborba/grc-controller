@@ -5,9 +5,8 @@ const dbPassMatch = envContent.match(/SUPABASE_DB_PASSWORD=(.*)/);
 const client = new Client({ connectionString: 'postgresql://postgres:' + dbPassMatch[1].trim() + '@db.myxvxponlmulnjstbjwd.supabase.co:5432/postgres' });
 client.connect().then(async () => {
   const result = await client.query(
-    "SELECT tablename, policyname, cmd FROM pg_policies WHERE tablename IN ('remediation_tasks', 'vulnerability_action_items', 'vulnerability_status_history', 'vulnerabilities', 'vulnerability_attachments', 'vulnerability_comments') ORDER BY tablename, cmd"
+    "SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public' AND routine_name = 'get_tenant_security_settings'"
   );
-  console.log('--- Final Policy Summary ---');
-  result.rows.forEach(r => console.log(`${r.tablename}: [${r.cmd}] ${r.policyname}`));
+  console.log('get_tenant_security_settings exists:', result.rows.length > 0);
   await client.end();
 });

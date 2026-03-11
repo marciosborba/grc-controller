@@ -215,7 +215,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         }
 
         const fullProfile = rpcData as any;
-        console.log('✅ [AUTH] RPC Data received:', JSON.stringify(fullProfile, null, 2));
+        console.log('✅ [AUTH] RPC Data received: profile loaded successfully');
 
         // PROTEÇÃO EXTRA: O usuário tem o perfil mas está marcado explicitamente como inativo
         if (fullProfile && fullProfile.is_active === false) {
@@ -580,29 +580,22 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       console.log('🔐 [AUTH] Chamando supabase.auth.signInWithPassword...');
 
       // 0. IP Enforcement (Dynamic from Tenant Settings)
-      const domain = cleanEmail.split('@')[1];
-      if (domain) {
-        // Fetch security settings for the domain
-        const { data: securitySettings } = await supabase.rpc('get_tenant_security_settings', {
-          domain_name: domain
-        });
+      try {
+        const domain = cleanEmail.split('@')[1];
+        if (domain) {
+          const { data: securitySettings } = await supabase.rpc('get_tenant_security_settings', {
+            domain_name: domain
+          });
 
-        // Check if IP whitelisting is enabled
-        if (securitySettings?.accessControl?.ipWhitelisting) {
-          const allowedIPs = securitySettings.accessControl.allowedIPs || [];
-
-          console.log('🛡️ [SECURITY] IP Whitelist checking enabled for domain:', domain);
-          console.log('Allowed IPs:', allowedIPs);
-
-          // Note: In a real production scenario, IP enforcement should be done:
-          // 1. Via Supabase Edge Functions (server-side)
-          // 2. Or by checking a reliable external service for the client's public IP
-          // We are currently logging the check to demonstrate the integration.
-          // 
-          // Example blocking logic if IP was available:
-          // const clientIP = await fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => d.ip);
-          // if (!allowedIPs.includes(clientIP)) throw new Error('Acesso negado: Seu endereço IP não está autorizado.');
+          if (securitySettings?.accessControl?.ipWhitelisting) {
+            const allowedIPs = securitySettings.accessControl.allowedIPs || [];
+            // IP enforcement would be done server-side via Edge Functions
+            // allowedIPs array is available here for future enforcement logic
+            void allowedIPs;
+          }
         }
+      } catch {
+        // Security settings fetch is optional; continue login flow if unavailable
       }
 
       // 1. Check for Account Lockout (Brute Force Protection)
