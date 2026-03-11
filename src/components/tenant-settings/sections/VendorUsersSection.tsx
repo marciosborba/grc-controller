@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
     Search, Users, Building2, CheckCircle2, Clock, Trash2, PowerOff, Power,
-    AlertCircle, Shield, Mail
+    AlertCircle, Shield, Mail, MoreVertical, Edit, ChevronDown
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,6 +20,22 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface ExternalUser {
     email: string;
@@ -51,6 +67,13 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
     const [searchTerm, setSearchTerm] = useState('');
     const [isProcessing, setIsProcessing] = useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<ExternalUser | null>(null);
+    const [editTarget, setEditTarget] = useState<ExternalUser | null>(null);
+    
+    // Edit Modal State
+    const [editName, setEditName] = useState('');
+    const [editHasVendor, setEditHasVendor] = useState(false);
+    const [editHasRisk, setEditHasRisk] = useState(false);
+    const [editHasVulnerability, setEditHasVulnerability] = useState(false);
 
     useEffect(() => {
         if (tenantId) loadExternalUsers();
@@ -193,19 +216,33 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
         }
     };
 
-    const handleResendInvite = async (user: ExternalUser) => {
+    const handleResendInvite = async (user: ExternalUser, targetPortal: 'vendor' | 'risk') => {
         setIsProcessing(`invite-${user.email}`);
         try {
-            const { error } = await supabase.functions.invoke('invite-risk-stakeholder', {
-                body: {
-                    email: user.email,
-                    full_name: user.full_name || user.email.split('@')[0],
-                    tenant_id: tenantId,
-                    resend: true
-                }
-            });
-            if (error) throw new Error(error.message);
-            toast.success(`Credenciais/Convite reenviados para ${user.email}`);
+            if (targetPortal === 'vendor') {
+                const { error } = await supabase.functions.invoke('create-vendor-user', {
+                    body: {
+                        email: user.email,
+                        vendor_id: user.vendor_id,
+                        name: user.full_name || user.vendor_name || user.email.split('@')[0],
+                        tenant_id: tenantId,
+                        resend: true
+                    }
+                });
+                if (error) throw new Error(error.message);
+                toast.success(`Convite Fornecedor reenviado para ${user.email}`);
+            } else {
+                const { error } = await supabase.functions.invoke('invite-risk-stakeholder', {
+                    body: {
+                        email: user.email,
+                        full_name: user.full_name || user.email.split('@')[0],
+                        tenant_id: tenantId,
+                        resend: true
+                    }
+                });
+                if (error) throw new Error(error.message);
+                toast.success(`Convite Riscos/Vulnerabilidades reenviado para ${user.email}`);
+            }
         } catch (err: any) {
             toast.error(`Erro ao reenviar convite: ${err.message}`);
         } finally {
@@ -236,6 +273,94 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
             await loadExternalUsers();
         } catch (err: any) {
             toast.error(`Erro ao remover: ${err.message}`);
+        } finally {
+            setIsProcessing(null);
+        }
+    };
+
+    const handleOpenEdit = (user: ExternalUser) => {
+        setEditTarget(user);
+        setEditName(user.full_name || '');
+        setEditHasVendor(user.has_vendor_access);
+        setEditHasRisk(user.has_risk_access);
+        setEditHasVulnerability(user.has_vulnerability_access);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editTarget) return;
+        setIsProcessing('edit');
+
+        try {
+            // 1. If giving risk/vuln access but no profile exists, create 'guest' profile 
+            // (Assuming Supabase will handle Auth user creation if they don't exist via invite-risk-stakeholder if needed)
+            // But we can at least ensure profiles row exists or update it.
+            let pid = editTarget.profile_id;
+            if ((editHasRisk || editHasVulnerability) && !pid) {
+                // Determine name
+                const nameParts = editTarget.email.split('@');
+                const defaultName = editTarget.full_name || nameParts[0];
+                
+                // Attempt to insert profile with guest role
+                const { data: newProfile, error: insertError } = await supabase
+                    .from('profiles')
+                    .upsert({
+                        email: editTarget.email,
+                        tenant_id: tenantId,
+                        system_role: 'guest',
+                        full_name: defaultName,
+                        override_risk_portal: editHasRisk,
+                        override_vulnerability_portal: editHasVulnerability
+                    }, { onConflict: 'email' })
+                    .select('id')
+                    .single();
+                    
+                if (insertError) {
+                     // Since email is unique, it might conflict globally if they exist on another tenant (shouldn't happen locally due to unique constraint on email maybe?)
+                     // If it fails, we just try an RPC or show a warning.
+                     console.error('Failed to upsert profile:', insertError);
+                     toast.error('Erro ao criar perfil interno para este convidado. Envie um convite do portal de Riscos primeiro.');
+                     setIsProcessing(null);
+                     return;
+                }
+                pid = newProfile?.id;
+            } else if (pid) {
+                // Update existing profile's override flags and name
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        full_name: editName,
+                        override_risk_portal: editHasRisk,
+                        override_vulnerability_portal: editHasVulnerability
+                    })
+                    .eq('id', pid);
+                    
+                if (updateError) throw updateError;
+            }
+
+            // Vendor Access changes
+            // Note: If removing vendor access, we'd need to delete from vendor_portal_users, 
+            // or if adding, create it. Given the complexity, this toggle primarily reflects 
+            // risk/vuln vs vendor for now. If they try to toggle OFF vendor access without risk access, 
+            // it's deleting the user. Let's just focus on Risk/Vuln toggles updating the profiles.
+            
+            if (editHasVendor !== editTarget.has_vendor_access) {
+                if (!editHasVendor && editTarget.vpu_id) {
+                    await supabase.from('vendor_portal_users').delete().eq('id', editTarget.vpu_id);
+                } else if (editHasVendor && !editTarget.vpu_id && editTarget.vendor_id) {
+                    await supabase.from('vendor_portal_users').insert({
+                        vendor_id: editTarget.vendor_id,
+                        email: editTarget.email,
+                        tenant_id: tenantId
+                    });
+                }
+            }
+
+            toast.success('Acessos atualizados com sucesso.');
+            setEditTarget(null);
+            await loadExternalUsers();
+        } catch (error: any) {
+            console.error('Save edit error:', error);
+            toast.error(`Erro ao salvar: ${error.message}`);
         } finally {
             setIsProcessing(null);
         }
@@ -360,13 +485,31 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                                                 {u.is_active ? <PowerOff className="h-3 w-3" /> : <Power className="h-3 w-3" />}
                                                 {u.is_active ? 'Desativar' : 'Reativar'}
                                             </Button>
+
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button size="sm" variant="outline" className="text-xs h-7 gap-1" disabled={isProcessing?.startsWith('invite-')}>
+                                                        <Mail className="h-3 w-3" /> Reenviar <ChevronDown className="h-3 w-3" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'vendor')}>
+                                                        Portal de Fornecedores
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleResendInvite(u, 'risk')}>
+                                                        Portal de Riscos
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+
                                             <Button
                                                 size="sm" variant="outline" className="text-xs h-7 gap-1"
-                                                onClick={() => handleResendInvite(u)}
-                                                disabled={isProcessing === `invite-${u.email}`}
+                                                onClick={() => handleOpenEdit(u)}
+                                                disabled={isProcessing === u.email}
                                             >
-                                                <Mail className="h-3 w-3" /> Reenviar
+                                                <Edit className="h-3 w-3" /> Editar
                                             </Button>
+
                                             <Button
                                                 size="sm" variant="outline" className="text-xs h-7 gap-1 text-red-600 hover:text-red-700"
                                                 onClick={() => setDeleteTarget(u)}
@@ -410,14 +553,35 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                                                 <TableCell>{getStatusBadge(u)}</TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex items-center justify-center gap-2">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <Button
+                                                                    size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
+                                                                    title="Reenviar e-mail de acesso/senha"
+                                                                    disabled={isProcessing?.startsWith('invite-')}
+                                                                >
+                                                                    <Mail className="h-3.5 w-3.5" /> Reenviar <ChevronDown className="h-3 w-3" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent>
+                                                                <DropdownMenuItem onClick={() => handleResendInvite(u, 'vendor')}>
+                                                                    Portal de Fornecedores
+                                                                </DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleResendInvite(u, 'risk')}>
+                                                                    Portal de Riscos
+                                                                </DropdownMenuItem>
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+
                                                         <Button
                                                             size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
-                                                            title="Reenviar e-mail de acesso/senha"
-                                                            onClick={() => handleResendInvite(u)}
-                                                            disabled={isProcessing === `invite-${u.email}`}
+                                                            title="Editar acessos"
+                                                            onClick={() => handleOpenEdit(u)}
+                                                            disabled={isProcessing === u.email}
                                                         >
-                                                            <Mail className="h-3.5 w-3.5" /> Reenviar
+                                                            <Edit className="h-3.5 w-3.5" />
                                                         </Button>
+
                                                         <Button
                                                             size="sm" variant="outline" className="h-8 gap-1.5 text-xs"
                                                             onClick={() => handleToggleActive(u)}
@@ -454,7 +618,7 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                             Remover Acesso Externo
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            Tem certeza que deseja desativar remover <strong>{deleteTarget?.email}</strong>?
+                            Tem certeza que deseja remover <strong>{deleteTarget?.email}</strong>?
                             <br />Esta ação removerá o acesso do usuário aos portais vinculados.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -469,6 +633,84 @@ export const VendorUsersSection: React.FC<VendorUsersSectionProps> = ({ tenantId
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* Edit User Modal */}
+            <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Editar Usuário Externo</DialogTitle>
+                        <DialogDescription>
+                            Altere as informações do convidado e habilite ou desabilite seu acesso aos portais disponíveis.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Nome Completo</Label>
+                            <Input 
+                                value={editName} 
+                                onChange={(e) => setEditName(e.target.value)} 
+                                placeholder="Nome do usuário" 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>E-mail <span className="text-xs text-muted-foreground font-normal">(Não pode ser editado pois é a credencial de login)</span></Label>
+                            <Input 
+                                value={editTarget?.email || ''} 
+                                disabled 
+                                className="bg-muted"
+                            />
+                        </div>
+
+                        <div className="pt-4 mt-2 border-t">
+                            <h4 className="text-sm font-medium mb-4">Acessos a Portais</h4>
+                            
+                            <div className="flex items-center justify-between border-b pb-4">
+                                <div className="space-y-0.5">
+                                <Label className="text-base flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-blue-600" /> Portal de Fornecedores
+                                </Label>
+                                <p className="text-sm text-muted-foreground cursor-default">
+                                    Permite responder a questionários de terceiros.
+                                </p>
+                            </div>
+                            <Switch checked={editHasVendor} onCheckedChange={setEditHasVendor} />
+                        </div>
+
+                        <div className="flex items-center justify-between border-b pb-4">
+                            <div className="space-y-0.5">
+                                <Label className="text-base flex items-center gap-2">
+                                    <Shield className="w-4 h-4 text-purple-600" /> Portal de Riscos
+                                </Label>
+                                <p className="text-sm text-muted-foreground cursor-default">
+                                    Permite analisar riscos da empresa e ativos.
+                                </p>
+                            </div>
+                            <Switch checked={editHasRisk} onCheckedChange={setEditHasRisk} />
+                        </div>
+
+                        <div className="flex items-center justify-between pb-4">
+                            <div className="space-y-0.5">
+                                <Label className="text-base flex items-center gap-2">
+                                    <Shield className="w-4 h-4 text-rose-600" /> Portal de Vulnerabilidades
+                                </Label>
+                                <p className="text-sm text-muted-foreground cursor-default">
+                                    Permite agir como responsável por vulnerabilidades.
+                                </p>
+                            </div>
+                            <Switch checked={editHasVulnerability} onCheckedChange={setEditHasVulnerability} />
+                        </div>
+                    </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditTarget(null)}>Cancelar</Button>
+                        <Button onClick={handleSaveEdit} disabled={isProcessing === 'edit'}>
+                            {isProcessing === 'edit' ? 'Salvando...' : 'Salvar Alterações'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

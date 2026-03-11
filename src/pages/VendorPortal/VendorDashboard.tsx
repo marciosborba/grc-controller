@@ -155,7 +155,7 @@ export const VendorDashboard = () => {
                             <span className="text-xs sm:text-sm font-semibold tracking-wider uppercase text-muted-foreground">Portal Confiável</span>
                         </div>
                         <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2 text-primary leading-tight">
-                            Olá, {vendorRegistryInfo?.name || (user as any)?.user_metadata?.name || (user as any)?.name || user?.email?.split('@')[0] || 'Fornecedor'}!
+                            Olá! {(user as any)?.user_metadata?.name || (user as any)?.name || vendorRegistryInfo?.name || user?.email?.split('@')[0] || 'Fornecedor'}
                         </h1>
                         <p className="text-sm sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
                             Bem-vindo ao seu painel central de conformidade. Acompanhe seus questionários, planos de correção e status regulatório.

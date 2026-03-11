@@ -214,7 +214,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         return;
       }
 
-      // Carregar usuários reais do banco de dados
+      // Carregar usuários reais do banco de dados (ignorando explicitamente guests e vendors)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -232,8 +232,20 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         return;
       }
 
+      // Filtrar fora os roles puramente externos da listagem interna
+      const internalProfilesData = profilesData.filter(
+        p => p.system_role !== 'guest' && p.system_role !== 'vendor'
+      );
+
+      // Se após filtrar só ficaram externos, array vazio.
+      if (internalProfilesData.length === 0) {
+        setUsers([]);
+        onMetricsUpdate({ totalUsers: 0, activeUsers: 0 });
+        return;
+      }
+
       // Buscar roles dos usuários da tabela user_roles
-      const userIds = profilesData.map(p => p.user_id).filter(Boolean);
+      const userIds = internalProfilesData.map(p => p.user_id).filter(Boolean);
       let userRolesData: any[] = [];
 
       if (userIds.length > 0) {
@@ -277,7 +289,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       }
 
       // Processar dados dos usuários
-      const realUsers: User[] = profilesData.map((profile, index) => {
+      const realUsers: User[] = internalProfilesData.map((profile, index) => {
         // Encontrar último login do usuário
         const lastLogin = lastLoginsData.find(log => log.user_id === profile.user_id);
 
