@@ -12,21 +12,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Target, 
-  Calendar, 
-  Users, 
-  DollarSign, 
-  CheckCircle, 
-  AlertTriangle, 
-  Clock, 
-  FileText, 
-  TrendingUp, 
-  ArrowRight, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Target,
+  Calendar,
+  Users,
+  DollarSign,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+  FileText,
+  TrendingUp,
+  ArrowRight,
   ArrowLeft,
   Filter,
   MoreHorizontal,
@@ -295,7 +295,7 @@ export default function ActionPlansManagementProfessional() {
     try {
       console.log('🔍 Carregando itens para plano:', planId);
       console.log('🔍 Tenant ID:', effectiveTenantId);
-      
+
       const { data, error } = await supabase
         .from('assessment_action_items')
         .select(`
@@ -323,7 +323,7 @@ export default function ActionPlansManagementProfessional() {
     try {
       console.log('🔍 Carregando gaps para assessment:', assessmentId);
       console.log('🔍 Tenant ID:', effectiveTenantId);
-      
+
       const { data, error } = await supabase
         .from('assessment_responses')
         .select(`
@@ -389,7 +389,7 @@ export default function ActionPlansManagementProfessional() {
     try {
       const { error } = await supabase
         .from('assessment_action_plans')
-        .update({ 
+        .update({
           status: newStatus,
           updated_by: user?.id,
           updated_at: new Date().toISOString()
@@ -427,7 +427,7 @@ export default function ActionPlansManagementProfessional() {
   const getStatusBadge = (status: string) => {
     const statusOption = statusOptions.find(s => s.value === status);
     if (!statusOption) return <Badge>Desconhecido</Badge>;
-    
+
     return (
       <Badge className={statusOption.color}>
         {statusOption.label}
@@ -459,7 +459,7 @@ export default function ActionPlansManagementProfessional() {
   };
 
   const filteredPlans = actionPlans.filter(plan => {
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       plan.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       plan.codigo.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || plan.status === statusFilter;
@@ -561,11 +561,10 @@ export default function ActionPlansManagementProfessional() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid gap-4">
             {assessments.map((assessment) => (
-              <Card 
+              <Card
                 key={assessment.id}
-                className={`cursor-pointer transition-shadow hover:shadow-md ${
-                  selectedAssessment?.id === assessment.id ? 'ring-2 ring-primary' : ''
-                }`}
+                className={`cursor-pointer transition-shadow hover:shadow-md ${selectedAssessment?.id === assessment.id ? 'ring-2 ring-primary' : ''
+                  }`}
                 onClick={() => handleSelectAssessment(assessment)}
               >
                 <CardContent className="p-6">
@@ -576,11 +575,11 @@ export default function ActionPlansManagementProfessional() {
                         <h3 className="text-lg font-semibold">{assessment.titulo}</h3>
                         {getStatusBadge(assessment.status)}
                       </div>
-                      
+
                       <p className="text-sm text-muted-foreground mb-3">
                         {assessment.codigo} • {assessment.framework?.nome}
                       </p>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                         <div>
                           <div className="flex items-center justify-between text-sm mb-1">
@@ -589,7 +588,7 @@ export default function ActionPlansManagementProfessional() {
                           </div>
                           <Progress value={assessment.percentual_maturidade || 0} className="h-2" />
                         </div>
-                        
+
                         <div className="flex flex-col gap-1 text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3" />
@@ -600,7 +599,7 @@ export default function ActionPlansManagementProfessional() {
                             <span>{assessment.responsavel_profile?.full_name || 'Não atribuído'}</span>
                           </div>
                         </div>
-                        
+
                         <div className="flex justify-end">
                           <Button size="sm" variant="outline">
                             <Target className="h-3 w-3 mr-1" />
@@ -649,209 +648,208 @@ export default function ActionPlansManagementProfessional() {
               </CardContent>
             </Card>
           )}
-          
+
           {selectedAssessment && (
             <>
-          {/* Filtros */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar planos..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os status</SelectItem>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Prioridade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as prioridades</SelectItem>
-                    {priorityOptions.map((priority) => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        {priority.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Lista de Planos */}
-          <div className="space-y-4">
-            {filteredPlans.map((plan) => (
-              <Card 
-                key={plan.id}
-                className={`transition-shadow hover:shadow-md ${
-                  selectedActionPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
-                }`}
-              >
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {getStatusIcon(plan.status)}
-                        <h3 className="text-lg font-semibold">{plan.titulo}</h3>
-                        {getStatusBadge(plan.status)}
-                        {getPriorityBadge(plan.prioridade)}
-                      </div>
-                      
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {plan.codigo} • Criado em {new Date(plan.created_at).toLocaleDateString()}
-                      </p>
-                      
-                      {plan.descricao && (
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {plan.descricao}
-                        </p>
-                      )}
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <div className="flex items-center justify-between text-sm mb-1">
-                            <span>Progresso</span>
-                            <span>{plan.percentual_conclusao}%</span>
-                          </div>
-                          <Progress value={plan.percentual_conclusao} className="h-2" />
-                        </div>
-                        
-                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                          {plan.responsavel_profile && (
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              <span>{plan.responsavel_profile.full_name}</span>
-                            </div>
-                          )}
-                          {plan.data_fim_planejada && (
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                Prazo: {new Date(plan.data_fim_planejada).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
-                          {plan.orcamento_estimado > 0 && (
-                            <div className="flex items-center gap-1">
-                              <DollarSign className="h-3 w-3" />
-                              <span>R$ {plan.orcamento_estimado.toLocaleString()}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedActionPlan(plan)}
-                          >
-                            <Eye className="h-3 w-3 mr-1" />
-                            Ver Itens
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingPlan(plan)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Editar
-                          </Button>
-                        </div>
-                      </div>
+              {/* Filtros */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar planos..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8"
+                      />
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-2">
-                        {plan.status === 'planejado' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdatePlanStatus(plan.id, 'aprovado')}
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Aprovar
-                          </Button>
-                        )}
-                        {plan.status === 'aprovado' && (
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdatePlanStatus(plan.id, 'em_andamento')}
-                          >
-                            <PlayCircle className="h-3 w-3 mr-1" />
-                            Iniciar
-                          </Button>
-                        )}
-                        {plan.status === 'em_andamento' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUpdatePlanStatus(plan.id, 'suspenso')}
-                            >
-                              <PauseCircle className="h-3 w-3 mr-1" />
-                              Suspender
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => handleUpdatePlanStatus(plan.id, 'concluido')}
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Concluir
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedActionPlan(plan)}
-                      >
-                        <ArrowRight className="h-3 w-3 mr-1" />
-                        Ver Detalhes
-                      </Button>
-                    </div>
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os status</SelectItem>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>
+                            {status.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Prioridade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as prioridades</SelectItem>
+                        {priorityOptions.map((priority) => (
+                          <SelectItem key={priority.value} value={priority.value}>
+                            {priority.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
 
-          {filteredPlans.length === 0 && (
-            <Card>
-              <CardContent className="text-center py-12">
-                <Target className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-medium mb-2">Nenhum plano de ação encontrado</h3>
-                <p className="text-muted-foreground mb-6">
-                  {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all'
-                    ? 'Tente ajustar os filtros de pesquisa'
-                    : 'Comece criando um plano de ação para tratar os gaps identificados'
-                  }
-                </p>
-                {selectedAssessment && (
-                  <Button onClick={() => setShowCreatePlan(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Primeiro Plano
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              {/* Lista de Planos */}
+              <div className="space-y-4">
+                {filteredPlans.map((plan) => (
+                  <Card
+                    key={plan.id}
+                    className={`transition-shadow hover:shadow-md ${selectedActionPlan?.id === plan.id ? 'ring-2 ring-primary' : ''
+                      }`}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            {getStatusIcon(plan.status)}
+                            <h3 className="text-lg font-semibold">{plan.titulo}</h3>
+                            {getStatusBadge(plan.status)}
+                            {getPriorityBadge(plan.prioridade)}
+                          </div>
+
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {plan.codigo} • Criado em {new Date(plan.created_at).toLocaleDateString()}
+                          </p>
+
+                          {plan.descricao && (
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {plan.descricao}
+                            </p>
+                          )}
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                              <div className="flex items-center justify-between text-sm mb-1">
+                                <span>Progresso</span>
+                                <span>{plan.percentual_conclusao}%</span>
+                              </div>
+                              <Progress value={plan.percentual_conclusao} className="h-2" />
+                            </div>
+
+                            <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                              {plan.responsavel_profile && (
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  <span>{plan.responsavel_profile.full_name}</span>
+                                </div>
+                              )}
+                              {plan.data_fim_planejada && (
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>
+                                    Prazo: {new Date(plan.data_fim_planejada).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                              {plan.orcamento_estimado > 0 && (
+                                <div className="flex items-center gap-1">
+                                  <DollarSign className="h-3 w-3" />
+                                  <span>R$ {plan.orcamento_estimado.toLocaleString()}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSelectedActionPlan(plan)}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Ver Itens
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setEditingPlan(plan)}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Editar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex gap-2">
+                            {plan.status === 'planejado' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdatePlanStatus(plan.id, 'aprovado')}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Aprovar
+                              </Button>
+                            )}
+                            {plan.status === 'aprovado' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleUpdatePlanStatus(plan.id, 'em_andamento')}
+                              >
+                                <PlayCircle className="h-3 w-3 mr-1" />
+                                Iniciar
+                              </Button>
+                            )}
+                            {plan.status === 'em_andamento' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUpdatePlanStatus(plan.id, 'suspenso')}
+                                >
+                                  <PauseCircle className="h-3 w-3 mr-1" />
+                                  Suspender
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleUpdatePlanStatus(plan.id, 'concluido')}
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Concluir
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSelectedActionPlan(plan)}
+                          >
+                            <ArrowRight className="h-3 w-3 mr-1" />
+                            Ver Detalhes
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {filteredPlans.length === 0 && (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <Target className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-medium mb-2">Nenhum plano de ação encontrado</h3>
+                    <p className="text-muted-foreground mb-6">
+                      {searchTerm || statusFilter !== 'all' || priorityFilter !== 'all'
+                        ? 'Tente ajustar os filtros de pesquisa'
+                        : 'Comece criando um plano de ação para tratar os gaps identificados'
+                      }
+                    </p>
+                    {selectedAssessment && (
+                      <Button onClick={() => setShowCreatePlan(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Criar Primeiro Plano
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </>
           )}
         </TabsContent>
@@ -873,69 +871,69 @@ export default function ActionPlansManagementProfessional() {
               </CardContent>
             </Card>
           )}
-          
+
           {selectedAssessment && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Gaps Identificados - {selectedAssessment?.titulo}</CardTitle>
-              <CardDescription>
-                Gaps que requerem ações corretivas ou de melhoria
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {gaps.length === 0 ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium">Nenhum gap identificado</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Parabéns! Todos os controles estão em conformidade.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {gaps.map((gap) => (
-                    <Card key={gap.id} className="border-l-4 border-l-red-500">
-                      <CardContent className="pt-4">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-2 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-medium">{gap.control?.titulo}</h4>
-                              {getPriorityBadge(gap.criticidade_gap)}
+            <Card>
+              <CardHeader>
+                <CardTitle>Gaps Identificados - {selectedAssessment?.titulo}</CardTitle>
+                <CardDescription>
+                  Gaps que requerem ações corretivas ou de melhoria
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {gaps.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium">Nenhum gap identificado</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Parabéns! Todos os controles estão em conformidade.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {gaps.map((gap) => (
+                      <Card key={gap.id} className="border-l-4 border-l-red-500">
+                        <CardContent className="pt-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{gap.control?.titulo}</h4>
+                                {getPriorityBadge(gap.criticidade_gap)}
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {gap.control?.codigo} • Conformidade: {gap.percentual_conformidade}%
+                              </p>
+                              {gap.justificativa && (
+                                <p className="text-sm">
+                                  <strong>Justificativa:</strong> {gap.justificativa}
+                                </p>
+                              )}
+                              {gap.comentarios && (
+                                <p className="text-sm">
+                                  <strong>Comentários:</strong> {gap.comentarios}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground">
-                              {gap.control?.codigo} • Conformidade: {gap.percentual_conformidade}%
-                            </p>
-                            {gap.justificativa && (
-                              <p className="text-sm">
-                                <strong>Justificativa:</strong> {gap.justificativa}
-                              </p>
-                            )}
-                            {gap.comentarios && (
-                              <p className="text-sm">
-                                <strong>Comentários:</strong> {gap.comentarios}
-                              </p>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // Lógica para criar ação baseada no gap
+                                setActiveTab('plans');
+                                setShowCreatePlan(true);
+                              }}
+                            >
+                              <Target className="h-3 w-3 mr-1" />
+                              Criar Plano
+                            </Button>
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => {
-                              // Lógica para criar ação baseada no gap
-                              setActiveTab('plans');
-                              setShowCreatePlan(true);
-                            }}
-                          >
-                            <Target className="h-3 w-3 mr-1" />
-                            Criar Plano
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
@@ -956,7 +954,7 @@ export default function ActionPlansManagementProfessional() {
               </CardContent>
             </Card>
           )}
-          
+
           {selectedActionPlan && (
             <>
               <Card>
@@ -1021,8 +1019,8 @@ export default function ActionPlansManagementProfessional() {
                         <div className="text-sm">
                           <div className="text-muted-foreground">Prazo</div>
                           <div className="font-medium">
-                            {item.data_fim_planejada ? 
-                              new Date(item.data_fim_planejada).toLocaleDateString() : 
+                            {item.data_fim_planejada ?
+                              new Date(item.data_fim_planejada).toLocaleDateString() :
                               'Não definido'
                             }
                           </div>
