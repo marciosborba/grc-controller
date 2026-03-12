@@ -21,6 +21,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import ScrollToTop from "@/components/ScrollToTop";
 // Lazy import for GeneralSettingsPage to reduce initial bundle size
 const GeneralSettingsPage = lazy(() => import("@/components/general-settings/GeneralSettingsPage").then(module => ({ default: module.GeneralSettingsPage })));
+const GuestHub = lazy(() => import("@/pages/GuestHub").then(module => ({ default: module.GuestHub })));
 
 // Lazy imports for feature modules
 const RiskManagementCenter = lazy(() => import("@/components/risks/RiskManagementCenterImproved"));
@@ -148,9 +149,6 @@ const Applications = lazy(() => import("@/components/vulnerabilities/Application
 const ApplicationForm = lazy(() => import("@/components/vulnerabilities/ApplicationForm"));
 const CMDB = lazy(() => import("@/components/vulnerabilities/CMDB"));
 const AssetForm = lazy(() => import("@/components/vulnerabilities/AssetForm"));
-const AssetFieldsCustomization = lazy(() => import("@/components/vulnerabilities/AssetFieldsCustomization"));
-const VulnerabilityFieldsCustomization = lazy(() => import("@/components/vulnerabilities/VulnerabilityFieldsCustomization"));
-const ApplicationFieldsCustomization = lazy(() => import("@/components/vulnerabilities/ApplicationFieldsCustomizationFixed"));
 
 // Página pública de avaliação de fornecedores (mantida)
 const PublicVendorAssessmentPage = lazy(() => import("./pages/PublicVendorAssessmentPage"));
@@ -235,23 +233,56 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!needsMFA && location.pathname === '/mfa-verify') {
     return <Navigate to="/dashboard" replace />;
   }
-
-  // Isolating Guest Environment: If user is a guest, they can ONLY access /risk-portal
-  // We check this BEFORE isVendorOnly because a user's email might exist as both a vendor
-  // and a risk stakeholder, but the risk invite flow explicitly lands them here.
+  
+  // 1. Unified Login Redirection Logic within ProtectedRoute
+  //    This logic ensures that if an external user tries to access the root '/' or dashboard,
+  //    they are redirected to their single portal or the guest hub.
   const isGuest = user.system_role === 'guest' || user.roles?.includes('guest') || (user as any).system_role === 'guest';
-  const isAdmin = user.roles?.some(r => ['admin', 'tenant_admin', 'super_admin'].includes(r));
+  const isAdmin = user.roles?.some((r: string) => ['admin', 'tenant_admin', 'super_admin', 'platform_admin'].includes(r));
+  const isExternalUser = isGuest || user.isVendorOnly;
 
-  if (isGuest && !isAdmin) {
-    if (!location.pathname.startsWith('/risk-portal')) {
-      console.warn('⚠️ [ROUTING] Usuário convidado restrito ao portal de riscos. Redirecionando...');
-      return <Navigate to="/risk-portal" replace />;
+  if (isExternalUser && !isAdmin) {
+    // Collect the portals this user has access to
+    const accessiblePortals = [];
+    
+    // Vendor access check
+    if (user.isVendorOnly || user.roles?.includes('vendor')) {
+      accessiblePortals.push('/vendor-portal');
     }
-  }
+    
+    // Risk portal access check
+    if (user.enabledModules?.includes('risk_portal') || user.permissions?.includes('risk.read')) {
+      accessiblePortals.push('/risk-portal');
+    }
+    
+    // Vulnerability portal access check
+    if (user.enabledModules?.includes('vulnerability_portal') || user.permissions?.includes('vulnerability.read') || user.permissions?.includes('security.read')) {
+      // Small adjustment: sometimes the permission might exist without the portal being enabled. 
+      // Relying on the override flags we added in AuthContextOptimized.
+      accessiblePortals.push('/vulnerability-portal');
+    }
 
-  if (user.isVendorOnly) {
-    console.warn('⚠️ [ROUTING] Usuário é restrito ao portal de fornecedores. Redirecionando...');
-    return <Navigate to="/vendor-portal" replace />;
+    // Deduplicate just in case
+    const uniquePortals = [...new Set(accessiblePortals)];
+
+    // If the user is currently on an explicitly allowed portal route, let them stay.
+    const isOnAllowedPortal = uniquePortals.some(portal => location.pathname.startsWith(portal));
+    
+    // Also allow access to the guest hub itself if they have multiple portal access
+    const isHandlingGuestHub = location.pathname === '/guest-hub';
+
+    if (!isOnAllowedPortal && !isHandlingGuestHub) {
+      if (uniquePortals.length === 0) {
+        console.warn('⚠️ [ROUTING] Usuário externo sem acesso a nenhum portal. Redirecionando para login...');
+        return <Navigate to="/login" replace />;
+      } else if (uniquePortals.length === 1) {
+        console.warn(`⚠️ [ROUTING] Usuário externo com 1 acesso. Redirecionando para ${uniquePortals[0]}...`);
+        return <Navigate to={uniquePortals[0]} replace />;
+      } else {
+        console.warn('⚠️ [ROUTING] Usuário externo com múltiplos acessos. Redirecionando para /guest-hub...');
+        return <Navigate to="/guest-hub" replace />;
+      }
+    }
   }
 
   return <>{children}</>;
@@ -319,7 +350,10 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (user) {
     if (needsMFA) return <Navigate to="/mfa-verify" replace />;
-    return <Navigate to="/dashboard" replace />;
+    
+    // Instead of hardcoding to /dashboard, redirect to the root `/` 
+    // so RootRedirect or ProtectedRoute handles the dynamic routing
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -429,6 +463,15 @@ const App = () => (
                       <Route path="list" element={<VulnerabilityPortalList />} />
                       <Route path="vuln/:id" element={<VulnerabilityPortalDetail />} />
                     </Route>
+
+                    {/* Guest Hub Route for multi-portal external users */}
+                    <Route path="/guest-hub" element={
+                      <ProtectedRoute>
+                        <Suspense fallback={<PageLoader />}>
+                          <GuestHub />
+                        </Suspense>
+                      </ProtectedRoute>
+                    } />
 
                     {/* Protected Routes */}
                     <Route path="/" element={
@@ -763,11 +806,6 @@ const App = () => (
                             <ApplicationForm />
                           </Suspense>
                         } />
-                        <Route path="vulnerabilities/applications/fields-customization" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <ApplicationFieldsCustomization />
-                          </Suspense>
-                        } />
                         <Route path="vulnerabilities/cmdb" element={
                           <Suspense fallback={<PageLoader />}>
                             <CMDB />
@@ -781,16 +819,6 @@ const App = () => (
                         <Route path="vulnerabilities/cmdb/edit/:id" element={
                           <Suspense fallback={<PageLoader />}>
                             <AssetForm />
-                          </Suspense>
-                        } />
-                        <Route path="vulnerabilities/cmdb/fields-customization" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <AssetFieldsCustomization />
-                          </Suspense>
-                        } />
-                        <Route path="vulnerabilities/fields-customization" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <VulnerabilityFieldsCustomization />
                           </Suspense>
                         } />
                       </Route>

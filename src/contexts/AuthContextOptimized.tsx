@@ -177,7 +177,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   }, []);
 
   // Função simplificada para carregar dados do usuário
-  const loadUserData = useCallback(async (supabaseUser: User): Promise<AuthUser | null> => {
+  const loadUserData = useCallback(async (supabaseUser: User, authEvent?: string): Promise<AuthUser | null> => {
     console.log('👤 [AUTH] Loading user data for:', supabaseUser.id);
 
     // Criar usuário básico primeiro para evitar travamento (Escopo global da função)
@@ -202,6 +202,13 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         return cachedUser;
       }
 
+      // 🛡️ EXCEÇÃO: Permitir se for fluxo de recuperação de senha ou convite (onde a conta começa inativa)
+      const isRecoveryFlow = authEvent === 'PASSWORD_RECOVERY' || 
+                           window.location.hash.includes('type=recovery') || 
+                           window.location.hash.includes('type=invite') ||
+                           window.location.hash.includes('type=signup') ||
+                           window.location.pathname.includes('/reset-password');
+
       // Tentar carregar via RPC
       try {
         console.log('📊 [AUTH] Fetching profile via Secure RPC...');
@@ -218,7 +225,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         console.log('✅ [AUTH] RPC Data received: profile loaded successfully');
 
         // PROTEÇÃO EXTRA: O usuário tem o perfil mas está marcado explicitamente como inativo
-        if (fullProfile && fullProfile.is_active === false) {
+        if (fullProfile && fullProfile.is_active === false && !isRecoveryFlow) {
           console.error('❌ [AUTH] Conta REGULAR DESATIVADA detectada via perfil principal!');
           await supabase.auth.signOut();
           throw new Error('CONTA_DESATIVADA');
@@ -301,7 +308,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           } else if (isVendorRpc === 'active') {
             console.log('✅ [AUTH] Usuário identificado como fornecedor seguro via RPC');
             isVendorOnly = true;
-          } else if (isVendorRpc === 'inactive') {
+          } else if (isVendorRpc === 'inactive' && !isRecoveryFlow) {
             console.error('❌ [AUTH] Conta de fornecedor DESATIVADA detectada no fluxo principal!');
             await supabase.auth.signOut();
             throw new Error('CONTA_DESATIVADA');
@@ -373,7 +380,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             const vendorData = { ...basicUser, isVendorOnly: true, roles: ['vendor'] };
             setCachedUser(supabaseUser.id, vendorData);
             return vendorData;
-          } else if (vendorStatus === 'inactive') {
+          } else if (vendorStatus === 'inactive' && !isRecoveryFlow) {
             console.error('❌ [AUTH] Conta de fornecedor DESATIVADA detectada!');
             // Forçar logout imediato se estiver inativo
             await supabase.auth.signOut();
@@ -420,7 +427,7 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
           setTimeout(() => reject(new Error('Timeout ao carregar dados do usuário')), USER_DATA_TIMEOUT);
         });
 
-        const userDataPromise = loadUserData(session.user);
+        const userDataPromise = loadUserData(session.user, event);
         const userData = await Promise.race([userDataPromise, timeoutPromise]) as AuthUser;
 
         console.log('👤 [AUTH] User data loaded:', { id: userData?.id, name: userData?.name });

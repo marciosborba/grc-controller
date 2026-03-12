@@ -35,6 +35,7 @@ interface CustomFieldDef {
     target_module: string;
     editable: boolean;
     created_at: string;
+    ui_placement?: string | null;
 }
 
 const MODULE_LABELS: Record<string, string> = {
@@ -76,6 +77,27 @@ const MODULE_LABELS: Record<string, string> = {
     training: 'Treinamentos (Modal: Novo Treinamento)',
 };
 
+const MODULE_TABS: Record<string, { value: string, label: string }[]> = {
+    vulnerability: [
+        { value: 'basic', label: 'Aba Básico' },
+        { value: 'technical', label: 'Aba Técnico' },
+        { value: 'remediation', label: 'Aba Remediação' },
+        { value: 'classification', label: 'Aba Classificação' },
+    ],
+    application: [
+        { value: 'basic', label: 'Aba Básico' },
+        { value: 'technical', label: 'Aba Técnico' },
+        { value: 'business', label: 'Aba Negócio' },
+    ],
+    asset: [
+        { value: 'basic', label: 'Aba Básico' },
+        { value: 'network', label: 'Aba Detalhes de Rede' },
+        { value: 'location', label: 'Aba Localização' },
+        { value: 'management', label: 'Aba Gestão' },
+        { value: 'security', label: 'Aba Segurança' },
+    ],
+};
+
 const FIELD_TYPE_LABELS: Record<string, string> = {
     text: 'Texto Curto',
     textarea: 'Texto Longo',
@@ -107,6 +129,7 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
         show_in_filters: boolean;
         target_module: string[];
         required: boolean;
+        ui_placement: string | null;
     }>({
         field_name: '',
         field_type: 'text',
@@ -116,6 +139,7 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
         show_in_filters: false,
         target_module: [],
         required: false,
+        ui_placement: null,
     });
 
     const fetchFields = useCallback(async () => {
@@ -167,12 +191,13 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
                     show_in_filters: newField.show_in_filters,
                     target_module: mod,
                     required: newField.required,
+                    ui_placement: newField.ui_placement,
                 };
             });
             const { error } = await supabase.from('custom_field_definitions').insert(inserts);
             if (error) throw error;
             toast({ title: 'Campo criado', description: `"${newField.field_name}" adicionado a ${newField.target_module.length} módulo(s).` });
-            setNewField({ field_name: '', field_type: 'text', options: '', show_on_card: false, show_in_interior: true, show_in_filters: false, target_module: [], required: false });
+            setNewField({ field_name: '', field_type: 'text', options: '', show_on_card: false, show_in_interior: true, show_in_filters: false, target_module: [], required: false, ui_placement: null });
             setShowAddForm(false);
             fetchFields();
         } catch (e: any) {
@@ -203,6 +228,7 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
             show_in_filters: field.show_in_filters || false,
             target_module: field.target_module,
             required: field.required,
+            ui_placement: field.ui_placement,
         });
     };
 
@@ -214,6 +240,7 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
                 show_in_filters: editForm.show_in_filters,
                 target_module: editForm.target_module,
                 required: editForm.required,
+                ui_placement: editForm.ui_placement,
             };
             // Only update field_type and options if type changed
             if (editForm.field_type) {
@@ -332,6 +359,23 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    {newField.target_module.length === 1 && MODULE_TABS[newField.target_module[0]] && (
+                                        <div>
+                                            <label className="text-xs font-medium mb-1 block">Local de Exibição (Aba)</label>
+                                            <Select
+                                                value={newField.ui_placement || 'default'}
+                                                onValueChange={v => setNewField(p => ({ ...p, ui_placement: v === 'default' ? null : v }))}
+                                            >
+                                                <SelectTrigger><SelectValue placeholder="Padrão (Adicionais)" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="default">Padrão (Adicionais)</SelectItem>
+                                                    {MODULE_TABS[newField.target_module[0]].map(tab => (
+                                                        <SelectItem key={tab.value} value={tab.value}>{tab.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    )}
                                     {(newField.field_type === 'select' || newField.field_type === 'multiselect') && (
                                         <div>
                                             <label className="text-xs font-medium mb-1 block">Opções (separadas por vírgula)</label>
@@ -411,7 +455,7 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
                                         {editingId === field.id ? (
                                             /* Edit mode */
                                             <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                                                     <Input
                                                         value={editForm.field_name || ''}
                                                         onChange={e => setEditForm(p => ({ ...p, field_name: e.target.value }))}
@@ -440,6 +484,20 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
                                                             ))}
                                                         </SelectContent>
                                                     </Select>
+                                                    {MODULE_TABS[editForm.target_module as string] && (
+                                                        <Select
+                                                            value={editForm.ui_placement || 'default'}
+                                                            onValueChange={v => setEditForm(p => ({ ...p, ui_placement: v === 'default' ? null : v }))}
+                                                        >
+                                                            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Local (Adicionais)" /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="default">Local Padrão</SelectItem>
+                                                                {MODULE_TABS[editForm.target_module as string].map(tab => (
+                                                                    <SelectItem key={tab.value} value={tab.value}>{tab.label}</SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    )}
                                                 </div>
                                                 {(editForm.field_type === 'select' || editForm.field_type === 'multiselect') && (
                                                     <Input
@@ -495,6 +553,11 @@ export const CustomFieldsConfigSection: React.FC<Props> = ({ tenantId }) => {
                                                     <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
                                                     <span className="text-sm font-medium truncate">{field.field_name}</span>
                                                     <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0">{FIELD_TYPE_LABELS[field.field_type] || field.field_type}</Badge>
+                                                    {field.ui_placement && MODULE_TABS[field.target_module]?.find(t => t.value === field.ui_placement) && (
+                                                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 shrink-0">
+                                                            {MODULE_TABS[field.target_module].find(t => t.value === field.ui_placement)?.label}
+                                                        </Badge>
+                                                    )}
                                                     {field.show_on_card && <Badge className="text-[9px] px-1.5 py-0 bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300 shrink-0">Resumo</Badge>}
                                                     {field.show_in_interior && <Badge className="text-[9px] px-1.5 py-0 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 shrink-0">Interior</Badge>}
                                                     {field.required && <Badge className="text-[9px] px-1.5 py-0 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 shrink-0">Obrigatório</Badge>}

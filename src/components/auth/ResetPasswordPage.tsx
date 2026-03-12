@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, KeyRound, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, KeyRound, CheckCircle2, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 export const ResetPasswordPage = () => {
@@ -14,18 +14,16 @@ export const ResetPasswordPage = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [hashError, setHashError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const navigate = useNavigate();
     const { toast } = useToast();
 
-    const [isGuestInvite, setIsGuestInvite] = useState(() => {
-        // Initial synchronous check
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        return hashParams.get('redirect_to')?.includes('risk-portal') || false;
-    });
+    const [isGuest, setIsGuest] = useState(false);
 
-    const isVendorPortal = window.location.pathname.includes('/vendor-portal');
-    const loginRoute = isVendorPortal ? '/vendor-portal/login' : '/login';
+    // Removed isVendorPortal and loginRoute since login is now unified
+    const loginRoute = '/login';
 
     useEffect(() => {
         // Check for error in the URL hash (e.g. expired link)
@@ -44,8 +42,8 @@ export const ResetPasswordPage = () => {
         // Check user session to see if they are actually a guest
         const checkUserRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            if (user?.user_metadata?.system_role === 'guest') {
-                setIsGuestInvite(true);
+            if (user?.user_metadata?.system_role === 'guest' || user?.user_metadata?.is_vendor) {
+                setIsGuest(true);
             }
         };
         checkUserRole();
@@ -56,16 +54,17 @@ export const ResetPasswordPage = () => {
                 if (event === 'PASSWORD_RECOVERY') {
                     console.log('🔗 [AUTH] Redefinição de senha autorizada.');
                     setHashError(null);
-                    if (session?.user?.user_metadata?.system_role === 'guest') {
-                        setIsGuestInvite(true);
+                    if (session?.user?.user_metadata?.system_role === 'guest' || session?.user?.user_metadata?.is_vendor) {
+                        setIsGuest(true);
                     }
                 }
                 // Invite links fire SIGNED_IN instead of PASSWORD_RECOVERY
                 if (event === 'SIGNED_IN') {
                     const role = session?.user?.user_metadata?.system_role;
-                    if (role === 'guest') {
-                        console.log('🔗 [AUTH] Convite detectado via SIGNED_IN — ativando modo convidado.');
-                        setIsGuestInvite(true);
+                    const isVendor = session?.user?.user_metadata?.is_vendor;
+                    if (role === 'guest' || isVendor) {
+                        console.log('🔗 [AUTH] Convite detectado via SIGNED_IN — ativando modo convidado/fornecedor.');
+                        setIsGuest(true);
                     }
                     setHashError(null);
                 }
@@ -122,17 +121,12 @@ export const ResetPasswordPage = () => {
 
             setSuccess(true);
             toast({
-                title: isGuestInvite ? "Bem-vindo(a) ao Portal de Riscos!" : "Bem-vindo(a) ao GEPRIV!",
-                description: "Sua senha foi criada. Redirecionando para a aplicação...",
+                title: "Tudo Certo!",
+                description: "Sua senha foi configurada. Redirecionando para a aplicação...",
             });
 
-            if (isGuestInvite) {
-                // Guest invite: go straight to risk portal
-                setTimeout(() => navigate('/risk-portal'), 2000);
-            } else {
-                // Regular user: go straight to dashboard (they are already logged in via Supabase)
-                setTimeout(() => navigate('/dashboard'), 2000);
-            }
+            // Redirect to root, where App.tsx will route them dynamically based on permissions
+            setTimeout(() => navigate('/'), 2000);
 
         } catch (error: any) {
             console.error('❌ Erro ao redefinir senha:', error);
@@ -180,17 +174,15 @@ export const ResetPasswordPage = () => {
                         </div>
                         <CardTitle className="text-2xl font-bold">Tudo Pronto!</CardTitle>
                         <CardDescription className="text-green-600 dark:text-green-400 font-medium">
-                            {isGuestInvite ? 'Bem-vindo(a)! Sua senha foi criada com sucesso.' : 'Sua senha foi redefinida com sucesso.'}
+                            {isGuest ? 'Bem-vindo(a)! Sua senha foi configurada com sucesso.' : 'Sua senha foi redefinida com sucesso.'}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
                         <p className="text-sm text-muted-foreground mb-6">
-                            {isGuestInvite
-                                ? 'Você será redirecionado para o Portal de Riscos em alguns instantes.'
-                                : 'Você será redirecionado para a tela de login em alguns instantes.'}
+                            Você será redirecionado para a plataforma em alguns instantes.
                         </p>
-                        <Button className="w-full" onClick={() => navigate(isGuestInvite ? '/risk-portal' : loginRoute)}>
-                            {isGuestInvite ? 'Ir para o Portal de Riscos' : 'Ir para o Login Agora'}
+                        <Button className="w-full" onClick={() => navigate('/')}>
+                            Acessar a Plataforma
                         </Button>
                     </CardContent>
                 </Card>
@@ -214,27 +206,47 @@ export const ResetPasswordPage = () => {
                     <form onSubmit={handleResetPassword} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="password">Nova Senha</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                minLength={6}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    minLength={6}
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                            <Input
-                                id="confirmPassword"
-                                type="password"
-                                placeholder="••••••••"
-                                required
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                minLength={6}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="confirmPassword"
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    required
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    minLength={6}
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
                         </div>
                         <Button
                             type="submit"

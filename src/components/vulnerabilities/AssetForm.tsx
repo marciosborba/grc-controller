@@ -448,6 +448,13 @@ export default function AssetForm({
 
   const recommendedRisk = calculateBestPracticeRisk();
 
+  const basicCustomFields = customFields.filter(f => f.ui_placement === 'basic' && f.show_in_interior !== false);
+  const networkCustomFields = customFields.filter(f => f.ui_placement === 'network' && f.show_in_interior !== false);
+  const locationCustomFields = customFields.filter(f => f.ui_placement === 'location' && f.show_in_interior !== false);
+  const managementCustomFields = customFields.filter(f => f.ui_placement === 'management' && f.show_in_interior !== false);
+  const securityCustomFields = customFields.filter(f => f.ui_placement === 'security' && f.show_in_interior !== false);
+  const defaultCustomFields = customFields.filter(f => (!f.ui_placement || !['basic', 'network', 'location', 'management', 'security'].includes(f.ui_placement)) && f.show_in_interior !== false);
+
   if (loading && isEditing) {
     return (
       <div className={isEmbedded ? "p-8 flex items-center justify-center" : "min-h-screen flex items-center justify-center"}>
@@ -487,6 +494,9 @@ export default function AssetForm({
             <TabsTrigger value="location">Localização</TabsTrigger>
             <TabsTrigger value="management">Gestão</TabsTrigger>
             <TabsTrigger value="security">Segurança</TabsTrigger>
+            {defaultCustomFields.length > 0 && (
+              <TabsTrigger value="custom">Adicionais</TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="basic" className="space-y-6">
@@ -647,12 +657,12 @@ export default function AssetForm({
                 </div>
 
                 {/* Custom Fields for Basic Tab */}
-                {customFields.length > 0 && (
+                {basicCustomFields.length > 0 && (
                   <div className="pt-4 border-t mt-6">
-                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Informações Adicionais</h3>
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Campos Customizados</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <CustomFieldInputs
-                        fields={customFields}
+                        fields={basicCustomFields}
                         values={customFieldValues}
                         onChange={setCustomFieldValues}
                       />
@@ -758,7 +768,18 @@ export default function AssetForm({
                   />
                 </div>
 
-                {/* Custom Fields for Network Tab removed due to type incompatibility */}
+                {networkCustomFields.length > 0 && (
+                  <div className="pt-4 border-t mt-6">
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Campos Customizados</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <CustomFieldInputs
+                        fields={networkCustomFields}
+                        values={customFieldValues}
+                        onChange={setCustomFieldValues}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -826,6 +847,18 @@ export default function AssetForm({
                   </div>
                 </div>
 
+                {locationCustomFields.length > 0 && (
+                  <div className="pt-4 border-t mt-6">
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Campos Customizados</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <CustomFieldInputs
+                        fields={locationCustomFields}
+                        values={customFieldValues}
+                        onChange={setCustomFieldValues}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -929,6 +962,18 @@ export default function AssetForm({
                   </div>
                 </div>
 
+                {managementCustomFields.length > 0 && (
+                  <div className="pt-4 border-t mt-6">
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Campos Customizados</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <CustomFieldInputs
+                        fields={managementCustomFields}
+                        values={customFieldValues}
+                        onChange={setCustomFieldValues}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -1054,9 +1099,43 @@ export default function AssetForm({
                   />
                 </div>
 
+                {securityCustomFields.length > 0 && (
+                  <div className="pt-4 border-t mt-6">
+                    <h3 className="text-sm font-semibold mb-4 text-violet-700 dark:text-violet-400">Campos Customizados</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <CustomFieldInputs
+                        fields={securityCustomFields}
+                        values={customFieldValues}
+                        onChange={setCustomFieldValues}
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
+
+          {defaultCustomFields.length > 0 && (
+            <TabsContent value="custom" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Informações Adicionais</CardTitle>
+                  <CardDescription>
+                    Campos personalizados configurados pela sua organização
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <CustomFieldInputs
+                      fields={defaultCustomFields}
+                      values={customFieldValues}
+                      onChange={setCustomFieldValues}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
         {/* Form Actions */}
         <div className="flex justify-end gap-4 mt-6">

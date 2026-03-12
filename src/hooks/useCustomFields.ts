@@ -18,6 +18,7 @@ export interface CustomFieldDefinition {
     target_module: string;
     editable: boolean;
     created_at: string;
+    ui_placement?: string | null;
 }
 
 interface UseCustomFieldsReturn {

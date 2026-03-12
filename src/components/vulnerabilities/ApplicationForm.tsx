@@ -328,6 +328,11 @@ export default function ApplicationForm({
     );
   }
 
+  const basicCustomFields = customFields.filter(f => f.ui_placement === 'basic' && f.show_in_interior !== false);
+  const technicalCustomFields = customFields.filter(f => f.ui_placement === 'technical' && f.show_in_interior !== false);
+  const businessCustomFields = customFields.filter(f => f.ui_placement === 'business' && f.show_in_interior !== false);
+  const defaultCustomFields = customFields.filter(f => (!f.ui_placement || !['basic', 'technical', 'business'].includes(f.ui_placement)) && f.show_in_interior !== false);
+
   return (
     <div className={isEmbedded ? "space-y-4" : "space-y-4 p-4"}>
       {/* Header - Row 1: Back + Title */}
@@ -403,7 +408,7 @@ export default function ApplicationForm({
             <TabsTrigger value="basic" className="text-xs px-2 py-1.5 flex-shrink-0">Básico</TabsTrigger>
             <TabsTrigger value="technical" className="text-xs px-2 py-1.5 flex-shrink-0">Técnico</TabsTrigger>
             <TabsTrigger value="business" className="text-xs px-2 py-1.5 flex-shrink-0">Negócio</TabsTrigger>
-            {customFields.length > 0 && (
+            {defaultCustomFields.length > 0 && (
               <TabsTrigger value="custom" className="text-xs px-2 py-1.5 flex-shrink-0">
                 <Sliders className="h-3 w-3 mr-1" />
                 Adicionais
@@ -519,6 +524,26 @@ export default function ApplicationForm({
                 </div>
               </CardContent>
             </Card>
+
+            {basicCustomFields.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader className="pb-3 pt-4 px-4">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-violet-500" />
+                    Campos Customizados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CustomFieldInputs
+                      fields={basicCustomFields}
+                      values={customFieldValues}
+                      onChange={setCustomFieldValues}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="technical" className="space-y-4 mt-3">
@@ -563,6 +588,26 @@ export default function ApplicationForm({
                 </div>
               </CardContent>
             </Card>
+
+            {technicalCustomFields.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader className="pb-3 pt-4 px-4">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-violet-500" />
+                    Campos Customizados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CustomFieldInputs
+                      fields={technicalCustomFields}
+                      values={customFieldValues}
+                      onChange={setCustomFieldValues}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="business" className="space-y-4 mt-3">
@@ -716,9 +761,29 @@ export default function ApplicationForm({
                 </div>
               </CardContent>
             </Card>
+
+            {businessCustomFields.length > 0 && (
+              <Card className="mt-4">
+                <CardHeader className="pb-3 pt-4 px-4">
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <Sliders className="h-4 w-4 text-violet-500" />
+                    Campos Customizados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <CustomFieldInputs
+                      fields={businessCustomFields}
+                      values={customFieldValues}
+                      onChange={setCustomFieldValues}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
-          {customFields.length > 0 && (
+          {defaultCustomFields.length > 0 && (
             <TabsContent value="custom" className="space-y-4 mt-3">
               <Card>
                 <CardHeader className="pb-3 pt-4 px-4">
@@ -733,7 +798,7 @@ export default function ApplicationForm({
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <CustomFieldInputs
-                      fields={customFields.filter(f => f.show_in_interior !== false)}
+                      fields={defaultCustomFields}
                       values={customFieldValues}
                       onChange={setCustomFieldValues}
                     />
