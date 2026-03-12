@@ -770,6 +770,7 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       send_invitation: true,
       permissions: [],
     });
+    setSearchTerm('');
   };
 
   const openEditDialog = async (user: User) => {
@@ -1060,10 +1061,13 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
+                      id="search-users-internal"
+                      name="search_users_internal"
                       placeholder="Buscar por nome, email ou departamento..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="pl-10"
+                      autoComplete="off"
                     />
                   </div>
                 </div>

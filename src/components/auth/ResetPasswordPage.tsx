@@ -99,6 +99,15 @@ export const ResetPasswordPage = () => {
 
         try {
             setLoading(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            console.log('🔄 [AUTH] Estado da sessão antes de redefinir:', { hasSession: !!session });
+
+            if (!session) {
+                console.warn('⚠️ [AUTH] Sessão ausente antes de redefinir. Verificando getUser()...');
+                const { data: { user: currentUser } } = await supabase.auth.getUser();
+                console.log('👤 [AUTH] getUser() result:', { hasUser: !!currentUser });
+            }
+
             const { error } = await supabase.auth.updateUser({
                 password: password
             });

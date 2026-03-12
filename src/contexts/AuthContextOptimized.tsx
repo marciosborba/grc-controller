@@ -207,6 +207,8 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
                            window.location.hash.includes('type=recovery') || 
                            window.location.hash.includes('type=invite') ||
                            window.location.hash.includes('type=signup') ||
+                           window.location.hash.includes('recovery_token=') ||
+                           window.location.search.includes('type=recovery') ||
                            window.location.pathname.includes('/reset-password');
 
       // Tentar carregar via RPC
@@ -227,8 +229,13 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
         // PROTEÇÃO EXTRA: O usuário tem o perfil mas está marcado explicitamente como inativo
         if (fullProfile && fullProfile.is_active === false && !isRecoveryFlow) {
           console.error('❌ [AUTH] Conta REGULAR DESATIVADA detectada via perfil principal!');
-          await supabase.auth.signOut();
-          throw new Error('CONTA_DESATIVADA');
+          // Apenas deslogar se NÃO for fluxo de recuperação
+          if (!isRecoveryFlow) {
+            await supabase.auth.signOut();
+            throw new Error('CONTA_DESATIVADA');
+          } else {
+            console.warn('⚠️ [AUTH] Conta inativa ignorada em fluxo de recuperação.');
+          }
         }
 
         if (!fullProfile || !fullProfile.profile) {
@@ -310,8 +317,10 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
             isVendorOnly = true;
           } else if (isVendorRpc === 'inactive' && !isRecoveryFlow) {
             console.error('❌ [AUTH] Conta de fornecedor DESATIVADA detectada no fluxo principal!');
-            await supabase.auth.signOut();
-            throw new Error('CONTA_DESATIVADA');
+            if (!isRecoveryFlow) {
+              await supabase.auth.signOut();
+              throw new Error('CONTA_DESATIVADA');
+            }
           }
         } catch (vendorCheckError: any) {
           if (vendorCheckError?.message === 'CONTA_DESATIVADA') throw vendorCheckError;
