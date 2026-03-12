@@ -116,12 +116,16 @@ Deno.serve(async (req) => {
 
     // Check permissions: platform admin or admin role
     const { data: platformAdmin } = await supabaseAdmin
-      .from('platform_admins').select('user_id').eq('user_id', user.id).single()
-    const isPlatformAdmin = !!platformAdmin
+      .from('platform_admins').select('user_id').eq('user_id', user.id).maybeSingle()
+    
+    // Also check if the user has a global 'super_admin' role in user_roles table
+    const { data: userRoles } = await supabaseAdmin
+      .from('user_roles').select('role').eq('user_id', user.id)
+    
+    const isSuperAdmin = userRoles?.some(r => r.role === 'super_admin')
+    const isPlatformAdmin = !!platformAdmin || isSuperAdmin
 
     if (!isPlatformAdmin) {
-      const { data: userRoles } = await supabaseAdmin
-        .from('user_roles').select('role').eq('user_id', user.id)
       const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'tenant_admin')
       if (!isAdmin) throw new Error('Sem permissão para criar usuários.')
     }
@@ -132,6 +136,7 @@ Deno.serve(async (req) => {
     // Determine effective tenant_id
     let targetTenantId = userData.tenant_id
     if (!isPlatformAdmin) {
+      // For non-platform-admins, force the tenant_id from their own profile
       const { data: currentProfile } = await supabaseAdmin
         .from('profiles').select('tenant_id').eq('user_id', user.id).single()
       targetTenantId = currentProfile?.tenant_id
