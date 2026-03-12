@@ -180,25 +180,31 @@ Deno.serve(async (req) => {
       }
 
       if (existingUser && existingUser.email_confirmed_at) {
-        throw new Error(`O usuário ${emailNorm} já possui conta ativa. Use "Editar" para alterar permissões.`)
-      }
-
-      const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'invite',
-        email: emailNorm,
-        options: {
-          redirectTo: RESET_URL,
-          data: {
-            full_name: userData.full_name,
-            tenant_id: targetTenantId,
-            system_role: systemRole,
-          }
+        const { data: profile } = await supabaseAdmin.from('profiles').select('system_role').eq('user_id', existingUser.id).single();
+        if (profile && (profile.system_role === 'guest' || profile.system_role === 'vendor')) {
+          console.log(`Promoting confirmed external user ${emailNorm} to internal.`)
+          userId = existingUser.id;
+        } else {
+          throw new Error(`O usuário ${emailNorm} já possui conta ativa. Use "Editar" para alterar permissões.`)
         }
-      })
-      if (linkErr) throw new Error(`Falha ao gerar convite: ${linkErr.message}`)
-      inviteLink = linkData?.properties?.action_link || null
-      userId = linkData?.user?.id || existingUser?.id || null
-      console.log(`✅ Invite link generated for ${emailNorm}`)
+      } else {
+        const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+          type: 'invite',
+          email: emailNorm,
+          options: {
+            redirectTo: RESET_URL,
+            data: {
+              full_name: userData.full_name,
+              tenant_id: targetTenantId,
+              system_role: systemRole,
+            }
+          }
+        })
+        if (linkErr) throw new Error(`Falha ao gerar convite: ${linkErr.message}`)
+        inviteLink = linkData?.properties?.action_link || null
+        userId = linkData?.user?.id || existingUser?.id || null
+        console.log(`✅ Invite link generated for ${emailNorm}`)
+      }
 
     } else {
       // ── No-invite flow: create user directly with a temp password ──

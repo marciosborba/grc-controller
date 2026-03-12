@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
     Trash2,
     Save,
@@ -89,6 +90,59 @@ export function RemediationBlock({
     });
     const [assigneeSearchTerm, setAssigneeSearchTerm] = useState('');
     const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+
+    const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+    const [inviteFormData, setInviteFormData] = useState({ full_name: '', email: '' });
+    const [isInviting, setIsInviting] = useState(false);
+
+    const handleInviteUser = async () => {
+        if (!inviteFormData.full_name || !inviteFormData.email) {
+            toast.error('Preencha nome e e-mail');
+            return;
+        }
+        const tenantIdToUse = tenantId || user?.tenantId;
+        if (!tenantIdToUse) {
+            toast.error('Tenant não encontrado');
+            return;
+        }
+
+        setIsInviting(true);
+        try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const token = sessionData?.session?.access_token;
+
+            const response = await supabase.functions.invoke('invite-vulnerability-stakeholder', {
+                body: {
+                    email: inviteFormData.email.trim(),
+                    full_name: inviteFormData.full_name.trim(),
+                    tenant_id: tenantIdToUse
+                },
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.error) throw new Error(response.error.message);
+            if (response.data?.error) throw new Error(response.data.error);
+
+            toast.success('Usuário convidado com sucesso!');
+            
+            const newUser = {
+                id: response.data?.userId || `temp_${Date.now()}`,
+                type: 'user' as const,
+                name: inviteFormData.full_name.trim()
+            };
+            
+            setAssignedItems(prev => [...prev, newUser]);
+            setIsInviteDialogOpen(false);
+            setInviteFormData({ full_name: '', email: '' });
+            setAssigneeSearchTerm('');
+            setShowAssigneeDropdown(false);
+        } catch (error: any) {
+            console.error('Error inviting user:', error);
+            toast.error(error.message || 'Erro ao convidar usuário');
+        } finally {
+            setIsInviting(false);
+        }
+    };
 
     const [status, setStatus] = useState(task.status || 'open');
     const [isSaving, setIsSaving] = useState(false);
@@ -376,8 +430,34 @@ export function RemediationBlock({
                                         ))}
                                         {groups.filter(g => !assignedItems.some(i => i.id === g.id && i.type === 'group') && g.name.toLowerCase().includes(assigneeSearchTerm.toLowerCase())).length === 0 &&
                                             users.filter(u => !assignedItems.some(i => i.id === u.id && i.type === 'user') && (u.full_name?.toLowerCase().includes(assigneeSearchTerm.toLowerCase()) || u.email?.toLowerCase().includes(assigneeSearchTerm.toLowerCase()))).length === 0 && (
-                                                <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum resultado encontrado</div>
+                                                <div className="px-3 py-2 text-sm text-muted-foreground text-center">
+                                                    Nenhum resultado encontrado.
+                                                </div>
                                             )}
+
+                                        {assigneeSearchTerm.trim().length > 0 && (
+                                            <div className="px-2 py-2 border-t mt-1">
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="w-full justify-start font-normal text-primary hover:text-primary/90 hover:bg-primary/10"
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        const term = assigneeSearchTerm.trim();
+                                                        const isEmail = term.includes('@');
+                                                        setInviteFormData({ 
+                                                            email: isEmail ? term : '', 
+                                                            full_name: isEmail ? '' : term 
+                                                        });
+                                                        setIsInviteDialogOpen(true);
+                                                        setShowAssigneeDropdown(false);
+                                                    }}
+                                                >
+                                                    <Plus className="h-4 w-4 mr-2" />
+                                                    Convidar novo usuário "{assigneeSearchTerm}"
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -508,6 +588,48 @@ export function RemediationBlock({
                     </Button>
                 </div>
             </CardContent>
+
+            {/* Dialog for Inviting External User */}
+            <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Convidar Novo Usuário</DialogTitle>
+                        <DialogDescription>
+                            Este usuário receberá um convite para acessar exclusivamente esta e outras vulnerabilidades em que for marcado.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>E-mail</Label>
+                            <Input
+                                value={inviteFormData.email}
+                                onChange={(e) => setInviteFormData(prev => ({ ...prev, email: e.target.value }))}
+                                placeholder="email@empresa.com"
+                                disabled={isInviting}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Nome Completo</Label>
+                            <Input
+                                value={inviteFormData.full_name}
+                                onChange={(e) => setInviteFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                                placeholder="Nome do responsável"
+                                disabled={isInviting}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)} disabled={isInviting}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleInviteUser} disabled={isInviting}>
+                            {isInviting ? 'Convidando...' : 'Enviar Convite'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 }
