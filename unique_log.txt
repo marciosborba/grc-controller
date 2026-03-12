@@ -1,0 +1,6 @@
+--- UNIQUE INDEXES for profiles ---
+profiles_pkey: CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)
+
+--- UNIQUE INDEXES for user_roles ---
+user_roles_pkey: CREATE UNIQUE INDEX user_roles_pkey ON public.user_roles USING btree (id)
+user_roles_user_id_role_key: CREATE UNIQUE INDEX user_roles_user_id_role_key ON public.user_roles USING btree (user_id, role)

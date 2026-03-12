@@ -1,0 +1,21 @@
+--- RLS Policies for public.profiles ---
+Command: [DELETE] | Policy: Only admins can delete profiles
+QUAL: has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role)
+WITH CHECK: null
+-----------------------------------
+Command: [INSERT] | Policy: Users can insert profiles
+QUAL: null
+WITH CHECK: (has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) OR (( SELECT ( SELECT auth.uid() AS uid) AS uid) = user_id))
+-----------------------------------
+Command: [SELECT] | Policy: profiles_select_policy
+QUAL: ((id = auth.uid()) OR (tenant_id = get_auth_tenant_id()) OR is_platform_admin())
+WITH CHECK: null
+-----------------------------------
+Command: [UPDATE] | Policy: Users can update profiles based on permissions
+QUAL: can_manage_user(( SELECT ( SELECT auth.uid() AS uid) AS uid), user_id)
+WITH CHECK: can_manage_user(( SELECT ( SELECT auth.uid() AS uid) AS uid), user_id)
+-----------------------------------
+Command: [UPDATE] | Policy: profiles_update_policy
+QUAL: ((id = auth.uid()) OR is_tenant_admin() OR is_platform_admin())
+WITH CHECK: null
+-----------------------------------

@@ -234,6 +234,7 @@ Deno.serve(async (req) => {
     // ── Upsert profile ───────────────────────────────────────────────────────
     if (userId) {
       const profilePayload: Record<string, any> = {
+        id: userId,
         user_id: userId,
         email: emailNorm,
         full_name: userData.full_name,
@@ -271,15 +272,12 @@ Deno.serve(async (req) => {
         console.log(`👤 Profile missing for ${userId}, inserting...`);
         const { error: profileErr } = await supabaseAdmin
           .from('profiles')
-          .insert([profilePayload])
+          .upsert(profilePayload, { onConflict: 'user_id' })
         if (profileErr) {
-          console.error(`❌ Error inserting profile:`, profileErr);
-          // Non-blocking if it already exists (race condition with trigger)
-          if (!profileErr.message.includes('unique_user_id') && !profileErr.message.includes('already exists')) {
-            throw new Error(`Erro ao inserir perfil: ${profileErr.message}`);
-          }
+          console.error(`❌ Error upserting profile:`, profileErr);
+          throw new Error(`Erro ao salvar perfil: ${profileErr.message}`);
         }
-        console.log(`✅ Profile insert attempt completed for ${emailNorm}`)
+        console.log(`✅ Profile upsert completed for ${emailNorm}`)
       }
 
       // ── Assign roles ──────────────────────────────────────────────────────
@@ -294,7 +292,7 @@ Deno.serve(async (req) => {
 
       const { error: roleErr } = await supabaseAdmin
         .from('user_roles')
-        .insert({ user_id: userId, role: dbRole, tenant_id: targetTenantId })
+        .upsert({ user_id: userId, role: dbRole, tenant_id: targetTenantId }, { onConflict: 'user_id, role' })
 
       if (roleErr) throw new Error(`Erro ao atribuir função: ${roleErr.message}`)
       console.log(`✅ Role "${dbRole}" assigned for ${emailNorm}`)

@@ -118,14 +118,38 @@ export const ResetPasswordPage = () => {
 
             // Atualizar o perfil do usuário para ativo e remover a flag de mudança de senha obrigatória
             // Isso remove o usuário do status "Pendente" no painel de IAM
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await supabase.from('profiles').update({
-                    is_active: true,
-                    must_change_password: false,
-                    last_login_at: new Date().toISOString()
-                }).eq('user_id', user.id);
-                console.log('✅ Perfil atualizado: is_active=true, must_change_password=false');
+            const { data: { user: updatedUser } } = await supabase.auth.getUser();
+            if (updatedUser) {
+                console.log(`🔄 [AUTH] Efetuando ativação final para o perfil: ${updatedUser.id}`);
+                const { data: updateData, error: updateError, count } = await supabase
+                    .from('profiles')
+                    .update({
+                        is_active: true,
+                        must_change_password: false,
+                        last_login_at: new Date().toISOString()
+                    })
+                    .eq('user_id', updatedUser.id)
+                    .select();
+
+                if (updateError) {
+                    console.error('❌ [AUTH] Erro ao ativar perfil no banco:', updateError);
+                    toast({
+                        title: "Alerta de sincronização",
+                        description: "Sua senha foi alterada, mas o perfil não foi ativado. Entre em contato com o suporte.",
+                        variant: "destructive",
+                    });
+                } else if (!updateData || updateData.length === 0) {
+                    console.warn('⚠️ [AUTH] Nenhuma linha atualizada na ativação do perfil. Verificando RLS/Identidade...');
+                    // Fallback: tentar atualizar por e-mail se por ID falhar (raro mas possível em migrações)
+                    const { error: secondTryError, count: secondTryCount } = await supabase
+                        .from('profiles')
+                        .update({ is_active: true, must_change_password: false })
+                        .eq('email', updatedUser.email);
+                    
+                    console.log('🔄 [AUTH] Resultado da tentativa de contingência (email):', { error: secondTryError, count: secondTryCount });
+                } else {
+                    console.log('✅ [AUTH] Perfil ativado com sucesso no banco:', { rowsAffected: updateData.length });
+                }
             }
 
             setSuccess(true);

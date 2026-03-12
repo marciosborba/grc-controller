@@ -1,0 +1,189 @@
+
+--- RPC check_account_lockout ---
+CREATE OR REPLACE FUNCTION public.check_account_lockout(user_email text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    record public.auth_lockouts%ROWTYPE;
+BEGIN
+    SELECT * INTO record FROM public.auth_lockouts WHERE email = user_email;
+    
+    -- If no record, not locked
+    IF record IS NULL THEN
+        RETURN jsonb_build_object('locked', false);
+    END IF;
+
+    -- Check if lock is active
+    IF record.locked_until IS NOT NULL AND record.locked_until > NOW() THEN
+        RETURN jsonb_build_object(
+            'locked', true, 
+            'until', record.locked_until
+        );
+    END IF;
+
+    -- If lock expired, reset
+    IF record.locked_until IS NOT NULL AND record.locked_until <= NOW() THEN
+        UPDATE public.auth_lockouts 
+        SET failed_attempts = 0, locked_until = NULL 
+        WHERE email = user_email;
+    END IF;
+
+    RETURN jsonb_build_object('locked', false);
+END;
+$function$
+
+
+--- RPC increment_failed_login ---
+CREATE OR REPLACE FUNCTION public.increment_failed_login(user_email text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+    record public.auth_lockouts%ROWTYPE;
+    new_attempts INT;
+    
+    -- Dynamic variables with defaults
+    lock_duration INTERVAL := INTERVAL '15 minutes';
+    max_attempts INT := 5; 
+    
+    v_domain TEXT;
+    v_lockout_minutes INT;
+    v_failed_limit INT;
+BEGIN
+    -- Extract domain from email
+    v_domain := split_part(user_email, '@', 2);
+
+    -- Try to find tenant settings for this domain
+    SELECT 
+        (settings->'security'->'accessControl'->>'lockoutDurationMinutes')::INT,
+        (settings->'security'->'accessControl'->>'failedLoginLimit')::INT
+    INTO v_lockout_minutes, v_failed_limit
+    FROM public.tenants
+    WHERE domain = v_domain;
+
+    -- Override defaults if tenant settings exist
+    IF v_lockout_minutes IS NOT NULL THEN
+        lock_duration := (v_lockout_minutes || ' minutes')::INTERVAL;
+    END IF;
+
+    IF v_failed_limit IS NOT NULL THEN
+        max_attempts := v_failed_limit;
+    END IF;
+
+    -- Rest of logic remains the same
+    SELECT * INTO record FROM public.auth_lockouts WHERE email = user_email;
+
+    IF record IS NULL THEN
+        INSERT INTO public.auth_lockouts (email, failed_attempts, last_attempt_at)
+        VALUES (user_email, 1, NOW())
+        RETURNING * INTO record;
+        new_attempts := 1;
+    ELSE
+        -- If previous attempt was long ago, reset
+        IF record.last_attempt_at < NOW() - INTERVAL '1 hour' THEN
+            new_attempts := 1;
+        ELSE
+            new_attempts := record.failed_attempts + 1;
+        END IF;
+
+        -- Check if should lock
+        IF new_attempts >= max_attempts THEN
+            UPDATE public.auth_lockouts 
+            SET failed_attempts = new_attempts, 
+                last_attempt_at = NOW(),
+                locked_until = NOW() + lock_duration
+            WHERE email = user_email;
+            
+            RETURN jsonb_build_object('locked', true, 'until', NOW() + lock_duration);
+        ELSE
+             UPDATE public.auth_lockouts 
+            SET failed_attempts = new_attempts, 
+                last_attempt_at = NOW()
+            WHERE email = user_email;
+        END IF;
+    END IF;
+
+    RETURN jsonb_build_object('locked', false, 'attempts', new_attempts);
+END;
+$function$
+
+
+--- RPC get_user_complete_profile ---
+CREATE OR REPLACE FUNCTION public.get_user_complete_profile()
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+      DECLARE
+          uid uuid;
+          res_profile json;
+          res_tenant json;
+          res_modules json;
+          res_roles json;
+          res_platform_admin json;
+          res_custom_permissions json;
+          v_is_active boolean;
+      BEGIN
+          uid := auth.uid();
+          
+          -- Check if active
+          SELECT is_active INTO v_is_active 
+          FROM public.profiles 
+          WHERE user_id = uid;
+
+          -- If not active or not found, return explicit deactivated JSON
+          IF v_is_active IS NOT NULL AND v_is_active = false THEN
+              RETURN json_build_object('status', 'deactivated', 'is_active', false);
+          END IF;
+
+          -- 1. Profile
+          SELECT row_to_json(p) INTO res_profile 
+          FROM (SELECT * FROM public.profiles WHERE user_id = uid) p;
+          
+          -- 2. Tenant
+          SELECT row_to_json(t) INTO res_tenant 
+          FROM public.tenants t
+          JOIN public.profiles p ON p.tenant_id = t.id
+          WHERE p.user_id = uid;
+          
+          -- 3. Modules
+          SELECT json_agg(tm) INTO res_modules
+          FROM public.tenant_modules tm
+          JOIN public.profiles p ON p.tenant_id = tm.tenant_id
+          WHERE p.user_id = uid;
+          
+          -- 4. Roles
+          SELECT json_agg(ur) INTO res_roles
+          FROM public.user_roles ur
+          WHERE ur.user_id = uid;
+          
+          -- 5. Platform Admin
+          SELECT row_to_json(pa) INTO res_platform_admin
+          FROM public.platform_admins pa
+          WHERE pa.user_id = uid;
+
+          -- 6. Custom RBAC Permissions
+          IF (res_profile->>'custom_role_id' IS NOT NULL) THEN
+              SELECT json_agg(rmp.module_key) INTO res_custom_permissions
+              FROM public.role_module_permissions rmp
+              WHERE rmp.role_id = (res_profile->>'custom_role_id')::uuid
+              AND rmp.can_access = true;
+          END IF;
+          
+          RETURN json_build_object(
+              'profile', res_profile,
+              'tenant', res_tenant,
+              'modules', COALESCE(res_modules, '[]'::json),
+              'roles', COALESCE(res_roles, '[]'::json),
+              'platform_admin', res_platform_admin,
+              'custom_permissions', COALESCE(res_custom_permissions, '[]'::json)
+          );
+      END;
+      $function$
+

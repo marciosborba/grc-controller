@@ -1,0 +1,14 @@
+--- 1. RLS Policies on profiles ---
+Name: Only admins can delete profiles | CMD: DELETE | Qual: has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) | Check: null
+Name: Users can insert profiles | CMD: INSERT | Qual: null | Check: (has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) OR (( SELECT ( SELECT auth.uid() AS uid) AS uid) = user_id))
+Name: Users can update profiles based on permissions | CMD: UPDATE | Qual: ((user_id = auth.uid()) OR can_manage_user(auth.uid(), user_id)) | Check: null
+Name: profiles_select_policy | CMD: SELECT | Qual: ((user_id = auth.uid()) OR (tenant_id = get_auth_tenant_id()) OR is_platform_admin()) | Check: null
+Name: profiles_update_policy | CMD: UPDATE | Qual: ((user_id = auth.uid()) OR is_tenant_admin() OR is_platform_admin()) | Check: null
+
+--- 2. Checking for Lockouts (marcio@gepriv.com) ---
+✅ No lockout found.
+
+--- 3. Checking Profile Data ---
+
+--- 4. Final Purge ---
+✅ Deep cleanup complete.

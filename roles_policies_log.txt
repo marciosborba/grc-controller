@@ -1,0 +1,41 @@
+--- RLS Policies for user_roles and user_tenant_roles ---
+Table: undefined | Command: [ALL] | Policy: user_roles_admin_policy
+QUAL: (is_tenant_admin() OR is_platform_admin())
+WITH CHECK: null
+-----------------------------------
+Table: undefined | Command: [DELETE] | Policy: unified_ALL_user_roles_policy_delete
+QUAL: ((tenant_id IN ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid)))) OR (has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) AND (tenant_id = ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))
+WITH CHECK: null
+-----------------------------------
+Table: undefined | Command: [INSERT] | Policy: unified_ALL_user_roles_policy_insert
+QUAL: null
+WITH CHECK: ((tenant_id IN ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid)))) OR (has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) AND (tenant_id = ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))
+-----------------------------------
+Table: undefined | Command: [SELECT] | Policy: unified_SELECT_user_roles_policy
+QUAL: true
+WITH CHECK: null
+-----------------------------------
+Table: undefined | Command: [SELECT] | Policy: user_roles_select_policy
+QUAL: ((tenant_id = get_auth_tenant_id()) OR is_platform_admin())
+WITH CHECK: null
+-----------------------------------
+Table: undefined | Command: [UPDATE] | Policy: unified_ALL_user_roles_policy_update
+QUAL: ((tenant_id IN ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid)))) OR (has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) AND (tenant_id = ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))
+WITH CHECK: ((tenant_id IN ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid)))) OR (has_role(( SELECT ( SELECT auth.uid() AS uid) AS uid), 'admin'::app_role) AND (tenant_id = ( SELECT profiles.tenant_id
+   FROM profiles
+  WHERE (profiles.user_id = ( SELECT ( SELECT auth.uid() AS uid) AS uid))))))
+-----------------------------------
