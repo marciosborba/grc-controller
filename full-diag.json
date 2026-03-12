@@ -1,0 +1,18 @@
+{
+  "profileConstraints": [
+    {
+      "conname": "profiles_pkey",
+      "def": "PRIMARY KEY (id)"
+    }
+  ],
+  "appRoles": [
+    "admin",
+    "ciso",
+    "risk_manager",
+    "compliance_officer",
+    "auditor",
+    "user",
+    "super_admin"
+  ],
+  "triggerSource": "\nDECLARE\n  v_tenant_id uuid;\n  v_system_role text;\n  v_full_name text;\nBEGIN\n  -- Extract metadata\n  v_tenant_id := (NEW.raw_user_meta_data->>'tenant_id')::uuid;\n  v_system_role := COALESCE(NEW.raw_user_meta_data->>'system_role', 'user');\n  v_full_name := COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1));\n\n  -- Insert profile\n  INSERT INTO public.profiles (\n    user_id, \n    email,\n    full_name, \n    job_title, \n    tenant_id, \n    system_role,\n    is_active,\n    must_change_password\n  )\n  VALUES (\n    NEW.id,\n    NEW.email,\n    v_full_name,\n    COALESCE(NEW.raw_user_meta_data->>'job_title', 'Usuário'),\n    v_tenant_id,\n    v_system_role,\n    true,\n    true\n  )\n  ON CONFLICT (user_id) DO UPDATE SET\n    tenant_id = EXCLUDED.tenant_id,\n    system_role = EXCLUDED.system_role,\n    full_name = EXCLUDED.full_name;\n  \n  -- Assign initial role\n  -- Map system roles to valid app_role enum values\n  -- tenant_admin -> admin\n  -- guest -> user\n  IF v_system_role = 'tenant_admin' THEN\n    v_system_role := 'admin';\n  ELSIF v_system_role = 'guest' THEN\n    v_system_role := 'user';\n  END IF;\n\n  INSERT INTO public.user_roles (user_id, role, tenant_id)\n  VALUES (NEW.id, v_system_role::app_role, v_tenant_id)\n  ON CONFLICT (user_id, role) DO UPDATE SET\n    tenant_id = EXCLUDED.tenant_id;\n  \n  RETURN NEW;\nEND;\n"
+}

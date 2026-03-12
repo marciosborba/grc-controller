@@ -1,0 +1,65 @@
+{
+  "enums": [
+    {
+      "enumlabel": "admin"
+    },
+    {
+      "enumlabel": "ciso"
+    },
+    {
+      "enumlabel": "risk_manager"
+    },
+    {
+      "enumlabel": "compliance_officer"
+    },
+    {
+      "enumlabel": "auditor"
+    },
+    {
+      "enumlabel": "user"
+    },
+    {
+      "enumlabel": "super_admin"
+    }
+  ],
+  "columns": [
+    {
+      "column_name": "id",
+      "udt_name": "uuid"
+    },
+    {
+      "column_name": "user_id",
+      "udt_name": "uuid"
+    },
+    {
+      "column_name": "role",
+      "udt_name": "app_role"
+    },
+    {
+      "column_name": "created_at",
+      "udt_name": "timestamptz"
+    },
+    {
+      "column_name": "tenant_id",
+      "udt_name": "uuid"
+    }
+  ],
+  "constraints": [
+    {
+      "conname": "user_roles_pkey",
+      "def": "PRIMARY KEY (id)"
+    },
+    {
+      "conname": "user_roles_tenant_id_fkey",
+      "def": "FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL"
+    },
+    {
+      "conname": "user_roles_user_id_fkey",
+      "def": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "conname": "user_roles_user_id_role_key",
+      "def": "UNIQUE (user_id, role)"
+    }
+  ]
+}

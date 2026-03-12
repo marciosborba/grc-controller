@@ -357,11 +357,26 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('create-user-admin error:', msg)
+  } catch (error: any) {
+    const errorMsg = error?.message || 'Erro desconhecido';
+    const errorDetails = error?.details || error?.hint || '';
+    
+    console.error('❌ [CREATE-USER-ADMIN] Edge Function Error:', {
+      message: errorMsg,
+      details: errorDetails,
+      error: error
+    });
+
     return new Response(
-      JSON.stringify({ success: false, error: msg }),
+      JSON.stringify({ 
+        success: false, 
+        error: errorMsg,
+        details: errorDetails,
+        diagnostic: {
+          timestamp: new Date().toISOString(),
+          requestId: req.headers.get('x-request-id')
+        }
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
