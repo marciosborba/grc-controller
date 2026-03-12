@@ -28,14 +28,12 @@ async function sendSendPulseInvite({
   const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
   const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
   const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  // Use env var if set, otherwise fall back to the confirmed template ID 77996
   const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || "77996";
 
   if (!clientId || !clientSecret) {
-    console.warn("⚠️ SendPulse SENDPULSE_CLIENT_ID or SENDPULSE_CLIENT_SECRET missing. Skipping email sending.");
+    console.warn("⚠️ SendPulse credentials missing. Skipping email sending.");
     return false;
   }
-
 
   const templateId = parseInt(templateIdStr);
   const accessToken = await getSendPulseToken(clientId, clientSecret);
@@ -73,21 +71,14 @@ async function sendSendPulseInvite({
   return true;
 }
 
-interface CreateUserRequest {
-  email: string;
-  full_name: string;
-  job_title?: string;
-  department?: string;
-  phone?: string;
-  tenant_id: string;
-  // System role: tenant_admin | admin | user | guest
-  system_role?: string;
-  roles: string[];
-  // Custom tenant role ID from tenant_roles table
-  tenant_role_id?: string;
-  permissions?: string[];
-  send_invitation?: boolean;
-  must_change_password?: boolean;
+// Maps UI system_role values to valid app_role enum values in the database
+function mapToAppRole(role: string): string {
+  const mapping: Record<string, string> = {
+    'tenant_admin': 'admin',
+    'guest': 'user',
+    'super_admin': 'admin', // Super admin UI label -> admin DB role for regular tenant assignment
+  }
+  return mapping[role] || role;
 }
 
 Deno.serve(async (req) => {
@@ -99,100 +90,130 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) throw new Error('Missing authorization header')
 
+    // Admin client (service role) – bypasses RLS
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    // Validate the calling user token
     const token = authHeader.replace('Bearer ', '')
-    const supabaseUser = createClient(
+    const supabaseAnon = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
-
-    const { data: { user }, error: userError } = await supabaseUser.auth.getUser(token)
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token)
     if (userError || !user) throw new Error('Unauthorized')
 
-    // Check permissions: platform admin or admin role
+    // ── Determine caller's permission level ──────────────────────────────────
+    // Fetch ALL roles of the caller (no tenant filter – global check)
+    const { data: callerRoles } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+
+    const callerRoleNames = (callerRoles || []).map((r: { role: string }) => r.role)
+
+    const isSuperAdmin = callerRoleNames.includes('super_admin')
+    const isAdmin = callerRoleNames.includes('admin') || callerRoleNames.includes('tenant_admin') || isSuperAdmin
+
+    // Also check platform_admins table as a fallback
     const { data: platformAdmin } = await supabaseAdmin
-      .from('platform_admins').select('user_id').eq('user_id', user.id).maybeSingle()
+      .from('platform_admins')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
     
-    // Also check if the user has a global 'super_admin' role in user_roles table
-    const { data: userRoles } = await supabaseAdmin
-      .from('user_roles').select('role').eq('user_id', user.id)
-    
-    const isSuperAdmin = userRoles?.some(r => r.role === 'super_admin')
-    const isPlatformAdmin = !!platformAdmin || isSuperAdmin
+    const isPlatformSuperAdmin = isSuperAdmin || !!platformAdmin
 
-    if (!isPlatformAdmin) {
-      const isAdmin = userRoles?.some(r => r.role === 'admin' || r.role === 'tenant_admin')
-      if (!isAdmin) throw new Error('Sem permissão para criar usuários.')
+    if (!isAdmin) {
+      throw new Error('Sem permissão para criar usuários.')
     }
 
-    const userData: CreateUserRequest = await req.json()
-    const emailNorm = userData.email.trim().toLowerCase()
+    // ── Parse request body ───────────────────────────────────────────────────
+    const userData = await req.json()
+    const emailNorm = (userData.email || '').trim().toLowerCase()
 
-    // Determine effective tenant_id
-    let targetTenantId = userData.tenant_id
-    if (!isPlatformAdmin) {
-      // For non-platform-admins, force the tenant_id from their own profile
-      const { data: currentProfile } = await supabaseAdmin
-        .from('profiles').select('tenant_id').eq('user_id', user.id).single()
-      targetTenantId = currentProfile?.tenant_id
+    if (!emailNorm) throw new Error('Email é obrigatório')
+
+    // ── Determine effective tenant_id ────────────────────────────────────────
+    // Super admins: use the tenant_id sent from the UI (from the tenant selector)
+    // Regular admins: force their own profile tenant_id for security
+    let targetTenantId: string | null = null
+
+    if (isPlatformSuperAdmin) {
+      // Trust the payload tenant_id – it comes from the UI tenant selector
+      targetTenantId = userData.tenant_id || null
+      console.log(`🔑 [SUPER_ADMIN] Using payload tenant_id: ${targetTenantId}`)
+    } else {
+      // For regular admins, always use their own tenant (security measure)
+      const { data: callerProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .single()
+      targetTenantId = callerProfile?.tenant_id || null
+      console.log(`👤 [REGULAR_ADMIN] Using caller profile tenant_id: ${targetTenantId}`)
     }
-    if (!targetTenantId) throw new Error('Tenant ID é obrigatório')
 
-    // Determine system_role (default to 'user')
-    const systemRole = userData.system_role || (userData.roles?.[0] as string) || 'user'
+    if (!targetTenantId) {
+      throw new Error('Tenant ID não encontrado. Selecione um tenant no seletor da barra superior antes de criar usuários.')
+    }
 
-    // SECURITY: Block assignment of platform-level roles via this endpoint.
-    // super_admin / platform_admin can ONLY be assigned in Global Settings.
+    // ── Determine system_role ────────────────────────────────────────────────
+    const systemRole = userData.system_role || 'user'
+
+    // SECURITY: Block platform-level roles via this endpoint
     const BLOCKED_ROLES = ['super_admin', 'platform_admin']
     if (BLOCKED_ROLES.includes(systemRole)) {
       throw new Error('A função Super Admin só pode ser atribuída em Configurações Globais.')
     }
-    if (userData.roles?.some((r: string) => BLOCKED_ROLES.includes(r))) {
-      throw new Error('A função Super Admin só pode ser atribuída em Configurações Globais.')
-    }
 
-    // Check tenant user limit
-    if (!isPlatformAdmin) {
+    // ── Check tenant user limit (only for non-super-admins) ─────────────────
+    if (!isPlatformSuperAdmin) {
       const { data: tenant, error: tenantError } = await supabaseAdmin
         .from('tenants').select('max_users, current_users_count').eq('id', targetTenantId).single()
       if (tenantError) throw new Error('Erro ao verificar limites do tenant')
-      if (tenant.current_users_count >= tenant.max_users) {
+      if (tenant && tenant.current_users_count >= tenant.max_users) {
         throw new Error(`Limite de usuários atingido (${tenant.max_users}).`)
       }
     }
 
+    // ── Create user / generate invite link ───────────────────────────────────
     let userId: string | null = null
     let inviteLink: string | null = null
 
     if (userData.send_invitation !== false) {
-      // ── Invite flow: generate a magic invite link (sends email via Supabase SMTP) ──
       console.log(`📧 Generating invite link for ${emailNorm}`)
 
-      // Check if user already exists
+      // Check if user already exists in auth.users
       let existingUser = null
       let page = 1
-      while (!existingUser) {
+      while (true) {
         const { data: { users: list }, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 })
         if (error || !list?.length) break
-        existingUser = list.find(u => u.email?.toLowerCase() === emailNorm) || null
-        if (list.length < 1000) break
+        existingUser = list.find((u: { email?: string }) => u.email?.toLowerCase() === emailNorm) || null
+        if (existingUser || list.length < 1000) break
         page++
       }
 
       if (existingUser && existingUser.email_confirmed_at) {
-        const { data: profile } = await supabaseAdmin.from('profiles').select('system_role').eq('user_id', existingUser.id).single();
-        if (profile && (profile.system_role === 'guest' || profile.system_role === 'vendor')) {
-          console.log(`Promoting confirmed external user ${emailNorm} to internal.`)
-          userId = existingUser.id;
+        // User already confirmed – check if external user being promoted to internal
+        const { data: existingProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('system_role')
+          .eq('user_id', existingUser.id)
+          .single()
+
+        if (existingProfile && (existingProfile.system_role === 'guest' || existingProfile.system_role === 'vendor')) {
+          console.log(`Promoting external user ${emailNorm} to internal.`)
+          userId = existingUser.id
         } else {
           throw new Error(`O usuário ${emailNorm} já possui conta ativa. Use "Editar" para alterar permissões.`)
         }
       } else {
+        // Generate invite link with metadata
         const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
           type: 'invite',
           email: emailNorm,
@@ -207,22 +228,26 @@ Deno.serve(async (req) => {
         })
         if (linkErr) throw new Error(`Falha ao gerar convite: ${linkErr.message}`)
         inviteLink = linkData?.properties?.action_link || null
-        userId = linkData?.user?.id || existingUser?.id || null
-        console.log(`✅ Invite link generated for ${emailNorm}`)
+        userId = linkData?.user?.id || null
+        console.log(`✅ Invite link generated for ${emailNorm}, userId: ${userId}`)
       }
 
     } else {
-      // ── No-invite flow: create user directly with a temp password ──
+      // No-invite: create user directly
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: emailNorm,
         email_confirm: true,
-        user_metadata: { full_name: userData.full_name },
+        user_metadata: {
+          full_name: userData.full_name,
+          tenant_id: targetTenantId,
+          system_role: systemRole,
+        },
       })
       if (authError) throw authError
       userId = authData.user.id
     }
 
-    // ── Save / update profile ──
+    // ── Upsert profile ───────────────────────────────────────────────────────
     if (userId) {
       const profilePayload: Record<string, unknown> = {
         user_id: userId,
@@ -236,23 +261,22 @@ Deno.serve(async (req) => {
         is_active: false,
         must_change_password: true,
       }
-      // Optional: attach custom tenant role
+
       if (userData.tenant_role_id) {
-        profilePayload['tenant_role_id'] = userData.tenant_role_id
+        profilePayload['custom_role_id'] = userData.tenant_role_id
       }
       if (userData.permissions?.length) {
         profilePayload['permissions'] = userData.permissions
       }
 
-      // Check if the profile was already created by the auth trigger
+      // Check if profile already created by auth trigger
       const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
         .select('id')
         .eq('user_id', userId)
         .single()
 
-      if (existingProfile) {
-        // Trigger already created it (often with default or null tenant_id)
+      if (existingProfile?.id) {
         const { error: profileErr } = await supabaseAdmin
           .from('profiles')
           .update(profilePayload)
@@ -261,7 +285,6 @@ Deno.serve(async (req) => {
         if (profileErr) console.error('Profile update error:', profileErr.message)
         else console.log(`✅ Profile updated for ${emailNorm} in tenant ${targetTenantId}`)
       } else {
-        // Profile doesn't exist yet
         const { error: profileErr } = await supabaseAdmin
           .from('profiles')
           .insert([profilePayload])
@@ -270,48 +293,51 @@ Deno.serve(async (req) => {
         else console.log(`✅ Profile inserted for ${emailNorm} in tenant ${targetTenantId}`)
       }
 
-      // ── Assign roles ──
-      // Map system roles to valid app_role enum values
-      const mapToAppRole = (role: string): string => {
-        const mapping: Record<string, string> = {
-          'tenant_admin': 'admin',
-          'guest': 'user',
-        }
-        return mapping[role] || role
-      }
-      const rolesToAssign = userData.roles?.length ? userData.roles : [systemRole]
-      for (const role of rolesToAssign) {
-        const appRole = mapToAppRole(role)
-        await supabaseAdmin.from('user_roles').upsert(
-          { user_id: userId, role: appRole, tenant_id: targetTenantId },
+      // ── Assign role ──────────────────────────────────────────────────────
+      const dbRole = mapToAppRole(systemRole)
+      
+      // Remove any null-tenant orphan roles that may have been created by the trigger
+      await supabaseAdmin
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .is('tenant_id', null)
+
+      // Upsert the proper role with the correct tenant
+      const { error: roleErr } = await supabaseAdmin
+        .from('user_roles')
+        .upsert(
+          { user_id: userId, role: dbRole, tenant_id: targetTenantId },
           { onConflict: 'user_id, role' }
         )
-      }
 
-      // ── Assign custom tenant role ──
+      if (roleErr) console.error('Role upsert error:', roleErr.message)
+      else console.log(`✅ Role "${dbRole}" assigned for ${emailNorm} in tenant ${targetTenantId}`)
+
+      // ── Assign custom tenant role (if selected in UI) ────────────────────
       if (userData.tenant_role_id) {
-        await supabaseAdmin.from('user_tenant_roles').upsert(
-          { user_id: userId, tenant_role_id: userData.tenant_role_id, tenant_id: targetTenantId },
-          { onConflict: 'user_id, tenant_role_id' }
-        ).then(({ error }) => {
-          // table may not exist — ignore error gracefully
-          if (error) console.warn('user_tenant_roles upsert:', error.message)
-        })
+        const { error: trErr } = await supabaseAdmin
+          .from('user_tenant_roles')
+          .upsert(
+            { user_id: userId, tenant_role_id: userData.tenant_role_id, tenant_id: targetTenantId },
+            { onConflict: 'user_id, tenant_role_id' }
+          )
+        if (trErr) console.warn('user_tenant_roles upsert (non-fatal):', trErr.message)
       }
     }
 
-    // ── Activity log ──
+    // ── Activity log ─────────────────────────────────────────────────────────
     try {
       await supabaseAdmin.rpc('rpc_log_activity', {
         p_user_id: user.id,
         p_action: 'user_invited',
         p_resource_type: 'users',
         p_resource_id: userId,
-        p_details: { email: emailNorm, system_role: systemRole, roles: userData.roles }
+        p_details: { email: emailNorm, system_role: systemRole, tenant_id: targetTenantId }
       })
     } catch { /* ignore log errors */ }
 
-    // ── Send Email via SendPulse ──
+    // ── Send invitation email via SendPulse ──────────────────────────────────
     if (userData.send_invitation !== false && inviteLink) {
       try {
         await sendSendPulseInvite({
@@ -320,9 +346,9 @@ Deno.serve(async (req) => {
           inviteLink: inviteLink,
           senderName: user.email?.split('@')[0] || "Administrador"
         });
-      } catch (emailErr: any) {
-        console.error("⚠️ Invite email failed to send, but user was created:", emailErr.message);
-        // We don't fail the whole request if only the email fails, but we inform the user
+      } catch (emailErr: unknown) {
+        const msg = emailErr instanceof Error ? emailErr.message : String(emailErr)
+        console.error("⚠️ Invite email failed (non-fatal):", msg);
       }
     }
 
@@ -331,10 +357,11 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
 
-  } catch (error) {
-    console.error('create-user-admin error:', error)
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error('create-user-admin error:', msg)
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: msg }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
