@@ -626,7 +626,11 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Falha ao reenviar convite');
 
-      toast.success(`Convite reenviado com sucesso para ${user.email}`);
+      if (data.emailSent) {
+        toast.success(`Convite reenviado com sucesso para ${user.email}`);
+      } else {
+        toast.warning(`O link foi gerado, mas houve um problema ao enviar o e-mail: ${data.emailError || 'Erro desconhecido'}`);
+      }
     } catch (err: any) {
       toast.error(`Erro ao reenviar: ${err.message}`);
     } finally {
