@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx supabase functions deploy send-password-reset --project-ref myxvxponlmulnjstbjwd)",
+      "Bash(npx supabase functions deploy invite-risk-stakeholder --project-ref myxvxponlmulnjstbjwd)",
+      "Bash(npx supabase functions deploy create-vendor-user --project-ref myxvxponlmulnjstbjwd)"
+    ]
+  }
+}

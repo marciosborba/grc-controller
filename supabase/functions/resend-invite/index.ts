@@ -19,14 +19,13 @@ async function sendInviteEmail(recipientEmail: string, recipientName: string, in
   const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
   const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
   const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_PASSWORD_RESET") || "79267";
+  const templateId = 79267;
 
   if (!clientId || !clientSecret) {
     console.warn("[WARN] SendPulse credentials missing — cannot send email.");
     return false;
   }
 
-  const templateId = parseInt(templateIdStr);
   const accessToken = await getSendPulseToken(clientId, clientSecret);
 
   const res = await fetch("https://api.sendpulse.com/smtp/emails", {

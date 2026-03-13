@@ -35,7 +35,7 @@ async function sendSendPulseInvite({
   const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
   const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
   const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || "77996";
+  const templateIdStr = "77966"; // Template fixo: Aba Comunicação de Risk Card
 
   if (!clientId || !clientSecret) {
     console.warn("⚠️ SendPulse SENDPULSE_CLIENT_ID or SENDPULSE_CLIENT_SECRET missing. Skipping email sending.");

@@ -20,9 +20,9 @@ async function sendVendorInviteEmail(recipientEmail: string, recipientName: stri
     const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
     const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
     const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-    const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE");
+    const templateIdStr = "79283"; // Template fixo: Portal de Fornecedores (TPRM)
 
-    if (!clientId || !clientSecret || !templateIdStr) {
+    if (!clientId || !clientSecret) {
         console.warn("[WARN] SendPulse config missing — skipping vendor invite email.");
         return false;
     }
