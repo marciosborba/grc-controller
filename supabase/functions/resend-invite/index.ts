@@ -19,7 +19,7 @@ async function sendInviteEmail(recipientEmail: string, recipientName: string, in
   const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
   const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
   const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || "77996";
+  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || "79267";
 
   if (!clientId || !clientSecret) {
     console.warn("[WARN] SendPulse credentials missing — cannot send email.");
@@ -34,13 +34,13 @@ async function sendInviteEmail(recipientEmail: string, recipientName: string, in
     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
     body: JSON.stringify({
       email: {
-        subject: "GEPRIV - Seu link de acesso",
+        subject: "GEPRIV - Redefinição de Senha",
         template: {
           id: templateId,
           variables: {
             firstName: recipientName.split(" ")[0] || recipientName,
             inviteLink,
-            senderName: "Equipe GEPRIV",
+            senderName: "Segurança GEPRIV",
           },
         },
         from: { name: "GEPRIV", email: fromEmail },
