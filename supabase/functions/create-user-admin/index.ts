@@ -28,16 +28,26 @@ async function sendSendPulseInvite({
   const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
   const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
   const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || "77996";
+  // Check both names as they might be defined differently in different environments
+  const templateIdStr = Deno.env.get("SENDPULSE_TEMPLATE_INVITE") || Deno.env.get("SENDPULSE_TEMPLATE_ID");
 
   if (!clientId || !clientSecret) {
-    console.warn("⚠️ SendPulse credentials missing. Skipping email sending.");
-    return false;
+    throw new Error("Credenciais do SendPulse não configuradas no servidor (CLIENT_ID/SECRET).");
+  }
+
+  if (!templateIdStr) {
+    throw new Error("Template Id do SendPulse (SENDPULSE_TEMPLATE_INVITE) não encontrado.");
   }
 
   const templateId = parseInt(templateIdStr);
+  if (isNaN(templateId)) {
+    throw new Error(`Template Id inválido: "${templateIdStr}"`);
+  }
+
+  console.log(`🔗 [EMAIL] Fetching SendPulse token for ${recipientEmail}...`);
   const accessToken = await getSendPulseToken(clientId, clientSecret);
 
+  console.log(`✉️ [EMAIL] Sending email to ${recipientEmail} using template ${templateId}...`);
   const res = await fetch("https://api.sendpulse.com/smtp/emails", {
     method: "POST",
     headers: {
@@ -50,7 +60,7 @@ async function sendSendPulseInvite({
         template: {
           id: templateId,
           variables: {
-            firstName: recipientName.split(" ")[0],
+            firstName: recipientName.split(" ")[0] || recipientName,
             inviteLink: inviteLink,
             senderName: senderName || "Administrador",
           },
@@ -63,11 +73,11 @@ async function sendSendPulseInvite({
 
   if (!res.ok) {
     const errorText = await res.text();
-    console.error("❌ SendPulse send error:", errorText);
-    throw new Error(`SendPulse send failed: ${errorText}`);
+    console.error("❌ [EMAIL] SendPulse API error:", errorText);
+    throw new Error(`API do SendPulse retornou erro: ${errorText}`);
   }
 
-  console.log(`✅ Invitation email sent via SendPulse to ${recipientEmail}`);
+  console.log(`✅ [EMAIL] Invitation email sent successfully to ${recipientEmail}`);
   return true;
 }
 
