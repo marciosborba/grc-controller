@@ -60,7 +60,13 @@ async function sendInviteEmail(recipientEmail: string, recipientName: string, in
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  // Standard OPTIONS response for CORS
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
+  }
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -73,13 +79,12 @@ Deno.serve(async (req) => {
     );
 
     // Validate caller
+    const token = authHeader.replace('Bearer ', '');
     const supabaseAnon = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
-    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const { data: { user }, error: userError } = await supabaseAnon.auth.getUser(token);
     if (userError || !user) throw new Error('Unauthorized');
 
     const { email, full_name } = await req.json();
@@ -88,7 +93,7 @@ Deno.serve(async (req) => {
     const emailNorm = email.trim().toLowerCase();
     const displayName = full_name || emailNorm.split('@')[0];
 
-    console.log(`[INFO] Resending invite for ${emailNorm}`);
+    console.log(`[resend-invite] Processing request for: ${emailNorm}`);
 
     // Find user in Auth
     let existingUser = null;
@@ -102,29 +107,43 @@ Deno.serve(async (req) => {
     }
 
     if (!existingUser) {
-      throw new Error(`Usuário ${emailNorm} não encontrado. Invite-o primeiro pelo botão "Convidar".`);
+      console.log(`[resend-invite] User ${emailNorm} not found in Auth.`);
+      // Return 200 with success: false so the UI can show the custom message
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `O usuário ${emailNorm} não foi encontrado no sistema de autenticação. Ele provavelmente foi excluído ou ainda não foi convidado. Por favor, use o botão "Convidar Usuário" acima para criá-lo novamente.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
     }
 
     if (existingUser.email_confirmed_at) {
-      throw new Error(`O usuário ${emailNorm} já confirmou o e-mail e possui uma conta ativa.`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `O usuário ${emailNorm} já confirmou o e-mail e possui uma conta ativa. Se ele esqueceu a senha, ele deve usar a opção "Esqueci minha senha" na tela de login.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      );
     }
 
-    // Generate new invite link (regenerates the token without changing roles or profiles)
+    // Generate new invite link
     const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
       type: 'invite',
       email: emailNorm,
       options: { redirectTo: RESET_URL }
     });
 
-    if (linkErr) throw new Error(`Falha ao gerar link: ${linkErr.message}`);
+    if (linkErr) throw new Error(`Falha do Supabase ao gerar link: ${linkErr.message}`);
 
     const inviteLink = linkData?.properties?.action_link || null;
-    if (!inviteLink) throw new Error('Supabase não retornou o link de convite. Tente novamente.');
-
-    console.log(`[INFO] New invite link generated for ${emailNorm}`);
+    if (!inviteLink) throw new Error('O link de convite não foi gerado pelo servidor.');
 
     // Send email
     await sendInviteEmail(emailNorm, displayName, inviteLink);
+
+    console.log(`[resend-invite] Success: Email sent to ${emailNorm}`);
 
     return new Response(
       JSON.stringify({ success: true, message: `Convite reenviado para ${emailNorm}` }),
@@ -132,10 +151,11 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[ERROR] resend-invite:', error.message);
+    const errorMsg = error.message || 'Erro interno no servidor';
+    console.error('[resend-invite] Error:', errorMsg);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      JSON.stringify({ success: false, error: errorMsg }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   }
 });
