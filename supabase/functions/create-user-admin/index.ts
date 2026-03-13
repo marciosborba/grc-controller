@@ -107,18 +107,15 @@ Deno.serve(async (req) => {
     if (userError || !user) throw new Error('Unauthorized')
 
     // ── Determine caller's permission level ──────────────────────────────────
-    // Fetch ALL roles of the caller (no tenant filter – global check)
     const { data: callerRoles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
 
     const callerRoleNames = (callerRoles || []).map((r: { role: string }) => r.role)
-
     const isSuperAdmin = callerRoleNames.includes('super_admin')
     const isAdmin = callerRoleNames.includes('admin') || callerRoleNames.includes('tenant_admin') || isSuperAdmin
 
-    // Also check platform_admins table as a fallback
     const { data: platformAdmin } = await supabaseAdmin
       .from('platform_admins')
       .select('user_id')
@@ -155,26 +152,14 @@ Deno.serve(async (req) => {
     }
 
     if (!targetTenantId) {
-      throw new Error('Tenant ID não encontrado. Selecione um tenant no seletor da barra superior antes de criar usuários.')
+      throw new Error('Tenant ID não encontrado.')
     }
 
     // ── Determine system_role ────────────────────────────────────────────────
     const systemRole = userData.system_role || 'user'
-
-    // SECURITY: Block platform-level roles via this endpoint
     const BLOCKED_ROLES = ['super_admin', 'platform_admin']
     if (BLOCKED_ROLES.includes(systemRole)) {
       throw new Error('A função Super Admin só pode ser atribuída em Configurações Globais.')
-    }
-
-    // ── Check tenant user limit (only for non-super-admins) ─────────────────
-    if (!isPlatformSuperAdmin) {
-      const { data: tenant, error: tenantError } = await supabaseAdmin
-        .from('tenants').select('max_users, current_users_count').eq('id', targetTenantId).single()
-      if (tenantError) throw new Error('Erro ao verificar limites do tenant')
-      if (tenant && tenant.current_users_count >= tenant.max_users) {
-        throw new Error(`Limite de usuários atingido (${tenant.max_users}).`)
-      }
     }
 
     // ── Create user / generate invite link ───────────────────────────────────
@@ -200,14 +185,18 @@ Deno.serve(async (req) => {
         }
         userId = existingUser.id
       } else {
-        const type = (existingUser && userData.resend) ? 'recovery' : 'invite'
-        console.log(`🔄 [INVITE] Generating link type "${type}" for ${emailNorm}`)
+        const isConfirmed = existingUser?.email_confirmed_at != null
+        // If unconfirmed, 'invite' type is always best even if resending
+        const type = (isConfirmed && userData.resend) ? 'recovery' : 'invite'
+        
+        console.log(`🔄 [INVITE] Generating link type "${type}" for ${emailNorm} (confirmed: ${isConfirmed})`)
         
         const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
           type: type as any,
           email: emailNorm,
           options: {
             redirectTo: RESET_URL,
+            // Skip metadata if user exists to avoid conflicts
             data: existingUser ? undefined : {
               full_name: userData.full_name,
               tenant_id: targetTenantId,
@@ -219,7 +208,7 @@ Deno.serve(async (req) => {
 
         if (linkErr) {
           console.error(`❌ [INVITE] generateLink error:`, linkErr)
-          throw new Error(`Falha ao gerar link: ${linkErr.message}`)
+          throw new Error(`Falha ao gerar link do Supabase: ${linkErr.message}`)
         }
 
         inviteLink = linkData?.properties?.action_link || null
@@ -227,6 +216,7 @@ Deno.serve(async (req) => {
         
         console.log(`✅ [INVITE] Link generated: ${!!inviteLink}, userId: ${userId}`)
       }
+
     } else {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: emailNorm,
@@ -249,21 +239,12 @@ Deno.serve(async (req) => {
         user_id: userId,
         email: emailNorm,
         full_name: userData.full_name,
-        job_title: userData.job_title || null,
-        department: userData.department || null,
-        phone: userData.phone || null,
         tenant_id: targetTenantId,
         system_role: systemRole,
         is_active: false,
         must_change_password: true,
         custom_role_id: userData.tenant_role_id || null
       }
-
-      if (userData.permissions?.length) {
-        profilePayload['permissions'] = userData.permissions
-      }
-
-      console.log(`👤 [LOG] Updating profile for ${userId} with payload:`, JSON.stringify(profilePayload))
 
       const { data: existingProfile } = await supabaseAdmin
         .from('profiles')
@@ -272,73 +253,49 @@ Deno.serve(async (req) => {
         .maybeSingle()
 
       if (existingProfile?.id) {
-        console.log(`👤 Profile already exists for ${userId}, updating...`);
-        const { error: profileErr } = await supabaseAdmin
-          .from('profiles')
-          .update(profilePayload)
-          .eq('id', existingProfile.id)
-        if (profileErr) throw new Error(`Erro ao atualizar perfil: ${profileErr.message}`)
-        console.log(`✅ Profile updated for ${emailNorm}`)
+        await supabaseAdmin.from('profiles').update(profilePayload).eq('id', existingProfile.id)
       } else {
-        console.log(`👤 Profile missing for ${userId}, inserting...`);
-        const { error: profileErr } = await supabaseAdmin
-          .from('profiles')
-          .upsert(profilePayload, { onConflict: 'user_id' })
-        if (profileErr) {
-          console.error(`❌ Error upserting profile:`, profileErr);
-          throw new Error(`Erro ao salvar perfil: ${profileErr.message}`);
-        }
-        console.log(`✅ Profile upsert completed for ${emailNorm}`)
+        await supabaseAdmin.from('profiles').upsert(profilePayload, { onConflict: 'user_id' })
       }
 
       // ── Assign roles ──────────────────────────────────────────────────────
       const dbRole = mapToAppRole(systemRole)
-      console.log(`🔑 [LOG] Assigning app_role: ${dbRole} to tenant: ${targetTenantId}`)
-      
-      await supabaseAdmin
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('tenant_id', targetTenantId)
-
-      const { error: roleErr } = await supabaseAdmin
-        .from('user_roles')
-        .upsert({ user_id: userId, role: dbRole, tenant_id: targetTenantId }, { onConflict: 'user_id, role' })
-
-      if (roleErr) throw new Error(`Erro ao atribuir função: ${roleErr.message}`)
-      console.log(`✅ Role "${dbRole}" assigned for ${emailNorm}`)
+      await supabaseAdmin.from('user_roles').delete().eq('user_id', userId).eq('tenant_id', targetTenantId)
+      await supabaseAdmin.from('user_roles').upsert({ user_id: userId, role: dbRole, tenant_id: targetTenantId }, { onConflict: 'user_id, role' })
 
       if (userData.tenant_role_id) {
-        await supabaseAdmin
-          .from('user_tenant_roles')
-          .upsert(
-            { user_id: userId, tenant_role_id: userData.tenant_role_id, tenant_id: targetTenantId },
-            { onConflict: 'user_id, tenant_role_id' }
-          )
+        await supabaseAdmin.from('user_tenant_roles').upsert(
+          { user_id: userId, tenant_role_id: userData.tenant_role_id, tenant_id: targetTenantId },
+          { onConflict: 'user_id, tenant_role_id' }
+        )
       }
     }
 
     // ── Activity log & email ────────────────────────────────────────────────
+    let emailSent = false;
+    let emailError = null;
+
     try {
       await supabaseAdmin.rpc('rpc_log_activity', {
         p_user_id: user.id,
         p_action: 'user_invited',
         p_resource_type: 'users',
         p_resource_id: userId,
-        p_details: { email: emailNorm, system_role: systemRole, tenant_id: targetTenantId }
+        p_details: { email: emailNorm, system_role: systemRole, tenant_id: targetTenantId, resend: !!userData.resend }
       })
     } catch { /* ignore */ }
 
     if (userData.send_invitation !== false && inviteLink) {
       try {
-        await sendSendPulseInvite({
+        emailSent = await sendSendPulseInvite({
           recipientEmail: emailNorm,
-          recipientName: userData.full_name,
+          recipientName: userData.full_name || emailNorm,
           inviteLink: inviteLink,
           senderName: user.email?.split('@')[0] || "Administrador"
         });
-      } catch (emailErr) {
-        console.error("⚠️ Invite email failed (non-fatal):", emailErr);
+      } catch (err: any) {
+        console.error("⚠️ [EMAIL] Failed to send invite:", err.message);
+        emailError = err.message;
       }
     }
 
@@ -346,8 +303,10 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         user: { id: userId, email: emailNorm }, 
-        inviteLink,
-        debug: { systemRole, targetTenantId, customRoleApplied: userData.tenant_role_id || null }
+        emailSent,
+        emailError,
+        inviteLinkGenerated: !!inviteLink,
+        debug: { systemRole, targetTenantId, resend: !!userData.resend }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )
@@ -356,7 +315,7 @@ Deno.serve(async (req) => {
     const errorMsg = error?.message || 'Erro desconhecido';
     console.error('❌ [CREATE-USER-ADMIN] Edge Function Error:', errorMsg);
     return new Response(
-      JSON.stringify({ success: false, error: errorMsg, diagnostic: { timestamp: new Date().toISOString() } }),
+      JSON.stringify({ success: false, error: errorMsg }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     )
   }
