@@ -9,9 +9,7 @@ const corsHeaders = {
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
 // Invite link goes to /reset-password so the new user creates their password first
-// ResetPasswordPage detects type=invite and redirects to /risk-portal after setup
 const RESET_URL = `${FRONTEND_URL}/reset-password`;
-const PORTAL_URL = `${FRONTEND_URL}/risk-portal`;
 
 async function getSendPulseToken(clientId: string, clientSecret: string) {
   const res = await fetch("https://api.sendpulse.com/oauth/access_token", {
@@ -182,6 +180,7 @@ serve(async (req: Request) => {
                 system_role: 'guest',
                 is_active: false,
                 must_change_password: true,
+                override_risk_portal: true, // Garante acesso ao portal mesmo que o módulo global esteja desativado
             };
 
             if (existingProfile) {

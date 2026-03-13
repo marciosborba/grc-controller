@@ -63,8 +63,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signup: (email: string, password: string, fullName: string, jobTitle?: string) => Promise<void>;
-  refreshUserData: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUserData: () => Promise<AuthUser | undefined>;
+  refreshUser: () => Promise<AuthUser | undefined>;
   checkModuleAccess: (moduleKey: string) => boolean;
   needsMFA: boolean;
 }
@@ -142,6 +142,8 @@ const CUSTOM_MODULE_MAPPING: Record<string, string[]> = {
   incidents: ['incident.read', 'incident.write'],
   assets: ['asset.read', 'asset.write'],
   vulnerabilities: ['vulnerability.read', 'security.read'],
+  vulnerability_portal: ['vulnerability.read', 'security.read'],
+  risk_portal: ['risk.read'],
   vendor_portal: ['vendor.read', 'vendor.write'],
   policies: ['compliance.read'],
   privacy: ['privacy.read', 'privacy.write'],
@@ -750,9 +752,9 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
   }, []);
 
   // Função para recarregar dados do usuário
-  const refreshUserData = useCallback(async () => {
+  const refreshUserData = useCallback(async (): Promise<AuthUser | undefined> => {
     if (!session?.user) {
-      return;
+      return undefined;
     }
 
     try {
@@ -762,8 +764,10 @@ export const AuthProviderOptimized: React.FC<{ children: ReactNode }> = ({ child
       // Recarregar dados
       const userData = await loadUserData(session.user);
       setUser(userData);
+      return userData;
     } catch (error) {
       console.error('Erro ao recarregar dados do usuário:', error);
+      return undefined;
     }
   }, [session, loadUserData]);
 

@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
-// Vendor portal first-access link — after setting password, the new flow handles redirection dynamically
+// Vendor portal first-access link
 const VENDOR_RESET_URL = `${FRONTEND_URL}/reset-password`;
 
 async function getSendPulseToken(clientId: string, clientSecret: string) {

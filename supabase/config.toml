@@ -2,8 +2,8 @@ project_id = "myxvxponlmulnjstbjwd"
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["https://497b2947-e810-4aeb-9ce8-108410eaf186.lovableproject.com/**", "https://grc-nexus-ai.lovable.app/**", "https://id-preview--497b2947-e810-4aeb-9ce8-108410eaf186.lovable.app/**", "https://preview--grc-nexus-ai.lovable.app/**"]
+site_url = "https://gepriv.com"
+additional_redirect_urls = ["https://gepriv.com/**", "https://497b2947-e810-4aeb-9ce8-108410eaf186.lovableproject.com/**", "https://grc-nexus-ai.lovable.app/**", "https://id-preview--497b2947-e810-4aeb-9ce8-108410eaf186.lovable.app/**", "https://preview--grc-nexus-ai.lovable.app/**"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

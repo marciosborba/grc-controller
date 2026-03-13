@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldAlert, KeyRound, CheckCircle2, Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 
 export const ResetPasswordPage = () => {
     const [password, setPassword] = useState('');
@@ -19,6 +20,7 @@ export const ResetPasswordPage = () => {
 
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { refreshUserData } = useAuth();
 
     const [isGuest, setIsGuest] = useState(false);
 
@@ -115,6 +117,9 @@ export const ResetPasswordPage = () => {
             if (error) {
                 throw error;
             }
+            
+            // 🔥 Refresh the session to ensure claims are updated immediately
+            await supabase.auth.refreshSession();
 
             // Atualizar o perfil do usuário para ativo e remover a flag de mudança de senha obrigatória
             // Isso remove o usuário do status "Pendente" no painel de IAM
@@ -150,16 +155,41 @@ export const ResetPasswordPage = () => {
                 } else {
                     console.log('✅ [AUTH] Perfil ativado com sucesso no banco:', { rowsAffected: updateData.length });
                 }
+                
+                // Also update vendor_users if applicable
+                if (isGuest || updatedUser.user_metadata?.is_vendor) {
+                    await supabase.from('vendor_users').update({ is_active: true }).eq('email', updatedUser.email);
+                    await supabase.from('vendor_portal_users').update({ force_password_change: false }).eq('email', updatedUser.email);
+                }
+            }
+
+            // Ensure AuthContext is aware of the new confirmed account and profile changes
+            console.log('🔄 [AUTH] Forçando atualização de dados do usuário pós-reset...');
+            const userData = await refreshUserData();
+            
+            // Setup explicit redirect based on the updated user data
+            let targetUrl = '/';
+            if (userData) {
+                const isAdmin = userData.roles?.some((r: string) => ['admin', 'tenant_admin', 'super_admin', 'platform_admin'].includes(r));
+                const isExternalUser = userData.system_role === 'guest' || userData.roles?.includes('guest') || userData.isVendorOnly;
+                
+                if (isExternalUser && !isAdmin) {
+                    const accessiblePortals = [];
+                    if (userData.isVendorOnly || userData.roles?.includes('vendor')) accessiblePortals.push('/vendor-portal');
+                    if (userData.enabledModules?.includes('risk_portal') || userData.permissions?.includes('risk.read')) accessiblePortals.push('/risk-portal');
+                    if (userData.enabledModules?.includes('vulnerability_portal') || userData.permissions?.includes('vulnerability.read') || userData.permissions?.includes('security.read')) accessiblePortals.push('/vulnerability-portal');
+                    
+                    const uniquePortals = [...new Set(accessiblePortals)];
+                    if (uniquePortals.length === 1) {
+                        targetUrl = uniquePortals[0];
+                    } else if (uniquePortals.length > 1) {
+                        targetUrl = '/guest-hub';
+                    }
+                }
             }
 
             setSuccess(true);
-            toast({
-                title: "Tudo Certo!",
-                description: "Sua senha foi configurada. Redirecionando para a aplicação...",
-            });
-
-            // Redirect to root, where App.tsx will route them dynamically based on permissions
-            setTimeout(() => navigate('/'), 2000);
+            setTimeout(() => navigate(targetUrl, { replace: true }), 2000);
 
         } catch (error: any) {
             console.error('❌ Erro ao redefinir senha:', error);
@@ -214,8 +244,8 @@ export const ResetPasswordPage = () => {
                         <p className="text-sm text-muted-foreground mb-6">
                             Você será redirecionado para a plataforma em alguns instantes.
                         </p>
-                        <Button className="w-full" onClick={() => navigate('/')}>
-                            Acessar a Plataforma
+                        <Button className="w-full" disabled>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Acessando a Plataforma...
                         </Button>
                     </CardContent>
                 </Card>

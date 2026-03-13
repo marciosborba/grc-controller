@@ -667,11 +667,12 @@ export const useRiskManagement = () => {
           const { error: stkError } = await supabase
             .from('risk_stakeholders')
             .insert([{
-              risk_id: data.id,
+              risk_registration_id: data.id,
               name: stakeholder.name,
               position: stakeholder.role || '',
               email: stakeholder.email || null,
-              notification_type: notificationType
+              notification_type: notificationType,
+              tenant_id: userTenantId
             }]);
 
           if (stkError) console.error("❌ Erro ao inserir stakeholder", stkError);
@@ -890,22 +891,60 @@ export const useRiskManagement = () => {
         if (deleteError) {
           console.error('❌ Erro ao limpar stakeholders antigos:', deleteError);
         } else if (data.stakeholders.length > 0) {
-          // 2. Inserir os novos/atualizados
-          const stakeholdersToInsert = data.stakeholders.map(stk => ({
-            risk_registration_id: riskId,
-            name: stk.name,
-            position: stk.position || stk.role || '',
-            email: stk.email || '',
-            notification_type: stk.notification_type || 'awareness',
-            response_status: stk.response_status || 'pending'
-          }));
+          // 2. Inserir os novos/atualizados e convidar se necessário
+          for (const stk of data.stakeholders) {
+            const { error: insertError } = await supabase
+              .from('risk_stakeholders')
+              .insert([{
+                risk_registration_id: riskId,
+                name: stk.name,
+                position: stk.position || stk.role || '',
+                email: stk.email || '',
+                notification_type: stk.notification_type || 'awareness',
+                response_status: stk.response_status || 'pending',
+                tenant_id: userTenantId
+              }]);
 
-          const { error: insertError } = await supabase
-            .from('risk_stakeholders')
-            .insert(stakeholdersToInsert);
+            if (insertError) {
+              console.error('❌ Erro ao inserir stakeholder:', insertError);
+              continue;
+            }
 
-          if (insertError) {
-            console.error('❌ Erro ao inserir novos stakeholders:', insertError);
+            // Disparar convite/notificação para novos stakeholders ou se solicitado
+            if (stk.email && (stk.notification_type === 'both' || stk.notification_type === 'email')) {
+               try {
+                  console.log(`✉️ [STAKEHOLDER] Iniciando convite para: ${stk.email}`);
+                  
+                  // Chamar Edge Function de convite (cria profile guest se não existir)
+                  const { data: inviteData } = await supabase.functions.invoke('invite-risk-stakeholder', {
+                      body: {
+                          email: stk.email,
+                          full_name: stk.name,
+                          tenant_id: userTenantId
+                      }
+                  });
+
+                  let customPortalUrl: string | undefined;
+                  if (inviteData?.isNewUser && inviteData?.inviteLink) {
+                      customPortalUrl = inviteData.inviteLink;
+                  }
+
+                  // Enviar notificação de risco
+                  await supabase.functions.invoke('risk-notification', {
+                      body: {
+                          recipientName: stk.name,
+                          recipientEmail: stk.email,
+                          riskTitle: result.risk_title || data.name || 'Risco Atualizado',
+                          riskLevel: result.risk_level || 'Médio',
+                          senderName: (user as any)?.full_name || user?.email || 'Sistema GRC',
+                          customPortalUrl
+                      }
+                  });
+                  console.log(`✅ [STAKEHOLDER] Convite enviado com sucesso para: ${stk.email}`);
+               } catch (inviteErr) {
+                  console.error(`❌ [STAKEHOLDER] Erro ao convidar stakeholder ${stk.email}:`, inviteErr);
+               }
+            }
           }
         }
       }

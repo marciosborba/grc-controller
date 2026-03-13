@@ -192,7 +192,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
     framework_id: '',
     priority: 'medium',
     due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    vendor_emails: [{ email: '', password: '' }] as { email: string; password: string }[],
+    vendor_emails: [{ email: '' }] as { email: string }[],
   });
 
   // Fetch frameworks
@@ -241,11 +241,11 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
   }, [user]);
 
   const handleCreateAssessment = async () => {
-    const validEmails = newAssessmentForm.vendor_emails.filter(e => e.email.trim() && e.password.trim());
+    const validEmails = newAssessmentForm.vendor_emails.filter(e => e.email.trim());
     if (!newAssessmentForm.name || !newAssessmentForm.vendor_id || !newAssessmentForm.framework_id || validEmails.length === 0) {
       toast({
         title: "Erro",
-        description: "Preencha todos os campos obrigatórios. Adicione ao menos um e-mail e senha para o Portal.",
+        description: "Preencha todos os campos obrigatórios. Adicione ao menos um e-mail para o Portal.",
         variant: "destructive"
       });
       return;
@@ -268,27 +268,37 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
 
       for (const entry of validEmails) {
         const emailToUse = entry.email.trim().toLowerCase();
-        const { data: rpcData, error: rpcError } = await supabase.rpc('create_vendor_auth_user', {
-          p_email: emailToUse,
-          p_password: entry.password.trim(),
-          p_name: selectedVendor.name,
-          p_vendor_id: selectedVendor.id,
-          p_tenant_id: tenantIdToUse
-        });
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+          
+          if (!token) throw new Error('Sessão expirada. Faça login novamente.');
 
-        console.log('[create_vendor_auth_user] rpcData:', rpcData, 'rpcError:', rpcError);
+          const { data: invokeData, error: invokeError } = await supabase.functions.invoke('create-vendor-user', {
+              body: {
+                  email: emailToUse,
+                  name: selectedVendor.primary_contact_name || selectedVendor.name,
+                  vendor_id: selectedVendor.id,
+                  tenant_id: tenantIdToUse
+              },
+              headers: { Authorization: `Bearer ${token}` }
+          });
 
-        if (rpcError) {
-          toast({ title: "Erro ao criar acesso", description: `${emailToUse}: ${rpcError.message}`, variant: "destructive" });
-          throw new Error(rpcError.message);
-        } else if (rpcData && !rpcData.success) {
-          if (!rpcData.error?.includes('Usuário já existe')) {
-            toast({ title: "Aviso ao criar acesso", description: `${emailToUse}: ${rpcData.error}`, variant: "destructive" });
-            throw new Error(rpcData.error);
+          console.log('[create-vendor-user edge function] data:', invokeData, 'error:', invokeError);
+
+          if (invokeError) {
+             throw new Error(invokeError.message);
+          } else if (invokeData && !invokeData.success) {
+            if (!invokeData.error?.includes('já possui uma conta ativa')) {
+                toast({ title: "Aviso ao criar acesso", description: `${emailToUse}: ${invokeData.error}`, variant: "destructive" });
+                throw new Error(invokeData.error);
+            }
           }
-          // User already exists - that's OK, just add to list
+          createdEmails.push(emailToUse);
+        } catch (e: any) {
+          toast({ title: "Erro ao convidar usuário", description: `${emailToUse}: ${e.message}`, variant: "destructive" });
+          throw e; // Abort assessment creation if we failed to create the user
         }
-        createdEmails.push(emailToUse);
       }
 
 
@@ -364,7 +374,7 @@ export const VendorAssessmentManager: React.FC<VendorAssessmentManagerProps> = (
         framework_id: '',
         priority: 'medium',
         due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        vendor_emails: [{ email: '', password: '' }],
+        vendor_emails: [{ email: '' }],
       });
 
     } catch (error: any) {
@@ -3287,18 +3297,6 @@ Equipe de Compliance`;
                         return { ...prev, vendor_emails: updated };
                       })}
                       placeholder="email@fornecedor.com"
-                      className="h-8 text-sm flex-1"
-                    />
-                    <Input
-                      type="password"
-                      value={entry.password}
-                      onChange={e => setNewAssessmentForm(prev => {
-                        const updated = [...prev.vendor_emails];
-                        updated[idx] = { ...updated[idx], password: e.target.value };
-                        return { ...prev, vendor_emails: updated };
-                      })}
-                      placeholder="Senha inicial"
-                      className="h-8 text-sm w-32"
                     />
                     {newAssessmentForm.vendor_emails.length > 1 && (
                       <Button

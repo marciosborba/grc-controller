@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
+import { Button } from '@/components/ui/button';
 import { AuthProviderOptimized as AuthProvider, useAuth } from "@/contexts/AuthContextOptimized";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { NotificationsRealtimeProvider } from "@/contexts/NotificationsRealtimeContext";
@@ -264,6 +265,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     // Deduplicate just in case
     const uniquePortals = [...new Set(accessiblePortals)];
+    
+    console.log('🛡️ [ROUTING] ProtectedRoute check:', {
+      userId: user.id,
+      email: user.email,
+      isExternalUser,
+      accessiblePortals: uniquePortals,
+      currentPath: location.pathname
+    });
 
     // If the user is currently on an explicitly allowed portal route, let them stay.
     const isOnAllowedPortal = uniquePortals.some(portal => location.pathname.startsWith(portal));
@@ -273,8 +282,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
     if (!isOnAllowedPortal && !isHandlingGuestHub) {
       if (uniquePortals.length === 0) {
-        console.warn('⚠️ [ROUTING] Usuário externo sem acesso a nenhum portal. Redirecionando para login...');
-        return <Navigate to="/login" replace />;
+        console.warn('⚠️ [ROUTING] Usuário externo sem acesso a nenhum portal. Exibindo alerta...');
+        // Instead of redirecting to login (loop), we can show a specific message
+        // Or redirect to a public 'Unauthorized' or 'Profile Pending' page
+        // For now, let's keep the logic but ensure we don't loop if they are already on '/'
+        if (location.pathname !== '/') {
+           return <Navigate to="/" replace />;
+        }
+        
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
+            <h1 className="text-2xl font-bold mb-2">Conta em Análise</h1>
+            <p className="text-muted-foreground mb-4">Sua conta foi criada, mas ainda não possui permissões para acessar os portais. Por favor, aguarde a liberação pelo administrador.</p>
+            <Button onClick={() => window.location.reload()}>Recarregar Página</Button>
+          </div>
+        );
       } else if (uniquePortals.length === 1) {
         console.warn(`⚠️ [ROUTING] Usuário externo com 1 acesso. Redirecionando para ${uniquePortals[0]}...`);
         return <Navigate to={uniquePortals[0]} replace />;
