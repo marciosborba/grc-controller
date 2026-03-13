@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,10 @@ export const ResetPasswordPage = () => {
     const [hashError, setHashError] = useState<string | null>(null);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [sessionReady, setSessionReady] = useState(false);
+
+    // Store the actual session captured from the invite/recovery link so we don't lose it
+    const capturedSessionRef = useRef<any>(null);
 
     const navigate = useNavigate();
     const { toast } = useToast();
@@ -41,37 +45,39 @@ export const ResetPasswordPage = () => {
             });
         }
 
-        // Check user session to see if they are actually a guest
-        const checkUserRole = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user?.user_metadata?.system_role === 'guest' || user?.user_metadata?.is_vendor) {
-                setIsGuest(true);
-            }
-        };
-        checkUserRole();
-
-        // Set up a listener so if the user arrives cleanly, we ensure they are "logged in" enough to update their password
+        // We need to capture the session from the invite/recovery link immediately
+        // because AuthContextOptimized can sign the user out during its profile loading
+        // if no profile is found yet (new invited user).
         const { data: authListener } = supabase.auth.onAuthStateChange(
             (event, session) => {
-                if (event === 'PASSWORD_RECOVERY') {
-                    console.log('🔗 [AUTH] Redefinição de senha autorizada.');
-                    setHashError(null);
-                    if (session?.user?.user_metadata?.system_role === 'guest' || session?.user?.user_metadata?.is_vendor) {
-                        setIsGuest(true);
+                if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+                    if (session) {
+                        console.log(`🔗 [RESET] Session captured from ${event} event.`);
+                        capturedSessionRef.current = session;
+                        setSessionReady(true);
+                        setHashError(null);
+
+                        const role = session.user?.user_metadata?.system_role;
+                        const isVendor = session.user?.user_metadata?.is_vendor;
+                        if (event === 'PASSWORD_RECOVERY' || role === 'guest' || isVendor) {
+                            setIsGuest(true);
+                        }
                     }
-                }
-                // Invite links fire SIGNED_IN instead of PASSWORD_RECOVERY
-                if (event === 'SIGNED_IN') {
-                    const role = session?.user?.user_metadata?.system_role;
-                    const isVendor = session?.user?.user_metadata?.is_vendor;
-                    if (role === 'guest' || isVendor) {
-                        console.log('🔗 [AUTH] Convite detectado via SIGNED_IN — ativando modo convidado/fornecedor.');
-                        setIsGuest(true);
-                    }
-                    setHashError(null);
                 }
             }
         );
+
+        // Also check if there's already an active session (page refresh scenario)
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session && !capturedSessionRef.current) {
+                console.log('🔗 [RESET] Existing session found on init.');
+                capturedSessionRef.current = session;
+                setSessionReady(true);
+                const role = session.user?.user_metadata?.system_role;
+                const isVendor = session.user?.user_metadata?.is_vendor;
+                if (role === 'guest' || isVendor) setIsGuest(true);
+            }
+        });
 
         return () => {
             authListener.subscription.unsubscribe();
@@ -101,13 +107,27 @@ export const ResetPasswordPage = () => {
 
         try {
             setLoading(true);
-            const { data: { session } } = await supabase.auth.getSession();
+            let { data: { session } } = await supabase.auth.getSession();
             console.log('🔄 [AUTH] Estado da sessão antes de redefinir:', { hasSession: !!session });
 
+            // If session was lost (common with invite links that get consumed by AuthContext),
+            // try to restore it from the captured session ref
+            if (!session && capturedSessionRef.current) {
+                console.warn('⚠️ [AUTH] Sessão ausente, tentando restaurar via sessão capturada do convite...');
+                const { data: restored, error: restoreError } = await supabase.auth.setSession({
+                    access_token: capturedSessionRef.current.access_token,
+                    refresh_token: capturedSessionRef.current.refresh_token,
+                });
+                if (!restoreError && restored.session) {
+                    session = restored.session;
+                    console.log('✅ [AUTH] Sessão restaurada com sucesso.');
+                } else {
+                    console.error('❌ [AUTH] Não foi possível restaurar a sessão:', restoreError);
+                }
+            }
+
             if (!session) {
-                console.warn('⚠️ [AUTH] Sessão ausente antes de redefinir. Verificando getUser()...');
-                const { data: { user: currentUser } } = await supabase.auth.getUser();
-                console.log('👤 [AUTH] getUser() result:', { hasUser: !!currentUser });
+                throw new Error('Sua sessão expirou. Por favor, solicite um novo link de acesso.');
             }
 
             const { error } = await supabase.auth.updateUser({

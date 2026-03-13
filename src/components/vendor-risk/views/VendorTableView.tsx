@@ -126,7 +126,6 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const [loadingPortalUsers, setLoadingPortalUsers] = useState<string | null>(null);
   const [newPortalUserEmail, setNewPortalUserEmail] = useState('');
   const [newPortalUserName, setNewPortalUserName] = useState('');
-  const [newPortalUserPassword, setNewPortalUserPassword] = useState('');
   const [showAddPortalUser, setShowAddPortalUser] = useState<string | null>(null);
 
   // Custom fields from centralized hook
@@ -477,47 +476,35 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
   const handleAddPortalUser = async (vendorId: string) => {
     if (!newPortalUserEmail || !newPortalUserName) return;
     try {
-      // Create auth user via Supabase Auth
-      const tempPassword = newPortalUserPassword || Math.random().toString(36).slice(-10) + 'A1!';
-      
+      const emailToUse = newPortalUserEmail.trim().toLowerCase();
       const vendor = vendors.find(v => v.id === vendorId);
       
-      // Use the RPC to create vendor auth user so they are correctly linked
-      const { data: rpcData, error: rpcError } = await supabase.rpc('create_vendor_auth_user', {
-        p_email: newPortalUserEmail,
-        p_password: tempPassword,
-        p_name: newPortalUserName,
-        p_vendor_id: vendorId,
-        p_tenant_id: vendor?.tenant_id || effectiveTenantId
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      
+      if (!token) throw new Error('Sessão expirada. Faça login novamente.');
+
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke('create-vendor-user', {
+          body: {
+              email: emailToUse,
+              name: newPortalUserName,
+              vendor_id: vendorId,
+              tenant_id: vendor?.tenant_id || effectiveTenantId
+          },
+          headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (rpcError) throw rpcError;
-      if (rpcData && !rpcData.success && !rpcData.error?.includes('Usuário já existe')) {
-          throw new Error(rpcData.error);
+      if (invokeError) {
+         throw new Error(invokeError.message);
+      } else if (invokeData && !invokeData.success) {
+        if (!invokeData.error?.includes('já possui uma conta ativa')) {
+            throw new Error(invokeData.error);
+        }
       }
-      // If user already existed, the RPC might have returned success: false but with "Usuário já existe".
-      // Let's ensure the vendor_portal_users record exists for this specific tenant/vendor.
-      const { error: insertError } = await supabase
-        .from('vendor_portal_users')
-        .upsert({
-          email: newPortalUserEmail,
-          vendor_id: vendorId,
-          tenant_id: vendor?.tenant_id,
-          is_active: true,
-          force_password_change: true
-        }, { onConflict: 'email,tenant_id' });
-        
-      if (insertError) console.warn('Could not upsert vendor_portal_user', insertError);
 
-      // Automatically trigger the "reset password" email so the user can set their own password immediately
-      await supabase.auth.resetPasswordForEmail(newPortalUserEmail, {
-        redirectTo: `${window.location.origin}/vendor-portal/reset-password`
-      });
-
-      toast({ title: 'Usuário criado', description: `Acesso criado para ${newPortalUserEmail}. Um e-mail foi enviado para o fornecedor definir sua senha.` });
+      toast({ title: 'Usuário criado', description: `Acesso criado para ${emailToUse}. Um e-mail com as instruções de acesso foi enviado.` });
       setNewPortalUserEmail('');
       setNewPortalUserName('');
-      setNewPortalUserPassword('');
       setShowAddPortalUser(null);
       fetchPortalUsers(vendorId);
     } catch (e: any) {
@@ -1132,7 +1119,7 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                         {showAddPortalUser === vendor.id && (
                           <Card className="border-dashed border-primary/30 bg-primary/5">
                             <CardContent className="p-3">
-                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                 <Input
                                   placeholder="Nome do usuário"
                                   type="text"
@@ -1145,13 +1132,6 @@ export const VendorTableView: React.FC<VendorTableViewProps> = ({
                                   type="email"
                                   value={newPortalUserEmail}
                                   onChange={e => setNewPortalUserEmail(e.target.value)}
-                                  className="h-8 text-xs"
-                                />
-                                <Input
-                                  placeholder="Senha temporária (opcional)"
-                                  type="text"
-                                  value={newPortalUserPassword}
-                                  onChange={e => setNewPortalUserPassword(e.target.value)}
                                   className="h-8 text-xs"
                                 />
                                 <div className="flex gap-1">

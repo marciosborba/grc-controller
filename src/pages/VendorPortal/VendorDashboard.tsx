@@ -158,7 +158,7 @@ export const VendorDashboard = () => {
                             Olá! {(user as any)?.user_metadata?.name || (user as any)?.name || vendorRegistryInfo?.name || user?.email?.split('@')[0] || 'Fornecedor'}
                         </h1>
                         <p className="text-sm sm:text-lg text-muted-foreground max-w-xl leading-relaxed">
-                            Bem-vindo ao seu painel central de conformidade. Acompanhe seus questionários, planos de correção e status regulatório.
+                            Bem-vindo ao seu painel central de conformidade. Acompanhe seus questionários e planos de ação.
                         </p>
                     </div>
                     <div className="hidden lg:block">
