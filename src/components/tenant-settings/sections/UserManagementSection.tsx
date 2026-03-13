@@ -614,7 +614,11 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      if (error) throw new Error(error.message);
+      // Extract the real error message from the response body
+      if (error) {
+        const msg = data?.error || error.message || 'Erro desconhecido ao reenviar convite';
+        throw new Error(msg);
+      }
       if (!data?.success) throw new Error(data?.error || 'Falha ao reenviar convite');
 
       toast.success(`Convite reenviado com sucesso para ${user.email}`);
