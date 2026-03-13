@@ -196,17 +196,16 @@ Deno.serve(async (req) => {
         userId = existingUser.id
       } else {
         const isConfirmed = existingUser?.email_confirmed_at != null
-        // If unconfirmed, 'invite' type is always best even if resending
-        const type = (isConfirmed && userData.resend) ? 'recovery' : 'invite'
+        let type = (isConfirmed && userData.resend) ? 'recovery' : 'invite'
         
-        console.log(`🔄 [INVITE] Generating link type "${type}" for ${emailNorm} (confirmed: ${isConfirmed})`)
+        console.log(`🔄 [INVITE] Attempting link generation. Initial type: "${type}" for ${emailNorm} (confirmed: ${isConfirmed})`)
         
-        const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+        let { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
           type: type as any,
           email: emailNorm,
           options: {
             redirectTo: RESET_URL,
-            // Skip metadata if user exists to avoid conflicts
+            // Only pass metadata if creating a brand new user record in Auth
             data: existingUser ? undefined : {
               full_name: userData.full_name,
               tenant_id: targetTenantId,
@@ -216,6 +215,21 @@ Deno.serve(async (req) => {
           }
         })
 
+        // If 'invite' failed or no link, and user exists, try 'recovery' as a fallback
+        if ((linkErr || !linkData?.properties?.action_link) && existingUser && type === 'invite') {
+           console.log("⚠️ [INVITE] 'invite' link generation failed or empty, trying 'recovery' type as fallback...")
+           const recoveryResult = await supabaseAdmin.auth.admin.generateLink({
+             type: 'recovery',
+             email: emailNorm,
+             options: { redirectTo: RESET_URL }
+           })
+           if (recoveryResult.data?.properties?.action_link) {
+             linkData = recoveryResult.data
+             linkErr = recoveryResult.error
+             type = 'recovery'
+           }
+        }
+
         if (linkErr) {
           console.error(`❌ [INVITE] generateLink error:`, linkErr)
           throw new Error(`Falha ao gerar link do Supabase: ${linkErr.message}`)
@@ -224,7 +238,12 @@ Deno.serve(async (req) => {
         inviteLink = linkData?.properties?.action_link || null
         userId = linkData?.user?.id || existingUser?.id || userId || null
         
-        console.log(`✅ [INVITE] Link generated: ${!!inviteLink}, userId: ${userId}`)
+        if (!inviteLink) {
+           console.error("❌ [INVITE] Supabase returned success but NO action_link. LinkData:", JSON.stringify(linkData))
+           throw new Error("O link de convite não foi gerado pelo Supabase. Verifique se o usuário já confirmou o e-mail ou se as configurações de Auth estão corretas.")
+        }
+
+        console.log(`✅ [INVITE] Link generated successfully (type: ${type}), userId: ${userId}`)
       }
 
     } else {
