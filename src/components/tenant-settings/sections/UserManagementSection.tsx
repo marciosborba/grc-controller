@@ -602,19 +602,31 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
     }
   };
 
-  const handleResendInvite = async (email: string, fullName: string) => {
+  const handleResendInvite = async (user: User) => {
     setIsProcessing(true);
     try {
-      const { error } = await supabase.functions.invoke('invite-risk-stakeholder', {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('Sessão inválida');
+
+      // ── Use create-user-admin for internal users ────────────────────────────
+      // This ensures correct role and tenant metadata are passed for the link regeneration
+      const { data, error } = await supabase.functions.invoke('create-user-admin', {
         body: {
-          email,
-          full_name: fullName || email.split('@')[0],
+          email: user.email,
+          full_name: user.full_name,
           tenant_id: tenantId,
-          resend: true
-        }
+          system_role: user.role,
+          resend: true,
+          send_invitation: true
+        },
+        headers: { Authorization: `Bearer ${token}` }
       });
+
       if (error) throw new Error(error.message);
-      toast.success(`Credenciais reenviadas para ${email}`);
+      if (!data?.success) throw new Error(data?.error || 'Falha ao reenviar convite');
+
+      toast.success(`Convite reenviado com sucesso para ${user.email}`);
     } catch (err: any) {
       toast.error(`Erro ao reenviar: ${err.message}`);
     } finally {
@@ -1108,6 +1120,9 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); openEditDialog(user); }}>
                           <Edit className="h-3.5 w-3.5" />
                         </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleResendInvite(user); }} title="Reenviar Convite ou Senha">
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
                         {user.status === 'pending' ? (
                           <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}>
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1119,9 +1134,6 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                                 {isImpersonating === user.id ? <span className="text-xs animate-pulse">...</span> : <UserCog className="h-3.5 w-3.5" />}
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleResendInvite(user.email, user.full_name); }} title="Reenviar Convite ou Senha">
-                              <Mail className="h-3.5 w-3.5" />
-                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => { e.stopPropagation(); handleToggleUserStatus(user.id); }}>
                               {user.status === 'active' ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
                             </Button>
@@ -1256,6 +1268,18 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                               <Edit className="h-4 w-4" />
                             </Button>
 
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResendInvite(user);
+                              }}
+                              title="Reenviar Convite ou Setup de Senha"
+                            >
+                              <Mail className="h-4 w-4" />
+                            </Button>
+
                             {user.status === 'pending' ? (
                               // Para convites pendentes: apenas excluir
                               <Button
@@ -1293,17 +1317,6 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
                                     )}
                                   </Button>
                                 )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleResendInvite(user.email, user.full_name);
-                                  }}
-                                  title="Reenviar Convite ou Setup de Senha"
-                                >
-                                  <Mail className="h-4 w-4" />
-                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="sm"

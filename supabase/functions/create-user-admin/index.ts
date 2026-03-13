@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
     let inviteLink: string | null = null
 
     if (userData.send_invitation !== false) {
-      console.log(`📧 Generating invite link for ${emailNorm}`)
+      console.log(`📧 Generating invite link for ${emailNorm} (resend: ${userData.resend})`)
       let existingUser = null
       let page = 1
       while (true) {
@@ -193,10 +193,15 @@ Deno.serve(async (req) => {
         page++
       }
 
-      if (existingUser) {
+      if (existingUser && !userData.resend) {
+        // User exists and it's NOT a resend request: error or reuse
+        if (existingUser.email_confirmed_at) {
+          throw new Error('Este e-mail já está em uso por uma conta ativa.')
+        }
         userId = existingUser.id
         // Non-fatal: if user exists but profile missing, we continue and create profile
       } else {
+        // New user OR resend request: generate/regenerate link
         const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
           type: 'invite',
           email: emailNorm,
