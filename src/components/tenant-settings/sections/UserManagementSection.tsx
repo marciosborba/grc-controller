@@ -609,28 +609,15 @@ export const UserManagementSection: React.FC<UserManagementSectionProps> = ({
       const token = sessionData?.session?.access_token;
       if (!token) throw new Error('Sessão inválida');
 
-      // ── Use create-user-admin for internal users ────────────────────────────
-      // This ensures correct role and tenant metadata are passed for the link regeneration
-      const { data, error } = await supabase.functions.invoke('create-user-admin', {
-        body: {
-          email: user.email,
-          full_name: user.full_name,
-          tenant_id: tenantId,
-          system_role: user.role,
-          resend: true,
-          send_invitation: true
-        },
+      const { data, error } = await supabase.functions.invoke('resend-invite', {
+        body: { email: user.email, full_name: user.full_name || user.email.split('@')[0] },
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Falha ao reenviar convite');
 
-      if (data.emailSent) {
-        toast.success(`Convite reenviado com sucesso para ${user.email}`);
-      } else {
-        toast.warning(`O link foi gerado, mas houve um problema ao enviar o e-mail: ${data.emailError || 'Erro desconhecido'}`);
-      }
+      toast.success(`Convite reenviado com sucesso para ${user.email}`);
     } catch (err: any) {
       toast.error(`Erro ao reenviar: ${err.message}`);
     } finally {
