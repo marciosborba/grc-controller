@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
     let inviteLink: string | null = null
 
     if (userData.send_invitation !== false) {
-      console.log(`📧 Generating invite link for ${emailNorm} (resend: ${userData.resend})`)
+      console.log(`📧 [INVITE] Starting link generation for ${emailNorm} (resend: ${!!userData.resend})`)
       let existingUser = null
       let page = 1
       while (true) {
@@ -194,20 +194,21 @@ Deno.serve(async (req) => {
       }
 
       if (existingUser && !userData.resend) {
-        // User exists and it's NOT a resend request: error or reuse
+        console.log(`⚠️ [INVITE] User ${emailNorm} already exists and not a resend request.`)
         if (existingUser.email_confirmed_at) {
           throw new Error('Este e-mail já está em uso por uma conta ativa.')
         }
         userId = existingUser.id
-        // Non-fatal: if user exists but profile missing, we continue and create profile
       } else {
-        // New user OR resend request: generate/regenerate link
+        const type = (existingUser && userData.resend) ? 'recovery' : 'invite'
+        console.log(`🔄 [INVITE] Generating link type "${type}" for ${emailNorm}`)
+        
         const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-          type: 'invite',
+          type: type as any,
           email: emailNorm,
           options: {
             redirectTo: RESET_URL,
-            data: {
+            data: existingUser ? undefined : {
               full_name: userData.full_name,
               tenant_id: targetTenantId,
               system_role: systemRole,
@@ -215,12 +216,17 @@ Deno.serve(async (req) => {
             }
           }
         })
-        if (linkErr) throw new Error(`Falha ao gerar convite: ${linkErr.message}`)
-        inviteLink = linkData?.properties?.action_link || null
-        userId = linkData?.user?.id || null
-        console.log(`✅ Invite link generated for ${emailNorm}, userId: ${userId}`)
-      }
 
+        if (linkErr) {
+          console.error(`❌ [INVITE] generateLink error:`, linkErr)
+          throw new Error(`Falha ao gerar link: ${linkErr.message}`)
+        }
+
+        inviteLink = linkData?.properties?.action_link || null
+        userId = linkData?.user?.id || existingUser?.id || userId || null
+        
+        console.log(`✅ [INVITE] Link generated: ${!!inviteLink}, userId: ${userId}`)
+      }
     } else {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: emailNorm,
