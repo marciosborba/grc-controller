@@ -170,9 +170,12 @@ export const ResetPasswordPage = () => {
                             await supabase.from('vendor_portal_users').update({ force_password_change: false }).eq('email', updatedUser.email);
                         }
 
-                        // Risk stakeholder → always go to risk portal after first access
-                        if (updatedUser.user_metadata?.invited_as === 'risk_stakeholder') {
+                        // Invited stakeholders → redirect to their respective portal
+                        const invitedAs = updatedUser.user_metadata?.invited_as;
+                        if (invitedAs === 'risk_stakeholder') {
                             targetUrl = '/risk-portal';
+                        } else if (invitedAs === 'vulnerability_stakeholder') {
+                            targetUrl = '/vulnerability-portal';
                         } else {
                             const userData = await refreshUserData();
                             if (userData) {
