@@ -1,15 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  Shield, 
-  Lock, 
+import {
+  UserCheck,
+  Shield,
   Activity,
   AlertTriangle,
-  TrendingUp
+  Lock,
+  UserX
 } from 'lucide-react';
 import type { UserManagementStats } from '@/types/user-management';
 
@@ -44,38 +42,18 @@ export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats, isLoading
     return null;
   }
 
-  const activePercentage = stats.total_users > 0 
-    ? Math.round((stats.active_users / stats.total_users) * 100) 
+  const activePercentage = stats.internal_users > 0
+    ? Math.round((stats.active_users / stats.internal_users) * 100)
     : 0;
 
-  const mfaPercentage = stats.total_users > 0 
-    ? Math.round((stats.mfa_enabled_users / stats.total_users) * 100) 
+  const mfaPercentage = stats.internal_users > 0
+    ? Math.round((stats.mfa_enabled_users / stats.internal_users) * 100)
     : 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Total de Usuários */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{stats.total_users}</div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              {stats.active_users} ativos
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              {stats.inactive_users} inativos
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Usuários Ativos */}
+      {/* Usuários Ativos — número grande; internos/externos abaixo */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
@@ -83,21 +61,45 @@ export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats, isLoading
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-green-600">{stats.active_users}</div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {activePercentage}% do total
-            </Badge>
+          <div className="flex items-center gap-3 mt-1.5">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+              {stats.internal_users ?? 0} internos
+            </span>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-orange-400" />
+              {stats.external_users ?? 0} externos
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Inativos & Bloqueados */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Inativos & Bloqueados</CardTitle>
+          <UserX className="h-4 w-4 text-red-500" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-red-500">
+            {stats.inactive_users + stats.locked_users}
+          </div>
+          <div className="flex items-center gap-3 mt-1.5">
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-gray-400" />
+              {stats.inactive_users} inativos
+            </span>
             {stats.locked_users > 0 && (
-              <div className="flex items-center gap-1 text-xs text-red-600">
+              <span className="text-xs text-red-600 flex items-center gap-1">
                 <Lock className="w-3 h-3" />
                 {stats.locked_users} bloqueados
-              </div>
+              </span>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* MFA Habilitado */}
+      {/* MFA Habilitado (internos) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">MFA Habilitado</CardTitle>
@@ -105,63 +107,61 @@ export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats, isLoading
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-blue-600">{stats.mfa_enabled_users}</div>
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant={mfaPercentage >= 80 ? "default" : mfaPercentage >= 50 ? "secondary" : "destructive"}
+          <div className="flex items-center gap-2 mt-1">
+            <Badge
+              variant={mfaPercentage >= 80 ? 'default' : mfaPercentage >= 50 ? 'secondary' : 'destructive'}
               className="text-xs"
             >
-              {mfaPercentage}% do total
+              {mfaPercentage}% dos internos
             </Badge>
             {mfaPercentage < 50 && (
-              <div className="flex items-center gap-1 text-xs text-amber-600">
+              <span className="flex items-center gap-1 text-xs text-amber-600">
                 <AlertTriangle className="w-3 h-3" />
                 Baixa adoção
-              </div>
+              </span>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Usuários Logados */}
+      {/* Logins recentes (últimas 24h) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Usuários Logados</CardTitle>
+          <CardTitle className="text-sm font-medium">Logins Recentes</CardTitle>
           <Activity className="h-4 w-4 text-purple-600" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-purple-600">{stats.recent_logins}</div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              Últimas 24 horas
-            </Badge>
-            {stats.failed_login_attempts > 0 && (
-              <div className="flex items-center gap-1 text-xs text-red-600">
-                <AlertTriangle className="w-3 h-3" />
-                {stats.failed_login_attempts} tentativas falhadas
-              </div>
-            )}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground">Últimas 24 horas</span>
           </div>
+          {stats.failed_login_attempts > 0 && (
+            <div className="flex items-center gap-1 text-xs text-red-600 mt-0.5">
+              <AlertTriangle className="w-3 h-3" />
+              {stats.failed_login_attempts} tentativas falhas
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Distribuição por Roles */}
       <Card className="md:col-span-2 lg:col-span-4">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Distribuição por Roles</CardTitle>
+          <CardTitle className="text-sm font-medium">Distribuição por Perfil (Internos)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {Object.entries(stats.users_by_role).map(([role, count]) => {
-              const roleNames = {
+              const roleNames: Record<string, string> = {
                 admin: 'Administradores',
                 ciso: 'CISOs',
                 risk_manager: 'Gerentes de Risco',
-                compliance_officer: 'Oficiais de Compliance',
+                compliance_officer: 'Compliance',
                 auditor: 'Auditores',
                 user: 'Usuários'
               };
 
-              const roleColors = {
+              const roleColors: Record<string, string> = {
                 admin: 'bg-red-100 text-red-800',
                 ciso: 'bg-purple-100 text-purple-800',
                 risk_manager: 'bg-orange-100 text-orange-800',
@@ -173,11 +173,11 @@ export const UserStatsCards: React.FC<UserStatsCardsProps> = ({ stats, isLoading
               return (
                 <div key={role} className="text-center">
                   <div className="text-2xl font-bold">{count}</div>
-                  <Badge 
-                    variant="secondary" 
-                    className={`text-xs ${roleColors[role as keyof typeof roleColors]}`}
+                  <Badge
+                    variant="secondary"
+                    className={`text-xs mt-1 ${roleColors[role] ?? ''}`}
                   >
-                    {roleNames[role as keyof typeof roleNames]}
+                    {roleNames[role] ?? role}
                   </Badge>
                 </div>
               );

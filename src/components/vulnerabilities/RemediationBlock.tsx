@@ -171,6 +171,31 @@ export function RemediationBlock({
         fetchAttachments();
     }, [task.id]);
 
+    // Resolve UUIDs to names for items loaded in old single-UUID format
+    useEffect(() => {
+        const unresolvedIds = assignedItems
+            .filter(item => item.type === 'user' && item.name === item.id)
+            .map(item => item.id);
+        if (unresolvedIds.length === 0) return;
+
+        supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', unresolvedIds)
+            .then(({ data }) => {
+                if (!data) return;
+                setAssignedItems(prev => prev.map(item => {
+                    if (item.type === 'user' && item.name === item.id) {
+                        const profile = data.find(p => p.id === item.id);
+                        return profile
+                            ? { ...item, name: profile.full_name || profile.email || item.id }
+                            : item;
+                    }
+                    return item;
+                }));
+            });
+    }, []);
+
     const handleSave = async () => {
         if (!isRemediationValid) {
             toast.warning('Atenção: Preencha a Data Prevista e o Esforço na vulnerabilidade antes de salvar as etapas.');

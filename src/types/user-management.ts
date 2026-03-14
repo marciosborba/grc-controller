@@ -136,6 +136,8 @@ export interface UserManagementFilters {
 
 export interface UserManagementStats {
   total_users: number;
+  internal_users: number;
+  external_users: number;
   active_users: number;
   inactive_users: number;
   locked_users: number;

@@ -245,20 +245,15 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
         setLoading(true);
         const { data: rolesData } = await supabase.from('tenant_roles').select('*').eq('tenant_id', tenantId).order('name');
         const { data: permsData } = await supabase.from('role_module_permissions').select('*').in('role_id', (rolesData || []).map(r => r.id));
-        const { data: tenantModules, error: tmError } = await supabase.rpc('get_tenant_modules_for_rbac', { p_tenant_id: tenantId });
+        const { data: tenantModules } = await supabase
+            .from('tenant_modules')
+            .select('module_key, is_enabled')
+            .eq('tenant_id', tenantId);
 
-        if (tmError) {
-            console.error('Error fetching tenant modules via RPC:', tmError);
-            toast.error('Erro ao carregar os módulos da organização.');
-        }
+        const enabledKeys = tenantModules && tenantModules.length > 0
+            ? tenantModules.filter((m: { module_key: string; is_enabled: boolean }) => m.is_enabled).map((m: { module_key: string; is_enabled: boolean }) => m.module_key)
+            : ['dashboard', 'risk_management', 'compliance', 'incidents', 'settings'];
 
-        let enabledKeys: string[] = [];
-        if (tenantModules && tenantModules.length > 0) {
-            enabledKeys = tenantModules.filter(m => m.is_enabled).map(m => m.module_key);
-        } else {
-            // Fallback default
-            enabledKeys = ['dashboard', 'risk_management', 'compliance', 'incidents', 'settings'];
-        }
         setEnabledModules(enabledKeys);
 
         const permsMap: Record<string, Record<string, boolean>> = {};
@@ -339,7 +334,7 @@ const RBACTab = ({ tenantId }: { tenantId: string }) => {
                                 </CardHeader>
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-border">
-                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings' || m.key === 'risk_portal' || m.key === 'vulnerability_portal').map(mod => {
+                                        {MODULES.filter(m => enabledModules.includes(m.key) || m.key === 'settings').map(mod => {
                                             const allowed = permissions[selectedRole.id]?.[mod.key] ?? false;
                                             const isSaving = saving === `${selectedRole.id}-${mod.key}`;
                                             return (

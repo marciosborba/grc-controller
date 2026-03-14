@@ -5,7 +5,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useTenantManagement } from '@/hooks/useTenantManagement';
 import { useAuth } from '@/contexts/AuthContextOptimized';
-import { Box, Code2, ShieldAlert, FileKey2 } from 'lucide-react';
+import { Box, Code2, ShieldAlert, FileKey2, Globe } from 'lucide-react';
 
 interface TenantModulesTabProps {
     tenantId: string;
@@ -82,6 +82,7 @@ export const TenantModulesTab: React.FC<TenantModulesTabProps> = ({ tenantId }) 
         if (cat === 'privacy') return <FileKey2 className="h-5 w-5 text-blue-500" />;
         if (cat === 'strategic') return <Code2 className="h-5 w-5 text-green-500" />; // Or another icon
         if (cat === 'reporting') return <Box className="h-5 w-5 text-orange-500" />;
+        if (cat === 'portals') return <Globe className="h-5 w-5 text-teal-500" />;
         return <Box className="h-5 w-5 text-gray-500" />;
     }
 
@@ -93,7 +94,8 @@ export const TenantModulesTab: React.FC<TenantModulesTabProps> = ({ tenantId }) 
             'grc': 'Governança & Riscos',
             'ethics': 'Ética & Compliance',
             'strategic': 'Estratégia & Planejamento',
-            'reporting': 'Relatórios & Analytics'
+            'reporting': 'Relatórios & Analytics',
+            'portals': 'Portais de Acesso Externo'
         };
         return map[cat] || cat;
     }

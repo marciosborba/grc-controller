@@ -61,6 +61,8 @@ interface TenantInfo {
 
 interface SettingsMetrics {
   totalUsers: number;
+  internalUsers: number;
+  externalUsers: number;
   activeUsers: number;
   pendingInvitations: number;
   securityScore: number;
@@ -147,7 +149,7 @@ const TenantSettingsPage: React.FC = () => {
         // 1. Contar usuários totais e ativos
         supabase
           .from('profiles')
-          .select('id, user_id, created_at, is_active')
+          .select('id, user_id, created_at, is_active, system_role, email')
           .eq('tenant_id', tenantId),
 
         // 2. Contar atividades suspeitas
@@ -203,8 +205,40 @@ const TenantSettingsPage: React.FC = () => {
         settingsResult
       ] = await Promise.all(promises);
 
-      const totalUsers = usersResult.data?.length || 0;
-      const activeUsers = (usersResult.data as any[])?.filter(u => u.is_active).length || 0;
+      // system_role 'guest' e 'vendor' = externos; demais = internos
+      const EXTERNAL_ROLES = ['guest', 'vendor'];
+      const allProfiles = (usersResult.data as any[]) || [];
+      const internalProfiles = allProfiles.filter(u => !EXTERNAL_ROLES.includes(u.system_role || ''));
+      const externalProfiles = allProfiles.filter(u => EXTERNAL_ROLES.includes(u.system_role || ''));
+
+      const internalUsers = internalProfiles.length;
+      const activeUsers = internalProfiles.filter(u => u.is_active).length;
+
+      // Externos: profiles guest/vendor + vendor_portal_users sem perfil interno (dedup por email)
+      let externalUsers = externalProfiles.length;
+      try {
+        const { data: registries } = await supabase
+          .from('vendor_registry')
+          .select('id')
+          .eq('tenant_id', tenantId);
+
+        if (registries && registries.length > 0) {
+          const vendorIds = registries.map((r: any) => r.id);
+          const { data: portalUsers } = await supabase
+            .from('vendor_portal_users')
+            .select('email')
+            .in('vendor_id', vendorIds);
+
+          // Contar apenas os que NÃO estão já em externalProfiles (dedup por email)
+          const externalEmails = new Set(externalProfiles.map((u: any) => u.email?.toLowerCase()).filter(Boolean));
+          const newVendors = (portalUsers || []).filter(
+            (pu: any) => pu.email && !externalEmails.has(pu.email.toLowerCase())
+          );
+          externalUsers += newVendors.length;
+        }
+      } catch {
+        // RLS pode bloquear — mantém só o count de profiles guest/vendor
+      }
       const suspiciousActivities = suspiciousResult.data?.length || 0;
       const lastBackup = (backupResult.data?.[0] as any)?.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -257,7 +291,9 @@ const TenantSettingsPage: React.FC = () => {
       const securityScore = calculateSecurityScore(securitySettings);
 
       setMetrics({
-        totalUsers,
+        totalUsers: internalUsers + externalUsers,
+        internalUsers,
+        externalUsers,
         activeUsers,
         pendingInvitations: 0,
         securityScore,
@@ -386,7 +422,16 @@ const TenantSettingsPage: React.FC = () => {
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">Usuários</p>
             </div>
             <p className="text-xl sm:text-3xl font-bold text-foreground">{metrics.totalUsers}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{metrics.activeUsers} ativos</p>
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500" />
+                {metrics.internalUsers} internos
+              </span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-orange-400" />
+                {metrics.externalUsers} externos
+              </span>
+            </div>
           </div>
 
           {/* Sessões */}
@@ -587,9 +632,12 @@ const TenantSettingsPage: React.FC = () => {
           <IdentityAccessManagementSection
             tenantId={selectedTenantId}
             onMetricsUpdate={(userMetrics) => {
-              if (metrics) {
-                setMetrics(prev => prev ? { ...prev, totalUsers: userMetrics.totalUsers, activeUsers: userMetrics.activeUsers } : prev);
-              }
+              setMetrics(prev => prev ? {
+                ...prev,
+                internalUsers: userMetrics.totalUsers,
+                totalUsers: userMetrics.totalUsers + (prev.externalUsers ?? 0),
+                activeUsers: userMetrics.activeUsers,
+              } : prev);
               if (tenantInfo) {
                 setTenantInfo(prev => prev ? { ...prev, current_users: userMetrics.totalUsers } : prev);
               }

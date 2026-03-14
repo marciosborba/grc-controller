@@ -178,10 +178,14 @@ export const useUserManagement = () => {
     isLoading: isLoadingStats
   } = useQuery({
     queryKey: ['user-stats'],
+    gcTime: 0,
+    refetchOnMount: 'always',
     queryFn: async (): Promise<UserManagementStats> => {
       if (!hasPermission('users.read')) {
         return {
           total_users: 0,
+          internal_users: 0,
+          external_users: 0,
           active_users: 0,
           inactive_users: 0,
           locked_users: 0,
@@ -215,6 +219,8 @@ export const useUserManagement = () => {
           console.error('Erro ao buscar estatísticas:', error);
           return {
             total_users: 0,
+            internal_users: 0,
+            external_users: 0,
             active_users: 0,
             inactive_users: 0,
             locked_users: 0,
@@ -225,9 +231,7 @@ export const useUserManagement = () => {
               risk_manager: 0,
               compliance_officer: 0,
               auditor: 0,
-              user: 0,
-              guest: 0,
-              vendor: 0
+              user: 0
             },
             recent_logins: 0,
             failed_login_attempts: 0
@@ -235,7 +239,6 @@ export const useUserManagement = () => {
         }
 
         const now = new Date();
-        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
         // Carregar dados reais de autenticação do Supabase Auth
         const { data: authUsers } = await supabase.auth.admin.listUsers();
@@ -248,18 +251,29 @@ export const useUserManagement = () => {
         ).length;
 
         // Calcular usuários ativos baseado na combinação de profiles ativos E auth users
-        const totalUsers = profiles?.length || 0;
+        const internalUsers = profiles?.length || 0;
         const activeProfileUsers = profiles?.filter(p => p.is_active && (!p.locked_until || new Date(p.locked_until) <= now)).length || 0;
         const lockedUsers = profiles?.filter(p => p.locked_until && new Date(p.locked_until) > now).length || 0;
 
-        // Verificar usuários bloqueados no auth (usando metadados se existir)
-        const totalLockedUsers = lockedUsers;
+        // Buscar usuários externos (vendor_portal_users)
+        let externalQuery = supabase
+          .from('vendor_portal_users')
+          .select('id', { count: 'exact', head: true });
+
+        if (!user?.isPlatformAdmin && user?.tenantId) {
+          externalQuery = externalQuery.eq('tenant_id', user.tenantId);
+        }
+
+        const { count: externalCount } = await externalQuery;
+        const externalUsers = externalCount || 0;
 
         const stats: UserManagementStats = {
-          total_users: totalUsers,
+          total_users: internalUsers + externalUsers,
+          internal_users: internalUsers,
+          external_users: externalUsers,
           active_users: activeProfileUsers,
           inactive_users: (profiles?.filter(p => !p.is_active).length || 0),
-          locked_users: totalLockedUsers,
+          locked_users: lockedUsers,
           mfa_enabled_users: profiles?.filter(p => p.two_factor_enabled).length || 0,
           users_by_role: {
             admin: 0,
@@ -269,7 +283,7 @@ export const useUserManagement = () => {
             auditor: 0,
             user: 0
           },
-          recent_logins: recentlyLoggedIn, // Agora usa dados reais do auth
+          recent_logins: recentlyLoggedIn,
           failed_login_attempts: profiles?.reduce((sum, p) => sum + (p.failed_login_attempts || 0), 0) || 0
         };
 
@@ -308,13 +322,13 @@ export const useUserManagement = () => {
 
           // Contar usuários sem role definida como 'user'
           const usersWithRoles = roleCountMap.size;
-          const usersWithoutRoles = Math.max(0, totalUsers - usersWithRoles);
+          const usersWithoutRoles = Math.max(0, internalUsers - usersWithRoles);
           stats.users_by_role.user += usersWithoutRoles;
 
         } catch (roleError) {
           console.warn('Erro ao buscar roles para estatísticas:', roleError);
           // Se falhar, assumir que todos são usuários básicos
-          stats.users_by_role.user = totalUsers;
+          stats.users_by_role.user = internalUsers;
         }
 
         return stats;
@@ -322,6 +336,8 @@ export const useUserManagement = () => {
         console.error('Erro ao buscar estatísticas:', error);
         return {
           total_users: 0,
+          internal_users: 0,
+          external_users: 0,
           active_users: 0,
           inactive_users: 0,
           locked_users: 0,

@@ -544,6 +544,7 @@ export function AppSidebarFixed() {
               'Ética': 'ethics',
               'Riscos': 'risk_management',
               'Portal de Riscos': 'risk_portal',
+              'Portal Vuln.': 'vulnerability_portal',
               'Planos de Ação': 'action_plans',
               'Incidentes': 'incidents',
               'Políticas': 'policy_management',
