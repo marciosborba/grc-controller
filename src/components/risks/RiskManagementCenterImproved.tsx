@@ -103,6 +103,7 @@ interface QuickAction {
 export const RiskManagementCenterImproved: React.FC = () => {
   // Estados principais
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const [expandableDefaultTab, setExpandableDefaultTab] = useState<'open' | 'accepted' | 'closed'>('open');
 
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -220,7 +221,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
       description: 'Riscos aceitos',
       icon: FileText,
       color: 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700',
-      action: () => handleRiskLetters(),
+      action: () => { setExpandableDefaultTab('accepted'); setViewMode('table'); },
       category: 'integration',
       badge: metrics?.acceptedRisks > 0 ? metrics.acceptedRisks : undefined
     }
@@ -257,14 +258,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
     toast({
       title: '📊 Relatórios Executivos',
       description: 'Preparando dashboards personalizados...',
-    });
-  };
-
-  const handleRiskLetters = () => {
-    navigate('/risk-letters');
-    toast({
-      title: '📄 Carta de Risco',
-      description: 'Redirecionando para gestão de cartas de risco...',
     });
   };
 
@@ -575,11 +568,13 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
           {viewMode === 'table' && (
             <ExpandableCardsView
+              key={expandableDefaultTab}
               risks={risks}
               searchTerm={searchTerm}
               filters={filters}
               onUpdate={updateRisk}
               onDelete={deleteRisk}
+              defaultTab={expandableDefaultTab}
             />
           )}
 

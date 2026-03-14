@@ -31,8 +31,6 @@ const RiskManagementHub = lazy(() => import("@/components/risks/RiskManagementHu
 
 const RiskMatrixPage = lazy(() => import("@/components/risks/RiskMatrixPage").then(module => ({ default: module.RiskMatrixPage })));
 const ActionPlansManagementPage = lazy(() => import("@/components/risks/ActionPlansManagementPage").then(module => ({ default: module.ActionPlansManagementPage })));
-const RiskAcceptanceManagement = lazy(() => import("@/components/risks/RiskAcceptanceManagement"));
-
 // Centralized Action Plans Module
 const ActionPlansSimple = lazy(() => import("@/components/action-plans/ActionPlansSimple").then(module => ({ default: module.ActionPlansSimple })));
 const ActionPlansDashboardNew = lazy(() => import("@/components/action-plans/ActionPlansDashboardNew").then(module => ({ default: module.ActionPlansDashboard })));
@@ -654,11 +652,6 @@ const App = () => (
                         <Route path="risks/matrix" element={
                           <Suspense fallback={<PageLoader />}>
                             <RiskMatrixPage />
-                          </Suspense>
-                        } />
-                        <Route path="risk-letters" element={
-                          <Suspense fallback={<PageLoader />}>
-                            <RiskAcceptanceManagement />
                           </Suspense>
                         } />
                       </Route>

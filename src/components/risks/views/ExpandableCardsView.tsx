@@ -72,6 +72,7 @@ import { useTenantSecurity } from '@/utils/tenantSecurity';
 import type { Risk, RiskFilters, RiskStatus, TreatmentApprover } from '@/types/risk-management';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useRiskAcceptancePrint } from '@/hooks/useRiskAcceptancePrint';
 
 interface ExpandableCardsViewProps {
   risks: Risk[];
@@ -79,6 +80,7 @@ interface ExpandableCardsViewProps {
   filters?: RiskFilters;
   onUpdate: (riskId: string, data: any) => void;
   onDelete: (riskId: string) => void;
+  defaultTab?: 'open' | 'accepted' | 'closed';
 }
 
 type SortField = 'name' | 'category' | 'riskLevel' | 'riskScore' | 'status' | 'createdAt' | 'dueDate';
@@ -89,7 +91,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   searchTerm,
   filters = {},
   onUpdate,
-  onDelete
+  onDelete,
+  defaultTab = 'open',
 }) => {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [editingCards, setEditingCards] = useState<Set<string>>(new Set());
@@ -98,13 +101,14 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
-  const [riskListTab, setRiskListTab] = useState<'open' | 'accepted' | 'closed'>('open');
+  const [riskListTab, setRiskListTab] = useState<'open' | 'accepted' | 'closed'>(defaultTab);
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
 
   const { toast } = useToast();
   const { tenantSettings, isMatrix4x4, getRiskLevels, getMatrixLabels, getMatrixDimensions } = useTenantSettings();
   const { userTenantId } = useTenantSecurity();
   const { user } = useAuth();
+  const { printRiskAcceptancePDF, printRiskAcceptanceDOC, isGenerating: isPrintGenerating } = useRiskAcceptancePrint();
 
   const matrixLabels = getMatrixLabels();
   const matrixDims = getMatrixDimensions();
@@ -1011,6 +1015,12 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <Eye className="h-3.5 w-3.5" />
                                 Monitoramento
                               </TabsTrigger>
+                              {isRiskAccepted(risk) && (
+                                <TabsTrigger value="carta-risco" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0 text-emerald-700 dark:text-emerald-400 data-[state=active]:text-emerald-700 data-[state=active]:bg-emerald-50 dark:data-[state=active]:bg-emerald-950/40">
+                                  <FileText className="h-3.5 w-3.5" />
+                                  Carta de Risco
+                                </TabsTrigger>
+                              )}
                             </TabsList>
                           </div>
                         </div>
@@ -2510,6 +2520,179 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                             </div>
                           </div>
                         </TabsContent>
+
+                        {/* CARTA DE RISCO — only for accepted risks */}
+                        {isRiskAccepted(risk) && (
+                          <TabsContent value="carta-risco" className="space-y-6 mt-4">
+                            {/* Header */}
+                            <div className="flex items-start justify-between gap-4 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg flex-shrink-0">
+                                  <FileText className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-emerald-900 dark:text-emerald-100">Carta de Aceite de Risco</h4>
+                                  <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-0.5">
+                                    Documento formal de aceitação do risco. Todos os aprovadores confirmaram.
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 flex-shrink-0">
+                                <CheckCircle className="h-3 w-3 mr-1" /> Aceito
+                              </Badge>
+                            </div>
+
+                            {/* Risk summary */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {[
+                                { label: 'Risco', value: risk.name },
+                                { label: 'Categoria', value: risk.category },
+                                { label: 'Nível', value: risk.riskLevel },
+                                { label: 'Score', value: String(risk.riskScore) },
+                                { label: 'Tipo de Aceite', value: (risk as any).acceptance_type === 'definitivo' ? 'Definitivo' : 'Temporário' },
+                                { label: 'Responsável', value: risk.assignedTo || risk.owner || '—' },
+                              ].map(({ label, value }) => (
+                                <div key={label} className="p-3 bg-muted/40 rounded-lg">
+                                  <p className="text-xs text-muted-foreground font-medium uppercase">{label}</p>
+                                  <p className="text-sm font-semibold mt-0.5 truncate" title={value}>{value || '—'}</p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Justification */}
+                            {(risk as any).treatment_rationale && (
+                              <div className="p-4 border rounded-lg bg-card">
+                                <Label className="text-sm font-medium mb-2 block">Justificativa do Aceite</Label>
+                                <p className="text-sm text-muted-foreground">{(risk as any).treatment_rationale}</p>
+                              </div>
+                            )}
+
+                            {/* Approvers */}
+                            {(() => {
+                              const approvers: TreatmentApprover[] = (risk as any).treatment_approvers || [];
+                              if (approvers.length === 0) return null;
+                              return (
+                                <div className="p-4 border rounded-lg bg-card">
+                                  <Label className="text-sm font-medium mb-3 block flex items-center gap-1.5">
+                                    <UserCheck className="h-4 w-4 text-emerald-600" />
+                                    Aprovadores
+                                  </Label>
+                                  <div className="space-y-2">
+                                    {approvers.map((a) => (
+                                      <div key={a.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                                        <div>
+                                          <p className="text-sm font-medium">{a.name}</p>
+                                          <p className="text-xs text-muted-foreground">{a.email}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {a.approved ? (
+                                            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 text-xs">
+                                              <CheckCircle className="h-3 w-3 mr-1" />
+                                              Aprovado {a.approved_at ? `em ${formatDate(a.approved_at)}` : ''}
+                                            </Badge>
+                                          ) : (
+                                            <Badge variant="outline" className="text-xs">
+                                              <Clock className="h-3 w-3 mr-1" /> Pendente
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+
+                            {/* PDF / DOC actions */}
+                            <div className="p-4 border rounded-lg bg-card">
+                              <Label className="text-sm font-medium mb-3 block">Emitir Documento</Label>
+                              <p className="text-xs text-muted-foreground mb-4">
+                                Gere a Carta de Aceite de Risco em PDF ou Word com todos os dados do risco, aprovadores e justificativas.
+                              </p>
+                              <div className="flex flex-col sm:flex-row gap-3">
+                                <Button
+                                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                                  disabled={isPrintGenerating}
+                                  onClick={() => {
+                                    const approvers: TreatmentApprover[] = (risk as any).treatment_approvers || [];
+                                    const firstApprover = approvers[0];
+                                    printRiskAcceptancePDF({
+                                      id: risk.id,
+                                      risk_id: risk.id,
+                                      riskCode: (risk as any).riskCode,
+                                      risk_title: risk.name,
+                                      risk_description: risk.description || '',
+                                      risk_category: risk.category,
+                                      risk_level: risk.riskLevel,
+                                      risk_score: risk.riskScore,
+                                      residual_risk_score: (risk as any).residual_score || risk.riskScore,
+                                      acceptance_reason: (risk as any).treatment_rationale || '',
+                                      accepted_by: firstApprover?.name || risk.assignedTo || risk.owner || 'Aprovado',
+                                      accepted_by_role: '',
+                                      accepted_by_email: firstApprover?.email || '',
+                                      acceptance_date: firstApprover?.approved_at || new Date().toISOString(),
+                                      review_schedule: 'annual',
+                                      next_review_date: risk.dueDate?.toISOString() || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+                                      status: 'active',
+                                      monitoring_frequency: (risk as any).monitoring_frequency || 'Mensal',
+                                      created_at: risk.createdAt.toISOString(),
+                                      updated_at: risk.updatedAt.toISOString(),
+                                      probability_score: risk.probability,
+                                      impact_score: risk.impact,
+                                    });
+                                  }}
+                                >
+                                  {isPrintGenerating ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <Download className="h-4 w-4 mr-2" />
+                                  )}
+                                  Gerar PDF
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  className="flex-1"
+                                  disabled={isPrintGenerating}
+                                  onClick={() => {
+                                    const approvers: TreatmentApprover[] = (risk as any).treatment_approvers || [];
+                                    const firstApprover = approvers[0];
+                                    printRiskAcceptanceDOC({
+                                      id: risk.id,
+                                      risk_id: risk.id,
+                                      riskCode: (risk as any).riskCode,
+                                      risk_title: risk.name,
+                                      risk_description: risk.description || '',
+                                      risk_category: risk.category,
+                                      risk_level: risk.riskLevel,
+                                      risk_score: risk.riskScore,
+                                      residual_risk_score: (risk as any).residual_score || risk.riskScore,
+                                      acceptance_reason: (risk as any).treatment_rationale || '',
+                                      accepted_by: firstApprover?.name || risk.assignedTo || risk.owner || 'Aprovado',
+                                      accepted_by_role: '',
+                                      accepted_by_email: firstApprover?.email || '',
+                                      acceptance_date: firstApprover?.approved_at || new Date().toISOString(),
+                                      review_schedule: 'annual',
+                                      next_review_date: risk.dueDate?.toISOString() || new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString(),
+                                      status: 'active',
+                                      monitoring_frequency: (risk as any).monitoring_frequency || 'Mensal',
+                                      created_at: risk.createdAt.toISOString(),
+                                      updated_at: risk.updatedAt.toISOString(),
+                                      probability_score: risk.probability,
+                                      impact_score: risk.impact,
+                                    });
+                                  }}
+                                >
+                                  {isPrintGenerating ? (
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  ) : (
+                                    <FileText className="h-4 w-4 mr-2" />
+                                  )}
+                                  Gerar Word (.docx)
+                                </Button>
+                              </div>
+                            </div>
+                          </TabsContent>
+                        )}
                       </Tabs>
                     </div>
                   </CardContent>
