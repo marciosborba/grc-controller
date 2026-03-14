@@ -72,6 +72,8 @@ interface SettingsMetrics {
   activeSessions: number;
   activeUsersList: string[]; // List of active user names/emails
   suspiciousActivities: number;
+  enabledModulesCount: number;
+  activeFrameworks: number;
 }
 
 const TenantSettingsPage: React.FC = () => {
@@ -169,7 +171,7 @@ const TenantSettingsPage: React.FC = () => {
           .order('created_at', { ascending: false })
           .limit(1),
 
-        // 4. Contar frameworks de compliance
+        // 4. Contar frameworks de compliance ativos
         supabase
           .from('compliance_frameworks')
           .select('id')
@@ -192,7 +194,14 @@ const TenantSettingsPage: React.FC = () => {
           .from('tenants')
           .select('settings')
           .eq('id', tenantId)
-          .single()
+          .single(),
+
+        // 8. Contar módulos habilitados para o tenant
+        supabase
+          .from('tenant_modules')
+          .select('module_key')
+          .eq('tenant_id', tenantId)
+          .eq('is_enabled', true),
       ];
 
       const [
@@ -202,7 +211,8 @@ const TenantSettingsPage: React.FC = () => {
         frameworksResult,
         sessionsResult,
         storageResult,
-        settingsResult
+        settingsResult,
+        enabledModulesResult,
       ] = await Promise.all(promises);
 
       // system_role 'guest' e 'vendor' = externos; demais = internos
@@ -290,23 +300,29 @@ const TenantSettingsPage: React.FC = () => {
       };
       const securityScore = calculateSecurityScore(securitySettings);
 
+      const pendingInvitations = internalProfiles.filter(u => !u.is_active).length;
+      const activeFrameworks = frameworksResult.data?.length || 0;
+      const enabledModulesCount = enabledModulesResult.data?.length || 0;
+
       setMetrics({
         totalUsers: internalUsers + externalUsers,
         internalUsers,
         externalUsers,
         activeUsers,
-        pendingInvitations: 0,
+        pendingInvitations,
         securityScore,
         lastBackup,
         storageUsed: totalSizeGB,
         storageLimit: 10,
         activeSessions,
         activeUsersList,
-        suspiciousActivities
+        suspiciousActivities,
+        enabledModulesCount,
+        activeFrameworks,
       });
 
       if (tenantInfo) {
-        setTenantInfo(prev => prev ? { ...prev, current_users: totalUsers } : prev);
+        setTenantInfo(prev => prev ? { ...prev, current_users: internalUsers + externalUsers } : prev);
       }
     } catch (error) {
       console.error('Error loading metrics:', error);
@@ -602,27 +618,49 @@ const TenantSettingsPage: React.FC = () => {
             <CardHeader className="pb-2 pt-4 px-4">
               <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                 <Activity className="h-4 w-4" />
-                Status da Organização
+                Configuração da Organização
               </CardTitle>
+              <CardDescription className="text-xs">Indicadores de configuração e adoção dos recursos da plataforma</CardDescription>
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {[
-                  { label: 'Usuários Ativos', value: String(metrics?.activeUsers || 0), color: 'text-green-600' },
-                  { label: 'Sessões Ativas', value: String(metrics?.activeSessions || 0), color: 'text-blue-600' },
-                  { label: 'Score Segurança', value: `${metrics?.securityScore || 0}%`, color: 'text-purple-600' },
-                  {
-                    label: 'Armazenamento', color: 'text-orange-600',
-                    value: (metrics?.storageUsed || 0) < 1
-                      ? `${((metrics?.storageUsed || 0) * 1024).toFixed(0)}MB`
-                      : `${(metrics?.storageUsed || 0).toFixed(1)}GB`
-                  },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="text-center p-3 border rounded-lg bg-muted/20">
-                    <div className={`text-lg sm:text-2xl font-bold ${color}`}>{value}</div>
-                    <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{label}</div>
+                {/* Convites Pendentes */}
+                <div className="text-center p-3 border rounded-lg bg-muted/20">
+                  <div className={`text-lg sm:text-2xl font-bold ${(metrics?.pendingInvitations || 0) > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {metrics?.pendingInvitations || 0}
                   </div>
-                ))}
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Convites Pendentes</div>
+                  {(metrics?.pendingInvitations || 0) > 0 && (
+                    <div className="text-[9px] text-amber-600 mt-0.5">Aguardando aceite</div>
+                  )}
+                </div>
+
+                {/* Módulos Habilitados */}
+                <div className="text-center p-3 border rounded-lg bg-muted/20">
+                  <div className="text-lg sm:text-2xl font-bold text-blue-600">
+                    {metrics?.enabledModulesCount || 0}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Módulos Habilitados</div>
+                  <div className="text-[9px] text-muted-foreground mt-0.5">de {tenantInfo?.settings?.features_enabled?.length || 0} disponíveis</div>
+                </div>
+
+                {/* Frameworks Ativos */}
+                <div className="text-center p-3 border rounded-lg bg-muted/20">
+                  <div className={`text-lg sm:text-2xl font-bold ${(metrics?.activeFrameworks || 0) > 0 ? 'text-purple-600' : 'text-muted-foreground'}`}>
+                    {metrics?.activeFrameworks || 0}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Frameworks Ativos</div>
+                  <div className="text-[9px] text-muted-foreground mt-0.5">Compliance em uso</div>
+                </div>
+
+                {/* Alertas 24h */}
+                <div className="text-center p-3 border rounded-lg bg-muted/20">
+                  <div className={`text-lg sm:text-2xl font-bold ${(metrics?.suspiciousActivities || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    {metrics?.suspiciousActivities || 0}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Alertas Segurança</div>
+                  <div className="text-[9px] text-muted-foreground mt-0.5">Últimas 24 horas</div>
+                </div>
               </div>
             </CardContent>
           </Card>
