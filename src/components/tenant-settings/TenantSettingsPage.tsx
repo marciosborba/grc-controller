@@ -74,6 +74,7 @@ interface SettingsMetrics {
   suspiciousActivities: number;
   enabledModulesCount: number;
   activeFrameworks: number;
+  inactiveUsers30d: number;
 }
 
 const TenantSettingsPage: React.FC = () => {
@@ -151,7 +152,7 @@ const TenantSettingsPage: React.FC = () => {
         // 1. Contar usuários totais e ativos
         supabase
           .from('profiles')
-          .select('id, user_id, created_at, is_active, system_role, email')
+          .select('id, user_id, created_at, is_active, system_role, email, last_login_at')
           .eq('tenant_id', tenantId),
 
         // 2. Contar atividades suspeitas
@@ -279,6 +280,12 @@ const TenantSettingsPage: React.FC = () => {
       const activeFrameworks = frameworksResult.data?.length || 0;
       const enabledModulesCount = enabledModulesResult.data?.length || 0;
 
+      // Usuários internos ativos sem login nos últimos 30 dias
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const inactiveUsers30d = internalProfiles.filter(u =>
+        u.is_active && (!u.last_login_at || u.last_login_at < thirtyDaysAgo)
+      ).length;
+
       setMetrics({
         totalUsers: internalUsers + externalUsers,
         internalUsers,
@@ -294,6 +301,7 @@ const TenantSettingsPage: React.FC = () => {
         suspiciousActivities,
         enabledModulesCount,
         activeFrameworks,
+        inactiveUsers30d,
       });
 
       if (tenantInfo) {
@@ -626,28 +634,14 @@ const TenantSettingsPage: React.FC = () => {
                   );
                 })()}
 
-                {/* Último Backup */}
-                {(() => {
-                  const backupDate = metrics?.lastBackup ? new Date(metrics.lastBackup) : null;
-                  const diffDays = backupDate
-                    ? Math.floor((Date.now() - backupDate.getTime()) / (1000 * 60 * 60 * 24))
-                    : null;
-                  const label = diffDays === null ? '—'
-                    : diffDays === 0 ? 'Hoje'
-                    : diffDays === 1 ? '1 dia atrás'
-                    : `${diffDays} dias atrás`;
-                  const color = diffDays === null ? 'text-muted-foreground'
-                    : diffDays <= 1 ? 'text-green-600'
-                    : diffDays <= 7 ? 'text-amber-600'
-                    : 'text-red-600';
-                  return (
-                    <div className="text-center p-3 border rounded-lg bg-muted/20">
-                      <div className={`text-lg sm:text-2xl font-bold ${color}`}>{diffDays !== null ? diffDays : '—'}</div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Último Backup</div>
-                      <div className="text-[9px] text-muted-foreground mt-0.5">{label}</div>
-                    </div>
-                  );
-                })()}
+                {/* Sem Login (30 dias) */}
+                <div className="text-center p-3 border rounded-lg bg-muted/20">
+                  <div className={`text-lg sm:text-2xl font-bold ${(metrics?.inactiveUsers30d || 0) > 0 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {metrics?.inactiveUsers30d || 0}
+                  </div>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Sem Login (30d)</div>
+                  <div className="text-[9px] text-muted-foreground mt-0.5">Usuários inativos</div>
+                </div>
 
                 {/* Alertas 24h */}
                 <div className="text-center p-3 border rounded-lg bg-muted/20">
