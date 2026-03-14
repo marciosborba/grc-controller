@@ -20,31 +20,35 @@ export const CommunicationTab: React.FC<CommunicationTabProps> = ({ risk, user, 
     const [sending, setSending] = useState<string | null>(null);
     const [addingSending, setAddingSending] = useState(false);
 
+    const sendRiskNotification = (recipientName: string, recipientEmail: string, customPortalUrl: string | undefined) => {
+        supabase.functions.invoke('risk-notification', {
+            body: {
+                recipientName: recipientName || 'Stakeholder',
+                recipientEmail,
+                riskTitle: risk.title || risk.risk_title || risk.name || 'Risco',
+                riskDescription: risk.description || risk.risk_description || '',
+                riskLevel: risk.riskLevel || risk.risk_level || 'Não definido',
+                riskCategory: risk.category || risk.risk_category || '',
+                senderName: user?.email || 'Sistema',
+                customPortalUrl,
+            }
+        }).catch((err: any) => console.error('[risk-notification] background error:', err.message));
+    };
+
     const handleResendEmail = async (stk: any) => {
         if (!stk.email) { toast({ title: 'E-mail não informado', variant: 'destructive' }); return; }
         setSending(stk.email);
         try {
-            const { data: inviteData } = await supabase.functions.invoke('invite-risk-stakeholder', {
+            const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('invite-risk-stakeholder', {
                 body: {
                     email: stk.email,
                     full_name: stk.name || stk.email,
                     tenant_id: userTenantId || (risk as any).tenant_id,
                 }
             });
-            const customPortalUrl = inviteData?.inviteLink || undefined;
-            const { error } = await supabase.functions.invoke('risk-notification', {
-                body: {
-                    recipientName: stk.name || 'Stakeholder',
-                    recipientEmail: stk.email,
-                    riskTitle: risk.title || risk.risk_title || risk.name || 'Risco',
-                    riskDescription: risk.description || risk.risk_description || '',
-                    riskLevel: risk.riskLevel || risk.risk_level || 'Não definido',
-                    riskCategory: risk.category || risk.risk_category || '',
-                    senderName: user?.email || 'Sistema',
-                    customPortalUrl,
-                }
-            });
-            if (error) throw error;
+            if (inviteErr) throw inviteErr;
+            // Fire notification in background — don't block the UI
+            sendRiskNotification(stk.name, stk.email, inviteData?.inviteLink || undefined);
             toast({ title: 'E-mail reenviado', description: `Notificação enviada para ${stk.email}` });
         } catch (err: any) {
             toast({ title: 'Erro ao reenviar', description: err.message, variant: 'destructive' });
@@ -72,26 +76,16 @@ export const CommunicationTab: React.FC<CommunicationTabProps> = ({ risk, user, 
             });
             if (dbErr) throw dbErr;
 
-            const { data: inviteData } = await supabase.functions.invoke('invite-risk-stakeholder', {
+            const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('invite-risk-stakeholder', {
                 body: {
                     email: newPerson.email.trim().toLowerCase(),
                     full_name: newPerson.name.trim(),
                     tenant_id: userTenantId || (risk as any).tenant_id,
                 }
             });
-            const customPortalUrl = inviteData?.inviteLink || undefined;
-            await supabase.functions.invoke('risk-notification', {
-                body: {
-                    recipientName: newPerson.name,
-                    recipientEmail: newPerson.email.trim().toLowerCase(),
-                    riskTitle: risk.title || risk.risk_title || risk.name || 'Risco',
-                    riskDescription: risk.description || risk.risk_description || '',
-                    riskLevel: risk.riskLevel || risk.risk_level || 'Não definido',
-                    riskCategory: risk.category || risk.risk_category || '',
-                    senderName: user?.email || 'Sistema',
-                    customPortalUrl,
-                }
-            });
+            if (inviteErr) throw inviteErr;
+            // Fire notification in background — don't block the UI
+            sendRiskNotification(newPerson.name, newPerson.email.trim().toLowerCase(), inviteData?.inviteLink || undefined);
             toast({ title: 'Pessoa adicionada e notificada!', description: `E-mail enviado para ${newPerson.email}` });
             setNewPerson({ name: '', email: '', position: '' });
             setAddingPerson(false);
