@@ -36,10 +36,22 @@ async function fetchAndRenderTemplate(
       console.warn(`[SendPulse] Template ${templateId} has no HTML body. Keys: ${Object.keys(tpl).join(", ")}`);
       return null;
     }
-    console.log(`[SendPulse] Template ${templateId} fetched, length=${html.length}. Substituting vars: ${Object.keys(variables).join(", ")}`);
+    console.log(`[SendPulse] Template ${templateId} fetched, length=${html.length}. Vars: ${Object.keys(variables).join(", ")}`);
+
+    // Check if the HTML actually contains any of our variable patterns.
+    // If none are found, the template uses SendPulse's native variable engine
+    // (not literal {{varName}} in HTML), so fall back to template.variables.
+    const hasAnyVar = Object.keys(variables).some(key =>
+      html.includes(`{{ ${key} }}`) || html.includes(`{{${key}}}`) ||
+      html.includes(`{ ${key} }`) || html.includes(`{${key}}`)
+    );
+    if (!hasAnyVar) {
+      console.log(`[SendPulse] Template ${templateId} uses native SendPulse variables — using template.variables fallback`);
+      return null;
+    }
+
     let rendered = html;
     for (const [key, value] of Object.entries(variables)) {
-      // Handle {{ varName }}, {{varName}}, { varName }, {varName}
       rendered = rendered
         .split(`{{ ${key} }}`).join(value)
         .split(`{{${key}}}`).join(value)

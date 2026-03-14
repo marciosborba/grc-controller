@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { sendTemplateEmail } from '../_shared/sendpulse.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -10,30 +9,6 @@ const corsHeaders = {
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
 const RESET_URL = `${FRONTEND_URL}/reset-password`;
-
-async function sendSendPulseInvite({
-  recipientEmail,
-  recipientName,
-  inviteLink,
-  senderName
-}: {
-  recipientEmail: string;
-  recipientName: string;
-  inviteLink: string;
-  senderName: string;
-}) {
-  return sendTemplateEmail({
-    templateId: 77966,
-    subject: "Bem-vindo ao Portal de Riscos - Defina sua senha",
-    recipientEmail,
-    recipientName,
-    variables: {
-      firstName: recipientName.split(" ")[0] || recipientName,
-      inviteLink,
-      senderName: senderName || "Equipe GEPRIV",
-    },
-  });
-}
 
 serve(async (req: Request) => {
     if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -165,18 +140,7 @@ serve(async (req: Request) => {
             });
         }
 
-        // Responde ao frontend imediatamente — e-mail é disparado em background
-        if (inviteLink) {
-            sendSendPulseInvite({
-                recipientEmail: emailNorm,
-                recipientName: full_name || emailNorm,
-                inviteLink: inviteLink,
-                senderName: "Equipe GEPRIV"
-            }).catch((emailErr: any) =>
-                console.error("⚠️ Invite email failed to send, but user was created:", emailErr.message)
-            );
-        }
-
+        // O e-mail de notificação é enviado pela função risk-notification (não aqui)
         return new Response(JSON.stringify({
             success: true,
             isNewUser: true,
