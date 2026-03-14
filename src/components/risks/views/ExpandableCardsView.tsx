@@ -58,12 +58,18 @@ import {
   Plus,
   Send,
   ClipboardList,
-  MessageSquare
+  MessageSquare,
+  UserCheck,
+  ThumbsUp,
+  Mail,
+  Inbox,
+  FolderCheck,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { useTenantSecurity } from '@/utils/tenantSecurity';
-import type { Risk, RiskFilters, RiskStatus } from '@/types/risk-management';
+import type { Risk, RiskFilters, RiskStatus, TreatmentApprover } from '@/types/risk-management';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 
@@ -92,6 +98,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   const [sortField, setSortField] = useState<SortField>('createdAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
+  const [riskListTab, setRiskListTab] = useState<'open' | 'accepted' | 'closed'>('open');
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
 
   const { toast } = useToast();
   const { tenantSettings, isMatrix4x4, getRiskLevels, getMatrixLabels, getMatrixDimensions } = useTenantSettings();
@@ -248,6 +256,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         treatment_rationale: risk.treatment_rationale || '',
         treatment_cost: risk.treatment_cost || '',
         treatment_timeline: risk.treatment_timeline ? new Date(risk.treatment_timeline).toISOString().split('T')[0] : '',
+        treatment_evidence: (risk as any).treatment_evidence || '',
+        acceptance_type: (risk as any).acceptance_type || 'temporario',
+        treatment_approvers: (risk as any).treatment_approvers || [],
         status: risk.status,
         assignedTo: risk.assignedTo || '',
         dueDate: risk.dueDate ? new Date(risk.dueDate).toISOString().split('T')[0] : '',
@@ -364,6 +375,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         treatment_rationale: formData.treatment_rationale,
         treatment_cost: formData.treatment_cost,
         treatment_timeline: formData.treatment_timeline,
+        treatment_evidence: formData.treatment_evidence,
+        acceptance_type: formData.acceptance_type,
+        treatment_approvers: formData.treatment_approvers,
         status: formData.status,
         actionPlan: formData.actionPlan,
         assignedTo: formData.assignedTo,
@@ -597,6 +611,59 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     return new Date(risk.dueDate) < new Date();
   };
 
+  // Tab categorization helpers
+  const isRiskAccepted = (risk: Risk): boolean => {
+    const normalizedTreatment = (risk.treatmentType || risk.treatment_strategy || '').toLowerCase();
+    const isAccept = normalizedTreatment === 'aceitar' || normalizedTreatment === 'accept';
+    const approvers: TreatmentApprover[] = (risk as any).treatment_approvers || [];
+    const allApproved = approvers.length > 0 && approvers.every((a) => a.approved);
+    return isAccept && allApproved;
+  };
+
+  const isRiskClosed = (risk: Risk): boolean => {
+    return risk.status === 'Fechado';
+  };
+
+  const getRiskTab = (risk: Risk): 'accepted' | 'closed' | 'open' => {
+    if (isRiskClosed(risk)) return 'closed';
+    if (isRiskAccepted(risk)) return 'accepted';
+    return 'open';
+  };
+
+  const sendApprovalEmail = async (riskId: string, approver: TreatmentApprover, risk: Risk) => {
+    const key = `${riskId}-${approver.id}`;
+    setSendingEmail(prev => ({ ...prev, [key]: true }));
+    try {
+      const { error } = await supabase.functions.invoke('risk-acceptance-notify', {
+        body: {
+          approverName: approver.name,
+          approverEmail: approver.email,
+          riskTitle: risk.name,
+          riskLevel: risk.riskLevel,
+          riskCategory: risk.category,
+          riskDescription: risk.description || '',
+          senderName: user?.profile?.full_name || user?.email || 'Sistema GRC',
+          acceptanceType: (risk as any).acceptance_type || 'temporario',
+          justification: (risk as any).treatment_rationale || '',
+          riskId,
+        },
+      });
+      if (error) throw error;
+      // Mark sent_at in approvers
+      const approvers: TreatmentApprover[] = (risk as any).treatment_approvers || [];
+      const updated = approvers.map((a) =>
+        a.id === approver.id ? { ...a, sent_at: new Date().toISOString() } : a
+      );
+      await supabase.from('risk_registrations').update({ treatment_approvers: updated }).eq('id', riskId);
+      onUpdate(riskId, { treatment_approvers: updated });
+      toast({ title: '📧 E-mail enviado', description: `Notificação enviada para ${approver.email}` });
+    } catch (err: any) {
+      toast({ title: 'Erro ao enviar e-mail', description: err.message, variant: 'destructive' });
+    } finally {
+      setSendingEmail(prev => ({ ...prev, [key]: false }));
+    }
+  };
+
   const handleDelete = (risk: Risk) => {
     if (confirm(`Tem certeza que deseja excluir o risco "${risk.name}"?`)) {
       onDelete(risk.id);
@@ -696,26 +763,53 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
         </CardHeader>
       </Card>
 
-      {/* Cards dos Riscos */}
-      <div className="space-y-4">
-        {processedRisks.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Nenhum risco encontrado
-                </h3>
-                <p className="text-gray-500">
-                  {searchTerm || Object.keys(filters).length > 0
-                    ? 'Tente ajustar os filtros de busca.'
-                    : 'Não há riscos para exibir.'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          processedRisks.map((risk) => {
+      {/* 3-Tab Risk List: Abertos / Aceitos / Encerrados */}
+      <Tabs value={riskListTab} onValueChange={(v) => setRiskListTab(v as any)}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="open" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Inbox className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>Riscos em Aberto</span>
+            <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1.5">
+              {processedRisks.filter(r => getRiskTab(r) === 'open').length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="accepted" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <ThumbsUp className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>Riscos Aceitos</span>
+            <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1.5">
+              {processedRisks.filter(r => getRiskTab(r) === 'accepted').length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="closed" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <FolderCheck className="h-3.5 w-3.5 flex-shrink-0" />
+            <span>Riscos Encerrados</span>
+            <Badge variant="secondary" className="ml-1 text-[10px] h-5 px-1.5">
+              {processedRisks.filter(r => getRiskTab(r) === 'closed').length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+
+        {(['open', 'accepted', 'closed'] as const).map((tab) => (
+          <TabsContent key={tab} value={tab} className="mt-4">
+            <div className="space-y-4">
+              {processedRisks.filter(r => getRiskTab(r) === tab).length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8">
+                      <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                        {tab === 'open' ? 'Nenhum risco em aberto' : tab === 'accepted' ? 'Nenhum risco aceito' : 'Nenhum risco encerrado'}
+                      </h3>
+                      <p className="text-gray-500 text-sm">
+                        {searchTerm || Object.keys(filters).length > 0
+                          ? 'Tente ajustar os filtros de busca.'
+                          : tab === 'accepted' ? 'Riscos com tratamento "Aceitar" e todos aprovadores confirmados aparecerão aqui.' : tab === 'closed' ? 'Riscos com status "Fechado" aparecerão aqui.' : 'Não há riscos em aberto.'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                processedRisks.filter(r => getRiskTab(r) === tab).map((risk) => {
             const isExpanded = expandedCards.has(risk.id);
             const isEditing = editingCards.has(risk.id);
             const editForm = editForms[risk.id] || {};
@@ -1727,6 +1821,188 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                               )}
                             </div>
                           </div>
+
+                          {/* Evidência do Tratamento */}
+                          <div>
+                            <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                              <CheckSquare className="h-4 w-4" />
+                              Evidência do Tratamento
+                            </Label>
+                            {isEditing ? (
+                              <Textarea
+                                value={editForm.treatment_evidence || ''}
+                                onChange={(e) => updateEditForm(risk.id, 'treatment_evidence', e.target.value)}
+                                placeholder="Descreva ou cole URL da evidência do tratamento aplicado..."
+                                rows={2}
+                              />
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                {(risk as any).treatment_evidence || 'Nenhuma evidência registrada'}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Seção específica para Aceitar */}
+                          {((isEditing ? editForm.treatmentType : risk.treatmentType) === 'Aceitar' ||
+                            (isEditing ? editForm.treatmentType : (risk as any).treatment_strategy)?.toLowerCase() === 'accept') && (
+                            <div className="border rounded-lg p-4 space-y-4 bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800">
+                              <h6 className="font-semibold text-sm flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                                <UserCheck className="h-4 w-4" />
+                                Configuração de Aceite de Risco
+                              </h6>
+
+                              {/* Tipo de Aceite */}
+                              <div>
+                                <Label className="text-sm font-medium mb-2 block">Tipo de Aceite</Label>
+                                {isEditing ? (
+                                  <div className="flex gap-3">
+                                    {(['temporario', 'definitivo'] as const).map((type) => (
+                                      <label key={type} className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                          type="radio"
+                                          name={`acceptance_type_${risk.id}`}
+                                          value={type}
+                                          checked={(editForm.acceptance_type || 'temporario') === type}
+                                          onChange={() => updateEditForm(risk.id, 'acceptance_type', type)}
+                                          className="accent-orange-500"
+                                        />
+                                        <span className="text-sm capitalize">{type === 'temporario' ? 'Temporário' : 'Definitivo'}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <Badge variant="outline" className="capitalize">
+                                    {(risk as any).acceptance_type === 'definitivo' ? 'Definitivo' : 'Temporário'}
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Aprovadores */}
+                              <div>
+                                <Label className="text-sm font-medium mb-3 block flex items-center gap-1.5">
+                                  <Users className="h-4 w-4" />
+                                  Aprovadores
+                                  <span className="text-xs text-muted-foreground font-normal ml-1">(receberão e-mail: Carta de Risco)</span>
+                                </Label>
+
+                                {/* Lista de aprovadores existentes */}
+                                {((isEditing ? (editForm.treatment_approvers || []) : ((risk as any).treatment_approvers || []))).map((approver: TreatmentApprover) => (
+                                  <div key={approver.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 border rounded-lg bg-background mb-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm font-medium truncate">{approver.name}</span>
+                                        {approver.approved ? (
+                                          <Badge className="bg-green-100 text-green-800 text-[10px] h-5 flex-shrink-0">
+                                            <CheckCircle className="h-3 w-3 mr-1" /> Aprovado
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-[10px] h-5 flex-shrink-0">
+                                            <Clock className="h-3 w-3 mr-1" /> Pendente
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">{approver.email}</span>
+                                      {approver.sent_at && (
+                                        <span className="text-xs text-muted-foreground block">
+                                          E-mail enviado em {formatDate(approver.sent_at)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        disabled={sendingEmail[`${risk.id}-${approver.id}`]}
+                                        onClick={() => sendApprovalEmail(risk.id, approver, risk)}
+                                      >
+                                        {sendingEmail[`${risk.id}-${approver.id}`] ? (
+                                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                        ) : (
+                                          <Mail className="h-3 w-3 mr-1" />
+                                        )}
+                                        {approver.sent_at ? 'Reenviar' : 'Enviar'}
+                                      </Button>
+                                      {isEditing && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                          onClick={() => {
+                                            const current: TreatmentApprover[] = editForm.treatment_approvers || [];
+                                            updateEditForm(risk.id, 'treatment_approvers', current.filter(a => a.id !== approver.id));
+                                          }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+
+                                {/* Add approver form - only in edit mode */}
+                                {isEditing && (
+                                  <div className="border border-dashed rounded-lg p-3 space-y-2 bg-muted/20">
+                                    <p className="text-xs font-medium text-muted-foreground">Adicionar Aprovador</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      <Input
+                                        placeholder="Nome do aprovador"
+                                        className="h-8 text-xs"
+                                        value={editForm._newApproverName || ''}
+                                        onChange={(e) => updateEditForm(risk.id, '_newApproverName', e.target.value)}
+                                      />
+                                      <Input
+                                        type="email"
+                                        placeholder="email@empresa.com"
+                                        className="h-8 text-xs"
+                                        value={editForm._newApproverEmail || ''}
+                                        onChange={(e) => updateEditForm(risk.id, '_newApproverEmail', e.target.value)}
+                                      />
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 text-xs"
+                                      onClick={() => {
+                                        const name = editForm._newApproverName?.trim();
+                                        const email = editForm._newApproverEmail?.trim();
+                                        if (!name || !email) return;
+                                        const current: TreatmentApprover[] = editForm.treatment_approvers || [];
+                                        const newApprover: TreatmentApprover = {
+                                          id: `approver-${Date.now()}`,
+                                          name,
+                                          email,
+                                          approved: false,
+                                        };
+                                        updateEditForm(risk.id, 'treatment_approvers', [...current, newApprover]);
+                                        updateEditForm(risk.id, '_newApproverName', '');
+                                        updateEditForm(risk.id, '_newApproverEmail', '');
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3 mr-1" />
+                                      Adicionar
+                                    </Button>
+                                  </div>
+                                )}
+
+                                {/* All approved indicator */}
+                                {(() => {
+                                  const approvers: TreatmentApprover[] = (risk as any).treatment_approvers || [];
+                                  if (approvers.length > 0 && approvers.every(a => a.approved)) {
+                                    return (
+                                      <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg flex items-center gap-2">
+                                        <ThumbsUp className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                        <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                                          Todos os aprovadores confirmaram. Este risco será movido para "Riscos Aceitos".
+                                        </span>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </div>
+                          )}
                         </TabsContent>
 
                         {/* Etapa 5: Plano de Ação */}
@@ -2238,12 +2514,14 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                     </div>
                   </CardContent>
                 )}
-              </Card>
-            );
-          })
-
-        )}
-      </div>
+                </Card>
+              );
+            })
+          )}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
 
       {/* Modal de Preview de Evidência */}
       <Dialog open={evidencePreview.isOpen} onOpenChange={(open) => setEvidencePreview(prev => ({ ...prev, isOpen: open }))}>

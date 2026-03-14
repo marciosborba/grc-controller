@@ -162,6 +162,9 @@ export interface Risk {
   treatment_rationale?: string; // Justificativa do tratamento
   treatment_cost?: number; // Custo do tratamento
   treatment_timeline?: string; // Cronograma do tratamento
+  treatment_evidence?: string; // Evidência do tratamento
+  acceptance_type?: 'temporario' | 'definitivo'; // Tipo de aceitação
+  treatment_approvers?: TreatmentApprover[]; // Aprovadores para aceite de risco
 
   // Etapa 5: Plano de Ação - Atividade 1
   activity_1_name?: string;
@@ -212,6 +215,19 @@ export interface Risk {
   review_date?: Date;
   monitoring_notes?: string;
   residual_risk_level?: string;
+}
+
+// ============================================================================
+// TRATAMENTO - APROVADORES
+// ============================================================================
+
+export interface TreatmentApprover {
+  id: string;
+  name: string;
+  email: string;
+  approved: boolean;
+  approved_at?: string;
+  sent_at?: string;
 }
 
 // ============================================================================
@@ -469,6 +485,9 @@ export interface UpdateRiskRequest extends Partial<CreateRiskRequest> {
   treatment_rationale?: string;
   treatment_cost?: number;
   treatment_timeline?: string;
+  treatment_evidence?: string;
+  acceptance_type?: 'temporario' | 'definitivo';
+  treatment_approvers?: TreatmentApprover[];
 
   // Dados de atividades do plano de ação
   activity_1_name?: string;

@@ -230,7 +230,8 @@ export const useRiskManagement = () => {
           business_area, impact_score, likelihood_score, risk_score, risk_level, 
           analysis_methodology, analysis_notes, gut_gravity, gut_urgency, 
           gut_tendency, gut_score, gut_priority, treatment_strategy, 
-          treatment_rationale, treatment_cost, treatment_timeline, 
+          treatment_rationale, treatment_cost, treatment_timeline,
+          treatment_evidence, acceptance_type, treatment_approvers,
           monitoring_frequency, monitoring_responsible, residual_impact, 
           residual_likelihood, residual_score, closure_criteria, closure_date, 
           closure_notes, created_at, updated_at,
@@ -794,6 +795,9 @@ export const useRiskManagement = () => {
       if (data.treatment_rationale !== undefined) updateData.treatment_rationale = data.treatment_rationale;
       if (data.treatment_cost !== undefined) updateData.treatment_cost = parseNum(data.treatment_cost);
       if (data.treatment_timeline !== undefined) updateData.treatment_timeline = parseDate(data.treatment_timeline);
+      if (data.treatment_evidence !== undefined) updateData.treatment_evidence = data.treatment_evidence;
+      if (data.acceptance_type !== undefined) updateData.acceptance_type = data.acceptance_type;
+      if (data.treatment_approvers !== undefined) updateData.treatment_approvers = data.treatment_approvers;
 
       // Dados de atividades do plano de ação
       if (data.activity_1_name !== undefined) updateData.activity_1_name = data.activity_1_name;
@@ -1150,6 +1154,9 @@ export const useRiskManagement = () => {
       treatment_rationale: supabaseRisk.treatment_rationale,
       treatment_cost: supabaseRisk.treatment_cost,
       treatment_timeline: supabaseRisk.treatment_timeline,
+      treatment_evidence: supabaseRisk.treatment_evidence,
+      acceptance_type: supabaseRisk.acceptance_type,
+      treatment_approvers: supabaseRisk.treatment_approvers || [],
 
       // Dados de monitoramento
       monitoring_frequency: supabaseRisk.monitoring_frequency,
