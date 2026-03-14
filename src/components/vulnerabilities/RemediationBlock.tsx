@@ -133,11 +133,20 @@ export function RemediationBlock({
                 name: inviteFormData.full_name.trim()
             };
             
-            setAssignedItems(prev => [...prev, newUser]);
+            const updatedItems = [...assignedItems, newUser];
+            setAssignedItems(updatedItems);
             setIsInviteDialogOpen(false);
             setInviteFormData({ full_name: '', email: '' });
             setAssigneeSearchTerm('');
             setShowAssigneeDropdown(false);
+
+            // Auto-persist assignment immediately so it's not lost if user doesn't click Save
+            const usersToSave = updatedItems.filter(i => i.type === 'user');
+            const groupsToSave = updatedItems.filter(i => i.type === 'group');
+            await supabase.from('remediation_tasks').update({
+                assigned_to: usersToSave.length > 0 ? JSON.stringify(usersToSave) : null,
+                assigned_team: groupsToSave.length > 0 ? JSON.stringify(groupsToSave) : null,
+            }).eq('id', task.id);
         } catch (error: any) {
             console.error('Error inviting user:', error);
             toast.error(error.message || 'Erro ao convidar usuário');
