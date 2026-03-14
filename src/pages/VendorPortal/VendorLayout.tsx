@@ -252,7 +252,7 @@ const VendorHeader = () => {
                                 </div>
                                 <div className="text-left hidden md:block">
                                     <p className="text-sm font-semibold leading-none text-foreground truncate max-w-[120px]">
-                                        {user?.email?.split('@')[0]}
+                                        {(() => { const n = (user as any)?.user_metadata?.name || user?.email?.split('@')[0] || ''; return n ? n.charAt(0).toUpperCase() + n.slice(1) : ''; })()}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-1 font-medium">
                                         Fornecedor
