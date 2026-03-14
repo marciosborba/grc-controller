@@ -9,6 +9,7 @@ const corsHeaders = {
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
 const RESET_URL = `${FRONTEND_URL}/reset-password`;
+const RISK_PORTAL_URL = `${FRONTEND_URL}/risk-portal`;
 
 serve(async (req: Request) => {
     if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
@@ -29,109 +30,94 @@ serve(async (req: Request) => {
 
         const emailNorm = email.trim().toLowerCase();
 
-        // 1. Search for existing user with pagination to ensure we find them
+        // 1. Search for existing user
         let existingUser = null;
         let page = 1;
         const perPage = 1000;
         while (!existingUser) {
-            const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({
-                page,
-                perPage,
-            });
+            const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
             if (error || !users || users.length === 0) break;
             existingUser = users.find(u => u.email?.toLowerCase() === emailNorm) || null;
-            if (users.length < perPage) break; // last page
+            if (users.length < perPage) break;
             page++;
         }
 
-        // 2. If user exists AND their email is confirmed → they have an account, use direct portal link
+        // 2. Existing confirmed user → direct portal link (they just need to log in)
         if (existingUser && existingUser.email_confirmed_at) {
-            console.log(`✅ User ${emailNorm} already has confirmed account → direct portal link`);
+            console.log(`✅ User ${emailNorm} already confirmed → returning portal link`);
             return new Response(JSON.stringify({
                 success: true,
                 isNewUser: false,
-                inviteLink: null,
+                inviteLink: RISK_PORTAL_URL,
                 userId: existingUser.id,
             }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // 3. User doesn't exist OR exists but never confirmed → generate invite/recovery link
-        let inviteLink: string | null = null;
+        // 3. New or unconfirmed user → create/confirm + generate recovery link
         let userId: string | null = existingUser?.id || null;
 
-        if (existingUser && !existingUser.email_confirmed_at) {
-            // User was invited before but never set up → generate a new invite link
-            console.log(`🔄 User ${emailNorm} exists but unconfirmed → regenerating invite link`);
-            const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-                type: 'invite',
+        if (!existingUser) {
+            // Create new user with email already confirmed (no Supabase invite email sent)
+            console.log(`🆕 Creating new confirmed user ${emailNorm}`);
+            const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
                 email: emailNorm,
-                options: { redirectTo: RESET_URL }
+                email_confirm: true,
+                user_metadata: {
+                    full_name: full_name || emailNorm,
+                    tenant_id,
+                    system_role: 'guest',
+                    invited_as: 'risk_stakeholder',
+                },
             });
-            if (linkErr) {
-                console.error('generateLink error (existing unconfirmed):', linkErr.message);
-                throw new Error(`generateLink failed: ${linkErr.message}`);
-            }
-            inviteLink = linkData?.properties?.action_link || null;
+            if (createErr) throw new Error(`Failed to create user: ${createErr.message}`);
+            userId = newUser.user.id;
+            console.log(`✅ User created: ${userId}`);
         } else {
-            // Completely new user → generate invite link
-            console.log(`🆕 New user ${emailNorm} → generating invite link`);
-            const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-                type: 'invite',
-                email: emailNorm,
-                options: {
-                    redirectTo: RESET_URL,
-                    data: {
-                        full_name: full_name || emailNorm,
-                        tenant_id,
-                        system_role: 'guest',
-                        invited_as: 'risk_stakeholder',
-                    }
-                }
-            });
-            if (linkErr) throw new Error(`generateLink failed: ${linkErr.message}`);
-            inviteLink = linkData?.properties?.action_link || null;
-            userId = linkData?.user?.id || null;
+            // Existing unconfirmed user → confirm their email so recovery link works
+            console.log(`🔄 Confirming email for existing user ${emailNorm}`);
+            await supabaseAdmin.auth.admin.updateUser(existingUser.id, { email_confirm: true });
         }
 
-        console.log(`🔗 Invite link generated for ${emailNorm}: ${inviteLink?.substring(0, 80)}...`);
+        // Generate a recovery link (fires PASSWORD_RECOVERY event — more reliable than invite)
+        const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'recovery',
+            email: emailNorm,
+            options: { redirectTo: RESET_URL },
+        });
+        if (linkErr) throw new Error(`generateLink failed: ${linkErr.message}`);
 
-        // 4. Upsert profile as guest — ensure tenant_id and system_role are always set
+        const inviteLink = linkData?.properties?.action_link || null;
+        console.log(`🔗 Recovery link generated for ${emailNorm}`);
+
+        // 4. Upsert profile as guest
         if (userId) {
-            // Check if profile already exists (may have been created by Auth trigger with wrong tenant)
-            const { data: existingProfile } = await supabaseAdmin
-                .from('profiles')
-                .select('id')
-                .eq('user_id', userId)
-                .single();
-
             const profilePayload = {
                 user_id: userId,
                 email: emailNorm,
                 full_name: full_name || emailNorm,
                 tenant_id,
                 system_role: 'guest',
-                is_active: false,
+                is_active: true,
                 must_change_password: true,
-                override_risk_portal: true, // Garante acesso ao portal mesmo que o módulo global esteja desativado
+                override_risk_portal: true,
             };
+
+            const { data: existingProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('user_id', userId)
+                .single();
 
             if (existingProfile) {
                 const { error: profileErr } = await supabaseAdmin
-                    .from('profiles')
-                    .update(profilePayload)
-                    .eq('id', existingProfile.id);
+                    .from('profiles').update(profilePayload).eq('id', existingProfile.id);
                 if (profileErr) console.error('Profile update error:', profileErr.message);
-                else console.log(`Profile updated for guest ${emailNorm} in tenant ${tenant_id}`);
             } else {
                 const { error: profileErr } = await supabaseAdmin
-                    .from('profiles')
-                    .insert([profilePayload]);
+                    .from('profiles').insert([profilePayload]);
                 if (profileErr) console.error('Profile insert error:', profileErr.message);
-                else console.log(`Profile inserted for guest ${emailNorm} in tenant ${tenant_id}`);
             }
 
-            // Assign 'user' role in user_roles (app_role enum does not have 'guest')
-            // 'guest' is tracked via profiles.system_role only
             await supabaseAdmin.from('user_roles').upsert(
                 { user_id: userId, role: 'user' },
                 { onConflict: 'user_id, role' }
@@ -140,7 +126,6 @@ serve(async (req: Request) => {
             });
         }
 
-        // O e-mail de notificação é enviado pela função risk-notification (não aqui)
         return new Response(JSON.stringify({
             success: true,
             isNewUser: true,
