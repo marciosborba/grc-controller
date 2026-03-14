@@ -1,74 +1,27 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sendTemplateEmail } from '../_shared/sendpulse.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
 const RESET_PASSWORD_URL = `${FRONTEND_URL}/reset-password`;
-
-// Template 79267 — redefinição de senha (padrão para todos os usuários)
-const RESET_PASSWORD_TEMPLATE_ID = 79267;
-
-async function getSendPulseToken(clientId: string, clientSecret: string): Promise<string> {
-  const res = await fetch("https://api.sendpulse.com/oauth/access_token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-    }),
-  });
-  if (!res.ok) throw new Error(`SendPulse Auth failed: ${await res.text()}`);
-  return (await res.json()).access_token;
-}
 
 async function sendPasswordResetEmail(
   recipientEmail: string,
   recipientName: string,
   resetLink: string
 ): Promise<boolean> {
-  const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
-  const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
-  const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-
-  if (!clientId || !clientSecret) {
-    console.warn("[WARN] SendPulse credentials missing — cannot send reset email.");
-    return false;
-  }
-
-  const accessToken = await getSendPulseToken(clientId, clientSecret);
-
-  const res = await fetch("https://api.sendpulse.com/smtp/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${accessToken}`,
+  return sendTemplateEmail({
+    templateId: 79267,
+    subject: "GEPRIV - Redefinição de Senha",
+    recipientEmail,
+    recipientName,
+    variables: {
+      firstName: recipientName.split(" ")[0] || recipientName,
+      inviteLink: resetLink,
+      senderName: "Segurança GEPRIV",
     },
-    body: JSON.stringify({
-      email: {
-        subject: "GEPRIV - Redefinição de Senha",
-        template: {
-          id: RESET_PASSWORD_TEMPLATE_ID,
-          variables: {
-            firstName: recipientName.split(" ")[0] || recipientName,
-            inviteLink: resetLink,
-            senderName: "Segurança GEPRIV",
-          },
-        },
-        from: { name: "GEPRIV", email: fromEmail },
-        to: [{ name: recipientName, email: recipientEmail }],
-      },
-    }),
   });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("[ERROR] SendPulse password reset send failed:", errorText);
-    throw new Error(`SendPulse send failed: ${errorText}`);
-  }
-
-  console.log(`[SUCCESS] Password reset email sent to ${recipientEmail}`);
-  return true;
 }
 
 Deno.serve(async (req) => {

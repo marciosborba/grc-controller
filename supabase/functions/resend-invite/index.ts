@@ -1,62 +1,25 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sendTemplateEmail } from '../_shared/sendpulse.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
 const RESET_URL = `${FRONTEND_URL}/reset-password`;
 
-async function getSendPulseToken(clientId: string, clientSecret: string) {
-  const res = await fetch("https://api.sendpulse.com/oauth/access_token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
-  });
-  if (!res.ok) throw new Error(`SendPulse Auth failed: ${await res.text()}`);
-  return (await res.json()).access_token;
-}
-
 async function sendInviteEmail(recipientEmail: string, recipientName: string, inviteLink: string) {
-  const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
-  const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
-  const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateId = 79267;
-
-  if (!clientId || !clientSecret) {
-    console.warn("[WARN] SendPulse credentials missing — cannot send email.");
-    return false;
-  }
-
-  const accessToken = await getSendPulseToken(clientId, clientSecret);
-
-  const res = await fetch("https://api.sendpulse.com/smtp/emails", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
-    body: JSON.stringify({
-      email: {
-        subject: "GEPRIV - Redefinição de Senha",
-        template: {
-          id: templateId,
-          variables: {
-            firstName: recipientName.split(" ")[0] || recipientName,
-            inviteLink,
-            senderName: "Segurança GEPRIV",
-          },
-        },
-        from: { name: "GEPRIV", email: fromEmail },
-        to: [{ name: recipientName, email: recipientEmail }],
-      },
-    }),
+  return sendTemplateEmail({
+    templateId: 79267,
+    subject: "GEPRIV - Redefinição de Senha",
+    recipientEmail,
+    recipientName,
+    variables: {
+      firstName: recipientName.split(" ")[0] || recipientName,
+      inviteLink,
+      senderName: "Segurança GEPRIV",
+    },
   });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("[ERROR] SendPulse send failed:", errorText);
-    throw new Error(`SendPulse send failed: ${errorText}`);
-  }
-
-  console.log(`[SUCCESS] Invite email sent to ${recipientEmail}`);
-  return true;
 }
+
 
 Deno.serve(async (req) => {
   // Standard OPTIONS response for CORS

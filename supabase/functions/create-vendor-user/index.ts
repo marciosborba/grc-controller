@@ -1,66 +1,33 @@
 // @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+import { sendTemplateEmail } from '../_shared/sendpulse.ts'
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
-// Vendor portal first-access link
 const VENDOR_RESET_URL = `${FRONTEND_URL}/reset-password`;
 
-async function getSendPulseToken(clientId: string, clientSecret: string) {
-    const res = await fetch("https://api.sendpulse.com/oauth/access_token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
-    });
-    if (!res.ok) throw new Error(`SendPulse Auth failed: ${await res.text()}`);
-    return (await res.json()).access_token;
-}
-
 async function sendVendorInviteEmail(recipientEmail: string, recipientName: string, inviteLink: string) {
-    const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
-    const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
-    const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-    const templateIdStr = "79283"; // Template fixo: Portal de Fornecedores (TPRM)
-
-    if (!clientId || !clientSecret) {
-        console.warn("[WARN] SendPulse config missing — skipping vendor invite email.");
-        return false;
-    }
-
-    const templateId = parseInt(templateIdStr);
-    const accessToken = await getSendPulseToken(clientId, clientSecret);
-
-    const res = await fetch("https://api.sendpulse.com/smtp/emails", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${accessToken}`,
+    const firstName = recipientName.split(" ")[0] || recipientName;
+    return sendTemplateEmail({
+        templateId: 79283,
+        subject: "Bem-vindo ao Portal do Fornecedor GEPRIV - Defina sua senha",
+        recipientEmail,
+        recipientName,
+        variables: {
+            // SendPulse-style variables ({{firstName}}, {{inviteLink}})
+            firstName,
+            inviteLink,
+            senderName: "Equipe GEPRIV",
+            name: recipientName,
+            // Supabase Go-template-style variables ({{ .Email }}, {{ .ConfirmationURL }})
+            ".Email": recipientEmail,
+            ".ConfirmationURL": inviteLink,
+            ".SiteURL": Deno.env.get("FRONTEND_URL") || "https://gepriv.com",
+            ".Token": inviteLink,
+            ".FirstName": firstName,
+            ".Name": recipientName,
         },
-        body: JSON.stringify({
-            email: {
-                subject: "Bem-vindo ao Portal do Fornecedor GEPRIV - Defina sua senha",
-                template: {
-                    id: templateId,
-                    variables: {
-                        firstName: recipientName.split(" ")[0] || recipientName,
-                        inviteLink: inviteLink,
-                        senderName: "Equipe GEPRIV",
-                    },
-                },
-                from: { name: "GEPRIV", email: fromEmail },
-                to: [{ name: recipientName, email: recipientEmail }],
-            },
-        }),
     });
-
-    if (!res.ok) {
-        const errorText = await res.text();
-        console.error("[ERROR] SendPulse vendor invite error:", errorText);
-        throw new Error(`SendPulse send failed: ${errorText}`);
-    }
-
-    console.log(`[SUCCESS] Vendor invite email sent to ${recipientEmail}`);
-    return true;
 }
 
 interface CreateVendorUserRequest {
@@ -163,18 +130,20 @@ Deno.serve(async (req) => {
         }, { onConflict: 'email' });
         if (vpuErr) console.error('[WARN] vendor_portal_users upsert:', vpuErr.message);
 
-        // Send invite email via SendPulse
+        let emailSent = false;
+        let emailError = null;
         if (inviteLink) {
             try {
-                await sendVendorInviteEmail(emailNorm, name || emailNorm, inviteLink);
+                emailSent = await sendVendorInviteEmail(emailNorm, name || emailNorm, inviteLink);
+                console.log(`[create-vendor-user] Email sent: ${emailSent}`);
             } catch (emailErr: any) {
-                // Don't fail the request if email fails — user is created
-                console.error('[WARN] Vendor invite email failed:', emailErr.message);
+                emailError = emailErr.message;
+                console.error('[create-vendor-user] Email failed:', emailErr.message);
             }
         }
 
         return new Response(
-            JSON.stringify({ success: true, user_id: authUserId, inviteLink }),
+            JSON.stringify({ success: true, user_id: authUserId, inviteLink, emailSent, emailError }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
         )
 

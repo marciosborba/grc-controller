@@ -130,86 +130,69 @@ export const ResetPasswordPage = () => {
                 throw new Error('Sua sessão expirou. Por favor, solicite um novo link de acesso.');
             }
 
-            const { error } = await supabase.auth.updateUser({
-                password: password
-            });
+            const { error } = await supabase.auth.updateUser({ password });
+            if (error) throw error;
 
-            if (error) {
-                throw error;
-            }
-            
-            // 🔥 Refresh the session to ensure claims are updated immediately
-            await supabase.auth.refreshSession();
-
-            // Atualizar o perfil do usuário para ativo e remover a flag de mudança de senha obrigatória
-            // Isso remove o usuário do status "Pendente" no painel de IAM
-            const { data: { user: updatedUser } } = await supabase.auth.getUser();
-            if (updatedUser) {
-                console.log(`🔄 [AUTH] Efetuando ativação final para o perfil: ${updatedUser.id}`);
-                const { data: updateData, error: updateError, count } = await supabase
-                    .from('profiles')
-                    .update({
-                        is_active: true,
-                        must_change_password: false,
-                        last_login_at: new Date().toISOString()
-                    })
-                    .eq('user_id', updatedUser.id)
-                    .select();
-
-                if (updateError) {
-                    console.error('❌ [AUTH] Erro ao ativar perfil no banco:', updateError);
-                    toast({
-                        title: "Alerta de sincronização",
-                        description: "Sua senha foi alterada, mas o perfil não foi ativado. Entre em contato com o suporte.",
-                        variant: "destructive",
-                    });
-                } else if (!updateData || updateData.length === 0) {
-                    console.warn('⚠️ [AUTH] Nenhuma linha atualizada na ativação do perfil. Verificando RLS/Identidade...');
-                    // Fallback: tentar atualizar por e-mail se por ID falhar (raro mas possível em migrações)
-                    const { error: secondTryError, count: secondTryCount } = await supabase
-                        .from('profiles')
-                        .update({ is_active: true, must_change_password: false })
-                        .eq('email', updatedUser.email);
-                    
-                    console.log('🔄 [AUTH] Resultado da tentativa de contingência (email):', { error: secondTryError, count: secondTryCount });
-                } else {
-                    console.log('✅ [AUTH] Perfil ativado com sucesso no banco:', { rowsAffected: updateData.length });
-                }
-                
-                // Also update vendor_users if applicable
-                if (isGuest || updatedUser.user_metadata?.is_vendor) {
-                    await supabase.from('vendor_users').update({ is_active: true }).eq('email', updatedUser.email);
-                    await supabase.from('vendor_portal_users').update({ force_password_change: false }).eq('email', updatedUser.email);
-                }
-            }
-
-            // Ensure AuthContext is aware of the new confirmed account and profile changes
-            console.log('🔄 [AUTH] Forçando atualização de dados do usuário pós-reset...');
-            const userData = await refreshUserData();
-            
-            // Setup explicit redirect based on the updated user data
-            let targetUrl = '/';
-            if (userData) {
-                const isAdmin = userData.roles?.some((r: string) => ['admin', 'tenant_admin', 'super_admin', 'platform_admin'].includes(r));
-                const isExternalUser = userData.system_role === 'guest' || userData.roles?.includes('guest') || userData.isVendorOnly;
-                
-                if (isExternalUser && !isAdmin) {
-                    const accessiblePortals = [];
-                    if (userData.isVendorOnly || userData.roles?.includes('vendor')) accessiblePortals.push('/vendor-portal');
-                    if (userData.enabledModules?.includes('risk_portal') || userData.permissions?.includes('risk.read')) accessiblePortals.push('/risk-portal');
-                    if (userData.enabledModules?.includes('vulnerability_portal') || userData.permissions?.includes('vulnerability.read') || userData.permissions?.includes('security.read')) accessiblePortals.push('/vulnerability-portal');
-                    
-                    const uniquePortals = [...new Set(accessiblePortals)];
-                    if (uniquePortals.length === 1) {
-                        targetUrl = uniquePortals[0];
-                    } else if (uniquePortals.length > 1) {
-                        targetUrl = '/guest-hub';
-                    }
-                }
-            }
-
+            // ✅ Senha definida com sucesso — mostrar tela de sucesso IMEDIATAMENTE.
+            // O restante é limpeza/sincronização e não deve bloquear o usuário.
             setSuccess(true);
-            setTimeout(() => navigate(targetUrl, { replace: true }), 2000);
+            setLoading(false);
+
+            // Limpeza em background: refreshSession pode falhar em fluxo de convite (token rotacionado),
+            // mas isso não invalida a senha já cadastrada.
+            const runPostSetupCleanup = async () => {
+                try {
+                    await supabase.auth.refreshSession();
+                } catch (refreshErr: any) {
+                    console.warn('⚠️ [AUTH] refreshSession falhou (não-fatal, senha já definida):', refreshErr.message);
+                }
+
+                let targetUrl = '/';
+                try {
+                    const { data: { user: updatedUser } } = await supabase.auth.getUser();
+                    if (updatedUser) {
+                        console.log(`🔄 [AUTH] Ativando perfil: ${updatedUser.id}`);
+                        const { data: updateData } = await supabase
+                            .from('profiles')
+                            .update({ is_active: true, must_change_password: false, last_login_at: new Date().toISOString() })
+                            .eq('user_id', updatedUser.id)
+                            .select();
+
+                        if (!updateData || updateData.length === 0) {
+                            await supabase
+                                .from('profiles')
+                                .update({ is_active: true, must_change_password: false })
+                                .eq('email', updatedUser.email);
+                        }
+
+                        if (isGuest || updatedUser.user_metadata?.is_vendor) {
+                            await supabase.from('vendor_users').update({ is_active: true }).eq('email', updatedUser.email);
+                            await supabase.from('vendor_portal_users').update({ force_password_change: false }).eq('email', updatedUser.email);
+                        }
+
+                        const userData = await refreshUserData();
+                        if (userData) {
+                            const isAdmin = userData.roles?.some((r: string) => ['admin', 'tenant_admin', 'super_admin', 'platform_admin'].includes(r));
+                            const isExternalUser = userData.system_role === 'guest' || userData.roles?.includes('guest') || userData.isVendorOnly;
+                            if (isExternalUser && !isAdmin) {
+                                const portals: string[] = [];
+                                if (userData.isVendorOnly || userData.roles?.includes('vendor')) portals.push('/vendor-portal');
+                                if (userData.enabledModules?.includes('risk_portal') || userData.permissions?.includes('risk.read')) portals.push('/risk-portal');
+                                if (userData.enabledModules?.includes('vulnerability_portal') || userData.permissions?.includes('vulnerability.read') || userData.permissions?.includes('security.read')) portals.push('/vulnerability-portal');
+                                const unique = [...new Set(portals)];
+                                if (unique.length === 1) targetUrl = unique[0];
+                                else if (unique.length > 1) targetUrl = '/guest-hub';
+                            }
+                        }
+                    }
+                } catch (cleanupErr: any) {
+                    console.error('❌ [AUTH] Erro na limpeza pós-reset (não-fatal):', cleanupErr.message);
+                }
+
+                navigate(targetUrl, { replace: true });
+            };
+
+            setTimeout(runPostSetupCleanup, 2000);
 
         } catch (error: any) {
             console.error('❌ Erro ao redefinir senha:', error);

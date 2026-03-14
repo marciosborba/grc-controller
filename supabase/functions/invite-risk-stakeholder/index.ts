@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { sendTemplateEmail } from '../_shared/sendpulse.ts';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -8,18 +9,7 @@ const corsHeaders = {
 };
 
 const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://gepriv.com';
-// Invite link goes to /reset-password so the new user creates their password first
 const RESET_URL = `${FRONTEND_URL}/reset-password`;
-
-async function getSendPulseToken(clientId: string, clientSecret: string) {
-  const res = await fetch("https://api.sendpulse.com/oauth/access_token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grant_type: "client_credentials", client_id: clientId, client_secret: clientSecret }),
-  });
-  if (!res.ok) throw new Error(`SendPulse Auth failed: ${await res.text()}`);
-  return (await res.json()).access_token;
-}
 
 async function sendSendPulseInvite({
   recipientEmail,
@@ -32,50 +22,17 @@ async function sendSendPulseInvite({
   inviteLink: string;
   senderName: string;
 }) {
-  const clientId = Deno.env.get("SENDPULSE_CLIENT_ID");
-  const clientSecret = Deno.env.get("SENDPULSE_CLIENT_SECRET");
-  const fromEmail = Deno.env.get("SENDPULSE_FROM_EMAIL") || "gepriv@gepriv.com";
-  const templateIdStr = "77966"; // Template fixo: Aba Comunicação de Risk Card
-
-  if (!clientId || !clientSecret) {
-    console.warn("⚠️ SendPulse SENDPULSE_CLIENT_ID or SENDPULSE_CLIENT_SECRET missing. Skipping email sending.");
-    return false;
-  }
-
-  const templateId = parseInt(templateIdStr);
-  const accessToken = await getSendPulseToken(clientId, clientSecret);
-
-  const res = await fetch("https://api.sendpulse.com/smtp/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${accessToken}`,
+  return sendTemplateEmail({
+    templateId: 77966,
+    subject: "Bem-vindo ao Portal de Riscos - Defina sua senha",
+    recipientEmail,
+    recipientName,
+    variables: {
+      firstName: recipientName.split(" ")[0] || recipientName,
+      inviteLink,
+      senderName: senderName || "Equipe GEPRIV",
     },
-    body: JSON.stringify({
-      email: {
-        subject: "Bem-vindo ao Portal de Riscos - Defina sua senha",
-        template: {
-          id: templateId,
-          variables: {
-            firstName: recipientName.split(" ")[0],
-            inviteLink: inviteLink,
-            senderName: senderName || "Equipe GEPRIV",
-          },
-        },
-        from: { name: "GEPRIV", email: fromEmail },
-        to: [{ name: recipientName, email: recipientEmail }],
-      },
-    }),
   });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error("❌ SendPulse send error:", errorText);
-    throw new Error(`SendPulse send failed: ${errorText}`);
-  }
-
-  console.log(`✅ Invitation email sent via SendPulse to ${recipientEmail}`);
-  return true;
 }
 
 serve(async (req: Request) => {
@@ -208,18 +165,16 @@ serve(async (req: Request) => {
             });
         }
 
-        // Send Email via SendPulse
+        // Responde ao frontend imediatamente — e-mail é disparado em background
         if (inviteLink) {
-            try {
-                await sendSendPulseInvite({
-                    recipientEmail: emailNorm,
-                    recipientName: full_name || emailNorm,
-                    inviteLink: inviteLink,
-                    senderName: "Equipe GEPRIV"
-                });
-            } catch (emailErr: any) {
-                console.error("⚠️ Invite email failed to send, but user was created:", emailErr.message);
-            }
+            sendSendPulseInvite({
+                recipientEmail: emailNorm,
+                recipientName: full_name || emailNorm,
+                inviteLink: inviteLink,
+                senderName: "Equipe GEPRIV"
+            }).catch((emailErr: any) =>
+                console.error("⚠️ Invite email failed to send, but user was created:", emailErr.message)
+            );
         }
 
         return new Response(JSON.stringify({
