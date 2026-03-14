@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import { useDropzone } from 'react-dropzone';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import { X } from 'lucide-react';
 
 interface RemediationBlockProps {
@@ -61,6 +62,7 @@ export function RemediationBlock({
     tenantId
 }: RemediationBlockProps) {
     const { user } = useAuth();
+    const currentTenantId = useCurrentTenantId();
     const [description, setDescription] = useState(task.description || '');
     
     // Multi-select state initialized from task props
@@ -100,7 +102,7 @@ export function RemediationBlock({
             toast.error('Preencha nome e e-mail');
             return;
         }
-        const tenantIdToUse = tenantId || user?.tenantId;
+        const tenantIdToUse = tenantId || currentTenantId || user?.tenantId;
         if (!tenantIdToUse) {
             toast.error('Tenant não encontrado');
             return;
