@@ -1007,6 +1007,10 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
                                 <ClipboardList className="h-3.5 w-3.5" />
                                 Planos de Ação
                               </TabsTrigger>
+                              <TabsTrigger value="treatment" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
+                                <Target className="h-3.5 w-3.5" />
+                                Tratamento
+                              </TabsTrigger>
                               <TabsTrigger value="communication" className="flex items-center gap-1.5 text-xs whitespace-nowrap px-3 py-1.5 flex-shrink-0">
                                 <MessageSquare className="h-3.5 w-3.5" />
                                 Comunicação
