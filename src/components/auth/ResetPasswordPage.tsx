@@ -170,18 +170,23 @@ export const ResetPasswordPage = () => {
                             await supabase.from('vendor_portal_users').update({ force_password_change: false }).eq('email', updatedUser.email);
                         }
 
-                        const userData = await refreshUserData();
-                        if (userData) {
-                            const isAdmin = userData.roles?.some((r: string) => ['admin', 'tenant_admin', 'super_admin', 'platform_admin'].includes(r));
-                            const isExternalUser = userData.system_role === 'guest' || userData.roles?.includes('guest') || userData.isVendorOnly;
-                            if (isExternalUser && !isAdmin) {
-                                const portals: string[] = [];
-                                if (userData.isVendorOnly || userData.roles?.includes('vendor')) portals.push('/vendor-portal');
-                                if (userData.enabledModules?.includes('risk_portal') || userData.permissions?.includes('risk.read')) portals.push('/risk-portal');
-                                if (userData.enabledModules?.includes('vulnerability_portal') || userData.permissions?.includes('vulnerability.read') || userData.permissions?.includes('security.read')) portals.push('/vulnerability-portal');
-                                const unique = [...new Set(portals)];
-                                if (unique.length === 1) targetUrl = unique[0];
-                                else if (unique.length > 1) targetUrl = '/guest-hub';
+                        // Risk stakeholder → always go to risk portal after first access
+                        if (updatedUser.user_metadata?.invited_as === 'risk_stakeholder') {
+                            targetUrl = '/risk-portal';
+                        } else {
+                            const userData = await refreshUserData();
+                            if (userData) {
+                                const isAdmin = userData.roles?.some((r: string) => ['admin', 'tenant_admin', 'super_admin', 'platform_admin'].includes(r));
+                                const isExternalUser = userData.system_role === 'guest' || userData.roles?.includes('guest') || userData.isVendorOnly;
+                                if (isExternalUser && !isAdmin) {
+                                    const portals: string[] = [];
+                                    if (userData.isVendorOnly || userData.roles?.includes('vendor')) portals.push('/vendor-portal');
+                                    if (userData.enabledModules?.includes('risk_portal') || userData.permissions?.includes('risk.read')) portals.push('/risk-portal');
+                                    if (userData.enabledModules?.includes('vulnerability_portal') || userData.permissions?.includes('vulnerability.read') || userData.permissions?.includes('security.read')) portals.push('/vulnerability-portal');
+                                    const unique = [...new Set(portals)];
+                                    if (unique.length === 1) targetUrl = unique[0];
+                                    else if (unique.length > 1) targetUrl = '/guest-hub';
+                                }
                             }
                         }
                     }

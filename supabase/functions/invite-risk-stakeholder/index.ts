@@ -42,13 +42,41 @@ serve(async (req: Request) => {
             page++;
         }
 
-        // 2. Existing confirmed user → direct portal link (they just need to log in)
+        // 2. Existing confirmed user → check if they've already set a password
         if (existingUser && existingUser.email_confirmed_at) {
-            console.log(`✅ User ${emailNorm} already confirmed → returning portal link`);
+            const { data: profileRow } = await supabaseAdmin
+                .from('profiles')
+                .select('must_change_password')
+                .eq('user_id', existingUser.id)
+                .maybeSingle();
+
+            const needsPassword = profileRow?.must_change_password === true;
+
+            if (!needsPassword) {
+                // Has password → just send them to login via portal URL
+                console.log(`✅ User ${emailNorm} has password → returning portal link`);
+                return new Response(JSON.stringify({
+                    success: true,
+                    isNewUser: false,
+                    inviteLink: RISK_PORTAL_URL,
+                    userId: existingUser.id,
+                }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
+
+            // Confirmed but never set password → generate new recovery link
+            console.log(`🔄 User ${emailNorm} confirmed but needs password → generating recovery link`);
+            const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+                type: 'recovery',
+                email: emailNorm,
+                options: { redirectTo: RESET_URL },
+            });
+            if (linkErr) throw new Error(`generateLink failed: ${linkErr.message}`);
+            const inviteLink = linkData?.properties?.action_link || null;
+            console.log(`🔗 Recovery link generated for ${emailNorm}`);
             return new Response(JSON.stringify({
                 success: true,
-                isNewUser: false,
-                inviteLink: RISK_PORTAL_URL,
+                isNewUser: true,
+                inviteLink,
                 userId: existingUser.id,
             }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }

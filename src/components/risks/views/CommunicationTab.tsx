@@ -31,7 +31,7 @@ export const CommunicationTab: React.FC<CommunicationTabProps> = ({ risk, user, 
                     tenant_id: userTenantId || (risk as any).tenant_id,
                 }
             });
-            const customPortalUrl = (inviteData?.isNewUser && inviteData?.inviteLink) ? inviteData.inviteLink : undefined;
+            const customPortalUrl = inviteData?.inviteLink || undefined;
             const { error } = await supabase.functions.invoke('risk-notification', {
                 body: {
                     recipientName: stk.name || 'Stakeholder',
@@ -79,7 +79,7 @@ export const CommunicationTab: React.FC<CommunicationTabProps> = ({ risk, user, 
                     tenant_id: userTenantId || (risk as any).tenant_id,
                 }
             });
-            const customPortalUrl = (inviteData?.isNewUser && inviteData?.inviteLink) ? inviteData.inviteLink : undefined;
+            const customPortalUrl = inviteData?.inviteLink || undefined;
             await supabase.functions.invoke('risk-notification', {
                 body: {
                     recipientName: newPerson.name,
