@@ -178,13 +178,12 @@ const TenantSettingsPage: React.FC = () => {
           .eq('tenant_id', tenantId)
           .eq('is_active', true),
 
-        // 5. Contar sessões ativas (activity_logs recentes)
+        // 5. Logins recentes: perfis com last_login_at nas últimas 24h
         supabase
-          .from('activity_logs')
-          .select('user_id')
+          .from('profiles')
+          .select('user_id, full_name, email, last_login_at')
           .eq('tenant_id', tenantId)
-          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-          .limit(100),
+          .gte('last_login_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
 
         // 6. Buscar estatísticas reais de armazenamento
         supabase.rpc('get_tenant_storage_stats', { p_tenant_id: tenantId }),
@@ -252,38 +251,14 @@ const TenantSettingsPage: React.FC = () => {
       const suspiciousActivities = suspiciousResult.data?.length || 0;
       const lastBackup = (backupResult.data?.[0] as any)?.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-      // Contar sessões únicas e buscar nomes
-      // Robust filtering removing null/undefined IDs
-      const uniqueUserSessions = [...new Set(
-        sessionsResult.data
-          ?.map(s => s.user_id)
-          .filter((id): id is string => !!id && typeof id === 'string') || []
-      )];
-
-      const activeSessions = uniqueUserSessions.length;
-
-      let activeUsersList: string[] = [];
-
-      if (uniqueUserSessions.length > 0) {
-        try {
-          const { data: activeProfiles, error: profilesError } = await supabase
-            .from('profiles')
-            .select('full_name, email')
-            .in('user_id', uniqueUserSessions);
-
-          if (profilesError) {
-            console.error('Error fetching active profiles:', profilesError);
-          } else if (activeProfiles) {
-            activeUsersList = activeProfiles.map(p => {
-              const name = p.full_name || 'Usuário';
-              const email = p.email ? `(${p.email})` : '';
-              return `${name} ${email}`.trim();
-            });
-          }
-        } catch (err) {
-          console.error('Failed to fetch profiles:', err);
-        }
-      }
+      // Sessões: perfis com login nas últimas 24h (dados vêm direto da query 5)
+      const recentLoginProfiles = sessionsResult.data || [];
+      const activeSessions = recentLoginProfiles.length;
+      const activeUsersList: string[] = recentLoginProfiles.map((p: any) => {
+        const name = p.full_name || 'Usuário';
+        const email = p.email ? `(${p.email})` : '';
+        return `${name} ${email}`.trim();
+      });
 
       // Storage
       const storageStats = storageResult.data as any;
@@ -635,23 +610,44 @@ const TenantSettingsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Módulos Habilitados */}
-                <div className="text-center p-3 border rounded-lg bg-muted/20">
-                  <div className="text-lg sm:text-2xl font-bold text-blue-600">
-                    {metrics?.enabledModulesCount || 0}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Módulos Habilitados</div>
-                  <div className="text-[9px] text-muted-foreground mt-0.5">de {tenantInfo?.settings?.features_enabled?.length || 0} disponíveis</div>
-                </div>
+                {/* Vagas no Plano */}
+                {(() => {
+                  const used = metrics?.totalUsers || 0;
+                  const max = tenantInfo?.max_users || 10;
+                  const available = Math.max(0, max - used);
+                  const usagePct = Math.round((used / max) * 100);
+                  const color = usagePct >= 90 ? 'text-red-600' : usagePct >= 70 ? 'text-amber-600' : 'text-green-600';
+                  return (
+                    <div className="text-center p-3 border rounded-lg bg-muted/20">
+                      <div className={`text-lg sm:text-2xl font-bold ${color}`}>{available}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Vagas Disponíveis</div>
+                      <div className="text-[9px] text-muted-foreground mt-0.5">{used}/{max} usuários ({usagePct}%)</div>
+                    </div>
+                  );
+                })()}
 
-                {/* Frameworks Ativos */}
-                <div className="text-center p-3 border rounded-lg bg-muted/20">
-                  <div className={`text-lg sm:text-2xl font-bold ${(metrics?.activeFrameworks || 0) > 0 ? 'text-purple-600' : 'text-muted-foreground'}`}>
-                    {metrics?.activeFrameworks || 0}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Frameworks Ativos</div>
-                  <div className="text-[9px] text-muted-foreground mt-0.5">Compliance em uso</div>
-                </div>
+                {/* Último Backup */}
+                {(() => {
+                  const backupDate = metrics?.lastBackup ? new Date(metrics.lastBackup) : null;
+                  const diffDays = backupDate
+                    ? Math.floor((Date.now() - backupDate.getTime()) / (1000 * 60 * 60 * 24))
+                    : null;
+                  const label = diffDays === null ? '—'
+                    : diffDays === 0 ? 'Hoje'
+                    : diffDays === 1 ? '1 dia atrás'
+                    : `${diffDays} dias atrás`;
+                  const color = diffDays === null ? 'text-muted-foreground'
+                    : diffDays <= 1 ? 'text-green-600'
+                    : diffDays <= 7 ? 'text-amber-600'
+                    : 'text-red-600';
+                  return (
+                    <div className="text-center p-3 border rounded-lg bg-muted/20">
+                      <div className={`text-lg sm:text-2xl font-bold ${color}`}>{diffDays !== null ? diffDays : '—'}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Último Backup</div>
+                      <div className="text-[9px] text-muted-foreground mt-0.5">{label}</div>
+                    </div>
+                  );
+                })()}
 
                 {/* Alertas 24h */}
                 <div className="text-center p-3 border rounded-lg bg-muted/20">
