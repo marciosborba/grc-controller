@@ -34,6 +34,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
+import { useCurrentTenantId } from '@/contexts/TenantSelectorContext';
 import type { Risk } from '@/types/risk-management';
 
 interface StakeholderRow {
@@ -73,6 +74,7 @@ const TYPE_CONFIG: Record<string, { label: string; className: string }> = {
 export const CommunicationCenterIntegrated: React.FC<CommunicationCenterIntegratedProps> = ({ risks }) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const currentTenantId = useCurrentTenantId();
 
   const [stakeholders, setStakeholders] = useState<StakeholderRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -217,7 +219,7 @@ export const CommunicationCenterIntegrated: React.FC<CommunicationCenterIntegrat
     setAddSending(true);
     try {
       const riskReg = risks.find(r => r.id === addForm.riskId);
-      const tenantId = (riskReg as any)?.tenant_id || null;
+      const tenantId = (riskReg as any)?.tenant_id || currentTenantId || null;
 
       const insertPayload: any = {
         risk_registration_id: addForm.riskId,
@@ -234,7 +236,7 @@ export const CommunicationCenterIntegrated: React.FC<CommunicationCenterIntegrat
       if (dbErr) throw dbErr;
 
       const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('invite-risk-stakeholder', {
-        body: { email: addForm.email.trim().toLowerCase(), full_name: addForm.name.trim() }
+        body: { email: addForm.email.trim().toLowerCase(), full_name: addForm.name.trim(), tenant_id: tenantId }
       });
       if (inviteErr) throw inviteErr;
 
