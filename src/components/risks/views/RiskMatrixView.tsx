@@ -2,7 +2,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Target, AlertTriangle, TrendingUp, Zap, ArrowLeft, Eye, Lock, Info } from "lucide-react";
+import { Target, AlertTriangle, TrendingUp, Zap, ArrowLeft, Eye, Lock, Info, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useTenantSettings } from '@/hooks/useTenantSettings';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -314,6 +314,12 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
           return false;
         }
 
+        // Excluir apenas riscos cancelados da matriz
+        const cancelledStatuses = ['cancelled', 'cancelado', 'Cancelado'];
+        if (cancelledStatuses.includes(risk.status)) {
+          return false;
+        }
+
         // Aplicar filtro de busca apenas se houver termo de busca
         if (searchTerm && searchTerm.trim() !== '') {
           const searchLower = searchTerm.toLowerCase();
@@ -504,51 +510,47 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
         </div>
 
         {(() => {
-          const totalCards = riskLevels.length + 2; // +1 Total, +1 Não Avaliados
+          const totalCards = riskLevels.length + 2;
           const gridClass: Record<number, string> = {
             3: 'grid-cols-3',
             4: 'grid-cols-2 sm:grid-cols-4',
             5: 'grid-cols-2 sm:grid-cols-5',
-            6: 'grid-cols-2 sm:grid-cols-6',
-            7: 'grid-cols-2 sm:grid-cols-4 md:grid-cols-7',
+            6: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
+            7: 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-7',
           };
           const colClass = gridClass[totalCards] || 'grid-cols-2 sm:grid-cols-4';
+          const getLevelColorClass = (level: string) => {
+            if (level.toLowerCase().includes('crítico') || level.toLowerCase().includes('muito alto')) return 'text-red-600';
+            if (level.toLowerCase() === 'alto') return 'text-orange-500';
+            if (level.toLowerCase() === 'médio') return 'text-yellow-600';
+            if (level.toLowerCase() === 'baixo') return 'text-green-600';
+            if (level.toLowerCase() === 'muito baixo') return 'text-blue-500';
+            return 'text-gray-600';
+          };
           return (
-            <div className={`grid ${colClass} gap-3 sm:gap-4 mb-6`}>
-              <Card>
-                <CardContent className="p-3 sm:p-4 text-center">
-                  <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Total</div>
+            <div className={`grid ${colClass} gap-2 sm:gap-3 mb-5`}>
+              <Card className="shadow-sm">
+                <CardContent className="p-2 sm:p-3 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-foreground leading-none">{stats.total}</div>
+                  <div className="text-[9px] sm:text-xs text-muted-foreground mt-0.5">Total</div>
                 </CardContent>
               </Card>
-
-              {riskLevels.map((level) => {
-                const getColorClass = (level: string) => {
-                  if (level.toLowerCase().includes('crítico') || level.toLowerCase().includes('muito alto')) return 'text-red-600';
-                  if (level.toLowerCase() === 'alto') return 'text-orange-500';
-                  if (level.toLowerCase() === 'médio') return 'text-yellow-600';
-                  if (level.toLowerCase() === 'baixo') return 'text-green-600';
-                  if (level.toLowerCase() === 'muito baixo') return 'text-blue-500';
-                  return 'text-gray-600';
-                };
-                return (
-                  <Card key={level}>
-                    <CardContent className="p-3 sm:p-4 text-center">
-                      <div className={`text-xl sm:text-2xl font-bold ${getColorClass(level)}`}>
-                        {stats.byLevel[level] || 0}
-                      </div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground leading-tight">{level}</div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-
-              <Card>
-                <CardContent className="p-3 sm:p-4 text-center">
-                  <div className="text-xl sm:text-2xl font-bold text-gray-400">
+              {riskLevels.map((level) => (
+                <Card key={level} className="shadow-sm">
+                  <CardContent className="p-2 sm:p-3 text-center">
+                    <div className={`text-2xl sm:text-3xl font-black leading-none ${getLevelColorClass(level)}`}>
+                      {stats.byLevel[level] || 0}
+                    </div>
+                    <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight mt-0.5 truncate">{level}</div>
+                  </CardContent>
+                </Card>
+              ))}
+              <Card className="shadow-sm">
+                <CardContent className="p-2 sm:p-3 text-center">
+                  <div className="text-2xl sm:text-3xl font-black text-muted-foreground leading-none">
                     {processedRisks.filter(r => !r.hasValidScores).length}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground leading-tight">Não Avaliados</div>
+                  <div className="text-[9px] sm:text-xs text-muted-foreground leading-tight mt-0.5">Não Aval.</div>
                 </CardContent>
               </Card>
             </div>
@@ -619,27 +621,29 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
             ))}
           </div>
         </CardHeader>
-        <CardContent className="p-1 sm:p-6">
-          <div className="overflow-x-auto pb-4">
-            <div className="min-w-[340px] sm:min-w-[600px] pr-1 sm:pr-2">
+        <CardContent className="p-1 sm:p-4 lg:p-6">
+          <div className="overflow-x-auto pb-2">
+            <div className="min-w-[300px] sm:min-w-[560px]">
               {/* Headers da matriz */}
-              <div className="grid gap-[2px] sm:gap-2 mb-[2px] sm:mb-2" style={{ gridTemplateColumns: `repeat(${matrixDimensions.cols + 1}, 1fr)` }}>
-                <div className="flex items-center justify-center text-center font-bold text-[8px] sm:text-sm leading-[1.1] sm:leading-tight">
-                  <span className="hidden sm:inline">Impacto / Probabilidade</span>
-                  <span className="inline sm:hidden">Impacto /<br />Probab.</span>
+              <div className="grid gap-[3px] sm:gap-2 mb-[3px] sm:mb-2" style={{ gridTemplateColumns: `80px repeat(${matrixDimensions.cols}, 1fr)` }}>
+                <div className="flex items-center justify-center text-center font-bold text-[8px] sm:text-xs leading-tight p-1">
+                  <span className="hidden sm:block">Impacto / Probabilidade</span>
+                  <span className="sm:hidden">I / P</span>
                 </div>
                 {likelihoodLevels.map(level => (
-                  <div key={level.level} className={`flex items-center justify-center text-center font-semibold text-[8px] sm:text-sm p-1 sm:p-2 rounded ${level.color} leading-[1.1]`}>
-                    {level.label}
+                  <div key={level.level} className={`flex items-center justify-center text-center font-semibold text-[8px] sm:text-xs p-1 sm:p-2 rounded ${level.color} leading-tight`}>
+                    <span className="hidden sm:block">{level.label}</span>
+                    <span className="sm:hidden line-clamp-2 text-center leading-tight">{level.label.split(' ')[0]}</span>
                   </div>
                 ))}
               </div>
 
               {/* Linhas da matriz */}
               {impactLevels.map(impactLevel => (
-                <div key={impactLevel.level} className="grid gap-[2px] sm:gap-2 mb-[2px] sm:mb-2" style={{ gridTemplateColumns: `repeat(${matrixDimensions.cols + 1}, 1fr)` }}>
-                  <div className={`flex items-center justify-center text-center font-semibold text-[8px] sm:text-sm p-1 sm:p-2 rounded ${impactLevel.color} leading-[1.1]`}>
-                    {impactLevel.label}
+                <div key={impactLevel.level} className="grid gap-[3px] sm:gap-2 mb-[3px] sm:mb-2" style={{ gridTemplateColumns: `80px repeat(${matrixDimensions.cols}, 1fr)` }}>
+                  <div className={`flex items-center justify-center text-center font-semibold text-[8px] sm:text-xs p-1 sm:p-2 rounded ${impactLevel.color} leading-tight`}>
+                    <span className="hidden sm:block">{impactLevel.label}</span>
+                    <span className="sm:hidden line-clamp-2 leading-tight">{impactLevel.label.split(' ')[0]}</span>
                   </div>
 
                   {likelihoodLevels.map(likelihoodLevel => {
@@ -653,24 +657,24 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                     return (
                       <div
                         key={`${impactLevel.level}-${likelihoodLevel.level}`}
-                        className={`min-h-[40px] sm:min-h-[60px] p-[2px] sm:p-2 rounded border border-gray-200 sm:border-2 relative ${getRiskColor(impactLevel.level, likelihoodLevel.level, matrixConfig)
-                          } ${cellRisks.length > 0 ? 'cursor-pointer hover:opacity-80' : ''}`}
+                        className={`min-h-[52px] sm:min-h-[70px] lg:min-h-[80px] p-1 sm:p-2 rounded border border-white/20 sm:border-2 relative ${getRiskColor(impactLevel.level, likelihoodLevel.level, matrixConfig)
+                          } ${cellRisks.length > 0 ? 'cursor-pointer hover:opacity-80 active:opacity-70' : ''}`}
                         onClick={() => cellRisks.length > 0 && setSelectedRisk(cellRisks[0])}
                       >
                         {/* Score no canto superior direito */}
-                        <div className="absolute top-[2px] right-[2px] sm:top-1 sm:right-1 text-white font-bold text-[6px] sm:text-xs bg-black/20 
-                                      rounded px-1 py-[1px] backdrop-blur-sm">
+                        <div className="absolute top-[2px] right-[2px] sm:top-1 sm:right-1 text-white font-bold text-[7px] sm:text-[11px] bg-black/25 rounded px-[3px] py-[1px]">
                           {riskScore}
                         </div>
 
                         {/* Conteúdo principal centralizado */}
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <div className="text-[7.5px] sm:text-xs font-bold mb-0 text-center leading-[1.1]">
+                        <div className="flex flex-col items-center justify-center h-full pt-1">
+                          <div className="text-[7px] sm:text-[10px] lg:text-xs font-bold text-center leading-tight text-white/90">
                             {riskLevel}
                           </div>
                           {cellRisks.length > 0 && (
-                            <div className="text-[7px] sm:text-[10px] text-center leading-[1.1] mt-[2px]">
-                              {cellRisks.length} risco{cellRisks.length > 1 ? 's' : ''}
+                            <div className="flex flex-col items-center mt-0.5">
+                              <span className="text-base sm:text-2xl lg:text-3xl font-black leading-none drop-shadow-sm text-white">{cellRisks.length}</span>
+                              <span className="text-[6px] sm:text-[9px] leading-tight opacity-80 text-white">risco{cellRisks.length > 1 ? 's' : ''}</span>
                             </div>
                           )}
                         </div>
@@ -758,16 +762,29 @@ export const RiskMatrixView: React.FC<RiskMatrixViewProps> = ({
                     {risk.risk_description && (
                       <p className="text-[11px] text-muted-foreground line-clamp-1 mb-1.5 pl-[42px]">{risk.risk_description}</p>
                     )}
-                    <div className="flex items-center gap-1.5 pl-[42px] flex-wrap">
+                    <div className="flex items-center gap-1.5 pl-[42px] flex-wrap mt-1">
                       <div className="inline-flex items-center font-semibold text-[9px] px-1.5 py-[2px] rounded-md" style={getStatusBadgeStyle(risk.status)}>{getStatusBadgeStyle(risk.status).label}</div>
                       {risk.treatment_strategy && (
-                        <div className="inline-flex items-center font-semibold text-[9px] px-1.5 py-[2px] rounded-md max-w-[100px] truncate" style={getTreatmentBadgeStyle(risk.treatment_strategy)} title={getTreatmentBadgeStyle(risk.treatment_strategy).label}>{getTreatmentBadgeStyle(risk.treatment_strategy).label}</div>
+                        <div className="inline-flex items-center font-semibold text-[9px] px-1.5 py-[2px] rounded-md max-w-[90px] truncate" style={getTreatmentBadgeStyle(risk.treatment_strategy)} title={getTreatmentBadgeStyle(risk.treatment_strategy).label}>{getTreatmentBadgeStyle(risk.treatment_strategy).label}</div>
                       )}
                       {risk.hasValidScores ? (
-                        <span className="ml-auto text-[9px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-[2px] rounded">{risk.impact}×{risk.likelihood}={riskScore}</span>
+                        <span className="text-[9px] text-muted-foreground font-mono bg-muted/60 px-1.5 py-[2px] rounded">{risk.impact}×{risk.likelihood}={riskScore}</span>
                       ) : (
-                        <span className="ml-auto text-[9px] text-muted-foreground italic flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5" /> Não avaliado</span>
+                        <span className="text-[9px] text-muted-foreground italic flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5" /> Não avaliado</span>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-auto h-6 text-[10px] sm:text-xs px-2 sm:px-3 gap-1 shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate('/risks', { state: { expandRiskId: risk.id } });
+                        }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        <span className="hidden xs:inline">Ver Detalhes</span>
+                        <span className="xs:hidden">Ver</span>
+                      </Button>
                     </div>
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                   </div>

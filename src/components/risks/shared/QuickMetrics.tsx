@@ -1,15 +1,13 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   AlertTriangle,
   TrendingUp,
   Activity,
   Shield,
   Clock,
-  CheckCircle,
-  XCircle,
-  Target
+  TrendingDown,
+  Minus,
 } from 'lucide-react';
 import type { RiskMetrics } from '@/types/risk-management';
 import { useTenantSettings } from '@/hooks/useTenantSettings';
@@ -20,221 +18,156 @@ interface QuickMetricsProps {
 }
 
 export const QuickMetrics: React.FC<QuickMetricsProps> = ({ metrics, isLoading }) => {
-  console.log('🔍 QuickMetrics Debug DETALHADO:', {
-    isLoading,
-    hasMetrics: !!metrics,
-    metricsData: metrics,
-    metricsKeys: metrics ? Object.keys(metrics) : [],
-    totalRisks: metrics?.totalRisks,
-    risksByLevel: metrics?.risksByLevel,
-    risksByStatus: metrics?.risksByStatus
-  });
-
   const { getRiskLevels } = useTenantSettings();
   const riskLevels = getRiskLevels();
   const highestLevel = riskLevels[riskLevels.length - 1] || 'Muito Alto';
-  const secondHighestLevel = riskLevels.length > 1 ? riskLevels[riskLevels.length - 2] : null;
+  const secondHighestLevel = riskLevels.length > 1 ? riskLevels[riskLevels.length - 2] : 'Alto';
 
-  // Se não tiver métricas, criar métricas padrão
   const defaultMetrics: RiskMetrics = {
     totalRisks: 0,
-    risksByLevel: {
-      'Muito Alto': 0,
-      'Alto': 0,
-      'Médio': 0,
-      'Baixo': 0,
-      'Muito Baixo': 0
-    },
+    risksByLevel: { 'Muito Alto': 0, 'Alto': 0, 'Médio': 0, 'Baixo': 0, 'Muito Baixo': 0 },
     risksByCategory: {} as any,
-    risksByStatus: {
-      'Identificado': 0,
-      'Avaliado': 0,
-      'Em Tratamento': 0,
-      'Monitorado': 0,
-      'Fechado': 0,
-      'Reaberto': 0
-    },
+    risksByStatus: { 'Identificado': 0, 'Avaliado': 0, 'Em Tratamento': 0, 'Monitorado': 0, 'Fechado': 0, 'Reaberto': 0 },
     overdueActivities: 0,
     riskTrend: 'Estável',
     averageResolutionTime: 0
   };
 
-  const currentMetrics = metrics || defaultMetrics;
+  const m = metrics || defaultMetrics;
 
-  const getRiskLevelColor = (level: string) => {
-    switch (level) {
-      case 'Muito Alto': return 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950 dark:bg-opacity-50';
-      case 'Alto': return 'text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-950 dark:bg-opacity-50';
-      case 'Médio': return 'text-yellow-600 bg-yellow-100 dark:text-yellow-400 dark:bg-yellow-950 dark:bg-opacity-50';
-      case 'Baixo': return 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-950 dark:bg-opacity-50';
-      default: return 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-950 dark:bg-opacity-50';
-    }
-  };
+  const highestCount = m.risksByLevel[highestLevel] || 0;
+  const secondHighestCount = m.risksByLevel[secondHighestLevel] || 0;
+  const elevatedTotal = highestCount + secondHighestCount;
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'Aumentando': return <TrendingUp className="h-4 w-4 text-red-500 dark:text-red-400" />;
-      case 'Diminuindo': return <TrendingUp className="h-4 w-4 text-green-500 dark:text-green-400 transform rotate-180" />;
-      default: return <Activity className="h-4 w-4 text-blue-500 dark:text-blue-400" />;
-    }
-  };
+  // Riscos sem tratamento ativo = Identificado + Avaliado (gap de exposição)
+  const untreated = (m.risksByStatus['Identificado'] || 0) + (m.risksByStatus['Avaliado'] || 0);
 
-  const metricsData = [
-    {
-      id: 'total',
-      title: 'Total de Riscos',
-      value: currentMetrics.totalRisks,
-      icon: Shield,
-      color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-950 dark:bg-opacity-50',
-      description: 'Riscos identificados'
-    },
-    {
-      id: 'muito-alto',
-      title: highestLevel,
-      value: currentMetrics.risksByLevel[highestLevel] || 0,
-      icon: XCircle,
-      color: getRiskLevelColor(highestLevel),
-      description: 'Atenção imediata'
-    },
-    {
-      id: 'alto',
-      title: secondHighestLevel || 'Alto',
-      value: secondHighestLevel ? (currentMetrics.risksByLevel[secondHighestLevel] || 0) : 0,
-      icon: AlertTriangle,
-      color: secondHighestLevel ? getRiskLevelColor(secondHighestLevel) : getRiskLevelColor('Alto'),
-      description: 'Prioridade alta'
-    },
-    {
-      id: 'em-tratamento',
-      title: 'Em Tratamento',
-      value: currentMetrics.risksByStatus['Em Tratamento'] || 0,
-      icon: Activity,
-      color: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-950 dark:bg-opacity-50',
-      description: 'Ações em progresso'
-    },
-    {
-      id: 'atrasados',
-      title: 'Atrasados',
-      value: currentMetrics.overdueActivities,
-      icon: Clock,
-      color: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-950 dark:bg-opacity-50',
-      description: 'Ações vencidas'
-    },
-    {
-      id: 'tendencia',
-      title: 'Tendência',
-      value: currentMetrics.riskTrend,
-      icon: () => getTrendIcon(currentMetrics.riskTrend),
-      color: 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-950 dark:bg-opacity-50',
-      description: 'Evolução geral',
-      isText: true
-    }
+  const trendIcon = m.riskTrend === 'Aumentando'
+    ? <TrendingUp className="h-3.5 w-3.5 text-red-500" />
+    : m.riskTrend === 'Diminuindo'
+      ? <TrendingDown className="h-3.5 w-3.5 text-green-500" />
+      : <Minus className="h-3.5 w-3.5 text-blue-500" />;
+
+  const trendColor = m.riskTrend === 'Aumentando' ? 'text-red-600 bg-red-50 border-red-200'
+    : m.riskTrend === 'Diminuindo' ? 'text-green-600 bg-green-50 border-green-200'
+      : 'text-blue-600 bg-blue-50 border-blue-200';
+
+  // Distribuição por nível para mini-bar
+  const levels = [
+    { label: 'MA', color: 'bg-red-500', count: m.risksByLevel[highestLevel] || 0 },
+    { label: 'A', color: 'bg-orange-400', count: m.risksByLevel[secondHighestLevel] || 0 },
+    { label: 'M', color: 'bg-yellow-400', count: m.risksByLevel['Médio'] || 0 },
+    { label: 'B', color: 'bg-green-400', count: m.risksByLevel['Baixo'] || 0 },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-      {/* Card 1: Risk Trend Storytelling */}
-      <Card className="relative overflow-hidden border-l-4 border-l-primary shadow-sm hover:shadow-md transition-all">
-        <div className={`absolute top-0 right-0 p-3 opacity-10`}>
-          <Activity className="h-16 w-16 sm:h-24 sm:w-24" />
-        </div>
-        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
-          <CardTitle className={`text-sm sm:text-lg font-bold flex items-center gap-2 ${currentMetrics.totalRisks > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-            Panorama de Riscos
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-          <div className="flex items-baseline gap-2 mb-1 sm:mb-2">
-            <span className="text-xl sm:text-3xl font-bold text-foreground">{currentMetrics.totalRisks}</span>
-            <span className="text-xs sm:text-sm text-muted-foreground">riscos mapeados</span>
-          </div>
-          <p className="text-muted-foreground font-medium text-xs sm:text-sm leading-relaxed">
-            {currentMetrics.risksByLevel[highestLevel] > 0
-              ? `${currentMetrics.risksByLevel[highestLevel]} riscos nível ${highestLevel} requerem atenção imediata.`
-              : `Nenhum risco de nível ${highestLevel} identificado no momento. O ambiente está estável.`}
-          </p>
-          <div className={`mt-4 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currentMetrics.risksByLevel[highestLevel] > 0 ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-            {currentMetrics.risksByLevel[highestLevel] > 0 ? 'Ação Necessária' : 'Sob Controle'}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
 
-      {/* Card 2: Highest Risk Level (Critical Data) */}
-      <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group border-l-4 border-l-red-500">
-        <CardContent className="p-3 sm:p-5 flex flex-col gap-2 h-full relative z-10 w-full overflow-hidden">
-          {/* Título isolado em uma linha superior */}
-          <div className="w-full">
-            <p className="text-sm sm:text-base font-bold text-red-600 dark:text-red-500 whitespace-nowrap overflow-visible">
-              Riscos {highestLevel}
-            </p>
-          </div>
-
-          {/* Ícone e número juntos abaixo */}
-          <div className="flex w-full items-center gap-3">
-            <div className="p-2 sm:p-3 bg-red-100 dark:bg-red-900/50 rounded-xl sm:rounded-2xl shrink-0">
-              <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 dark:text-red-400" />
+      {/* Card 1: Total de Riscos com distribuição */}
+      <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
+        <CardContent className="p-2.5 sm:p-4">
+          <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+            <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <Shield className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <h3 className="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-500 leading-none">
-                {currentMetrics.risksByLevel[highestLevel] || 0}
-              </h3>
-            </div>
-          </div>
-
-          {secondHighestLevel && (
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 font-medium truncate w-full">
-              + {currentMetrics.risksByLevel[secondHighestLevel] || 0} de nível {secondHighestLevel}
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Card 3: In Treatment (Operational Status) */}
-      <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
-        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-          <TrendingUp className="h-16 w-16 sm:h-24 sm:w-24 text-blue-500" />
-        </div>
-        <CardContent className="p-3 sm:p-6 flex items-center gap-3 sm:gap-4 h-full">
-          <div className="p-2 sm:p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl sm:rounded-2xl">
-            <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <p className="text-xs sm:text-sm font-medium text-muted-foreground">Em Tratamento</p>
-            <h3 className="text-xl sm:text-3xl font-bold text-foreground">
-              {currentMetrics.risksByStatus['Em Tratamento'] || 0}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Planos de ação ativos
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Card 4: Overdue Activities (Alert) */}
-      <Card className="relative overflow-hidden shadow-sm hover:shadow-md transition-all group">
-        <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-          <Clock className="h-16 w-16 sm:h-24 sm:w-24 text-orange-500" />
-        </div>
-        <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
-          <CardTitle className="text-sm sm:text-lg font-bold text-foreground">
-            Status de Atividades
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
-          <div className="flex items-baseline gap-2">
-            <span className={`text-xl sm:text-3xl font-bold ${currentMetrics.overdueActivities > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-              {currentMetrics.overdueActivities}
+            <span className={`inline-flex items-center gap-0.5 text-[9px] sm:text-[10px] font-medium px-1 sm:px-1.5 py-0.5 rounded-full border ${trendColor} max-w-[80px] sm:max-w-none truncate`}>
+              {trendIcon}
+              <span className="truncate">{m.riskTrend}</span>
             </span>
-            <span className="text-xs sm:text-sm text-muted-foreground">atrasadas</span>
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-            {currentMetrics.overdueActivities > 0 ? 'Existem atividades fora do prazo.' : 'Todas as atividades em dia.'}
-          </p>
-          <div className="mt-4 w-full bg-secondary h-1.5 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full ${currentMetrics.overdueActivities > 0 ? 'bg-orange-500' : 'bg-green-500'}`} style={{ width: currentMetrics.overdueActivities > 0 ? '70%' : '100%' }}></div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Total de Riscos</p>
+          <p className="text-2xl sm:text-3xl font-black text-foreground leading-none mb-1.5 sm:mb-2">{m.totalRisks}</p>
+          {/* Mini distribuição */}
+          <div className="flex flex-wrap items-center gap-1">
+            {levels.map(l => l.count > 0 && (
+              <span key={l.label} className={`inline-flex items-center gap-0.5 text-[8px] sm:text-[10px] font-semibold px-1 py-0.5 rounded ${l.color} text-white`}>
+                {l.label} {l.count}
+              </span>
+            ))}
+            {levels.every(l => l.count === 0) && (
+              <span className="text-[9px] text-muted-foreground">Nenhum risco</span>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Card 2: Riscos Elevados (Muito Alto + Alto) */}
+      <Card className={`border-l-4 shadow-sm hover:shadow-md transition-all ${elevatedTotal > 0 ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
+        <CardContent className="p-2.5 sm:p-4">
+          <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+            <div className={`p-1.5 rounded-lg ${elevatedTotal > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'}`}>
+              <AlertTriangle className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${elevatedTotal > 0 ? 'text-red-600 dark:text-red-400' : 'text-emerald-600'}`} />
+            </div>
+            <span className={`text-[9px] sm:text-[10px] font-medium px-1 sm:px-1.5 py-0.5 rounded-full ${elevatedTotal > 0 ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+              <span className="hidden sm:inline">{elevatedTotal > 0 ? 'Ação necessária' : 'Sob controle'}</span>
+              <span className="sm:hidden">{elevatedTotal > 0 ? 'Ação' : 'OK'}</span>
+            </span>
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Riscos Elevados</p>
+          <p className={`text-2xl sm:text-3xl font-black leading-none mb-1.5 sm:mb-2 ${elevatedTotal > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+            {elevatedTotal}
+          </p>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-xs text-muted-foreground flex-wrap">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-500 shrink-0" />
+              {highestCount} <span className="hidden sm:inline">{highestLevel}</span>
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400 shrink-0" />
+              {secondHighestCount} <span className="hidden sm:inline">{secondHighestLevel}</span>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card 3: Sem Tratamento (gap de exposição) */}
+      <Card className={`border-l-4 shadow-sm hover:shadow-md transition-all ${untreated > 0 ? 'border-l-amber-500' : 'border-l-emerald-500'}`}>
+        <CardContent className="p-2.5 sm:p-4">
+          <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+            <div className={`p-1.5 rounded-lg ${untreated > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'}`}>
+              <Activity className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${untreated > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600'}`} />
+            </div>
+            <span className={`text-[9px] sm:text-[10px] font-medium px-1 sm:px-1.5 py-0.5 rounded-full ${untreated > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+              {untreated > 0 ? 'Expostos' : 'Tratados'}
+            </span>
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Sem Tratamento</p>
+          <p className={`text-2xl sm:text-3xl font-black leading-none mb-1.5 sm:mb-2 ${untreated > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+            {untreated}
+          </p>
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[9px] sm:text-xs text-muted-foreground">
+            <span>{m.risksByStatus['Identificado'] || 0} <span className="hidden sm:inline">identificados</span><span className="sm:hidden">id.</span></span>
+            <span className="hidden sm:inline">·</span>
+            <span>{m.risksByStatus['Avaliado'] || 0} <span className="hidden sm:inline">avaliados</span><span className="sm:hidden">aval.</span></span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Card 4: Atividades em Atraso */}
+      <Card className={`border-l-4 shadow-sm hover:shadow-md transition-all ${m.overdueActivities > 0 ? 'border-l-orange-500' : 'border-l-emerald-500'}`}>
+        <CardContent className="p-2.5 sm:p-4">
+          <div className="flex items-start justify-between mb-1.5 sm:mb-2">
+            <div className={`p-1.5 rounded-lg ${m.overdueActivities > 0 ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'}`}>
+              <Clock className={`h-3.5 w-3.5 sm:h-5 sm:w-5 ${m.overdueActivities > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600'}`} />
+            </div>
+            <span className={`text-[9px] sm:text-[10px] font-medium px-1 sm:px-1.5 py-0.5 rounded-full ${m.overdueActivities > 0 ? 'bg-orange-50 text-orange-700 border border-orange-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'}`}>
+              <span className="hidden sm:inline">{m.overdueActivities > 0 ? 'Fora do prazo' : 'Em dia'}</span>
+              <span className="sm:hidden">{m.overdueActivities > 0 ? 'Atrasado' : 'Em dia'}</span>
+            </span>
+          </div>
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-0.5">Ativid. em Atraso</p>
+          <p className={`text-2xl sm:text-3xl font-black leading-none mb-1.5 sm:mb-2 ${m.overdueActivities > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+            {m.overdueActivities}
+          </p>
+          <p className="text-[9px] sm:text-xs text-muted-foreground leading-tight">
+            {m.overdueActivities > 0
+              ? <span><span className="sm:hidden">{m.overdueActivities} vencida{m.overdueActivities > 1 ? 's' : ''}</span><span className="hidden sm:inline">{m.overdueActivities} atividade{m.overdueActivities > 1 ? 's' : ''} vencida{m.overdueActivities > 1 ? 's' : ''}</span></span>
+              : <span className="hidden sm:inline">Todas dentro do prazo</span>}
+            {m.overdueActivities === 0 && <span className="sm:hidden">Em dia</span>}
+          </p>
+        </CardContent>
+      </Card>
+
     </div>
   );
 };

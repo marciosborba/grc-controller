@@ -8,29 +8,25 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
-  Legend,
-  LabelList
+  LabelList,
 } from 'recharts';
 import {
   AlertTriangle,
-  TrendingUp,
   Shield,
-  Target,
-  Clock,
-  Users,
   Activity,
-  Zap,
-  Eye,
-  Edit,
-  MoreHorizontal
+  CheckCircle2,
+  Target,
+  Users,
+  Layers,
+  FolderOpen,
+  FileCheck,
+  Archive,
+  Filter,
 } from 'lucide-react';
 import type { Risk, RiskMetrics, RiskFilters } from '@/types/risk-management';
 import { cn } from '@/lib/utils';
@@ -43,6 +39,39 @@ interface DashboardViewProps {
   filters?: RiskFilters;
 }
 
+type RiskGroup = 'open' | 'accepted' | 'closed';
+
+const LEVEL_COLORS: Record<string, string> = {
+  'Crítico':    '#dc2626',
+  'Muito Alto': '#dc2626',
+  'Alto':       '#ea580c',
+  'Médio':      '#ca8a04',
+  'Baixo':      '#16a34a',
+  'Muito Baixo':'#64748b',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  'Identificado':  '#3b82f6',
+  'Avaliado':      '#8b5cf6',
+  'Em Tratamento': '#6366f1',
+  'Monitorado':    '#14b8a6',
+  'Reaberto':      '#f97316',
+  'Fechado':       '#94a3b8',
+};
+
+const getLevelColor = (level: string) => LEVEL_COLORS[level] || '#6b7280';
+
+// Classifica um risco no grupo: fechado → carta (aceito) → aberto
+const getRiskGroup = (risk: Risk): RiskGroup => {
+  if (risk.status === 'Fechado') return 'closed';
+  const treatment = (risk.treatmentType || (risk as any).treatment_strategy || '').toLowerCase();
+  if (treatment === 'aceitar' || treatment === 'accept') {
+    const approvers: any[] = (risk as any).treatment_approvers || [];
+    if (approvers.length > 0 && approvers.every((a: any) => a.approved)) return 'accepted';
+  }
+  return 'open';
+};
+
 export const DashboardView: React.FC<DashboardViewProps> = memo(({
   risks,
   metrics,
@@ -54,279 +83,477 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
   const { getRiskLevels } = useTenantSettings();
   const riskLevels = getRiskLevels();
 
-  // Filtrar riscos baseado nos filtros e busca
+  // Seleção de grupos (padrão: todos selecionados)
+  const [selectedGroups, setSelectedGroups] = useState<Set<RiskGroup>>(
+    new Set(['open', 'accepted', 'closed'])
+  );
+
+  const toggleGroup = (group: RiskGroup) => {
+    setSelectedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(group) && next.size === 1) return prev; // pelo menos 1 selecionado
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+    setCurrentPage(1);
+  };
+
+  // Filtrar por busca/filtros externos
   const filteredRisks = useMemo(() => {
     return risks.filter(risk => {
-      // Busca por termo
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
         if (!risk.name.toLowerCase().includes(term) &&
           !risk.description?.toLowerCase().includes(term) &&
-          !risk.category.toLowerCase().includes(term)) {
-          return false;
-        }
+          !risk.category.toLowerCase().includes(term)) return false;
       }
-
-      // Filtro por categorias
-      if (filters?.categories && filters.categories.length > 0) {
-        if (!filters.categories.includes(risk.category)) return false;
-      }
-
-      // Filtro por níveis
-      if (filters?.levels && filters.levels.length > 0) {
-        if (!filters.levels.includes(risk.riskLevel)) return false;
-      }
-
-      // Filtro por status
-      if (filters?.statuses && filters.statuses.length > 0) {
-        if (!filters.statuses.includes(risk.status)) return false;
-      }
-
+      if (filters?.categories?.length && !filters.categories.includes(risk.category)) return false;
+      if (filters?.levels?.length && !filters.levels.includes(risk.riskLevel)) return false;
+      if (filters?.statuses?.length && !filters.statuses.includes(risk.status)) return false;
       return true;
     });
   }, [risks, searchTerm, filters]);
 
-  const totalItems = filteredRisks.length;
+  // Aplicar filtro de grupo
+  const viewRisks = useMemo(() =>
+    filteredRisks.filter(r => selectedGroups.has(getRiskGroup(r))),
+    [filteredRisks, selectedGroups]
+  );
+
+  // Contagens por grupo (para os botões de filtro)
+  const groupCounts = useMemo(() => ({
+    open:     filteredRisks.filter(r => getRiskGroup(r) === 'open').length,
+    accepted: filteredRisks.filter(r => getRiskGroup(r) === 'accepted').length,
+    closed:   filteredRisks.filter(r => getRiskGroup(r) === 'closed').length,
+  }), [filteredRisks]);
+
+  const totalItems = viewRisks.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const currentItems = filteredRisks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const currentItems = viewRisks
+    .slice()
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Funções utilitárias
-  const getRiskLevelColor = (level: string) => {
-    switch (level) {
-      case 'Crítico':
-      case 'Muito Alto': return '#ef4444';
-      case 'Alto': return '#f97316';
-      case 'Médio': return '#eab308';
-      case 'Baixo': return '#22c55e';
-      case 'Muito Baixo': return '#64748b';
-      default: return '#6b7280';
-    }
-  };
-
-  const getRiskLevelBadgeStyle = (level: string) => {
-    switch (level) {
-      case 'Crítico':
-      case 'Muito Alto':
-        return {
-          backgroundColor: '#dc2626',
-          color: '#ffffff',
-          borderColor: '#dc2626',
-          borderWidth: '1px'
-        };
-      case 'Alto':
-        return {
-          backgroundColor: '#ea580c',
-          color: '#ffffff',
-          borderColor: '#ea580c',
-          borderWidth: '1px'
-        };
-      case 'Médio':
-        return {
-          backgroundColor: '#ca8a04',
-          color: '#ffffff',
-          borderColor: '#ca8a04',
-          borderWidth: '1px'
-        };
-      case 'Baixo':
-        return {
-          backgroundColor: '#16a34a',
-          color: '#ffffff',
-          borderColor: '#16a34a',
-          borderWidth: '1px'
-        };
-      case 'Muito Baixo':
-        return {
-          backgroundColor: '#64748b',
-          color: '#ffffff',
-          borderColor: '#64748b',
-          borderWidth: '1px'
-        };
-      default:
-        return {
-          backgroundColor: '#6b7280',
-          color: '#ffffff',
-          borderColor: '#6b7280',
-          borderWidth: '1px'
-        };
-    }
-  };
-
-  const getRiskLevelIconBg = (level: string) => {
-    switch (level) {
-      case 'Crítico':
-      case 'Muito Alto': return 'bg-red-100 dark:bg-red-950/50';
-      case 'Alto': return 'bg-orange-100 dark:bg-orange-950/50';
-      case 'Médio': return 'bg-yellow-100 dark:bg-yellow-950/50';
-      case 'Baixo': return 'bg-green-100 dark:bg-green-950/50';
-      case 'Muito Baixo': return 'bg-slate-100 dark:bg-slate-950/50';
-      default: return 'bg-gray-100 dark:bg-gray-950/50';
-    }
-  };
-
-  const getRiskLevelIconColor = (level: string) => {
-    switch (level) {
-      case 'Crítico':
-      case 'Muito Alto': return 'text-red-600 dark:text-red-400';
-      case 'Alto': return 'text-orange-600 dark:text-orange-400';
-      case 'Médio': return 'text-yellow-600 dark:text-yellow-400';
-      case 'Baixo': return 'text-green-600 dark:text-green-400';
-      case 'Muito Baixo': return 'text-slate-600 dark:text-slate-400';
-      default: return 'text-gray-600 dark:text-gray-400';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Identificado': return 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400';
-      case 'Avaliado': return 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-400';
-      case 'Em Tratamento': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400';
-      case 'Monitorado': return 'bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-400';
-      case 'Fechado': return 'bg-gray-100 text-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-950/50 dark:text-gray-400';
-    }
-  };
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+  // ── Distribuição por Nível (usa os níveis reais da tenant) ───────────────
+  const levelDistribution = useMemo(() => {
+    return riskLevels.map(level => {
+      const count = viewRisks.filter(r => r.riskLevel === level).length;
+      return { name: level, value: count, color: getLevelColor(level) };
     });
+  }, [viewRisks, riskLevels]);
+
+  // ── Pipeline de Ciclo de Vida ────────────────────────────────────────────
+  const statusPipeline = useMemo(() => {
+    const statuses = ['Identificado', 'Avaliado', 'Em Tratamento', 'Monitorado', 'Reaberto', 'Fechado'];
+    return statuses.map(status => ({
+      name: status,
+      count: viewRisks.filter(r => r.status === status).length,
+      color: STATUS_COLORS[status],
+    })).filter(s => s.count > 0);
+  }, [viewRisks]);
+
+  // ── Distribuição por Categoria × Nível (stacked bar) ────────────────────
+  const categoryStackedData = useMemo(() => {
+    const byCategory: Record<string, Record<string, number> & { total: number }> = {};
+    viewRisks.forEach(risk => {
+      if (!byCategory[risk.category]) {
+        byCategory[risk.category] = { total: 0 };
+        riskLevels.forEach(l => { byCategory[risk.category][l] = 0; });
+      }
+      byCategory[risk.category][risk.riskLevel] = (byCategory[risk.category][risk.riskLevel] || 0) + 1;
+      byCategory[risk.category].total++;
+    });
+    return Object.entries(byCategory)
+      .map(([category, levels]) => ({
+        name: category.length > 14 ? category.slice(0, 13) + '…' : category,
+        fullName: category,
+        total: levels.total,
+        ...levels,
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 8);
+  }, [viewRisks, riskLevels]);
+
+  // ── Top 5 por Score (todos os grupos selecionados, não só abertos) ───────
+  const topRisks = useMemo(() =>
+    viewRisks
+      .filter(r => r.status !== 'Fechado')
+      .sort((a, b) => b.riskScore - a.riskScore)
+      .slice(0, 5),
+    [viewRisks]
+  );
+
+  // ── Cobertura de Tratamento ──────────────────────────────────────────────
+  const treatmentStats = useMemo(() => {
+    const nonClosed = viewRisks.filter(r => r.status !== 'Fechado');
+    const treated = nonClosed.filter(r =>
+      r.status === 'Em Tratamento' || r.status === 'Monitorado'
+    ).length;
+    const untreated = nonClosed.filter(r =>
+      r.status === 'Identificado' || r.status === 'Avaliado'
+    ).length;
+    const pct = nonClosed.length > 0 ? Math.round((treated / nonClosed.length) * 100) : 0;
+    return { treated, untreated, pct, total: nonClosed.length };
+  }, [viewRisks]);
+
+  // ── Helpers visuais ──────────────────────────────────────────────────────
+  const getLevelBadgeStyle = (level: string) => ({
+    backgroundColor: getLevelColor(level),
+    color: '#ffffff',
+    borderColor: getLevelColor(level),
+    borderWidth: '1px',
+  });
+
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Identificado':  return 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300';
+      case 'Avaliado':      return 'bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300';
+      case 'Em Tratamento': return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-300';
+      case 'Monitorado':    return 'bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300';
+      case 'Reaberto':      return 'bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300';
+      case 'Fechado':       return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
+      default:              return 'bg-gray-100 text-gray-700';
+    }
   };
 
-  // Dados para gráficos
-  const chartData = useMemo(() => {
-    // Distribuição por categoria
-    const categoryData = filteredRisks.reduce((acc, risk) => {
-      acc[risk.category] = (acc[risk.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  const formatDate = (date: Date) =>
+    new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
-    const categoryChartData = Object.entries(categoryData).map(([category, count]) => ({
-      name: category,
-      value: count,
-      percentage: ((count / filteredRisks.length) * 100).toFixed(1)
-    }));
+  // ── Custom tooltip para categoria ────────────────────────────────────────
+  const CategoryTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    const entry = categoryStackedData.find(d => d.name === label);
+    return (
+      <div className="bg-background border border-border rounded-lg p-3 shadow-lg text-xs space-y-1">
+        <p className="font-semibold text-sm mb-1">{entry?.fullName || label}</p>
+        {payload.filter((p: any) => p.value > 0).map((p: any) => (
+          <div key={p.dataKey} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.fill }} />
+            <span className="text-muted-foreground">{p.dataKey}:</span>
+            <span className="font-medium">{p.value}</span>
+          </div>
+        ))}
+        <div className="border-t pt-1 mt-1 font-semibold">Total: {entry?.total}</div>
+      </div>
+    );
+  };
 
-    // Distribuição por nível de risco
-    const levelData = filteredRisks.reduce((acc, risk) => {
-      acc[risk.riskLevel] = (acc[risk.riskLevel] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  // ── Custom label para pipeline ────────────────────────────────────────────
+  const renderPipelineLabel = ({ x, y, width, value }: any) => {
+    if (!value || width < 28) return null;
+    return (
+      <text x={x + width / 2} y={y + 12} fill="#fff" textAnchor="middle" fontSize={11} fontWeight="700">
+        {value}
+      </text>
+    );
+  };
 
-    // Criamos a lista baseada exatamente na matriz da tenant atualizada
-    const levelChartData = riskLevels.map(level => ({
-      name: level,
-      value: levelData[level] || 0,
-      color: getRiskLevelColor(level)
-    }));
-
-    // Tendência de riscos (simulado)
-    const trendData = [
-      { month: 'Jan', total: Math.max(0, filteredRisks.length - 15), alto: Math.max(0, (levelData['Alto'] || 0) - 3) },
-      { month: 'Fev', total: Math.max(0, filteredRisks.length - 12), alto: Math.max(0, (levelData['Alto'] || 0) - 2) },
-      { month: 'Mar', total: Math.max(0, filteredRisks.length - 8), alto: Math.max(0, (levelData['Alto'] || 0) - 1) },
-      { month: 'Abr', total: Math.max(0, filteredRisks.length - 5), alto: levelData['Alto'] || 0 },
-      { month: 'Mai', total: filteredRisks.length, alto: levelData['Alto'] || 0 }
-    ];
-
-    return { categoryChartData, levelChartData, trendData };
-  }, [filteredRisks]);
-
-  // Top riscos por prioridade
-  const topRisks = filteredRisks
-    .sort((a, b) => b.riskScore - a.riskScore)
-    .slice(0, 5);
+  // ── Grupo config (label, ícone, cor) ─────────────────────────────────────
+  const GROUP_CONFIG: Record<RiskGroup, { label: string; icon: React.ReactNode; activeClass: string; inactiveClass: string }> = {
+    open: {
+      label: 'Em Aberto',
+      icon: <FolderOpen className="h-3.5 w-3.5" />,
+      activeClass: 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700',
+      inactiveClass: 'text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30',
+    },
+    accepted: {
+      label: 'Carta de Risco',
+      icon: <FileCheck className="h-3.5 w-3.5" />,
+      activeClass: 'bg-orange-500 text-white border-orange-500 hover:bg-orange-600',
+      inactiveClass: 'text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30',
+    },
+    closed: {
+      label: 'Encerrados',
+      icon: <Archive className="h-3.5 w-3.5" />,
+      activeClass: 'bg-slate-500 text-white border-slate-500 hover:bg-slate-600',
+      inactiveClass: 'text-slate-500 border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950/30',
+    },
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Resumo Executivo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Gráfico de Distribuição por Categoria (Movido para cima) */}
-        <Card className="md:col-span-2">
-          <CardHeader className="p-3 sm:p-6 pb-2">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
-              <Target className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Distribuição por Categoria</span>
+    <div className="space-y-5">
+
+      {/* ── Filtro de Grupo ──────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 p-2.5 sm:p-3 bg-muted/40 rounded-lg border overflow-x-auto hide-scrollbar">
+        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+          <Filter className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          <span className="hidden xs:inline">Exibindo:</span>
+        </div>
+        {(['open', 'accepted', 'closed'] as RiskGroup[]).map(group => {
+          const cfg = GROUP_CONFIG[group];
+          const isActive = selectedGroups.has(group);
+          return (
+            <button
+              key={group}
+              onClick={() => toggleGroup(group)}
+              className={cn(
+                'inline-flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-medium px-2 sm:px-2.5 py-1 rounded-full border transition-all shrink-0 whitespace-nowrap',
+                isActive ? cfg.activeClass : cfg.inactiveClass
+              )}
+            >
+              {cfg.icon}
+              <span className="hidden sm:inline">{cfg.label}</span>
+              <span className="sm:hidden">{cfg.label.split(' ')[0]}</span>
+              <span className={cn(
+                'inline-flex items-center justify-center w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full text-[9px] sm:text-[10px] font-black',
+                isActive ? 'bg-white/20' : 'bg-current/10'
+              )}>
+                {groupCounts[group]}
+              </span>
+            </button>
+          );
+        })}
+        <span className="ml-auto shrink-0 text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+          <span className="font-bold text-foreground">{viewRisks.length}</span>
+          <span className="hidden sm:inline"> de {filteredRisks.length} riscos</span>
+          <span className="sm:hidden">/{filteredRisks.length}</span>
+        </span>
+      </div>
+
+      {/* ── ROW 1: Categoria × Nível + Donut ────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* Stacked bar: Categoria × Nível */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Layers className="h-4 w-4 text-primary" />
+              Exposição por Categoria
             </CardTitle>
+            <p className="text-[11px] text-muted-foreground">Riscos por categoria e severidade</p>
           </CardHeader>
-          <CardContent className="p-1 sm:p-6 sm:pt-0">
-            <div className="w-full overflow-x-auto min-w-0">
-              <div className="w-full">
-                <ResponsiveContainer width="100%" height={Math.max(250, chartData.categoryChartData.length * 35 + 40)}>
+          <CardContent className="p-2 sm:p-4 pt-0">
+            {categoryStackedData.length === 0 ? (
+              <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+                <Shield className="h-8 w-8 mr-2 opacity-40" /> Nenhum risco no filtro selecionado
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={Math.max(200, categoryStackedData.length * 38 + 40)}>
                   <BarChart
-                    data={[...chartData.categoryChartData].sort((a: any, b: any) => b.value - a.value)}
+                    data={categoryStackedData}
                     layout="vertical"
-                    margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                    margin={{ top: 4, right: 40, left: 4, bottom: 4 }}
+                    barCategoryGap="22%"
                   >
                     <XAxis type="number" hide />
                     <YAxis
                       type="category"
                       dataKey="name"
+                      width={100}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fontSize: 10, fill: 'currentColor' }}
-                      width={90}
+                      tick={{ fontSize: 11, fill: 'currentColor' }}
                     />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      cursor={{ fill: 'var(--muted)', opacity: 0.4 }}
-                      formatter={(value: any, name: any, props: any) => {
-                        const item = chartData.categoryChartData.find((c: any) => c.name === props.payload.name) as any;
-                        return [`${value} (${item?.percentage || 0}%)`, 'Quantidade'];
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                      {chartData.categoryChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(${index * 40}, 70%, 60%)`} />
-                      ))}
-                      <LabelList dataKey="value" position="right" fill="currentColor" fontSize={10} />
-                    </Bar>
+                    <Tooltip content={<CategoryTooltip />} />
+                    {riskLevels.map((level, idx) => (
+                      <Bar
+                        key={level}
+                        dataKey={level}
+                        stackId="a"
+                        fill={getLevelColor(level)}
+                        name={level}
+                        radius={idx === riskLevels.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]}
+                      >
+                        <LabelList
+                          dataKey={level}
+                          position="insideRight"
+                          fill="#fff"
+                          fontSize={9}
+                          fontWeight="700"
+                          formatter={(v: number) => v > 0 ? v : ''}
+                        />
+                      </Bar>
+                    ))}
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 px-1">
+                  {riskLevels.map(level => (
+                    <span key={level} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: getLevelColor(level) }} />
+                      {level}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Top 5 Riscos Críticos */}
+        {/* Donut: Nível */}
         <Card>
-          <CardHeader className="p-3 sm:p-6 pb-2">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
-              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 dark:text-red-400" />
-              <span>Top 5 Riscos</span>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Target className="h-4 w-4 text-primary" />
+              Nível de Risco
             </CardTitle>
+            <p className="text-[11px] text-muted-foreground">
+              {viewRisks.length} risco{viewRisks.length !== 1 ? 's' : ''} no filtro
+            </p>
           </CardHeader>
-          <CardContent className="p-3 sm:p-6 pt-0">
-            <div className="space-y-3">
-              {topRisks.map((risk, index) => (
-                <div key={risk.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 gap-2 overflow-hidden">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">#{index + 1}</span>
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] px-1.5 py-0 h-4 min-w-0 whitespace-nowrap overflow-hidden text-ellipsis"
-                        style={getRiskLevelBadgeStyle(risk.riskLevel)}
-                      >
-                        {risk.riskLevel}
-                      </Badge>
+          <CardContent className="p-2 sm:p-4 pt-0">
+            {levelDistribution.every(d => d.value === 0) ? (
+              <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
+                <Shield className="h-6 w-6 mr-2 opacity-40" /> Sem dados
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={175}>
+                  <PieChart>
+                    <Pie
+                      data={levelDistribution.filter(d => d.value > 0)}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={78}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {levelDistribution.filter(d => d.value > 0).map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: number, name: string) => [`${value} risco${value !== 1 ? 's' : ''}`, name]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1.5 mt-1">
+                  {levelDistribution.map(d => (
+                    <div key={d.name} className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: d.color }} />
+                      <span className="text-xs text-muted-foreground flex-1">{d.name}</span>
+                      <span className="text-xs font-bold tabular-nums">{d.value}</span>
+                      <span className="text-[10px] text-muted-foreground w-8 text-right tabular-nums">
+                        {viewRisks.length > 0 ? Math.round(d.value / viewRisks.length * 100) : 0}%
+                      </span>
                     </div>
-                    <p className="text-xs sm:text-sm font-medium truncate" title={risk.name}>{risk.name}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate" title={risk.category}>{risk.category}</p>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── ROW 2: Pipeline + Top 5 ──────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* Pipeline */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Activity className="h-4 w-4 text-primary" />
+              Ciclo de Vida dos Riscos
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground">Quantidade de riscos por fase do processo</p>
+          </CardHeader>
+          <CardContent className="p-2 sm:p-4 pt-2">
+            {statusPipeline.length === 0 ? (
+              <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+                <Shield className="h-6 w-6 mr-2 opacity-40" /> Nenhum risco no filtro
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={Math.max(140, statusPipeline.length * 44)}>
+                  <BarChart
+                    data={statusPipeline}
+                    layout="vertical"
+                    margin={{ top: 4, right: 50, left: 4, bottom: 4 }}
+                    barCategoryGap="18%"
+                  >
+                    <XAxis type="number" hide />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      width={110}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: 'currentColor' }}
+                    />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      cursor={{ fill: 'var(--muted)', opacity: 0.3 }}
+                      formatter={(v: number) => [`${v} risco${v !== 1 ? 's' : ''}`, '']}
+                    />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} maxBarSize={32}>
+                      {statusPipeline.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                      <LabelList content={renderPipelineLabel} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+
+                {/* Cobertura de Tratamento */}
+                <div className="mt-3 p-3 bg-muted/40 rounded-lg border">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <CheckCircle2 className={cn(
+                        'h-3.5 w-3.5',
+                        treatmentStats.pct >= 70 ? 'text-green-500' : treatmentStats.pct >= 40 ? 'text-amber-500' : 'text-red-500'
+                      )} />
+                      Cobertura de Tratamento
+                    </div>
+                    <span className={cn(
+                      'text-sm font-black',
+                      treatmentStats.pct >= 70 ? 'text-green-600' : treatmentStats.pct >= 40 ? 'text-amber-600' : 'text-red-600'
+                    )}>
+                      {treatmentStats.pct}%
+                    </span>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm sm:text-base font-bold">{risk.riskScore}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">Score</p>
+                  <Progress value={treatmentStats.pct} className="h-2" />
+                  <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                    <span>{treatmentStats.treated} em tratamento / monitoramento</span>
+                    <span className={treatmentStats.untreated > 0 ? 'text-amber-600 font-medium' : ''}>
+                      {treatmentStats.untreated} sem tratamento
+                    </span>
                   </div>
                 </div>
-              ))}
+              </>
+            )}
+          </CardContent>
+        </Card>
 
+        {/* Top 5 */}
+        <Card>
+          <CardHeader className="p-4 pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+              Top 5 Prioritários
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground">Maiores scores — riscos não encerrados</p>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="space-y-2">
+              {topRisks.map((risk, index) => (
+                <div key={risk.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 hover:bg-muted/70 transition-colors">
+                  <span className="text-[10px] font-black text-muted-foreground w-4 shrink-0">#{index + 1}</span>
+                  <div
+                    className="w-7 h-7 rounded-md flex items-center justify-center text-white text-[10px] font-black shrink-0"
+                    style={{ backgroundColor: getLevelColor(risk.riskLevel) }}
+                  >
+                    {risk.riskScore}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate leading-tight" title={risk.name}>{risk.name}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{risk.category}</p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] px-1 py-0 h-4 shrink-0 whitespace-nowrap"
+                    style={getLevelBadgeStyle(risk.riskLevel)}
+                  >
+                    {risk.riskLevel}
+                  </Badge>
+                </div>
+              ))}
               {topRisks.length === 0 && (
-                <div className="text-center py-4">
+                <div className="text-center py-6">
                   <Shield className="mx-auto h-8 w-8 text-green-500 mb-2" />
-                  <p className="text-sm text-green-600 font-medium">Excelente!</p>
-                  <p className="text-xs text-muted-foreground">Nenhum risco crítico identificado</p>
+                  <p className="text-sm text-green-600 font-medium">Sem riscos ativos</p>
                 </div>
               )}
             </div>
@@ -334,203 +561,83 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
         </Card>
       </div>
 
-      {/* Análises Detalhadas */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Distribuição por Nível de Risco (Movido para baixo) */}
-        <Card>
-          <CardHeader className="p-3 sm:p-6 pb-2">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
-              <BarChart className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Distribuição por Nível de Risco</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-1 sm:p-6 sm:pt-0">
-            <div className="w-full overflow-x-auto min-w-0">
-              <div className="w-full">
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={chartData.levelChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="name"
-                      fontSize={10}
-                      tick={{ fill: 'currentColor' }}
-                      tickMargin={5}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      fontSize={10}
-                      tick={{ fill: 'currentColor' }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickCount={5}
-                    />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                      cursor={{ fill: 'var(--muted)' }}
-                    />
-                    <Bar dataKey="value" fill="#8884d8" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                      {chartData.levelChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tendência Temporal */}
-        <Card>
-          <CardHeader className="p-3 sm:p-6 pb-2">
-            <CardTitle className="flex items-center space-x-2 text-sm sm:text-lg">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Evolução de Riscos</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-1 sm:p-6 sm:pt-0">
-            <div className="w-full overflow-x-auto min-w-0">
-              <div className="w-full">
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={chartData.trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      fontSize={10}
-                      tickMargin={5}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      fontSize={10}
-                      axisLine={false}
-                      tickLine={false}
-                      tickCount={5}
-                    />
-                    <Tooltip
-                      contentStyle={{ borderRadius: '8px', fontSize: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="total"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      name="Total"
-                      dot={{ r: 4, strokeWidth: 2 }}
-                      activeDot={{ r: 6 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="alto"
-                      stroke="#ef4444"
-                      strokeWidth={2}
-                      name="Alto Risco"
-                      dot={{ r: 4, strokeWidth: 2 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lista de Riscos Recentes */}
+      {/* ── ROW 3: Lista Recente ─────────────────────────────────────────── */}
       <Card>
-        <CardHeader className="p-3 sm:p-6 pb-2">
-          <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center space-x-2 text-sm sm:text-lg">
-              <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Riscos Recentes</span>
-              <Badge variant="secondary" className="text-[10px] sm:text-xs">{filteredRisks.length}</Badge>
-            </div>
-            <div className="flex items-center">
-              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm">
-                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                Ver Todos
-              </Button>
-            </div>
+        <CardHeader className="p-4 pb-2">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Activity className="h-4 w-4" />
+            Riscos Recentes
+            <Badge variant="secondary" className="text-[10px] ml-1">{viewRisks.length}</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-3 sm:p-6 pt-0">
-          <div className="space-y-3 sm:space-y-4">
+        <CardContent className="p-3 sm:p-4 pt-0">
+          <div className="space-y-2">
             {currentItems.map((risk) => (
-              <div key={risk.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors gap-3 sm:gap-0">
-                <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                  <div className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 mt-1 sm:mt-0 ${getRiskLevelIconBg(risk.riskLevel)}`}>
-                    <AlertTriangle className={`h-3 w-3 sm:h-4 sm:w-4 ${getRiskLevelIconColor(risk.riskLevel)}`} />
+              <div
+                key={risk.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg hover:bg-muted/40 transition-colors gap-2"
+              >
+                <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-black shrink-0 mt-0.5 sm:mt-0"
+                    style={{ backgroundColor: getLevelColor(risk.riskLevel) }}
+                  >
+                    {risk.riskScore || '?'}
                   </div>
-
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
-                      <h4 className="font-medium text-sm sm:text-base leading-tight w-full sm:w-auto break-words line-clamp-2">{risk.name}</h4>
+                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                      <h4 className="font-medium text-sm leading-tight truncate max-w-[260px]" title={risk.name}>{risk.name}</h4>
                       <Badge
                         variant="outline"
-                        className="text-[10px] sm:text-xs whitespace-nowrap"
-                        style={getRiskLevelBadgeStyle(risk.riskLevel)}
+                        className="text-[9px] px-1.5 py-0 h-4 shrink-0"
+                        style={getLevelBadgeStyle(risk.riskLevel)}
                       >
                         {risk.riskLevel}
                       </Badge>
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] sm:text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-muted-foreground">
                       <span>{risk.category}</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span>Score <strong className="text-foreground">{risk.riskScore}</strong></span>
-                      <span className="hidden sm:inline">•</span>
+                      <span>·</span>
                       <span>{formatDate(risk.createdAt)}</span>
+                      {risk.assignedTo && (
+                        <>
+                          <span>·</span>
+                          <span className="flex items-center gap-0.5">
+                            <Users className="h-2.5 w-2.5" />
+                            {risk.assignedTo}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto mt-2 sm:mt-0 space-x-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/50">
-                  <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
-                    <Badge className={cn("text-[10px] sm:text-xs whitespace-nowrap", getStatusColor(risk.status))}>
-                      {risk.status}
-                    </Badge>
-
-                    {risk.assignedTo && (
-                      <div className="flex items-center space-x-1 text-[11px] sm:text-xs text-muted-foreground whitespace-nowrap">
-                        <Users className="h-3 w-3" />
-                        <span className="truncate max-w-[100px] sm:max-w-none">{risk.assignedTo}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <Button variant="ghost" size="sm" className="h-7 w-7 sm:h-8 sm:w-8 p-0 flex-shrink-0 ml-auto">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Badge className={cn('text-[10px] whitespace-nowrap shrink-0', getStatusBadgeClass(risk.status))}>
+                  {risk.status}
+                </Badge>
               </div>
             ))}
 
-            {filteredRisks.length === 0 && (
-              <div className="text-center py-12">
-                <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                  Nenhum risco encontrado
-                </h3>
-                <p className="text-muted-foreground">
+            {viewRisks.length === 0 && (
+              <div className="text-center py-10">
+                <Shield className="mx-auto h-10 w-10 text-muted-foreground mb-3 opacity-40" />
+                <h3 className="text-base font-medium text-muted-foreground mb-1">Nenhum risco encontrado</h3>
+                <p className="text-sm text-muted-foreground">
                   {searchTerm || Object.keys(filters || {}).length > 0
-                    ? 'Tente ajustar os filtros ou termo de busca'
-                    : 'Nenhum risco foi identificado ainda'
-                  }
+                    ? 'Tente ajustar os filtros ou o termo de busca'
+                    : 'Selecione ao menos um grupo acima'}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Controles de Paginação */}
           {totalItems > itemsPerPage && (
             <div className="flex flex-col sm:flex-row items-center justify-between mt-4 pt-4 border-t gap-2">
               <div className="text-xs text-muted-foreground">
-                Mostrando {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} riscos
+                Mostrando {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems}
               </div>
               <div className="flex items-center gap-1.5">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="outline" size="sm"
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
                   className="h-7 px-2 text-xs"
@@ -541,8 +648,7 @@ export const DashboardView: React.FC<DashboardViewProps> = memo(({
                   {currentPage} / {totalPages}
                 </span>
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="outline" size="sm"
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
                   className="h-7 px-2 text-xs"

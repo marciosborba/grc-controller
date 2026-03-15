@@ -22,6 +22,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -81,6 +82,7 @@ interface ExpandableCardsViewProps {
   onUpdate: (riskId: string, data: any) => void;
   onDelete: (riskId: string) => void;
   defaultTab?: 'open' | 'accepted' | 'closed';
+  expandRiskId?: string;
 }
 
 type SortField = 'name' | 'category' | 'riskLevel' | 'riskScore' | 'status' | 'createdAt' | 'dueDate';
@@ -93,8 +95,11 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   onUpdate,
   onDelete,
   defaultTab = 'open',
+  expandRiskId,
 }) => {
-  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(
+    expandRiskId ? new Set([expandRiskId]) : new Set()
+  );
   const [editingCards, setEditingCards] = useState<Set<string>>(new Set());
   const [editForms, setEditForms] = useState<Record<string, any>>({});
   const [savingCards, setSavingCards] = useState<Set<string>>(new Set());
@@ -103,6 +108,8 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   const [evidencePreview, setEvidencePreview] = useState<{ isOpen: boolean; url: string; title: string }>({ isOpen: false, url: '', title: '' });
   const [riskListTab, setRiskListTab] = useState<'open' | 'accepted' | 'closed'>(defaultTab);
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
+  const [residualWarningRiskId, setResidualWarningRiskId] = useState<string | null>(null);
+
 
   const { toast } = useToast();
   const { tenantSettings, isMatrix4x4, getRiskLevels, getMatrixLabels, getMatrixDimensions } = useTenantSettings();
@@ -337,6 +344,17 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
   const saveEditing = async (riskId: string) => {
     const formData = editForms[riskId];
     if (!formData) return;
+
+    // Validar dados residuais antes de fechar o risco
+    if (formData.status === 'Fechado') {
+      const currentRisk = risks?.find((r: any) => r.id === riskId);
+      const hasResidualInForm = formData.residual_impact && formData.residual_likelihood;
+      const hasResidualInDB = currentRisk?.residual_impact && (currentRisk as any)?.residual_likelihood;
+      if (!hasResidualInForm && !hasResidualInDB) {
+        setResidualWarningRiskId(riskId);
+        return;
+      }
+    }
 
     // Mostrar estado de carregamento
     const newSaving = new Set(savingCards);
@@ -634,6 +652,18 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
     return 'open';
   };
 
+  // Quando expandRiskId é fornecido (navegação da matriz), abrir o tab correto e expandir o card
+  React.useEffect(() => {
+    if (!expandRiskId || risks.length === 0) return;
+    const risk = risks.find(r => r.id === expandRiskId);
+    if (!risk) return;
+    setRiskListTab(getRiskTab(risk));
+    setTimeout(() => {
+      const el = document.getElementById(`risk-card-${expandRiskId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }, [expandRiskId, risks]);
+
   const sendApprovalEmail = async (riskId: string, approver: TreatmentApprover, risk: Risk) => {
     const key = `${riskId}-${approver.id}`;
     setSendingEmail(prev => ({ ...prev, [key]: true }));
@@ -822,8 +852,9 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
             return (
               <Card
                 key={risk.id}
+                id={`risk-card-${risk.id}`}
                 className={`border-l-4 transition-all ${overdue ? 'border-l-red-500 bg-red-50 dark:bg-red-950/20' : 'border-l-primary'
-                  } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'}`}
+                  } ${isExpanded ? 'shadow-md' : 'hover:shadow-sm'} ${expandRiskId === risk.id ? 'ring-2 ring-primary ring-offset-2' : ''}`}
               >
                 <CardHeader className="pb-3 px-4 sm:px-6">
                   {isEditing ? (
@@ -2709,6 +2740,38 @@ export const ExpandableCardsView: React.FC<ExpandableCardsViewProps> = ({
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* ── Dialog: Risco Residual obrigatório para fechar ── */}
+      <Dialog open={!!residualWarningRiskId} onOpenChange={(open) => { if (!open) setResidualWarningRiskId(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              Risco Residual não preenchido
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Para encerrar este risco é obrigatório informar o <strong>Impacto Residual</strong> e a{' '}
+              <strong>Probabilidade Residual</strong> — dados que registram o nível de risco remanescente após as ações de tratamento.
+            </p>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-800 dark:text-amber-300 space-y-1">
+              <p className="font-medium">Como preencher:</p>
+              <ol className="list-decimal list-inside space-y-1 text-xs">
+                <li>Abra o card do risco e acesse a aba <strong>Monitoramento</strong></li>
+                <li>Edite o risco (clique em Editar)</li>
+                <li>Preencha os campos <strong>Impacto Residual</strong> e <strong>Probabilidade Residual</strong></li>
+                <li>Salve e então altere o status para Fechado</li>
+              </ol>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={() => setResidualWarningRiskId(null)}>
+                Entendido
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal de Preview de Evidência */}
       <Dialog open={evidencePreview.isOpen} onOpenChange={(open) => setEvidencePreview(prev => ({ ...prev, isOpen: open }))}>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,6 +104,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
   // Estados principais
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [expandableDefaultTab, setExpandableDefaultTab] = useState<'open' | 'accepted' | 'closed'>('open');
+  const [expandRiskId, setExpandRiskId] = useState<string | undefined>(undefined);
 
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -121,6 +122,18 @@ export const RiskManagementCenterImproved: React.FC = () => {
   // Hooks
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Ao vir da Matriz com expandRiskId, abrir a aba de cards e expandir o risco
+  useEffect(() => {
+    const state = location.state as { expandRiskId?: string } | null;
+    if (state?.expandRiskId) {
+      setViewMode('table');
+      setExpandRiskId(state.expandRiskId);
+      // Limpar o state para não reabrir ao navegar de volta
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
   const { toast } = useToast();
   const {
     risks,
@@ -174,15 +187,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
     // Ações Secundárias
     {
-      id: 'documentation',
-      title: 'Documentação',
-      description: 'Guia completo do sistema',
-      icon: BookOpen,
-      color: 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700',
-      action: () => setViewMode('documentation'),
-      category: 'secondary'
-    },
-    {
       id: 'risk-library',
       title: 'Biblioteca de Riscos',
       description: 'Templates e modelos',
@@ -204,16 +208,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
       action: () => setViewMode('communications'),
       category: 'integration',
       badge: 'Novo'
-    },
-    {
-      id: 'approvals',
-      title: 'Aprovações',
-      description: 'Workflow digital',
-      icon: CheckCircle,
-      color: 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700',
-      action: () => setViewMode('approvals'),
-      category: 'integration',
-      badge: metrics?.pendingApprovals > 0 ? metrics.pendingApprovals : undefined
     },
     {
       id: 'risk-letters',
@@ -358,7 +352,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
           <Zap className="h-5 w-5 text-orange-500 dark:text-orange-400" />
           <h2 className="text-lg font-semibold">Centro de Ações Integradas</h2>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {getQuickActions().map((action) => {
             const Icon = action.icon;
 
@@ -423,7 +417,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
                   </Badge>
                 </div>
                 <div className="flex items-center justify-start sm:justify-end gap-1 overflow-x-auto hide-scrollbar pb-1 sm:pb-0">
-                  {(['dashboard', 'table', 'kanban', 'process', 'matrix'] as ViewMode[]).map((view) => {
+                  {(['dashboard', 'table', 'kanban'] as ViewMode[]).map((view) => {
                     const Icon = getViewIcon(view);
                     return (
                       <Button
@@ -439,8 +433,6 @@ export const RiskManagementCenterImproved: React.FC = () => {
                           {view === 'dashboard' && 'Dashboard'}
                           {view === 'table' && 'Lista'}
                           {view === 'kanban' && 'Kanban'}
-                          {view === 'process' && 'Registro'}
-                          {view === 'matrix' && 'Matriz'}
                         </span>
                       </Button>
                     );
@@ -575,6 +567,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
               onUpdate={updateRisk}
               onDelete={deleteRisk}
               defaultTab={expandableDefaultTab}
+              expandRiskId={expandRiskId}
             />
           )}
 
@@ -630,7 +623,7 @@ export const RiskManagementCenterImproved: React.FC = () => {
 
       {/* Dialog do Assistente de Registro de Risco */}
       <Dialog open={processDialogOpen} onOpenChange={setProcessDialogOpen}>
-        <DialogContent className="w-full max-w-[100vw] sm:max-w-[95vw] md:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 m-0 sm:mx-auto border-none sm:border-solid rounded-none sm:rounded-lg flex flex-col">
+        <DialogContent className="w-full max-w-[100vw] sm:max-w-[95vw] md:max-w-5xl lg:max-w-6xl xl:max-w-7xl h-[100dvh] sm:h-auto sm:max-h-[95vh] overflow-y-auto overflow-x-hidden p-0 m-0 sm:mx-auto border-none sm:border-solid rounded-none sm:rounded-lg flex flex-col">
           <DialogHeader className="pt-10 pb-4 px-4 sm:px-6 text-left relative flex-shrink-0 border-b border-border/40 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 dark:border-green-900/50">
             <DialogTitle className="flex items-center space-x-2 text-sm">
               <span>Novo Registro de Risco</span>

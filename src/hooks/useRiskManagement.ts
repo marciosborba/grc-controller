@@ -257,7 +257,9 @@ export const useRiskManagement = () => {
             position,
             email,
             notification_type,
-            response_status
+            response_status,
+            notified_at,
+            created_at
           )
         `)
         .eq('tenant_id', userTenantId) // FILTRO CRÍTICO POR TENANT
@@ -419,11 +421,12 @@ export const useRiskManagement = () => {
         throw new Error('Acesso negado: tenant não identificado');
       }
 
-      // Query otimizada - apenas campos necessários para métricas
+      // Query otimizada - apenas campos necessários para métricas (excluir cancelados)
       const { data: riskData, error } = await supabase
         .from('risk_registrations')
         .select('id, risk_level, status, current_step, created_at')
-        .eq('tenant_id', userTenantId);
+        .eq('tenant_id', userTenantId)
+        .neq('status', 'cancelled');
 
       if (error) {
         throw error;
@@ -450,6 +453,9 @@ export const useRiskManagement = () => {
       };
 
       rawRisks.forEach(risk => {
+        // Pular riscos cancelados (segurança extra caso o filtro DB não cubra variações)
+        if (['cancelled', 'cancelado', 'Cancelado'].includes(risk.status)) return;
+
         // Mapear nível do risco
         let level = mapRiskLevel(risk.risk_level);
         if (level === 'Crítico') level = 'Muito Alto'; // Consolidar para métricas
@@ -821,8 +827,14 @@ export const useRiskManagement = () => {
       if (data.monitoring_frequency !== undefined) updateData.monitoring_frequency = data.monitoring_frequency;
       if (data.monitoring_responsible !== undefined) updateData.monitoring_responsible = data.monitoring_responsible;
       if (data.residual_impact !== undefined) updateData.residual_impact = parseNum(data.residual_impact);
+      // residual_probability (Step7) → residual_likelihood (DB)
       if (data.residual_likelihood !== undefined) updateData.residual_likelihood = parseNum(data.residual_likelihood);
+      if (data.residual_probability !== undefined) updateData.residual_likelihood = parseNum(data.residual_probability);
+      // residual_risk_score (Step7) → residual_score (DB)
       if (data.residual_score !== undefined) updateData.residual_score = parseNum(data.residual_score);
+      if (data.residual_risk_score !== undefined) updateData.residual_score = parseNum(data.residual_risk_score);
+      // residual_risk_level
+      if (data.residual_risk_level !== undefined) updateData.residual_risk_level = data.residual_risk_level;
       if (data.closure_criteria !== undefined) updateData.closure_criteria = data.closure_criteria;
       if (data.closure_notes !== undefined) updateData.closure_notes = data.closure_notes;
       if (data.closure_date !== undefined) updateData.closure_date = parseDate(data.closure_date);
