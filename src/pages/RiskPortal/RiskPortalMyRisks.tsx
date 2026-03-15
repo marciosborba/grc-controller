@@ -59,7 +59,11 @@ export const RiskPortalMyRisks = () => {
     const updateStatus = async (stakeholderId: string, newStatus: string) => {
         setUpdatingId(stakeholderId);
         try {
-            const { error } = await supabase.from('risk_stakeholders').update({ response_status: newStatus }).eq('id', stakeholderId);
+            const now = new Date().toISOString();
+            const updatePayload: any = { response_status: newStatus };
+            if (newStatus === 'acknowledged') updatePayload.acknowledged_at = now;
+            if (newStatus === 'approved' || newStatus === 'rejected') updatePayload.approved_at = now;
+            const { error } = await supabase.from('risk_stakeholders').update(updatePayload).eq('id', stakeholderId);
             if (error) throw error;
             setAllRisks(prev => prev.map(r => r.stakeholder_id === stakeholderId ? { ...r, response_status: newStatus } : r));
             toast({ title: 'Resposta registrada!', description: RESP_LABELS[newStatus] });

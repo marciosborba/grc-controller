@@ -131,7 +131,19 @@ export const CommunicationCenterIntegrated: React.FC<CommunicationCenterIntegrat
     }
   }, []);
 
-  useEffect(() => { loadStakeholders(); }, [loadStakeholders]);
+  useEffect(() => {
+    loadStakeholders();
+
+    // Realtime subscription: auto-refresh when any stakeholder row changes
+    const channel = supabase
+      .channel('risk_stakeholders_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'risk_stakeholders' }, () => {
+        loadStakeholders();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [loadStakeholders]);
 
   const fireNotification = (name: string, email: string, riskId: string, portalUrl?: string) => {
     const risk = risks.find(r => r.id === riskId);
