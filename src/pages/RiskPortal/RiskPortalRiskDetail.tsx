@@ -81,6 +81,15 @@ export const RiskPortalRiskDetail = () => {
             setActionPlans(apRes.data || []);
             const mine = (stkRes.data || []).find((s: any) => s.email === user?.email?.trim().toLowerCase());
             setMyStakeholder(mine || null);
+
+            // Auto-acknowledge: opening the risk detail counts as awareness
+            if (mine && mine.notification_type === 'awareness' && mine.response_status === 'pending') {
+                await supabase.from('risk_stakeholders').update({
+                    response_status: 'acknowledged',
+                    acknowledged_at: new Date().toISOString(),
+                }).eq('id', mine.id);
+                setMyStakeholder({ ...mine, response_status: 'acknowledged', acknowledged_at: new Date().toISOString() });
+            }
         } catch (err: any) {
             toast({ title: 'Erro ao carregar risco', description: err.message, variant: 'destructive' });
         } finally { setLoading(false); }
