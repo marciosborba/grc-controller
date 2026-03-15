@@ -84,11 +84,15 @@ export const RiskPortalRiskDetail = () => {
 
             // Auto-acknowledge: opening the risk detail counts as awareness
             if (mine && mine.notification_type === 'awareness' && mine.response_status === 'pending') {
-                await supabase.from('risk_stakeholders').update({
-                    response_status: 'acknowledged',
-                    acknowledged_at: new Date().toISOString(),
-                }).eq('id', mine.id);
-                setMyStakeholder({ ...mine, response_status: 'acknowledged', acknowledged_at: new Date().toISOString() });
+                const { error: ackErr } = await supabase.rpc('update_stakeholder_response', {
+                    p_id: mine.id,
+                    p_status: 'acknowledged',
+                });
+                if (ackErr) {
+                    console.error('[auto-acknowledge] error:', ackErr.message);
+                } else {
+                    setMyStakeholder({ ...mine, response_status: 'acknowledged', acknowledged_at: new Date().toISOString() });
+                }
             }
         } catch (err: any) {
             toast({ title: 'Erro ao carregar risco', description: err.message, variant: 'destructive' });
@@ -101,7 +105,10 @@ export const RiskPortalRiskDetail = () => {
         if (!myStakeholder) return;
         setUpdating(true);
         try {
-            const { error } = await supabase.from('risk_stakeholders').update({ response_status: newStatus }).eq('id', myStakeholder.id);
+            const { error } = await supabase.rpc('update_stakeholder_response', {
+                p_id: myStakeholder.id,
+                p_status: newStatus,
+            });
             if (error) throw error;
             setMyStakeholder({ ...myStakeholder, response_status: newStatus });
             setStakeholders(prev => prev.map(s => s.id === myStakeholder.id ? { ...s, response_status: newStatus } : s));
