@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContextOptimized';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +28,7 @@ const LEVEL_COLORS: Record<string, string> = {
 export const RiskPortalMyRisks = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
     const [allRisks, setAllRisks] = useState<any[]>([]);
@@ -35,7 +36,8 @@ export const RiskPortalMyRisks = () => {
     const [filterStatus, setFilterStatus] = useState('all');
     const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-    useEffect(() => { fetchMyRisks(); }, [user]);
+    // Refetch whenever this page is (re)visited — picks up status changes from detail page
+    useEffect(() => { fetchMyRisks(); }, [user, location.key]);
 
     const fetchMyRisks = async () => {
         if (!user) return;
