@@ -1,936 +1,617 @@
-import React, { useState, useEffect } from 'react';
+// @ts-nocheck
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  MessageSquare,
-  Send,
+import { Label } from '@/components/ui/label';
+import {
   Users,
-  Mail,
-  Phone,
-  Calendar,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  Filter,
-  Search,
+  Send,
   Plus,
+  Search,
+  RefreshCw,
+  Loader2,
+  CheckCircle,
+  Clock,
   Eye,
-  Edit,
   Trash2,
-  Archive,
-  Star,
-  Flag,
-  Paperclip,
-  Download,
-  Bell,
-  Settings,
-  User,
-  Building,
   Shield,
-  Target,
-  Brain,
-  Zap
+  X,
+  Mail,
+  ArrowUpDown,
+  ChevronDown,
+  MoreVertical,
+  AlertCircle
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContextOptimized';
 import type { Risk } from '@/types/risk-management';
 
-interface CommunicationMessage {
+interface StakeholderRow {
   id: string;
-  type: 'notification' | 'alert' | 'update' | 'approval_request' | 'escalation' | 'reminder';
-  title: string;
-  content: string;
-  sender: string;
-  recipients: string[];
-  riskId: string;
-  riskName: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'draft' | 'sent' | 'delivered' | 'read' | 'archived';
-  sentAt?: string;
-  readAt?: string;
-  channel: 'email' | 'sms' | 'push' | 'internal' | 'teams' | 'slack';
-  attachments: Attachment[];
-  tags: string[];
-  isStarred: boolean;
-  requiresResponse: boolean;
-  responseDeadline?: string;
-  responses: Response[];
-  template?: string;
-  automatedBy?: string;
-}
-
-interface Attachment {
-  id: string;
+  risk_registration_id: string;
   name: string;
-  type: string;
-  size: number;
-  url: string;
-}
-
-interface Response {
-  id: string;
-  author: string;
-  content: string;
-  timestamp: string;
-  type: 'reply' | 'acknowledgment' | 'approval' | 'rejection';
+  email: string;
+  position: string | null;
+  phone: string | null;
+  notification_type: 'awareness' | 'approval';
+  response_status: 'pending' | 'acknowledged' | 'approved' | 'rejected';
+  notified_at: string | null;
+  acknowledged_at: string | null;
+  approved_at: string | null;
+  response_notes: string | null;
+  created_at: string;
+  risk_title: string;
 }
 
 interface CommunicationCenterIntegratedProps {
   risks: Risk[];
-  onSendMessage: (message: CommunicationMessage) => void;
+  onSendMessage?: (message: any) => void;
 }
 
-export const CommunicationCenterIntegrated: React.FC<CommunicationCenterIntegratedProps> = ({
-  risks,
-  onSendMessage
-}) => {
-  const [messages, setMessages] = useState<CommunicationMessage[]>([]);
-  const [selectedMessage, setSelectedMessage] = useState<CommunicationMessage | null>(null);
+const STATUS_CONFIG: Record<string, { label: string; className: string; icon: React.ComponentType<any> }> = {
+  pending:      { label: 'Pendente',  className: 'bg-amber-50  text-amber-700  border-amber-200',  icon: Clock },
+  acknowledged: { label: 'Ciente',    className: 'bg-green-50  text-green-700  border-green-200',  icon: CheckCircle },
+  approved:     { label: 'Aprovado',  className: 'bg-blue-50   text-blue-700   border-blue-200',   icon: CheckCircle },
+  rejected:     { label: 'Rejeitado', className: 'bg-red-50    text-red-700    border-red-200',    icon: AlertCircle },
+};
+
+const TYPE_CONFIG: Record<string, { label: string; className: string }> = {
+  awareness: { label: 'Ciência',   className: 'bg-violet-50 text-violet-700 border-violet-200' },
+  approval:  { label: 'Aprovação', className: 'bg-orange-50 text-orange-700 border-orange-200' },
+};
+
+export const CommunicationCenterIntegrated: React.FC<CommunicationCenterIntegratedProps> = ({ risks }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+
+  const [stakeholders, setStakeholders] = useState<StakeholderRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterPriority, setFilterPriority] = useState<string>('all');
-  const [showStarred, setShowStarred] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showComposer, setShowComposer] = useState(false);
-  const [newMessage, setNewMessage] = useState<Partial<CommunicationMessage>>({
-    type: 'notification',
-    priority: 'medium',
-    channel: 'email',
-    recipients: [],
-    attachments: [],
-    tags: [],
-    requiresResponse: false
-  });
-  
-  const { toast } = useToast();
+  const [filterRisk, setFilterRisk] = useState<string>('all');
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadMessages();
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: '',
+    email: '',
+    position: '',
+    notification_type: 'awareness' as 'awareness' | 'approval',
+    riskId: '',
+  });
+  const [addSending, setAddSending] = useState(false);
+
+  const loadStakeholders = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      // RLS handles tenant isolation via the risk_registrations FK chain
+      const { data, error } = await supabase
+        .from('risk_stakeholders')
+        .select(`
+          id,
+          risk_registration_id,
+          name,
+          email,
+          position,
+          phone,
+          notification_type,
+          response_status,
+          notified_at,
+          acknowledged_at,
+          approved_at,
+          response_notes,
+          created_at,
+          risk_registrations!risk_stakeholders_risk_registration_id_fkey(risk_title)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const rows: StakeholderRow[] = (data || []).map((row: any) => ({
+        ...row,
+        risk_title: row.risk_registrations?.risk_title || '—',
+      }));
+      setStakeholders(rows);
+    } catch (err: any) {
+      console.error('[CommunicationHub] load error:', err.message);
+      toast({ title: 'Erro ao carregar dados', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const loadMessages = async () => {
-    setIsLoading(true);
-    
-    // Simular carregamento
-    setTimeout(() => {
-      const mockMessages: CommunicationMessage[] = [
-        {
-          id: 'msg-001',
-          type: 'alert',
-          title: 'Risco Crítico Identificado - Ação Imediata Necessária',
-          content: 'Um novo risco crítico de segurança cibernética foi identificado pelo Alex Risk. Vulnerabilidade crítica detectada que requer ação imediata da equipe de TI.',
-          sender: 'Alex Risk IA',
-          recipients: ['Diretor de TI', 'CISO', 'Gerente de Segurança'],
-          riskId: 'risk-001',
-          riskName: 'Vulnerabilidade Crítica de Segurança',
-          priority: 'high',
-          status: 'sent',
-          sentAt: '2024-12-15T10:30:00Z',
-          channel: 'email',
-          attachments: [
-            {
-              id: 'att-001',
-              name: 'Relatório_Vulnerabilidade.pdf',
-              type: 'application/pdf',
-              size: 2048576,
-              url: '/attachments/vuln-report.pdf'
-            }
-          ],
-          tags: ['crítico', 'segurança', 'urgente'],
-          isStarred: true,
-          requiresResponse: true,
-          responseDeadline: '2024-12-16T18:00:00Z',
-          responses: [
-            {
-              id: 'resp-001',
-              author: 'Diretor de TI',
-              content: 'Recebido. Equipe já mobilizada para análise e correção.',
-              timestamp: '2024-12-15T11:15:00Z',
-              type: 'acknowledgment'
-            }
-          ],
-          automatedBy: 'Alex Risk'
-        },
-        {
-          id: 'msg-002',
-          type: 'approval_request',
-          title: 'Solicitação de Aprovação - Plano de Ação',
-          content: 'Solicitação de aprovação para implementação do plano de ação de continuidade de negócios. Orçamento estimado: R$ 200.000.',
-          sender: 'Maria Santos',
-          recipients: ['CEO', 'CFO', 'Diretor de Operações'],
-          riskId: 'risk-002',
-          riskName: 'Falha de Sistema Crítico',
-          priority: 'high',
-          status: 'delivered',
-          sentAt: '2024-12-14T15:45:00Z',
-          readAt: '2024-12-14T16:30:00Z',
-          channel: 'internal',
-          attachments: [],
-          tags: ['aprovação', 'orçamento', 'continuidade'],
-          isStarred: false,
-          requiresResponse: true,
-          responseDeadline: '2024-12-18T23:59:59Z',
-          responses: [
-            {
-              id: 'resp-002',
-              author: 'CEO',
-              content: 'Aprovado. Prossiga com a implementação.',
-              timestamp: '2024-12-14T17:15:00Z',
-              type: 'approval'
-            }
-          ]
-        },
-        {
-          id: 'msg-003',
-          type: 'update',
-          title: 'Atualização de Status - Conformidade LGPD',
-          content: 'Progresso do projeto de adequação LGPD: 75% concluído. Próximas etapas incluem treinamento da equipe e auditoria final.',
-          sender: 'Pedro Costa',
-          recipients: ['Jurídico', 'Compliance', 'RH'],
-          riskId: 'risk-003',
-          riskName: 'Não Conformidade LGPD',
-          priority: 'medium',
-          status: 'read',
-          sentAt: '2024-12-13T09:15:00Z',
-          readAt: '2024-12-13T14:22:00Z',
-          channel: 'email',
-          attachments: [],
-          tags: ['lgpd', 'progresso', 'compliance'],
-          isStarred: false,
-          requiresResponse: false,
-          responses: []
-        },
-        {
-          id: 'msg-004',
-          type: 'reminder',
-          title: 'Lembrete: Revisão Mensal de Riscos',
-          content: 'Lembrete automático: A revisão mensal de riscos está agendada para amanhã às 14h. Por favor, prepare os relatórios de status.',
-          sender: 'Sistema GRC',
-          recipients: ['Todos os Gestores de Risco'],
-          riskId: '',
-          riskName: 'Revisão Geral',
-          priority: 'low',
-          status: 'sent',
-          sentAt: '2024-12-12T08:00:00Z',
-          channel: 'push',
-          attachments: [],
-          tags: ['lembrete', 'revisão', 'mensal'],
-          isStarred: false,
-          requiresResponse: false,
-          responses: [],
-          automatedBy: 'Sistema'
-        },
-        {
-          id: 'msg-005',
-          type: 'escalation',
-          title: 'Escalação: Risco Não Tratado no Prazo',
-          content: 'O risco "Falha de Backup" não foi tratado dentro do prazo estabelecido. Escalando para a diretoria conforme política de governança.',
-          sender: 'Alex Risk IA',
-          recipients: ['CEO', 'CTO', 'Diretor de TI'],
-          riskId: 'risk-004',
-          riskName: 'Falha de Sistema de Backup',
-          priority: 'high',
-          status: 'delivered',
-          sentAt: '2024-12-11T16:30:00Z',
-          channel: 'email',
-          attachments: [],
-          tags: ['escalação', 'prazo', 'backup'],
-          isStarred: true,
-          requiresResponse: true,
-          responseDeadline: '2024-12-13T23:59:59Z',
-          responses: [],
-          automatedBy: 'Alex Risk'
-        }
-      ];
-      
-      setMessages(mockMessages);
-      setIsLoading(false);
-    }, 1000);
+  useEffect(() => { loadStakeholders(); }, [loadStakeholders]);
+
+  const fireNotification = (name: string, email: string, riskId: string, portalUrl?: string) => {
+    const risk = risks.find(r => r.id === riskId);
+    supabase.functions.invoke('risk-notification', {
+      body: {
+        recipientName: name || 'Stakeholder',
+        recipientEmail: email,
+        riskTitle: risk?.title || risk?.name || 'Risco',
+        riskDescription: risk?.description || '',
+        riskLevel: risk?.riskLevel || '',
+        riskCategory: risk?.category || '',
+        senderName: user?.email || 'Sistema',
+        customPortalUrl: portalUrl,
+      }
+    }).catch((e: any) => console.error('[risk-notification]', e.message));
   };
 
-  const filteredMessages = messages.filter(message => {
-    const matchesSearch = message.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         message.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         message.riskName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === 'all' || message.type === filterType;
-    const matchesStatus = filterStatus === 'all' || message.status === filterStatus;
-    const matchesPriority = filterPriority === 'all' || message.priority === filterPriority;
-    const matchesStarred = !showStarred || message.isStarred;
-    
-    return matchesSearch && matchesType && matchesStatus && matchesPriority && matchesStarred;
-  });
-
-  const handleSendMessage = () => {
-    if (!newMessage.title || !newMessage.content || !newMessage.recipients?.length) {
-      toast({
-        title: '❌ Campos Obrigatórios',
-        description: 'Preencha título, conteúdo e destinatários',
-        variant: 'destructive'
+  const handleResend = async (stk: StakeholderRow) => {
+    if (!stk.email) { toast({ title: 'E-mail não informado', variant: 'destructive' }); return; }
+    setProcessingId(stk.id + '_resend');
+    try {
+      const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('invite-risk-stakeholder', {
+        body: { email: stk.email, full_name: stk.name || stk.email }
       });
+      if (inviteErr) throw inviteErr;
+      await supabase.from('risk_stakeholders').update({ notified_at: new Date().toISOString() }).eq('id', stk.id);
+      fireNotification(stk.name, stk.email, stk.risk_registration_id, inviteData?.inviteLink);
+      toast({ title: 'Notificação reenviada', description: `E-mail enviado para ${stk.email}` });
+      loadStakeholders();
+    } catch (err: any) {
+      toast({ title: 'Erro ao reenviar', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleChangeType = async (stk: StakeholderRow, newType: 'awareness' | 'approval') => {
+    setProcessingId(stk.id + '_type');
+    try {
+      const { error } = await supabase.from('risk_stakeholders').update({ notification_type: newType }).eq('id', stk.id);
+      if (error) throw error;
+      toast({ title: 'Tipo atualizado', description: `${stk.name} → ${TYPE_CONFIG[newType].label}` });
+      loadStakeholders();
+    } catch (err: any) {
+      toast({ title: 'Erro ao atualizar', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDelete = async (stk: StakeholderRow) => {
+    if (!confirm(`Remover ${stk.name} da comunicação?\n\nRisco: ${stk.risk_title}`)) return;
+    setProcessingId(stk.id + '_del');
+    try {
+      const { error } = await supabase.from('risk_stakeholders').delete().eq('id', stk.id);
+      if (error) throw error;
+      toast({ title: 'Removido com sucesso' });
+      loadStakeholders();
+    } catch (err: any) {
+      toast({ title: 'Erro ao remover', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleAdd = async () => {
+    if (!addForm.name.trim() || !addForm.email.trim() || !addForm.riskId) {
+      toast({ title: 'Campos obrigatórios', description: 'Preencha nome, e-mail e selecione o risco.', variant: 'destructive' });
       return;
     }
+    setAddSending(true);
+    try {
+      const riskReg = risks.find(r => r.id === addForm.riskId);
+      const tenantId = (riskReg as any)?.tenant_id || null;
 
-    const message: CommunicationMessage = {
-      id: `msg-${Date.now()}`,
-      type: newMessage.type as any,
-      title: newMessage.title,
-      content: newMessage.content,
-      sender: 'Usuário Atual',
-      recipients: newMessage.recipients || [],
-      riskId: newMessage.riskId || '',
-      riskName: newMessage.riskName || '',
-      priority: newMessage.priority as any,
-      status: 'sent',
-      sentAt: new Date().toISOString(),
-      channel: newMessage.channel as any,
-      attachments: newMessage.attachments || [],
-      tags: newMessage.tags || [],
-      isStarred: false,
-      requiresResponse: newMessage.requiresResponse || false,
-      responseDeadline: newMessage.responseDeadline,
-      responses: []
-    };
+      const insertPayload: any = {
+        risk_registration_id: addForm.riskId,
+        name: addForm.name.trim(),
+        position: addForm.position.trim() || null,
+        email: addForm.email.trim().toLowerCase(),
+        notification_type: addForm.notification_type,
+        response_status: 'pending',
+        notified_at: new Date().toISOString(),
+      };
+      if (tenantId) insertPayload.tenant_id = tenantId;
 
-    setMessages(prev => [message, ...prev]);
-    onSendMessage(message);
-    
-    setShowComposer(false);
-    setNewMessage({
-      type: 'notification',
-      priority: 'medium',
-      channel: 'email',
-      recipients: [],
-      attachments: [],
-      tags: [],
-      requiresResponse: false
-    });
+      const { error: dbErr } = await supabase.from('risk_stakeholders').insert(insertPayload);
+      if (dbErr) throw dbErr;
 
-    toast({
-      title: '✅ Mensagem Enviada',
-      description: 'Comunicação enviada com sucesso',
-    });
-  };
+      const { data: inviteData, error: inviteErr } = await supabase.functions.invoke('invite-risk-stakeholder', {
+        body: { email: addForm.email.trim().toLowerCase(), full_name: addForm.name.trim() }
+      });
+      if (inviteErr) throw inviteErr;
 
-  const handleToggleStar = (messageId: string) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { ...msg, isStarred: !msg.isStarred } : msg
-    ));
-  };
-
-  const handleAddResponse = (messageId: string, content: string, type: 'reply' | 'acknowledgment' | 'approval' | 'rejection') => {
-    const response: Response = {
-      id: `resp-${Date.now()}`,
-      author: 'Usuário Atual',
-      content,
-      timestamp: new Date().toISOString(),
-      type
-    };
-
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { 
-        ...msg, 
-        responses: [...msg.responses, response],
-        status: 'read'
-      } : msg
-    ));
-
-    toast({
-      title: '💬 Resposta Enviada',
-      description: 'Sua resposta foi registrada',
-    });
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'notification': return Bell;
-      case 'alert': return AlertTriangle;
-      case 'update': return MessageSquare;
-      case 'approval_request': return CheckCircle;
-      case 'escalation': return Flag;
-      case 'reminder': return Clock;
-      default: return MessageSquare;
+      fireNotification(addForm.name, addForm.email.trim().toLowerCase(), addForm.riskId, inviteData?.inviteLink);
+      toast({ title: 'Parte interessada adicionada', description: `Notificação enviada para ${addForm.email}` });
+      setAddForm({ name: '', email: '', position: '', notification_type: 'awareness', riskId: '' });
+      setShowAddModal(false);
+      loadStakeholders();
+    } catch (err: any) {
+      toast({ title: 'Erro ao adicionar', description: err.message, variant: 'destructive' });
+    } finally {
+      setAddSending(false);
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'notification': return 'bg-blue-100 text-blue-800';
-      case 'alert': return 'bg-red-100 text-red-800';
-      case 'update': return 'bg-green-100 text-green-800';
-      case 'approval_request': return 'bg-purple-100 text-purple-800';
-      case 'escalation': return 'bg-orange-100 text-orange-800';
-      case 'reminder': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  // Unique risks list for filter dropdown
+  const uniqueRisks = Array.from(
+    new Map(stakeholders.map(s => [s.risk_registration_id, { id: s.risk_registration_id, title: s.risk_title }])).values()
+  );
+
+  const filtered = stakeholders.filter(s => {
+    const q = searchTerm.toLowerCase();
+    const matchSearch = !q || s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q) || s.risk_title?.toLowerCase().includes(q) || s.position?.toLowerCase().includes(q);
+    const matchType   = filterType   === 'all' || s.notification_type  === filterType;
+    const matchStatus = filterStatus === 'all' || s.response_status    === filterStatus;
+    const matchRisk   = filterRisk   === 'all' || s.risk_registration_id === filterRisk;
+    return matchSearch && matchType && matchStatus && matchRisk;
+  });
+
+  const stats = {
+    total:      stakeholders.length,
+    pending:    stakeholders.filter(s => s.response_status === 'pending').length,
+    ciencia:    stakeholders.filter(s => s.notification_type === 'awareness').length,
+    aprovacao:  stakeholders.filter(s => s.notification_type === 'approval').length,
+    confirmados: stakeholders.filter(s => s.response_status === 'acknowledged' || s.response_status === 'approved').length,
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const formatDate = (d: string | null) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'sent': return 'bg-blue-100 text-blue-800';
-      case 'delivered': return 'bg-green-100 text-green-800';
-      case 'read': return 'bg-purple-100 text-purple-800';
-      case 'archived': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const isOverdue = (deadline?: string) => {
-    if (!deadline) return false;
-    return new Date(deadline) < new Date();
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Carregando central de comunicações...</p>
-        </div>
-      </div>
-    );
-  }
+  const hasFilters = searchTerm || filterType !== 'all' || filterStatus !== 'all' || filterRisk !== 'all';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MessageSquare className="h-6 w-6 text-blue-600" />
-            <span>Central de Comunicações Integrada</span>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-              {messages.filter(m => m.status === 'sent' || m.status === 'delivered').length} ativas
-            </Badge>
-          </CardTitle>
-          <p className="text-muted-foreground">
-            Gestão centralizada de comunicações, notificações e aprovações relacionadas a riscos
+    <div className="space-y-4">
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            Ciência de Risco
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Gestão centralizada de todas as comunicações e aprovações de riscos
           </p>
-        </CardHeader>
-      </Card>
+        </div>
+        <div className="flex gap-2 shrink-0">
+          <Button variant="outline" size="sm" onClick={loadStakeholders} disabled={isLoading} className="gap-1.5">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+          <Button size="sm" onClick={() => setShowAddModal(true)} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Adicionar Parte Interessada
+          </Button>
+        </div>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lista de Mensagens */}
-        <div className="lg:col-span-2">
-          {/* Controles */}
-          <Card className="mb-4">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    onClick={() => setShowComposer(true)}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Nova Mensagem
-                  </Button>
-                  
-                  <Button 
-                    variant={showStarred ? "default" : "outline"}
-                    onClick={() => setShowStarred(!showStarred)}
-                    size="sm"
-                  >
-                    <Star className={`h-4 w-4 mr-1 ${showStarred ? 'fill-current' : ''}`} />
-                    Favoritas
-                  </Button>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="text-xs">
-                    <AlertTriangle className="h-3 w-3 mr-1" />
-                    {messages.filter(m => m.priority === 'high').length} urgentes
-                  </Badge>
-                  
-                  <Badge variant="outline" className="text-xs">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {messages.filter(m => m.requiresResponse && isOverdue(m.responseDeadline)).length} vencidas
-                  </Badge>
-                </div>
-              </div>
-              
-              {/* Filtros */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Buscar mensagens..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                
-                <select 
-                  value={filterType} 
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background text-sm"
-                >
-                  <option value="all">Todos os Tipos</option>
-                  <option value="notification">Notificação</option>
-                  <option value="alert">Alerta</option>
-                  <option value="update">Atualização</option>
-                  <option value="approval_request">Aprovação</option>
-                  <option value="escalation">Escalação</option>
-                  <option value="reminder">Lembrete</option>
-                </select>
-                
-                <select 
-                  value={filterStatus} 
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background text-sm"
-                >
-                  <option value="all">Todos os Status</option>
-                  <option value="draft">Rascunho</option>
-                  <option value="sent">Enviado</option>
-                  <option value="delivered">Entregue</option>
-                  <option value="read">Lido</option>
-                  <option value="archived">Arquivado</option>
-                </select>
-                
-                <select 
-                  value={filterPriority} 
-                  onChange={(e) => setFilterPriority(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background text-sm"
-                >
-                  <option value="all">Todas as Prioridades</option>
-                  <option value="high">Alta</option>
-                  <option value="medium">Média</option>
-                  <option value="low">Baixa</option>
-                </select>
-                
-                <Button variant="outline" size="sm">
-                  <Filter className="h-4 w-4 mr-1" />
-                  Mais
-                </Button>
+      {/* ── STAT CARDS ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {[
+          { label: 'Total', value: stats.total,       color: 'border-slate-300  bg-slate-50  text-slate-700',  icon: Users },
+          { label: 'Pendentes', value: stats.pending,  color: 'border-amber-300  bg-amber-50  text-amber-700',  icon: Clock },
+          { label: 'Ciência',   value: stats.ciencia,  color: 'border-violet-300 bg-violet-50 text-violet-700', icon: Eye },
+          { label: 'Aprovação', value: stats.aprovacao, color: 'border-orange-300 bg-orange-50 text-orange-700', icon: CheckCircle },
+          { label: 'Confirmados', value: stats.confirmados, color: 'border-green-300 bg-green-50 text-green-700', icon: CheckCircle },
+        ].map(({ label, value, color, icon: Icon }) => (
+          <Card key={label} className={`border ${color} shadow-none`}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <Icon className="h-5 w-5 opacity-70 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-medium opacity-80 truncate">{label}</p>
+                <p className="text-2xl font-bold leading-none mt-0.5">{value}</p>
               </div>
             </CardContent>
           </Card>
-          
-          {/* Lista */}
-          <div className="space-y-4">
-            {filteredMessages.map((message) => {
-              const TypeIcon = getTypeIcon(message.type);
-              const isUrgent = message.priority === 'high';
-              const hasOverdueResponse = message.requiresResponse && isOverdue(message.responseDeadline);
-              
-              return (
-                <Card 
-                  key={message.id} 
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedMessage?.id === message.id ? 'ring-2 ring-primary' : ''
-                  } ${isUrgent ? 'border-red-200 bg-red-50' : ''} ${hasOverdueResponse ? 'border-orange-200 bg-orange-50' : ''}`}
-                  onClick={() => setSelectedMessage(message)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      {/* Ícone do tipo */}
-                      <div className="p-2 rounded-lg bg-blue-100">
-                        <TypeIcon className="h-4 w-4 text-blue-600" />
-                      </div>
-                      
-                      {/* Conteúdo */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-medium truncate">{message.title}</h4>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {message.content}
-                            </p>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2 ml-2">
-                            <Badge className={`text-xs ${getTypeColor(message.type)}`}>
-                              {message.type}
-                            </Badge>
-                            
-                            <Badge className={`text-xs ${getPriorityColor(message.priority)}`}>
-                              {message.priority}
-                            </Badge>
-                            
-                            <Badge className={`text-xs ${getStatusColor(message.status)}`}>
-                              {message.status}
-                            </Badge>
-                            
-                            {message.automatedBy && (
-                              <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
-                                <Brain className="h-3 w-3 mr-1" />
-                                Auto
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Metadados */}
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center space-x-3">
-                            <span>De: {message.sender}</span>
-                            <span className="flex items-center space-x-1">
-                              <Users className="h-3 w-3" />
-                              <span>{message.recipients.length} destinatários</span>
-                            </span>
-                            {message.riskName && (
-                              <span className="flex items-center space-x-1">
-                                <Shield className="h-3 w-3" />
-                                <span>{message.riskName}</span>
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
-                            {message.requiresResponse && hasOverdueResponse && (
-                              <Badge variant="destructive" className="text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Vencido
-                              </Badge>
-                            )}
-                            
-                            {message.isStarred && (
-                              <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                            )}
-                            
-                            {message.attachments.length > 0 && (
-                              <Paperclip className="h-3 w-3" />
-                            )}
-                            
-                            <span>{message.sentAt ? formatDate(message.sentAt) : 'Rascunho'}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Respostas */}
-                        {message.responses.length > 0 && (
-                          <div className="mt-3 pt-3 border-t">
-                            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                              <MessageSquare className="h-3 w-3" />
-                              <span>{message.responses.length} resposta(s)</span>
-                              <span>•</span>
-                              <span>Última: {formatDate(message.responses[message.responses.length - 1].timestamp)}</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-            
-            {filteredMessages.length === 0 && (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Nenhuma mensagem encontrada</h3>
-                  <p className="text-muted-foreground">
-                    Tente ajustar os filtros ou criar uma nova mensagem
-                  </p>
-                </CardContent>
-              </Card>
+        ))}
+      </div>
+
+      {/* ── FILTERS ────────────────────────────────────────────────────── */}
+      <Card className="shadow-none border">
+        <CardContent className="py-3 px-4">
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="relative flex-1 min-w-[200px] max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
+              <Input
+                placeholder="Buscar por nome, e-mail ou risco..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-8 h-8 text-sm"
+              />
+            </div>
+
+            <select
+              value={filterRisk}
+              onChange={e => setFilterRisk(e.target.value)}
+              className="h-8 px-2 border border-input rounded-md bg-background text-sm text-foreground"
+            >
+              <option value="all">Todos os Riscos</option>
+              {uniqueRisks.map(r => <option key={r.id} value={r.id}>{r.title}</option>)}
+            </select>
+
+            <select
+              value={filterType}
+              onChange={e => setFilterType(e.target.value)}
+              className="h-8 px-2 border border-input rounded-md bg-background text-sm text-foreground"
+            >
+              <option value="all">Todos os Tipos</option>
+              <option value="awareness">Ciência</option>
+              <option value="approval">Aprovação</option>
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="h-8 px-2 border border-input rounded-md bg-background text-sm text-foreground"
+            >
+              <option value="all">Todos os Status</option>
+              <option value="pending">Pendente</option>
+              <option value="acknowledged">Ciente</option>
+              <option value="approved">Aprovado</option>
+              <option value="rejected">Rejeitado</option>
+            </select>
+
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => { setSearchTerm(''); setFilterType('all'); setFilterStatus('all'); setFilterRisk('all'); }}
+              >
+                <X className="h-3.5 w-3.5" />
+                Limpar filtros
+              </Button>
+            )}
+
+            <span className="text-xs text-muted-foreground ml-auto">
+              {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── TABLE ──────────────────────────────────────────────────────── */}
+      <Card className="shadow-none border">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20 gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">Carregando comunicações...</span>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+            <div className="p-4 rounded-full bg-muted/50 mb-4">
+              <Users className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <p className="font-medium text-muted-foreground">
+              {stakeholders.length === 0
+                ? 'Nenhuma comunicação registrada'
+                : 'Nenhum resultado para os filtros aplicados'}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              {stakeholders.length === 0
+                ? 'Use "Adicionar Parte Interessada" ou cadastre pela aba Comunicação do card de risco.'
+                : 'Tente ajustar ou limpar os filtros.'}
+            </p>
+            {stakeholders.length === 0 && (
+              <Button size="sm" className="mt-4 gap-1.5" onClick={() => setShowAddModal(true)}>
+                <Plus className="h-4 w-4" />
+                Adicionar agora
+              </Button>
             )}
           </div>
-        </div>
-        
-        {/* Painel de Detalhes */}
-        <div className="lg:col-span-1">
-          {selectedMessage ? (
-            <div className="space-y-4">
-              {/* Detalhes da Mensagem */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{selectedMessage.title}</CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleStar(selectedMessage.id)}
-                    >
-                      <Star className={`h-4 w-4 ${selectedMessage.isStarred ? 'text-yellow-500 fill-current' : ''}`} />
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Conteúdo */}
-                  <div className="text-sm">
-                    {selectedMessage.content}
-                  </div>
-                  
-                  {/* Metadados */}
-                  <div className="space-y-2 text-sm border-t pt-4">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">De:</span>
-                      <span>{selectedMessage.sender}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Para:</span>
-                      <span className="text-right">{selectedMessage.recipients.join(', ')}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Canal:</span>
-                      <span>{selectedMessage.channel}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Enviado:</span>
-                      <span>{selectedMessage.sentAt ? formatDate(selectedMessage.sentAt) : 'Não enviado'}</span>
-                    </div>
-                    
-                    {selectedMessage.requiresResponse && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Prazo:</span>
-                        <span className={isOverdue(selectedMessage.responseDeadline) ? 'text-red-600 font-medium' : ''}>
-                          {selectedMessage.responseDeadline ? formatDate(selectedMessage.responseDeadline) : 'Sem prazo'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Anexos */}
-                  {selectedMessage.attachments.length > 0 && (
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium mb-2">Anexos ({selectedMessage.attachments.length})</h4>
-                      <div className="space-y-2">
-                        {selectedMessage.attachments.map((attachment) => (
-                          <div key={attachment.id} className="flex items-center justify-between p-2 bg-muted rounded">
-                            <div className="flex items-center space-x-2">
-                              <Paperclip className="h-4 w-4" />
-                              <span className="text-sm">{attachment.name}</span>
-                            </div>
-                            <Button variant="ghost" size="sm">
-                              <Download className="h-3 w-3" />
-                            </Button>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 uppercase tracking-wide">Pessoa</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 uppercase tracking-wide hidden md:table-cell">Risco</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 uppercase tracking-wide hidden sm:table-cell">Cargo</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 uppercase tracking-wide">Tipo</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 uppercase tracking-wide">Status</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 uppercase tracking-wide hidden lg:table-cell">Notificado em</th>
+                  <th className="w-12 px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map(stk => {
+                  const statusCfg = STATUS_CONFIG[stk.response_status] ?? STATUS_CONFIG.pending;
+                  const typeCfg   = TYPE_CONFIG[stk.notification_type]  ?? TYPE_CONFIG.awareness;
+                  const StatusIcon = statusCfg.icon;
+                  const isProcessing = processingId?.startsWith(stk.id);
+
+                  return (
+                    <tr key={stk.id} className="hover:bg-muted/20 transition-colors group">
+                      {/* Person */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-xs shrink-0">
+                            {(stk.name || '?').charAt(0).toUpperCase()}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Tags */}
-                  {selectedMessage.tags.length > 0 && (
-                    <div className="border-t pt-4">
-                      <h4 className="font-medium mb-2">Tags</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedMessage.tags.map((tag, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
-                            {tag}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Respostas */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <MessageSquare className="h-5 w-5 mr-2" />
-                    Respostas ({selectedMessage.responses.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Lista de Respostas */}
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                    {selectedMessage.responses.map((response) => (
-                      <div key={response.id} className="border-l-2 border-gray-200 pl-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">{response.author}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(response.timestamp)}
-                          </span>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-tight truncate max-w-[140px]">{stk.name || '—'}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">{stk.email || '—'}</p>
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">{response.content}</p>
-                        <Badge variant="outline" className="text-xs mt-1">
-                          {response.type}
+                      </td>
+
+                      {/* Risk */}
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <div className="flex items-center gap-2 max-w-[200px]">
+                          <Shield className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                          <span className="text-xs text-muted-foreground truncate">{stk.risk_title}</span>
+                        </div>
+                      </td>
+
+                      {/* Position */}
+                      <td className="px-4 py-3 text-xs text-muted-foreground hidden sm:table-cell">
+                        {stk.position || '—'}
+                      </td>
+
+                      {/* Type */}
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className={`text-xs font-medium ${typeCfg.className}`}>
+                          {typeCfg.label}
                         </Badge>
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Nova Resposta */}
-                  {selectedMessage.requiresResponse && (
-                    <div className="border-t pt-4">
-                      <Textarea
-                        placeholder="Digite sua resposta..."
-                        rows={3}
-                      />
-                      <div className="flex space-x-2 mt-2">
-                        <Button 
-                          size="sm"
-                          onClick={() => handleAddResponse(selectedMessage.id, 'Resposta de exemplo', 'reply')}
-                        >
-                          <Send className="h-3 w-3 mr-1" />
-                          Responder
-                        </Button>
-                        
-                        {selectedMessage.type === 'approval_request' && (
-                          <>
-                            <Button 
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600"
-                              onClick={() => handleAddResponse(selectedMessage.id, 'Aprovado', 'approval')}
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3">
+                        <Badge variant="outline" className={`text-xs font-medium gap-1 ${statusCfg.className}`}>
+                          <StatusIcon className="h-3 w-3" />
+                          {statusCfg.label}
+                        </Badge>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-4 py-3 text-xs text-muted-foreground hidden lg:table-cell whitespace-nowrap">
+                        {formatDate(stk.notified_at)}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                              disabled={!!isProcessing}
                             >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Aprovar
+                              {isProcessing
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <MoreVertical className="h-3.5 w-3.5" />}
                             </Button>
-                            
-                            <Button 
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600"
-                              onClick={() => handleAddResponse(selectedMessage.id, 'Rejeitado', 'rejection')}
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48">
+                            <DropdownMenuItem onClick={() => handleResend(stk)} className="gap-2 cursor-pointer">
+                              <Send className="h-3.5 w-3.5" />
+                              Reenviar notificação
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleChangeType(stk, stk.notification_type === 'awareness' ? 'approval' : 'awareness')}
+                              className="gap-2 cursor-pointer"
                             >
-                              <X className="h-3 w-3 mr-1" />
-                              Rejeitar
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">Selecione uma Mensagem</h3>
-                <p className="text-muted-foreground">
-                  Clique em uma mensagem para ver os detalhes
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
-      
-      {/* Composer Modal */}
-      {showComposer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle>Nova Mensagem</CardTitle>
+                              <ArrowUpDown className="h-3.5 w-3.5" />
+                              Mudar para {stk.notification_type === 'awareness' ? 'Aprovação' : 'Ciência'}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(stk)}
+                              className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Remover
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* ── ADD MODAL ──────────────────────────────────────────────────── */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md shadow-xl">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Plus className="h-4 w-4 text-primary" />
+                  Adicionar Parte Interessada
+                </CardTitle>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowAddModal(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A pessoa receberá um e-mail de notificação e acesso ao portal.
+              </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Tipo</label>
-                  <select 
-                    value={newMessage.type} 
-                    onChange={(e) => setNewMessage(prev => ({ ...prev, type: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                  >
-                    <option value="notification">Notificação</option>
-                    <option value="alert">Alerta</option>
-                    <option value="update">Atualização</option>
-                    <option value="approval_request">Solicitação de Aprovação</option>
-                    <option value="reminder">Lembrete</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium">Prioridade</label>
-                  <select 
-                    value={newMessage.priority} 
-                    onChange={(e) => setNewMessage(prev => ({ ...prev, priority: e.target.value as any }))}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                  >
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Título</label>
-                <Input
-                  value={newMessage.title || ''}
-                  onChange={(e) => setNewMessage(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Título da mensagem"
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Conteúdo</label>
-                <Textarea
-                  value={newMessage.content || ''}
-                  onChange={(e) => setNewMessage(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Conteúdo da mensagem"
-                  rows={6}
-                />
-              </div>
-              
-              <div>
-                <label className="text-sm font-medium">Destinatários</label>
-                <Input
-                  value={newMessage.recipients?.join(', ') || ''}
-                  onChange={(e) => setNewMessage(prev => ({ 
-                    ...prev, 
-                    recipients: e.target.value.split(',').map(r => r.trim()).filter(r => r) 
-                  }))}
-                  placeholder="Digite os destinatários separados por vírgula"
-                />
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={newMessage.requiresResponse || false}
-                    onChange={(e) => setNewMessage(prev => ({ ...prev, requiresResponse: e.target.checked }))}
-                  />
-                  <span className="text-sm">Requer resposta</span>
-                </label>
-                
-                {newMessage.requiresResponse && (
-                  <Input
-                    type="datetime-local"
-                    value={newMessage.responseDeadline || ''}
-                    onChange={(e) => setNewMessage(prev => ({ ...prev, responseDeadline: e.target.value }))}
-                    className="w-auto"
-                  />
-                )}
-              </div>
-              
-              <div className="flex space-x-2">
-                <Button onClick={handleSendMessage} className="flex-1">
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  onClick={() => setShowComposer(false)}
-                  className="flex-1"
+              {/* Risk selector */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Risco <span className="text-destructive">*</span></Label>
+                <select
+                  value={addForm.riskId}
+                  onChange={e => setAddForm(p => ({ ...p, riskId: e.target.value }))}
+                  className="w-full h-9 px-3 border border-input rounded-md bg-background text-sm text-foreground"
                 >
+                  <option value="">Selecione o risco...</option>
+                  {risks.map(r => (
+                    <option key={r.id} value={r.id}>{r.title || r.name || r.id}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Name + Email */}
+              <div className="grid grid-cols-1 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Nome completo <span className="text-destructive">*</span></Label>
+                  <Input
+                    placeholder="Ex: João da Silva"
+                    value={addForm.name}
+                    onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">E-mail <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="email"
+                    placeholder="joao.silva@empresa.com"
+                    value={addForm.email}
+                    onChange={e => setAddForm(p => ({ ...p, email: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
+              {/* Position + Type */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Cargo</Label>
+                  <Input
+                    placeholder="Ex: Diretor de TI"
+                    value={addForm.position}
+                    onChange={e => setAddForm(p => ({ ...p, position: e.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Tipo</Label>
+                  <select
+                    value={addForm.notification_type}
+                    onChange={e => setAddForm(p => ({ ...p, notification_type: e.target.value as 'awareness' | 'approval' }))}
+                    className="w-full h-9 px-3 border border-input rounded-md bg-background text-sm text-foreground"
+                  >
+                    <option value="awareness">Ciência</option>
+                    <option value="approval">Aprovação</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowAddModal(false)} disabled={addSending}>
                   Cancelar
+                </Button>
+                <Button className="flex-1 gap-2" onClick={handleAdd} disabled={addSending}>
+                  {addSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Adicionar e Notificar
                 </Button>
               </div>
             </CardContent>
