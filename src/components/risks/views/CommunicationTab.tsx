@@ -148,8 +148,8 @@ export const CommunicationTab: React.FC<CommunicationTabProps> = ({ risk, user, 
                                         <span className="truncate block max-w-[180px]">{stk.email || '—'}</span>
                                     </td>
                                     <td className="px-3 py-2.5 text-muted-foreground text-xs hidden lg:table-cell">
-                                        {stk.created_at
-                                            ? new Date(stk.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                        {(stk.notified_at || stk.created_at)
+                                            ? new Date(stk.notified_at || stk.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                             : '—'}
                                     </td>
                                     <td className="px-3 py-2.5 text-right">
